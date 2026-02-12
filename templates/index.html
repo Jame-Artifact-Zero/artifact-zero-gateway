@@ -1,0 +1,81 @@
+<!-- =========================
+FILE: templates/index.html
+========================= -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Artifact Zero — Paste anything. Get structural clarity.</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100">
+  <div class="max-w-3xl mx-auto px-6 py-10">
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-zinc-400">artifact0.com</div>
+      <div class="text-xs text-zinc-500">v1.1 gateway</div>
+    </div>
+
+    <h1 class="mt-6 text-4xl font-semibold tracking-tight">
+      Paste anything. See what’s structurally happening.
+    </h1>
+    <p class="mt-3 text-zinc-300">
+      Emails. Texts. Contracts. Medical notes. Investor messages.
+      One purchase includes <span class="font-medium">{{ max_runs }}</span> runs.
+    </p>
+
+    <div class="mt-8 grid gap-4">
+      <form action="/create-checkout-session" method="post" class="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5">
+        {% if ref %}
+          <input type="hidden" name="ref" value="{{ ref }}" />
+          <div class="text-xs text-zinc-400 mb-3">Referral: <span class="text-zinc-200">{{ ref }}</span></div>
+        {% endif %}
+
+        <button type="submit"
+          class="w-full rounded-xl bg-white text-zinc-900 font-semibold py-3 hover:bg-zinc-200 transition">
+          Pay $1 — Run NTI
+        </button>
+
+        <div class="mt-3 text-xs text-zinc-500">
+          You’ll receive an access code immediately after payment.
+        </div>
+      </form>
+
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-2xl p-5">
+        <h2 class="text-lg font-semibold">Already have a code?</h2>
+        <p class="text-sm text-zinc-400 mt-1">Enter your access code to run NTI.</p>
+
+        <form action="/run" method="post" class="mt-4 grid gap-3">
+          <input name="code" placeholder="ACCESS CODE" required
+                 class="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-zinc-100" />
+
+          <select name="mode" class="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-zinc-100">
+            <option value="default">Default</option>
+            <option value="fast">Fast</option>
+            <option value="strong">Strong</option>
+          </select>
+
+          <input name="email" type="email" placeholder="Email results to me (optional)"
+                 class="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-zinc-100" />
+
+          <textarea name="text_input" rows="10" placeholder="Paste text here..." required
+                    class="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-zinc-100"></textarea>
+
+          <button type="submit"
+                  class="w-full rounded-xl bg-emerald-400 text-zinc-950 font-semibold py-3 hover:bg-emerald-300 transition">
+            Run NTI
+          </button>
+
+          <div class="text-xs text-zinc-500">
+            Tip: If you paste an email thread, include the last 10–20 lines for context.
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="mt-10 text-xs text-zinc-600">
+      Operational note: this is a gateway. The NTI runtime runs separately and is called remotely.
+    </div>
+  </div>
+</body>
+</html>
