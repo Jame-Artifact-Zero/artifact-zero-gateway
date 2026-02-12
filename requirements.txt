@@ -1,4 +1,4 @@
 flask
+openai
+python-dotenv
 gunicorn
-requests
-sendgrid
