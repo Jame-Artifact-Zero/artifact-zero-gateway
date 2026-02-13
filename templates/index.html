@@ -1,204 +1,1062 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Don't Go Full Tilt</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Don't Go Full Tilt</title>
 
-<style>
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #000;
-    color: #fff;
-    text-align: center;
-}
+  <!-- Font: clean, modern, readable on mobile -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-.container {
-    padding: 40px 20px;
-    max-width: 1200px;
-    margin: auto;
-}
+  <style>
+    :root{
+      --bg0:#0a0b0d;
+      --bg1:#0f1216;
+      --panel:#0f131a;
+      --stroke:rgba(255,255,255,.08);
+      --stroke2:rgba(255,255,255,.12);
+      --text:#e9eef7;
+      --muted:rgba(233,238,247,.65);
+      --muted2:rgba(233,238,247,.45);
 
-h1 {
-    font-size: 42px;
-    margin-bottom: 10px;
-}
+      --you1:#1b2636;
+      --you2:#121a26;
 
-.subtitle {
-    font-size: 18px;
-    color: #aaa;
-    margin-bottom: 30px;
-}
+      --bot1:#101418;
+      --bot2:#0b0d10;
 
-select, textarea {
-    width: 100%;
-    margin-bottom: 20px;
-    background: #111;
-    color: #fff;
-    border: 1px solid #333;
-    padding: 12px;
-    font-size: 14px;
-}
+      --btn:#2b6cff;
+      --btn2:#1e56d6;
 
-textarea {
-    height: 160px;
-}
+      --assump:#2b6cff;
+      --emotion:#ff4d6d;
+      --general:#f5c542;
+      --authority:#a78bfa;
+      --absolute:#ff8a00;
 
-button {
-    background: #fff;
-    color: #000;
-    padding: 12px 24px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
+      --ok:#34d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
 
-button:hover {
-    background: #ccc;
-}
+      --radius:18px;
+      --radius2:22px;
+      --shadow: 0 14px 38px rgba(0,0,0,.45);
 
-.results {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.box {
-    background: #111;
-    padding: 20px;
-    border: 1px solid #333;
-    text-align: left;
-    white-space: pre-wrap;
-    max-height: 60vh;
-    overflow-y: auto;
-}
-
-.footer {
-    margin-top: 40px;
-    font-size: 12px;
-    color: #666;
-}
-
-@media(min-width: 1000px){
-    .results {
-        flex-direction: row;
+      --lensHue: 205deg;
+      --lensSat: 1.25;
+      --lensBright: 1.05;
+      --lensContrast: 1.15;
     }
-    .box {
-        width: 50%;
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 900px at 50% -10%, #111827 0%, var(--bg0) 55%, #050607 100%);
+      color:var(--text);
+      overflow:hidden;
     }
-}
-</style>
+
+    /* App Layout */
+    .app{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:20;
+      padding: 12px 14px;
+      border-bottom:1px solid var(--stroke);
+      background: linear-gradient(to bottom, rgba(10,11,13,.92), rgba(10,11,13,.70));
+      backdrop-filter: blur(10px);
+    }
+    .topbarRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    .brand{
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      min-width:0;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.12em;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .brand .sub{
+      font-size:12px;
+      color:var(--muted);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border:1px solid var(--stroke);
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size:12px;
+      user-select:none;
+      cursor:pointer;
+      transition: .15s ease;
+    }
+    .chip:hover{ border-color: var(--stroke2); color: var(--text); }
+    .chip strong{ color: var(--text); font-weight:700; }
+
+    .toggle{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 8px 12px;
+      border:1px solid var(--stroke);
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+      cursor:pointer;
+      user-select:none;
+      transition:.15s ease;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .toggle:hover{ border-color: var(--stroke2); color: var(--text); }
+    .switch{
+      width: 38px;
+      height: 22px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      position:relative;
+      flex:0 0 auto;
+    }
+    .knob{
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.75);
+      position:absolute;
+      top:1px;
+      left:1px;
+      transition: .15s ease;
+    }
+    .toggle.on .switch{ background: rgba(43,108,255,.18); border-color: rgba(43,108,255,.35); }
+    .toggle.on .knob{ left: 19px; background: rgba(43,108,255,.95); }
+
+    .threadWrap{
+      flex:1;
+      overflow:auto;
+      padding: 16px 12px 110px;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior:smooth;
+    }
+    .thread{
+      max-width: 980px;
+      margin: 0 auto;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+
+    .row{
+      display:flex;
+      width:100%;
+    }
+    .row.you{ justify-content:flex-end; }
+    .row.bot{ justify-content:flex-start; }
+
+    .bubble{
+      max-width: min(680px, 92%);
+      border-radius: var(--radius2);
+      border:1px solid var(--stroke);
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+
+    .bubble.you{
+      background: linear-gradient(180deg, rgba(27,38,54,.92), rgba(18,26,38,.92));
+    }
+    .bubble.bot{
+      background: linear-gradient(180deg, rgba(16,20,24,.92), rgba(11,13,16,.92));
+    }
+
+    .bubbleHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 12px;
+      border-bottom:1px solid var(--stroke);
+      background: rgba(255,255,255,.02);
+    }
+    .role{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .roleDot{
+      width:9px; height:9px; border-radius:999px;
+      background: rgba(255,255,255,.35);
+    }
+    .roleLabel{
+      font-size:12px;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .roleLabel b{ color: var(--text); font-weight:700; }
+    .tools{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .iconBtn{
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size:12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+      user-select:none;
+      transition:.15s ease;
+      white-space:nowrap;
+    }
+    .iconBtn:hover{ border-color: var(--stroke2); color: var(--text); }
+
+    .bubbleBody{
+      padding: 12px;
+    }
+
+    .text{
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .muted{ color: var(--muted); }
+
+    /* Analysis panel */
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size:12px;
+      color: var(--muted);
+    }
+    .pill b{ color: var(--text); }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size:12px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+    }
+    .badge.ok{ color: var(--ok); border-color: rgba(52,211,153,.25); background: rgba(52,211,153,.08); }
+    .badge.warn{ color: var(--warn); border-color: rgba(251,191,36,.25); background: rgba(251,191,36,.08); }
+    .badge.bad{ color: var(--bad); border-color: rgba(251,113,133,.25); background: rgba(251,113,133,.08); }
+
+    .grid{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 840px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+    .card{
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.02);
+      padding: 12px;
+    }
+    .cardTitle{
+      font-size:12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .cardTitle b{ color: var(--text); }
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .item{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      border:1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(0,0,0,.10);
+      cursor:pointer;
+      transition:.12s ease;
+    }
+    .item:hover{ border-color: var(--stroke2); }
+    .item .left{
+      min-width:0;
+    }
+    .item .phrase{
+      font-size:13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .item .type{
+      margin-top:4px;
+      font-size:11px;
+      color: var(--muted2);
+    }
+    .item .right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:0 0 auto;
+    }
+    .strength{
+      font-size:12px;
+      color: var(--muted);
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      opacity:.95;
+    }
+    .dot.ASSUMPTION{ background: var(--assump); }
+    .dot.EMOTION{ background: var(--emotion); }
+    .dot.GENERALIZATION{ background: var(--general); }
+    .dot.AUTHORITY{ background: var(--authority); }
+    .dot.ABSOLUTE{ background: var(--absolute); }
+
+    /* Highlighted spans in original text */
+    .hl{
+      padding: 1px 3px;
+      border-radius: 6px;
+      border:1px solid transparent;
+      transition:.12s ease;
+      cursor:pointer;
+      display:inline;
+    }
+    .hl.ASSUMPTION{ background: rgba(43,108,255,.18); border-color: rgba(43,108,255,.28); }
+    .hl.EMOTION{ background: rgba(255,77,109,.16); border-color: rgba(255,77,109,.26); }
+    .hl.GENERALIZATION{ background: rgba(245,197,66,.15); border-color: rgba(245,197,66,.28); }
+    .hl.AUTHORITY{ background: rgba(167,139,250,.15); border-color: rgba(167,139,250,.28); }
+    .hl.ABSOLUTE{ background: rgba(255,138,0,.14); border-color: rgba(255,138,0,.26); }
+
+    .hl.active{
+      outline: 2px solid rgba(255,255,255,.30);
+      filter: brightness(1.15);
+    }
+
+    /* Composer */
+    .composer{
+      position: fixed;
+      left:0; right:0; bottom:0;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      border-top:1px solid var(--stroke);
+      background: linear-gradient(to top, rgba(10,11,13,.95), rgba(10,11,13,.65));
+      backdrop-filter: blur(12px);
+      z-index:30;
+    }
+    .composerInner{
+      max-width: 980px;
+      margin: 0 auto;
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+    }
+    textarea{
+      flex:1;
+      min-height: 48px;
+      max-height: 140px;
+      resize:none;
+      padding: 12px 12px;
+      border-radius: 16px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.35;
+      outline:none;
+    }
+    textarea::placeholder{ color: rgba(233,238,247,.40); }
+    textarea:focus{ border-color: rgba(43,108,255,.35); box-shadow: 0 0 0 4px rgba(43,108,255,.10); }
+
+    .sendBtn{
+      height: 48px;
+      padding: 0 16px;
+      border: 1px solid rgba(43,108,255,.45);
+      background: linear-gradient(180deg, rgba(43,108,255,.90), rgba(30,86,214,.90));
+      color: white;
+      border-radius: 16px;
+      font-weight: 800;
+      letter-spacing:.02em;
+      cursor:pointer;
+      user-select:none;
+      box-shadow: 0 12px 24px rgba(43,108,255,.18);
+      transition:.15s ease;
+    }
+    .sendBtn:hover{ filter: brightness(1.04); }
+    .sendBtn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+
+    /* Lens Mode */
+    .lensOn .threadWrap{
+      filter: hue-rotate(var(--lensHue)) saturate(var(--lensSat)) brightness(var(--lensBright)) contrast(var(--lensContrast));
+    }
+    .lensHint{
+      font-size:11px;
+      color: var(--muted2);
+      margin-top:6px;
+    }
+
+    /* Tiny toast */
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 86px;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.55);
+      color: var(--text);
+      font-size: 12px;
+      opacity: 0;
+      pointer-events:none;
+      transition: .18s ease;
+      z-index:50;
+    }
+    .toast.show{ opacity: 1; }
+
+    /* Make it feel like "scrollable chat" */
+    .threadWrap::before{
+      content:"";
+      display:block;
+      height: 6px;
+    }
+  </style>
 </head>
+
 <body>
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="topbarRow">
+      <div class="brand">
+        <h1>DON'T GO FULL TILT.</h1>
+        <div class="sub">Paste → Tilt → See the structure.</div>
+      </div>
 
-<div class="container">
+      <div class="controls">
+        <div class="toggle" id="lensToggle" title="Snap Lens Mode">
+          <span>Snap Lens</span>
+          <div class="switch"><div class="knob"></div></div>
+        </div>
 
-<h1>DON'T GO FULL TILT.</h1>
-<div class="subtitle">You already did.</div>
-
-<h3>Try a Demo</h3>
-
-<select id="demoSelect">
-    <option value="">Select a prompt...</option>
-    <option value="What is my favorite color?">What is my favorite color?</option>
-    <option value="Why do I struggle in business?">Why do I struggle in business?</option>
-    <option value="Is my partner manipulating me?">Is my partner manipulating me?</option>
-    <option value="Tell me something surprising about myself.">Surprise me.</option>
-</select>
-
-<button onclick="runDemo()">Run It</button>
-
-<div class="results" id="demoResults" style="display:none;">
-    <div class="box">
-        <h3>What AI Said</h3>
-        <div id="demoOutput"></div>
+        <div class="chip" id="clearBtn" title="Clear thread (this session only)">
+          <strong>Clear</strong>
+        </div>
+      </div>
     </div>
-    <div class="box">
-        <h3>What It Actually Did</h3>
-        <div id="ntiOutput"></div>
+  </div>
+
+  <div class="threadWrap" id="threadWrap">
+    <div class="thread" id="thread"></div>
+  </div>
+
+  <div class="composer">
+    <div class="composerInner">
+      <textarea id="input"
+        placeholder="Paste what your AI told you… (Enter = send, Shift+Enter = new line)"
+        rows="1"></textarea>
+      <button class="sendBtn" id="sendBtn">Tilt</button>
     </div>
-</div>
-
-<hr style="margin:40px 0; border:1px solid #222;">
-
-<h3>Try Your Own</h3>
-
-<textarea id="manualInput" placeholder="Paste your AI's response here..."></textarea>
-
-<button onclick="runManual()">See It</button>
-
-<div class="results" id="manualResults" style="display:none;">
-    <div class="box">
-        <h3>NTI Response</h3>
-        <div id="manualOutput"></div>
+    <div class="lensHint" id="lensHint" style="display:none;">
+      Lens mode is on: highlights pop harder.
     </div>
-</div>
+  </div>
 
-<div class="footer">
-27 days remaining.
-</div>
-
+  <div class="toast" id="toast">Copied.</div>
 </div>
 
 <script>
+  /******************************************************************
+   * CONFIG
+   * If your UI is hosted on the SAME domain as your API, keep BASE_URL = "".
+   * If your API is elsewhere, set BASE_URL to: "https://artifact-zero-gateway.onrender.com"
+   ******************************************************************/
+  const BASE_URL = ""; // <-- change only if needed
 
-async function runDemo() {
-    const prompt = document.getElementById("demoSelect").value;
-    if (!prompt) return alert("Select a prompt first.");
+  // Endpoint that returns NTI analysis JSON like your examples
+  // Expecting POST { "input": "..." } -> JSON response
+  const ENDPOINT = "/nti-core"; // <-- change if your route is different
 
-    document.getElementById("demoResults").style.display = "flex";
-    document.getElementById("demoOutput").innerText = "Running...";
-    document.getElementById("ntiOutput").innerText = "";
+  /******************************************************************
+   * Helpers
+   ******************************************************************/
+  const $ = (id) => document.getElementById(id);
 
-    try {
-        const demoResponse = await fetch("/demo-run", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt })
-        });
+  function showToast(msg="Copied."){
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 1100);
+  }
 
-        const demoData = await demoResponse.json();
-        document.getElementById("demoOutput").innerText = demoData.output;
-
-        const ntiResponse = await fetch("/nti", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ input: demoData.output })
-        });
-
-        const ntiData = await ntiResponse.json();
-        document.getElementById("ntiOutput").innerText = ntiData.output;
-
-    } catch (err) {
-        document.getElementById("ntiOutput").innerText = "Error connecting.";
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast("Copied.");
+    }catch(e){
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("Copied.");
     }
-}
+  }
 
-async function runManual() {
-    const text = document.getElementById("manualInput").value.trim();
-    if (!text) return alert("Paste something first.");
+  function scrollToBottom(){
+    const wrap = $("threadWrap");
+    wrap.scrollTop = wrap.scrollHeight;
+  }
 
-    document.getElementById("manualResults").style.display = "flex";
-    document.getElementById("manualOutput").innerText = "Running...";
+  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 
-    try {
-        const response = await fetch("/nti", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ input: text })
-        });
+  function dotClass(type){
+    const t = (type||"").toUpperCase();
+    if(["ASSUMPTION","EMOTION","GENERALIZATION","AUTHORITY","ABSOLUTE"].includes(t)) return t;
+    return "ASSUMPTION";
+  }
 
-        const data = await response.json();
-        document.getElementById("manualOutput").innerText = data.output;
+  function bandBadge(score){
+    // score 0..1 expected (your v1/v1.1 examples look like 0.21 LOW)
+    if(score >= 0.66) return { cls:"bad", label:"HIGH" };
+    if(score >= 0.33) return { cls:"warn", label:"MED" };
+    return { cls:"ok", label:"LOW" };
+  }
 
-    } catch (err) {
-        document.getElementById("manualOutput").innerText = "Error connecting.";
+  function pretty(obj){
+    return JSON.stringify(obj, null, 2);
+  }
+
+  /******************************************************************
+   * Render: bubbles
+   ******************************************************************/
+  function addBubble({side, title, bodyHTML, tools=[]}){
+    const row = document.createElement("div");
+    row.className = `row ${side}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${side === "you" ? "you":"bot"}`;
+
+    const header = document.createElement("div");
+    header.className = "bubbleHeader";
+
+    const role = document.createElement("div");
+    role.className = "role";
+    const dot = document.createElement("div");
+    dot.className = "roleDot";
+    const label = document.createElement("div");
+    label.className = "roleLabel";
+    label.innerHTML = side === "you" ? `<b>You</b>` : `<b>NTI</b> <span class="muted">/ canonical lens</span>`;
+    role.appendChild(dot);
+    role.appendChild(label);
+
+    const toolsWrap = document.createElement("div");
+    toolsWrap.className = "tools";
+    tools.forEach(t=>{
+      const b = document.createElement("button");
+      b.className = "iconBtn";
+      b.textContent = t.label;
+      b.onclick = t.onClick;
+      toolsWrap.appendChild(b);
+    });
+
+    header.appendChild(role);
+    header.appendChild(toolsWrap);
+
+    const body = document.createElement("div");
+    body.className = "bubbleBody";
+    body.innerHTML = bodyHTML;
+
+    bubble.appendChild(header);
+    bubble.appendChild(body);
+    row.appendChild(bubble);
+    $("thread").appendChild(row);
+
+    scrollToBottom();
+    return { row, bubble, body };
+  }
+
+  function addUserMessage(text){
+    const safe = escapeHTML(text);
+    addBubble({
+      side:"you",
+      bodyHTML: `<div class="text">${safe}</div>`,
+      tools: [
+        { label:"Copy", onClick: ()=>copyText(text) }
+      ]
+    });
+  }
+
+  function addLoadingMessage(){
+    const msg = addBubble({
+      side:"bot",
+      bodyHTML: `<div class="text muted">Analyzing…</div>`
+    });
+    return msg;
+  }
+
+  function replaceBubbleBody(bubbleRef, html){
+    bubbleRef.body.innerHTML = html;
+    scrollToBottom();
+  }
+
+  /******************************************************************
+   * Word-by-word highlighting based on tags
+   * Supports tags with:
+   *   - (start,end,type,phrase)
+   * or fallback to phrase-only matching if start/end absent.
+   ******************************************************************/
+  function buildHighlightedOriginalText(inputText, tags){
+    if(!tags || !Array.isArray(tags) || tags.length === 0){
+      return { html: `<div class="text">${escapeHTML(inputText)}</div>`, spans: [] };
     }
-}
 
+    // Prefer start/end tags (your canonical examples include start/end sometimes)
+    const hasOffsets = tags.some(t => Number.isInteger(t.start) && Number.isInteger(t.end));
+    if(hasOffsets){
+      // Sort by start asc, then longer spans first
+      const spans = tags
+        .filter(t => Number.isInteger(t.start) && Number.isInteger(t.end) && t.end > t.start)
+        .map((t, idx)=>({
+          idx,
+          start: clamp(t.start,0,inputText.length),
+          end: clamp(t.end,0,inputText.length),
+          type: dotClass(t.type),
+          phrase: t.phrase || inputText.slice(t.start,t.end),
+          strength: t.strength ?? null
+        }))
+        .sort((a,b)=> a.start - b.start || (b.end-b.start) - (a.end-a.start));
+
+      // Remove overlaps (keep earliest, then skip overlaps)
+      const cleaned = [];
+      let cursor = 0;
+      for(const s of spans){
+        if(s.start >= cursor){
+          cleaned.push(s);
+          cursor = s.end;
+        }
+      }
+
+      let out = "";
+      let pos = 0;
+      cleaned.forEach(s=>{
+        out += escapeHTML(inputText.slice(pos, s.start));
+        const chunk = escapeHTML(inputText.slice(s.start, s.end));
+        out += `<span class="hl ${s.type}" data-hl="${s.idx}" title="${escapeAttr(s.type)}">${chunk}</span>`;
+        pos = s.end;
+      });
+      out += escapeHTML(inputText.slice(pos));
+
+      return { html: `<div class="text" id="origText">${out}</div>`, spans: cleaned };
+    }
+
+    // Fallback: phrase-only highlighting (best effort)
+    let out = escapeHTML(inputText);
+    const spans = [];
+    tags.forEach((t, idx)=>{
+      if(!t.phrase) return;
+      const type = dotClass(t.type);
+      const phrase = t.phrase;
+      // naive replace first occurrence only (avoid chaos)
+      const escapedPhrase = escapeRegExp(phrase);
+      const re = new RegExp(escapedPhrase);
+      if(re.test(inputText)){
+        out = out.replace(re, (m)=>`<span class="hl ${type}" data-hl="${idx}" title="${escapeAttr(type)}">${escapeHTML(m)}</span>`);
+        spans.push({ idx, type, phrase });
+      }
+    });
+
+    return { html: `<div class="text" id="origText">${out}</div>`, spans };
+  }
+
+  function wireHighlightClicks(tags){
+    // clicking a tag item highlights the corresponding span (if offsets existed)
+    document.querySelectorAll("[data-tag-idx]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const idx = el.getAttribute("data-tag-idx");
+        setActiveHighlight(idx);
+      });
+    });
+
+    // clicking a highlighted span highlights matching tag row
+    document.querySelectorAll(".hl[data-hl]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const idx = el.getAttribute("data-hl");
+        setActiveHighlight(idx);
+      });
+    });
+
+    function setActiveHighlight(idx){
+      document.querySelectorAll(".hl.active").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(`.hl[data-hl="${idx}"]`).forEach(x=>x.classList.add("active"));
+
+      document.querySelectorAll(".item.active").forEach(x=>x.classList.remove("active"));
+      const row = document.querySelector(`.item[data-tag-idx="${idx}"]`);
+      if(row){
+        row.classList.add("active");
+        row.scrollIntoView({ block:"nearest", behavior:"smooth" });
+      }
+    }
+  }
+
+  /******************************************************************
+   * Build NTI result bubble
+   ******************************************************************/
+  function buildResultHTML(inputText, result){
+    const status = (result.status || "ok").toLowerCase();
+    const statusBadge = status === "ok" ? "ok" : (status === "warn" ? "warn" : "bad");
+
+    // Tilt info:
+    let tiltScore = null;
+    let tiltBand = null;
+
+    // Some versions might have result.tilt.score / band, others may not
+    if(result.tilt && typeof result.tilt.score === "number"){
+      tiltScore = result.tilt.score;
+      tiltBand = result.tilt.band || bandBadge(tiltScore).label;
+    }else if(result.scores){
+      // fallback: rough composite from known fields if tilt missing
+      const s = result.scores;
+      if(typeof s.assumption === "number" || typeof s.emotion === "number" || typeof s.generalization === "number" || typeof s.authority === "number"){
+        const a = s.assumption || 0;
+        const e = s.emotion || 0;
+        const g = s.generalization || 0;
+        const au = s.authority || 0;
+        // simple average fallback
+        tiltScore = (a + e + g + au) / 4;
+        tiltBand = bandBadge(tiltScore).label;
+      }
+    }
+
+    const badge = tiltScore !== null ? bandBadge(tiltScore) : { cls:"ok", label:"—" };
+
+    // Tags
+    const tags = Array.isArray(result.tags) ? result.tags : [];
+    const highlighted = buildHighlightedOriginalText(inputText, tags);
+
+    // Build tag list items (include idx used by highlight mapper)
+    const tagItems = tags.map((t, i)=>{
+      const type = dotClass(t.type);
+      const strength = (typeof t.strength === "number") ? t.strength.toFixed(2) : "—";
+      const phrase = t.phrase || "";
+      return `
+        <div class="item" data-tag-idx="${i}">
+          <div class="left">
+            <div class="phrase">${escapeHTML(phrase)}</div>
+            <div class="type">${escapeHTML(type)}</div>
+          </div>
+          <div class="right">
+            <div class="strength">${strength}</div>
+            <div class="dot ${type}"></div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Scores table (quick)
+    const scores = result.scores || {};
+    const scoreLine = (k)=> (typeof scores[k] === "number" ? scores[k].toFixed(2) : "—");
+
+    const reqId = result.telemetry?.request_id || result.telemetry?.requestId || result.telemetry?.requestId || "—";
+    const sessionId = result.telemetry?.session_id || result.telemetry?.sessionId || "—";
+    const model = result.telemetry?.model || "—";
+    const latency = result.telemetry?.latency_ms ?? "—";
+    const version = result.version || "—";
+
+    const tiltLine = (tiltScore !== null)
+      ? `<span class="badge ${badge.cls}">TILT ${tiltBand} • ${tiltScore.toFixed(2)}</span>`
+      : `<span class="badge ok">TILT —</span>`;
+
+    return `
+      <div class="text">
+        ${tiltLine}
+        <span class="badge ${statusBadge}" style="margin-left:8px;">STATUS ${escapeHTML(status.toUpperCase())}</span>
+      </div>
+
+      <div class="meta">
+        <div class="pill"><b>version</b> ${escapeHTML(version)}</div>
+        <div class="pill"><b>model</b> ${escapeHTML(String(model))}</div>
+        <div class="pill"><b>latency</b> ${escapeHTML(String(latency))} ms</div>
+        <div class="pill"><b>request</b> ${escapeHTML(String(reqId))}</div>
+        <div class="pill"><b>session</b> ${escapeHTML(String(sessionId))}</div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="cardTitle"><b>What you pasted</b> <span class="muted">word-by-word</span></div>
+          ${highlighted.html}
+          <div class="lensHint">Tap a highlighted phrase → the matching tag lights up.</div>
+        </div>
+
+        <div class="card">
+          <div class="cardTitle">
+            <b>Tags detected</b>
+            <span class="muted">${tags.length} items</span>
+          </div>
+          <div class="list">
+            ${tagItems || `<div class="muted">No tags returned.</div>`}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="cardTitle"><b>Scores</b> <span class="muted">quick read</span></div>
+          <div class="list">
+            ${scoreRow("assumption", scoreLine("assumption"))}
+            ${scoreRow("emotion", scoreLine("emotion"))}
+            ${scoreRow("generalization", scoreLine("generalization"))}
+            ${scoreRow("authority", scoreLine("authority"))}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardTitle"><b>Raw JSON</b> <span class="muted">canonical proof</span></div>
+          <div class="text" style="font-size:12px; color: var(--muted); white-space:pre-wrap;" id="rawJson">${escapeHTML(pretty(result))}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function scoreRow(label, val){
+    return `
+      <div class="item" style="cursor:default;">
+        <div class="left">
+          <div class="phrase">${escapeHTML(label)}</div>
+          <div class="type">score</div>
+        </div>
+        <div class="right">
+          <div class="strength">${escapeHTML(String(val))}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  /******************************************************************
+   * Network
+   ******************************************************************/
+  async function callNTI(inputText){
+    const url = (BASE_URL || "") + ENDPOINT;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ input: inputText })
+    });
+
+    const ct = res.headers.get("content-type") || "";
+    if(!res.ok){
+      let body = "";
+      try{
+        body = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
+      }catch(e){}
+      throw new Error(`HTTP ${res.status} ${res.statusText} :: ${body}`.slice(0, 500));
+    }
+
+    if(ct.includes("application/json")) return await res.json();
+    // If server returns text, wrap it
+    const t = await res.text();
+    return { status:"ok", version:"text-only", raw:t };
+  }
+
+  /******************************************************************
+   * Compose / Send behavior
+   ******************************************************************/
+  function autosizeTextarea(el){
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+  }
+
+  async function send(){
+    const input = $("input");
+    const text = (input.value || "").trim();
+    if(!text) return;
+
+    // Add user bubble
+    addUserMessage(text);
+
+    // Clear input + reset height
+    input.value = "";
+    autosizeTextarea(input);
+
+    // Add loading bubble (assistant)
+    const loading = addLoadingMessage();
+
+    // Lock send while running
+    $("sendBtn").disabled = true;
+
+    try{
+      const result = await callNTI(text);
+
+      const html = buildResultHTML(text, result);
+
+      // Replace the loading bubble body with actual rendered content + tools
+      // tools: copy raw json, copy highlighted text, copy tag list
+      const bubble = loading.bubble;
+      const headerTools = bubble.querySelector(".tools");
+
+      // Replace header tools
+      headerTools.innerHTML = "";
+      const btnCopyJson = document.createElement("button");
+      btnCopyJson.className = "iconBtn";
+      btnCopyJson.textContent = "Copy JSON";
+      btnCopyJson.onclick = ()=>copyText(pretty(result));
+
+      const btnCopyText = document.createElement("button");
+      btnCopyText.className = "iconBtn";
+      btnCopyText.textContent = "Copy Text";
+      btnCopyText.onclick = ()=>copyText(text);
+
+      const btnCopyTags = document.createElement("button");
+      btnCopyTags.className = "iconBtn";
+      btnCopyTags.textContent = "Copy Tags";
+      const tags = Array.isArray(result.tags) ? result.tags : [];
+      btnCopyTags.onclick = ()=>copyText(tags.map(t=>`${(t.type||"").toUpperCase()}: ${t.phrase || ""}`).join("\n"));
+
+      headerTools.appendChild(btnCopyJson);
+      headerTools.appendChild(btnCopyText);
+      headerTools.appendChild(btnCopyTags);
+
+      replaceBubbleBody(loading, html);
+
+      // Wire click mapping between tag list and highlighted spans
+      wireHighlightClicks(result.tags || []);
+
+      // Keep it feeling like a chat: after response, keep us pinned to bottom
+      scrollToBottom();
+
+    }catch(err){
+      replaceBubbleBody(loading, `<div class="text"><span class="badge bad">ERROR</span></div><div class="text muted" style="margin-top:10px;">${escapeHTML(String(err.message || err))}</div>`);
+    }finally{
+      $("sendBtn").disabled = false;
+      input.focus();
+    }
+  }
+
+  /******************************************************************
+   * Basic escaping
+   ******************************************************************/
+  function escapeHTML(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function escapeAttr(str){ return escapeHTML(str).replaceAll("\n"," "); }
+  function escapeRegExp(str){
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /******************************************************************
+   * Init
+   ******************************************************************/
+  (function init(){
+    const input = $("input");
+    const sendBtn = $("sendBtn");
+
+    // Enter = send, Shift+Enter = newline
+    input.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        send();
+      }
+    });
+
+    input.addEventListener("input", ()=> autosizeTextarea(input));
+    autosizeTextarea(input);
+
+    sendBtn.addEventListener("click", send);
+
+    // Lens toggle
+    const lens = $("lensToggle");
+    lens.addEventListener("click", ()=>{
+      lens.classList.toggle("on");
+      $("app").classList.toggle("lensOn");
+      $("lensHint").style.display = lens.classList.contains("on") ? "block" : "none";
+    });
+
+    // Clear thread (session only)
+    $("clearBtn").addEventListener("click", ()=>{
+      $("thread").innerHTML = "";
+      showToast("Cleared.");
+    });
+
+    // Seed a first bot message (optional, keeps it from feeling blank)
+    addBubble({
+      side:"bot",
+      bodyHTML: `<div class="text"><span class="badge ok">READY</span> Paste an AI response and press <b>Tilt</b>.</div>
+                <div class="text muted" style="margin-top:10px;">This is a thread. Messages stay until you refresh.</div>`
+    });
+
+    scrollToBottom();
+  })();
 </script>
-
 </body>
 </html>
