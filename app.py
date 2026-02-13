@@ -464,3 +464,30 @@ def admin_state():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+@app.route("/nti-public", methods=["POST"])
+def nti_public():
+
+    data = request.get_json(silent=True) or {}
+    input_text = data.get("input", "")
+    mode = data.get("mode", "default")
+
+    # Hard public limits
+    if not input_text or not input_text.strip():
+        return jsonify({"error": "Missing input"}), 400
+
+    if len(input_text) > 5000:
+        return jsonify({"error": "Input too large (public limit 5000 chars)"}), 400
+
+    result = run_nti(input_text=input_text, mode=mode)
+
+    status = 200
+    if result.get("blocked") and result.get("reason") == "RATE_LIMIT":
+        status = 429
+    if result.get("blocked") and result.get("flags"):
+        status = 400
+    if result.get("error"):
+        status = 500
+
+    return jsonify(result), status
+
