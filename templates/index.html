@@ -1,221 +1,243 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>NTI</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NTI Structural Audit</title>
 
 <style>
 body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #0e1116;
-    color: #e8e8e8;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #0f1115;
+    color: #ffffff;
 }
 
-header {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background: #12161c;
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    z-index: 10;
-    border-bottom: 1px solid #1f252f;
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
-button {
-    background: #1f252f;
-    color: #e8e8e8;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-button.active {
-    background: #2f6df6;
-}
-
-main {
-    margin-top: 60px;
-    padding: 15px;
-    flex: 1;
-    overflow-y: auto;
+h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
 }
 
 textarea {
     width: 100%;
-    height: 120px;
-    background: #161b22;
-    color: #e8e8e8;
-    border: 1px solid #2a313c;
+    min-height: 150px;
+    background: #1b1f27;
+    border: 1px solid #2c313a;
+    color: #ffffff;
+    padding: 12px;
     border-radius: 6px;
-    padding: 10px;
-    resize: none;
-    font-size: 14px;
-}
-
-.output {
-    margin-top: 15px;
-    padding: 14px;
-    border-radius: 8px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    resize: vertical;
     font-size: 15px;
 }
 
-/* BASE */
-.base {
-    background: #161b22;
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
-/* LOW */
-.low {
-    background: #111827;
-    color: #dbeafe;
+.primary {
+    background: #2563eb;
+    color: white;
 }
 
-/* HIGH */
-.high {
-    background: #0b1220;
-    color: #f1f5ff;
-    font-weight: 500;
+.sample {
+    background: #2c313a;
+    color: #ffffff;
 }
 
-.constraint {
-    color: #3b82f6;
+.results {
+    margin-top: 30px;
+    display: none;
 }
 
-.absolute {
-    color: #ef4444;
+.metric {
+    margin-bottom: 14px;
 }
 
-.authority {
-    color: #a855f7;
+.metric-label {
+    font-size: 12px;
+    opacity: 0.6;
 }
 
-.certainty {
-    color: #f97316;
+.metric-value {
+    font-size: 18px;
+    font-weight: 600;
 }
 
+.section-title {
+    margin-top: 30px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.block {
+    background: #1b1f27;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #2c313a;
+    margin: 20px 0;
+}
 </style>
 </head>
 <body>
 
-<header>
-    <button id="baseBtn" class="active">BASE</button>
-    <button id="lowBtn">LOW</button>
-    <button id="highBtn">HIGH</button>
-    <button id="clearBtn">CLEAR</button>
-</header>
+<div class="container">
 
-<main>
+<h1>NTI Structural Audit</h1>
 
-<textarea id="inputBox" placeholder="Paste text... (Enter = send, Shift+Enter = new line)"></textarea>
+<textarea id="inputText" placeholder="Paste your email or message here..."></textarea>
 
-<div id="output" class="output base"></div>
+<button class="primary" onclick="runAudit()">AUDIT</button>
 
-</main>
+<button class="sample" onclick="loadSample('a')">Use Sample A</button>
+<button class="sample" onclick="loadSample('b')">Use Sample B</button>
+<button class="sample" onclick="loadSample('c')">Use Sample C</button>
+
+<div class="results" id="results">
+
+<hr>
+
+<div class="metric">
+    <div class="metric-label">Token Reduction Opportunity</div>
+    <div class="metric-value" id="reduction"></div>
+</div>
+
+<div class="metric">
+    <div class="metric-label">Current Length</div>
+    <div class="metric-value" id="currentLength"></div>
+</div>
+
+<div class="metric">
+    <div class="metric-label">Optimal Structural Length</div>
+    <div class="metric-value" id="optimalLength"></div>
+</div>
+
+<div class="metric">
+    <div class="metric-label">Structural Noise Index</div>
+    <div class="metric-value" id="noiseIndex"></div>
+</div>
+
+<div class="metric">
+    <div class="metric-label">Dominance Exposure</div>
+    <div class="metric-value" id="dominance"></div>
+</div>
+
+<div class="metric">
+    <div class="metric-label">Escalation Risk</div>
+    <div class="metric-value" id="risk"></div>
+</div>
+
+<div class="section-title">Core Intent (Machine View)</div>
+<div class="block" id="machineView"></div>
+
+<div class="section-title">Executive Compression</div>
+<div class="block" id="compression"></div>
+
+<button class="primary" onclick="clearAudit()">Run Another Audit</button>
+
+</div>
+
+</div>
 
 <script>
 
-let currentMode = "base";
-
-const inputBox = document.getElementById("inputBox");
-const output = document.getElementById("output");
-
-const baseBtn = document.getElementById("baseBtn");
-const lowBtn = document.getElementById("lowBtn");
-const highBtn = document.getElementById("highBtn");
-const clearBtn = document.getElementById("clearBtn");
-
-function setMode(mode) {
-    currentMode = mode;
-
-    baseBtn.classList.remove("active");
-    lowBtn.classList.remove("active");
-    highBtn.classList.remove("active");
-
-    if (mode === "base") baseBtn.classList.add("active");
-    if (mode === "low") lowBtn.classList.add("active");
-    if (mode === "high") highBtn.classList.add("active");
-
-    renderText(lastText);
+function tokenize(text) {
+    return text.trim().split(/\s+/).length;
 }
 
-function highlight(text) {
-    let result = text;
-
-    if (currentMode === "low" || currentMode === "high") {
-
-        result = result.replace(/\b(must|cannot|can't|should|policy|security|secret)\b/gi,
-            '<span class="constraint">$1</span>');
-
-        result = result.replace(/\b(always|never|everyone|no one)\b/gi,
-            '<span class="absolute">$1</span>');
-
-        result = result.replace(/\b(experts agree|research shows|industry standard)\b/gi,
-            '<span class="authority">$1</span>');
-
-        result = result.replace(/\b(guarantees|eliminates|perfect|all risk)\b/gi,
-            '<span class="certainty">$1</span>');
+function structuralCompress(text) {
+    // Simple compression logic for demo mode
+    let sentences = text.split(/[.?!]/).filter(s => s.trim().length > 0);
+    if (sentences.length > 2) {
+        return sentences.slice(0, 2).join(". ").trim() + ".";
     }
-
-    return result;
+    return sentences.join(". ").trim() + ".";
 }
 
-let lastText = "";
-
-function renderText(text) {
-    lastText = text;
-    output.className = "output " + currentMode;
-    output.innerHTML = highlight(text);
+function calculateNoise(text) {
+    let words = tokenize(text);
+    if (words < 20) return "Low";
+    if (words < 60) return "Moderate";
+    return "High";
 }
 
-inputBox.addEventListener("keydown", function(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        submitText();
+function dominanceExposure(text) {
+    let lower = text.toLowerCase();
+    if (lower.includes("wrong") || lower.includes("never") || lower.includes("always")) {
+        return "Elevated";
     }
-});
+    return "Moderate";
+}
 
-function submitText() {
-    const text = inputBox.value.trim();
+function escalationRisk(text) {
+    let lower = text.toLowerCase();
+    if (lower.includes("never") || lower.includes("always")) return "High";
+    return "Low";
+}
+
+function runAudit() {
+    let text = document.getElementById("inputText").value.trim();
     if (!text) return;
 
-    fetch("/nti", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ text: text })
-    })
-    .then(response => response.json())
-    .then(data => {
-        renderText(text);
-        inputBox.value = "";
-        window.scrollTo(0, 0);
-    })
-    .catch(error => {
-        console.error("Error:", error);
-    });
+    let currentTokens = tokenize(text);
+    let compressed = structuralCompress(text);
+    let optimalTokens = tokenize(compressed);
+
+    let reduction = Math.round((1 - (optimalTokens / currentTokens)) * 100);
+
+    document.getElementById("reduction").innerText = reduction + "%";
+    document.getElementById("currentLength").innerText = currentTokens + " tokens";
+    document.getElementById("optimalLength").innerText = optimalTokens + " tokens";
+    document.getElementById("noiseIndex").innerText = calculateNoise(text);
+    document.getElementById("dominance").innerText = dominanceExposure(text);
+    document.getElementById("risk").innerText = escalationRisk(text);
+
+    document.getElementById("machineView").innerText = compressed;
+    document.getElementById("compression").innerText = compressed;
+
+    document.getElementById("results").style.display = "block";
+    window.scrollTo(0, document.body.scrollHeight);
 }
 
-baseBtn.onclick = () => setMode("base");
-lowBtn.onclick = () => setMode("low");
-highBtn.onclick = () => setMode("high");
+function clearAudit() {
+    document.getElementById("inputText").value = "";
+    document.getElementById("results").style.display = "none";
+    window.scrollTo(0, 0);
+}
 
-clearBtn.onclick = () => {
-    output.innerHTML = "";
-    inputBox.value = "";
-};
+function loadSample(type) {
+    let sampleText = "";
+    if (type === "a") {
+        sampleText = "You were wrong earlier about routing still being broken. Routing was fixed. The payload key was incorrect.";
+    } else if (type === "b") {
+        sampleText = "We need to discuss why the quarterly projections did not align with actual performance and determine corrective strategy.";
+    } else {
+        sampleText = "This guarantees perfect security and eliminates all risk in every scenario.";
+    }
+    document.getElementById("inputText").value = sampleText;
+}
 
 </script>
 
