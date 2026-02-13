@@ -128,10 +128,10 @@ async function runComparison() {
     document.getElementById("results").style.display = "flex";
 
     try {
-        const response = await fetch("https://artifact-zero-gateway.onrender.com/nti-public", {
+        const response = await fetch("https://artifact-zero-gateway.onrender.com/nti", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"      
+                "Content-Type": "application/json"		     
             },
             body: JSON.stringify({ input: text })
         });
