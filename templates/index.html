@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Don't Go Full Tilt</title>
+
 <style>
 body {
     margin: 0;
@@ -15,7 +16,7 @@ body {
 
 .container {
     padding: 40px 20px;
-    max-width: 900px;
+    max-width: 1200px;
     margin: auto;
 }
 
@@ -30,15 +31,18 @@ h1 {
     margin-bottom: 30px;
 }
 
-textarea {
+select, textarea {
     width: 100%;
-    height: 180px;
     margin-bottom: 20px;
     background: #111;
     color: #fff;
     border: 1px solid #333;
-    padding: 10px;
+    padding: 12px;
     font-size: 14px;
+}
+
+textarea {
+    height: 160px;
 }
 
 button {
@@ -48,7 +52,7 @@ button {
     border: none;
     cursor: pointer;
     font-weight: bold;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 button:hover {
@@ -67,6 +71,8 @@ button:hover {
     border: 1px solid #333;
     text-align: left;
     white-space: pre-wrap;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 .footer {
@@ -74,7 +80,8 @@ button:hover {
     font-size: 12px;
     color: #666;
 }
-@media(min-width: 800px){
+
+@media(min-width: 1000px){
     .results {
         flex-direction: row;
     }
@@ -91,24 +98,41 @@ button:hover {
 <h1>DON'T GO FULL TILT.</h1>
 <div class="subtitle">You already did.</div>
 
-<p>
-Ask your favorite AI something real.  
-Something that matters.  
-Then paste the answer below.
-</p>
+<h3>Try a Demo</h3>
 
-<textarea id="original" placeholder="Paste your AI's response here..."></textarea>
+<select id="demoSelect">
+    <option value="">Select a prompt...</option>
+    <option value="What is my favorite color?">What is my favorite color?</option>
+    <option value="Why do I struggle in business?">Why do I struggle in business?</option>
+    <option value="Is my partner manipulating me?">Is my partner manipulating me?</option>
+    <option value="Tell me something surprising about myself.">Surprise me.</option>
+</select>
 
-<button onclick="runComparison()">See It</button>
+<button onclick="runDemo()">Run It</button>
 
-<div class="results" id="results" style="display:none;">
+<div class="results" id="demoResults" style="display:none;">
     <div class="box">
-        <h3>Original</h3>
-        <div id="originalOutput"></div>
+        <h3>What AI Said</h3>
+        <div id="demoOutput"></div>
     </div>
     <div class="box">
-        <h3>NTI Response</h3>
+        <h3>What It Actually Did</h3>
         <div id="ntiOutput"></div>
+    </div>
+</div>
+
+<hr style="margin:40px 0; border:1px solid #222;">
+
+<h3>Try Your Own</h3>
+
+<textarea id="manualInput" placeholder="Paste your AI's response here..."></textarea>
+
+<button onclick="runManual()">See It</button>
+
+<div class="results" id="manualResults" style="display:none;">
+    <div class="box">
+        <h3>NTI Response</h3>
+        <div id="manualOutput"></div>
     </div>
 </div>
 
@@ -120,32 +144,57 @@ Then paste the answer below.
 
 <script>
 
-async function runComparison() {
-    const text = document.getElementById("original").value.trim();
-    if (!text) return alert("Paste something first.");
+async function runDemo() {
+    const prompt = document.getElementById("demoSelect").value;
+    if (!prompt) return alert("Select a prompt first.");
 
-    document.getElementById("originalOutput").innerText = text;
-    document.getElementById("results").style.display = "flex";
+    document.getElementById("demoResults").style.display = "flex";
+    document.getElementById("demoOutput").innerText = "Running...";
+    document.getElementById("ntiOutput").innerText = "";
 
     try {
-        const response = await fetch("https://artifact-zero-gateway.onrender.com/nti", {
+        const demoResponse = await fetch("/demo-run", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"		     
-            },
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt })
+        });
+
+        const demoData = await demoResponse.json();
+        document.getElementById("demoOutput").innerText = demoData.output;
+
+        const ntiResponse = await fetch("/nti", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ input: demoData.output })
+        });
+
+        const ntiData = await ntiResponse.json();
+        document.getElementById("ntiOutput").innerText = ntiData.output;
+
+    } catch (err) {
+        document.getElementById("ntiOutput").innerText = "Error connecting.";
+    }
+}
+
+async function runManual() {
+    const text = document.getElementById("manualInput").value.trim();
+    if (!text) return alert("Paste something first.");
+
+    document.getElementById("manualResults").style.display = "flex";
+    document.getElementById("manualOutput").innerText = "Running...";
+
+    try {
+        const response = await fetch("/nti", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ input: text })
         });
 
         const data = await response.json();
-
-        if (data.output) {
-            document.getElementById("ntiOutput").innerText = data.output;
-        } else {
-            document.getElementById("ntiOutput").innerText = JSON.stringify(data, null, 2);
-        }
+        document.getElementById("manualOutput").innerText = data.output;
 
     } catch (err) {
-        document.getElementById("ntiOutput").innerText = "Error connecting to NTI.";
+        document.getElementById("manualOutput").innerText = "Error connecting.";
     }
 }
 
