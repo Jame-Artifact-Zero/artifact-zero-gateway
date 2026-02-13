@@ -904,10 +904,15 @@
     const url = (BASE_URL || "") + ENDPOINT;
 
     const res = await fetch("/nti", {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ input: inputText })
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    text: userInput
+  })
+})
+;
 
     const ct = res.headers.get("content-type") || "";
     if(!res.ok){
