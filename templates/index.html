@@ -1,283 +1,222 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DON'T GO FULL TILT</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<title>NTI</title>
 
 <style>
-:root{
-  --bg:#000;
-  --panel:#0b0b0b;
-  --user:#111;
-  --nti:#0e0e0e;
-  --text:#f5f5f5;
-  --muted:#888;
-  --accent:#2e6cff;
-  --border:#1a1a1a;
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0e1116;
+    color: #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
 }
 
-*{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
+header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: #12161c;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    z-index: 10;
+    border-bottom: 1px solid #1f252f;
 }
 
-html,body{
-  margin:0;
-  padding:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:'Inter',system-ui,Arial,sans-serif;
-  height:100%;
-  overflow:hidden;
+button {
+    background: #1f252f;
+    color: #e8e8e8;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
 }
 
-/* TOP BAR */
-
-.topbar{
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  height:56px;
-  background:rgba(0,0,0,.85);
-  backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--border);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 16px;
-  z-index:100;
+button.active {
+    background: #2f6df6;
 }
 
-.logo{
-  font-weight:700;
-  letter-spacing:.08em;
-  font-size:14px;
+main {
+    margin-top: 60px;
+    padding: 15px;
+    flex: 1;
+    overflow-y: auto;
 }
 
-.controls{
-  display:flex;
-  align-items:center;
-  gap:14px;
+textarea {
+    width: 100%;
+    height: 120px;
+    background: #161b22;
+    color: #e8e8e8;
+    border: 1px solid #2a313c;
+    border-radius: 6px;
+    padding: 10px;
+    resize: none;
+    font-size: 14px;
 }
 
-.toggle{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:12px;
-  cursor:pointer;
-  user-select:none;
+.output {
+    margin-top: 15px;
+    padding: 14px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 15px;
 }
 
-.switch{
-  width:34px;
-  height:18px;
-  background:#222;
-  border-radius:18px;
-  position:relative;
-  transition:.2s;
+/* BASE */
+.base {
+    background: #161b22;
 }
 
-.switch::after{
-  content:'';
-  position:absolute;
-  width:14px;
-  height:14px;
-  background:#fff;
-  border-radius:50%;
-  top:2px;
-  left:2px;
-  transition:.2s;
+/* LOW */
+.low {
+    background: #111827;
+    color: #dbeafe;
 }
 
-.toggle.active .switch{
-  background:var(--accent);
+/* HIGH */
+.high {
+    background: #0b1220;
+    color: #f1f5ff;
+    font-weight: 500;
 }
 
-.toggle.active .switch::after{
-  transform:translateX(16px);
+.constraint {
+    color: #3b82f6;
 }
 
-.clear{
-  font-size:12px;
-  cursor:pointer;
-  color:var(--muted);
+.absolute {
+    color: #ef4444;
 }
 
-/* THREAD */
-
-.thread{
-  position:absolute;
-  top:56px;
-  bottom:70px;
-  left:0;
-  right:0;
-  overflow-y:auto;
-  padding:20px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
+.authority {
+    color: #a855f7;
 }
 
-.bubble{
-  max-width:92%;
-  padding:14px 16px;
-  border-radius:16px;
-  line-height:1.45;
-  font-size:15px;
-  word-wrap:break-word;
-  white-space:pre-wrap;
-  border:1px solid var(--border);
+.certainty {
+    color: #f97316;
 }
 
-.user{
-  align-self:flex-end;
-  background:var(--user);
-}
-
-.nti{
-  align-self:flex-start;
-  background:var(--nti);
-}
-
-/* SNAP LENS */
-
-.snap .nti{
-  color:#eaf1ff;
-  background:#0a1224;
-  border-color:#1d2e5a;
-  letter-spacing:.01em;
-}
-
-.snap .nti strong{
-  color:#6ea1ff;
-  font-weight:700;
-}
-
-/* INPUT */
-
-.inputbar{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:70px;
-  background:#000;
-  border-top:1px solid var(--border);
-  display:flex;
-  padding:10px 12px;
-  gap:10px;
-  align-items:center;
-}
-
-textarea{
-  flex:1;
-  resize:none;
-  border:none;
-  outline:none;
-  background:#111;
-  color:#fff;
-  border-radius:12px;
-  padding:12px;
-  font-family:inherit;
-  font-size:14px;
-  max-height:140px;
-}
-
-button{
-  background:#fff;
-  color:#000;
-  border:none;
-  border-radius:12px;
-  padding:0 18px;
-  height:44px;
-  font-weight:600;
-  cursor:pointer;
-}
-
-button:active{
-  transform:scale(.97);
-}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="logo">NTI</div>
-  <div class="controls">
-    <div class="toggle" id="snapToggle">
-      Snap Lens
-      <div class="switch"></div>
-    </div>
-    <div class="clear" onclick="clearThread()">Clear</div>
-  </div>
-</div>
+<header>
+    <button id="baseBtn" class="active">BASE</button>
+    <button id="lowBtn">LOW</button>
+    <button id="highBtn">HIGH</button>
+    <button id="clearBtn">CLEAR</button>
+</header>
 
-<div class="thread" id="thread"></div>
+<main>
 
-<div class="inputbar">
-  <textarea id="input" placeholder="Paste text... (Enter = send, Shift+Enter = new line)"></textarea>
-  <button onclick="runTilt()">Tilt</button>
-</div>
+<textarea id="inputBox" placeholder="Paste text... (Enter = send, Shift+Enter = new line)"></textarea>
+
+<div id="output" class="output base"></div>
+
+</main>
 
 <script>
-const thread = document.getElementById('thread');
-const input = document.getElementById('input');
-const snapToggle = document.getElementById('snapToggle');
-let snapOn = false;
 
-snapToggle.onclick = () => {
-  snapOn = !snapOn;
-  snapToggle.classList.toggle('active', snapOn);
-  document.body.classList.toggle('snap', snapOn);
-};
+let currentMode = "base";
 
-function clearThread(){
-  thread.innerHTML='';
+const inputBox = document.getElementById("inputBox");
+const output = document.getElementById("output");
+
+const baseBtn = document.getElementById("baseBtn");
+const lowBtn = document.getElementById("lowBtn");
+const highBtn = document.getElementById("highBtn");
+const clearBtn = document.getElementById("clearBtn");
+
+function setMode(mode) {
+    currentMode = mode;
+
+    baseBtn.classList.remove("active");
+    lowBtn.classList.remove("active");
+    highBtn.classList.remove("active");
+
+    if (mode === "base") baseBtn.classList.add("active");
+    if (mode === "low") lowBtn.classList.add("active");
+    if (mode === "high") highBtn.classList.add("active");
+
+    renderText(lastText);
 }
 
-function addBubble(text,type){
-  const div=document.createElement('div');
-  div.className='bubble '+type;
-  div.textContent=text;
-  thread.appendChild(div);
-  thread.scrollTop=thread.scrollHeight;
+function highlight(text) {
+    let result = text;
+
+    if (currentMode === "low" || currentMode === "high") {
+
+        result = result.replace(/\b(must|cannot|can't|should|policy|security|secret)\b/gi,
+            '<span class="constraint">$1</span>');
+
+        result = result.replace(/\b(always|never|everyone|no one)\b/gi,
+            '<span class="absolute">$1</span>');
+
+        result = result.replace(/\b(experts agree|research shows|industry standard)\b/gi,
+            '<span class="authority">$1</span>');
+
+        result = result.replace(/\b(guarantees|eliminates|perfect|all risk)\b/gi,
+            '<span class="certainty">$1</span>');
+    }
+
+    return result;
 }
 
-input.addEventListener('keydown',function(e){
-  if(e.key==='Enter' && !e.shiftKey){
-    e.preventDefault();
-    runTilt();
-  }
+let lastText = "";
+
+function renderText(text) {
+    lastText = text;
+    output.className = "output " + currentMode;
+    output.innerHTML = highlight(text);
+}
+
+inputBox.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitText();
+    }
 });
 
-async function runTilt(){
-  const text=input.value.trim();
-  if(!text) return;
+function submitText() {
+    const text = inputBox.value.trim();
+    if (!text) return;
 
-  addBubble(text,'user');
-  input.value='';
-
-  try{
-    const res=await fetch('/nti',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ text:text })
+    fetch("/nti", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        renderText(text);
+        inputBox.value = "";
+        window.scrollTo(0, 0);
+    })
+    .catch(error => {
+        console.error("Error:", error);
     });
-
-    const data=await res.json();
-
-    const output=JSON.stringify(data,null,2);
-    addBubble(output,'nti');
-
-  }catch(err){
-    addBubble('Error connecting to NTI.','nti');
-  }
 }
+
+baseBtn.onclick = () => setMode("base");
+lowBtn.onclick = () => setMode("low");
+highBtn.onclick = () => setMode("high");
+
+clearBtn.onclick = () => {
+    output.innerHTML = "";
+    inputBox.value = "";
+};
+
 </script>
 
 </body>
