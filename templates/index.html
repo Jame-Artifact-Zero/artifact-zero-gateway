@@ -1,178 +1,283 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Don't Go Full Tilt</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DON'T GO FULL TILT</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
 <style>
-body {
-    margin: 0;
-    background: #05070b;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+:root{
+  --bg:#000;
+  --panel:#0b0b0b;
+  --user:#111;
+  --nti:#0e0e0e;
+  --text:#f5f5f5;
+  --muted:#888;
+  --accent:#2e6cff;
+  --border:#1a1a1a;
 }
 
-header {
-    padding: 18px;
-    text-align: center;
-    font-weight: 600;
-    letter-spacing: 1px;
-    font-size: 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
-.thread {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+html,body{
+  margin:0;
+  padding:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,Arial,sans-serif;
+  height:100%;
+  overflow:hidden;
 }
 
-.message {
-    max-width: 75%;
-    padding: 14px 18px;
-    border-radius: 16px;
-    line-height: 1.45;
-    font-size: 14px;
-    white-space: pre-wrap;
+/* TOP BAR */
+
+.topbar{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  height:56px;
+  background:rgba(0,0,0,.85);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  z-index:100;
 }
 
-.user {
-    align-self: flex-end;
-    background: linear-gradient(145deg,#1e2a3a,#0e1621);
-    border: 1px solid rgba(255,255,255,0.05);
+.logo{
+  font-weight:700;
+  letter-spacing:.08em;
+  font-size:14px;
 }
 
-.system {
-    align-self: flex-start;
-    background: linear-gradient(145deg,#0c1117,#0a0f14);
-    border: 1px solid rgba(255,255,255,0.08);
+.controls{
+  display:flex;
+  align-items:center;
+  gap:14px;
 }
 
-.error {
-    border: 1px solid #ff4d4d;
-    color: #ff8080;
+.toggle{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  cursor:pointer;
+  user-select:none;
 }
 
-.input-bar {
-    display: flex;
-    padding: 14px;
-    gap: 10px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    background: #0a0f14;
+.switch{
+  width:34px;
+  height:18px;
+  background:#222;
+  border-radius:18px;
+  position:relative;
+  transition:.2s;
 }
 
-textarea {
-    flex: 1;
-    resize: none;
-    background: #0f1620;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: white;
-    padding: 12px;
-    border-radius: 12px;
-    font-size: 14px;
-    outline: none;
+.switch::after{
+  content:'';
+  position:absolute;
+  width:14px;
+  height:14px;
+  background:#fff;
+  border-radius:50%;
+  top:2px;
+  left:2px;
+  transition:.2s;
 }
 
-button {
-    background: #2a6bff;
-    border: none;
-    padding: 0 20px;
-    border-radius: 12px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
+.toggle.active .switch{
+  background:var(--accent);
 }
 
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.toggle.active .switch::after{
+  transform:translateX(16px);
+}
+
+.clear{
+  font-size:12px;
+  cursor:pointer;
+  color:var(--muted);
+}
+
+/* THREAD */
+
+.thread{
+  position:absolute;
+  top:56px;
+  bottom:70px;
+  left:0;
+  right:0;
+  overflow-y:auto;
+  padding:20px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.bubble{
+  max-width:92%;
+  padding:14px 16px;
+  border-radius:16px;
+  line-height:1.45;
+  font-size:15px;
+  word-wrap:break-word;
+  white-space:pre-wrap;
+  border:1px solid var(--border);
+}
+
+.user{
+  align-self:flex-end;
+  background:var(--user);
+}
+
+.nti{
+  align-self:flex-start;
+  background:var(--nti);
+}
+
+/* SNAP LENS */
+
+.snap .nti{
+  color:#eaf1ff;
+  background:#0a1224;
+  border-color:#1d2e5a;
+  letter-spacing:.01em;
+}
+
+.snap .nti strong{
+  color:#6ea1ff;
+  font-weight:700;
+}
+
+/* INPUT */
+
+.inputbar{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:70px;
+  background:#000;
+  border-top:1px solid var(--border);
+  display:flex;
+  padding:10px 12px;
+  gap:10px;
+  align-items:center;
+}
+
+textarea{
+  flex:1;
+  resize:none;
+  border:none;
+  outline:none;
+  background:#111;
+  color:#fff;
+  border-radius:12px;
+  padding:12px;
+  font-family:inherit;
+  font-size:14px;
+  max-height:140px;
+}
+
+button{
+  background:#fff;
+  color:#000;
+  border:none;
+  border-radius:12px;
+  padding:0 18px;
+  height:44px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button:active{
+  transform:scale(.97);
 }
 </style>
 </head>
-
 <body>
 
-<header>
-    DON'T GO FULL TILT.
-</header>
+<div class="topbar">
+  <div class="logo">NTI</div>
+  <div class="controls">
+    <div class="toggle" id="snapToggle">
+      Snap Lens
+      <div class="switch"></div>
+    </div>
+    <div class="clear" onclick="clearThread()">Clear</div>
+  </div>
+</div>
 
 <div class="thread" id="thread"></div>
 
-<div class="input-bar">
-    <textarea id="inputBox" rows="1" placeholder="Paste text... (Enter = send, Shift+Enter = new line)"></textarea>
-    <button id="tiltBtn">Tilt</button>
+<div class="inputbar">
+  <textarea id="input" placeholder="Paste text... (Enter = send, Shift+Enter = new line)"></textarea>
+  <button onclick="runTilt()">Tilt</button>
 </div>
 
 <script>
-const thread = document.getElementById("thread");
-const inputBox = document.getElementById("inputBox");
-const tiltBtn = document.getElementById("tiltBtn");
+const thread = document.getElementById('thread');
+const input = document.getElementById('input');
+const snapToggle = document.getElementById('snapToggle');
+let snapOn = false;
 
-function addMessage(text, type="system", isError=false) {
-    const msg = document.createElement("div");
-    msg.classList.add("message", type);
-    if (isError) msg.classList.add("error");
-    msg.textContent = text;
-    thread.appendChild(msg);
-    thread.scrollTop = thread.scrollHeight;
+snapToggle.onclick = () => {
+  snapOn = !snapOn;
+  snapToggle.classList.toggle('active', snapOn);
+  document.body.classList.toggle('snap', snapOn);
+};
+
+function clearThread(){
+  thread.innerHTML='';
 }
 
-async function runNTI() {
-    const userInput = inputBox.value.trim();
-    if (!userInput) return;
-
-    addMessage(userInput, "user");
-    inputBox.value = "";
-    inputBox.style.height = "auto";
-
-    tiltBtn.disabled = true;
-
-    try {
-        const response = await fetch("/nti", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                text: userInput
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            addMessage("HTTP " + response.status + " :: " + JSON.stringify(data), "system", true);
-        } else {
-            addMessage(JSON.stringify(data, null, 2), "system");
-        }
-
-    } catch (err) {
-        addMessage("Connection error: " + err.message, "system", true);
-    }
-
-    tiltBtn.disabled = false;
+function addBubble(text,type){
+  const div=document.createElement('div');
+  div.className='bubble '+type;
+  div.textContent=text;
+  thread.appendChild(div);
+  thread.scrollTop=thread.scrollHeight;
 }
 
-tiltBtn.addEventListener("click", runNTI);
-
-inputBox.addEventListener("keydown", function(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        runNTI();
-    }
+input.addEventListener('keydown',function(e){
+  if(e.key==='Enter' && !e.shiftKey){
+    e.preventDefault();
+    runTilt();
+  }
 });
 
-inputBox.addEventListener("input", function() {
-    this.style.height = "auto";
-    this.style.height = this.scrollHeight + "px";
-});
+async function runTilt(){
+  const text=input.value.trim();
+  if(!text) return;
+
+  addBubble(text,'user');
+  input.value='';
+
+  try{
+    const res=await fetch('/nti',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ text:text })
+    });
+
+    const data=await res.json();
+
+    const output=JSON.stringify(data,null,2);
+    addBubble(output,'nti');
+
+  }catch(err){
+    addBubble('Error connecting to NTI.','nti');
+  }
+}
 </script>
 
 </body>
