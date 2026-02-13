@@ -1,245 +1,294 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NTI Structural Audit</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTI — No-Tilt Interface | Artifact Zero Labs</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #0f1115;
-    color: #ffffff;
+:root{
+  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
 }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 
-.container {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 20px;
+.topbar{
+  border-bottom:1px solid var(--border);padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
 }
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent)}
+.topbar .version{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:4px}
+.topbar .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-h1 {
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 20px;
-}
+.main{max-width:960px;margin:0 auto;padding:24px 20px 60px}
 
-textarea {
-    width: 100%;
-    min-height: 150px;
-    background: #1b1f27;
-    border: 1px solid #2c313a;
-    color: #ffffff;
-    padding: 12px;
-    border-radius: 6px;
-    resize: vertical;
-    font-size: 15px;
+.input-section{margin-bottom:24px}
+.input-section label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
+.input-section textarea{
+  width:100%;min-height:120px;background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:14px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
 }
+.input-section textarea:focus{border-color:var(--accent)}
+.input-section textarea::placeholder{color:#3d4452}
 
-button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 12px;
-    border-radius: 6px;
-    border: none;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-}
+.btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{padding:10px 20px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-primary:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
+.btn-sample:hover{color:var(--text);background:var(--border)}
 
-.primary {
-    background: #2563eb;
-    color: white;
-}
+.results{display:none}
+.results.show{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-.sample {
-    background: #2c313a;
-    color: #ffffff;
-}
+.hero-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+.score-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:4px}
+.score-card .sc-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.score-card.critical .sc-value{color:var(--red)}
+.score-card.warning .sc-value{color:var(--amber)}
+.score-card.good .sc-value{color:var(--green)}
+.score-card.info .sc-value{color:var(--accent)}
 
-.results {
-    margin-top: 30px;
-    display: none;
-}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.panel-header h3{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent)}
+.panel-header .badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
+.badge-red{background:#7f1d1d;color:#fca5a5}
+.badge-amber{background:#78350f;color:#fde68a}
+.badge-green{background:#14532d;color:#86efac}
 
-.metric {
-    margin-bottom: 14px;
-}
+.panel-body{padding:16px}
 
-.metric-label {
-    font-size: 12px;
-    opacity: 0.6;
-}
+.fm-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.fm-row:last-child{border-bottom:none}
+.fm-name{font-weight:600;font-size:14px}
+.fm-full{font-size:11px;color:var(--muted);margin-top:2px}
+.fm-status{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px}
+.fm-confirmed{background:#7f1d1d;color:#fca5a5}
+.fm-probable{background:#78350f;color:#fde68a}
+.fm-false{background:#14532d;color:#86efac}
 
-.metric-value {
-    font-size: 18px;
-    font-weight: 600;
-}
+.tilt-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;background:var(--surface2);color:var(--amber)}
 
-.section-title {
-    margin-top: 30px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    opacity: 0.6;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+.layer-table{width:100%;border-collapse:collapse;font-size:13px}
+.layer-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.layer-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.layer-table td:first-child{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);white-space:nowrap;width:60px}
 
-.block {
-    background: #1b1f27;
-    padding: 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    line-height: 1.5;
-}
+.matrix-row{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.matrix-row:last-child{border-bottom:none}
+.matrix-pair{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--purple);font-size:12px}
+.matrix-note{color:var(--muted);margin-top:2px}
 
-hr {
-    border: none;
-    border-top: 1px solid #2c313a;
-    margin: 20px 0;
-}
+.raw-toggle{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:12px;display:inline-block}
+.raw-json{display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
+.raw-json.show{display:block}
+
+.callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center}
+.callout .big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--green)}
+.callout .sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+.footer{text-align:center;padding:24px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
+.footer a{color:var(--accent);text-decoration:none}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<div class="container">
-
-<h1>NTI Structural Audit</h1>
-
-<textarea id="inputText" placeholder="Paste your email or message here..."></textarea>
-
-<button class="primary" onclick="runAudit()">AUDIT</button>
-
-<button class="sample" onclick="loadSample('a')">Use Sample A</button>
-<button class="sample" onclick="loadSample('b')">Use Sample B</button>
-<button class="sample" onclick="loadSample('c')">Use Sample C</button>
-
-<div class="results" id="results">
-
-<hr>
-
-<div class="metric">
-    <div class="metric-label">Token Reduction Opportunity</div>
-    <div class="metric-value" id="reduction"></div>
+<div class="topbar">
+  <div class="logo">ARTIFACT ZERO</div>
+  <div><span class="live-dot"></span><span class="version">NTI canonical-nti-v2.0 · LIVE</span></div>
 </div>
 
-<div class="metric">
-    <div class="metric-label">Current Length</div>
-    <div class="metric-value" id="currentLength"></div>
+<div class="main">
+
+  <div class="input-section">
+    <label>Paste any AI-generated text, email, or message</label>
+    <textarea id="input" placeholder="Paste text here to run the full NTI canonical stack..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="runBtn" onclick="runNTI()">Run Full Stack Audit</button>
+      <button class="btn btn-sample" onclick="loadSample('a')">Sample: Adversarial</button>
+      <button class="btn btn-sample" onclick="loadSample('b')">Sample: Corporate Drift</button>
+      <button class="btn btn-sample" onclick="loadSample('c')">Sample: Overconfident AI</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+
+    <div class="hero-scores" id="heroScores"></div>
+
+    <div class="callout">
+      <div class="big">63–65%</div>
+      <div class="sub">Validated token cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro · Rule-based · Zero inference cost</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" onclick="toggle('fmBody')">
+        <h3>Parent Failure Modes</h3>
+        <span class="badge" id="fmBadge">—</span>
+      </div>
+      <div class="panel-body" id="fmBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" onclick="toggle('tiltBody')">
+        <h3>Tilt Taxonomy (10 Categories)</h3>
+        <span class="badge" id="tiltBadge">—</span>
+      </div>
+      <div class="panel-body" id="tiltBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" onclick="toggle('matrixBody')">
+        <h3>Interaction Matrix</h3>
+        <span class="badge" id="matrixBadge">—</span>
+      </div>
+      <div class="panel-body" id="matrixBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" onclick="toggle('layerBody')">
+        <h3>Layer Analysis (L0–L7)</h3>
+      </div>
+      <div class="panel-body" id="layerBody"></div>
+    </div>
+
+    <span class="raw-toggle" onclick="toggleRaw()">View raw JSON response</span>
+    <div class="raw-json" id="rawJson"></div>
+
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="reset()">Run Another Audit</button>
+    </div>
+  </div>
+
 </div>
 
-<div class="metric">
-    <div class="metric-label">Optimal Structural Length</div>
-    <div class="metric-value" id="optimalLength"></div>
-</div>
-
-<div class="metric">
-    <div class="metric-label">Structural Noise Index</div>
-    <div class="metric-value" id="noiseIndex"></div>
-</div>
-
-<div class="metric">
-    <div class="metric-label">Dominance Exposure</div>
-    <div class="metric-value" id="dominance"></div>
-</div>
-
-<div class="metric">
-    <div class="metric-label">Escalation Risk</div>
-    <div class="metric-value" id="risk"></div>
-</div>
-
-<div class="section-title">Core Intent (Machine View)</div>
-<div class="block" id="machineView"></div>
-
-<div class="section-title">Executive Compression</div>
-<div class="block" id="compression"></div>
-
-<button class="primary" onclick="clearAudit()">Run Another Audit</button>
-
-</div>
-
+<div class="footer">
+  Artifact Zero Labs · NTI canonical-nti-v2.0 · Rule-based, zero LLM dependency · <a href="/health">Health</a> · <a href="/canonical/status">Status</a>
 </div>
 
 <script>
+const SAMPLES = {
+  a: "You were wrong earlier — not about routing — but about thinking routing was still broken. Routing is fixed. Your fetch body was sending the wrong key. That is not a routing problem. That is a payload problem. The fact that you kept debugging CORS and 404s after the route was already live means you lost the thread. The fix was one line. You spent an hour on it.",
+  b: "We need to align on Q3 projections. Generally speaking, most teams are basically on track, and overall the numbers look fine. We can probably address the variance later after we launch the new dashboard. Don't worry about the gap in EMEA — it's fine for now and we'll figure it out eventually.",
+  c: "This solution guarantees perfect security and eliminates all risk in every scenario. Our system always delivers and never fails. Everyone agrees this is the best practice, and research shows it works for everyone in any situation. We can handle everything — just deploy it and rest assured."
+};
 
-function tokenize(text) {
-    return text.trim().split(/\s+/).length;
+function loadSample(k){ document.getElementById('input').value = SAMPLES[k]; }
+function reset(){ document.getElementById('input').value = ''; document.getElementById('results').classList.remove('show'); window.scrollTo(0,0); }
+function toggle(id){ const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
+function toggleRaw(){ document.getElementById('rawJson').classList.toggle('show'); }
+
+function fmClass(s){ return s.includes('CONFIRMED') ? 'fm-confirmed' : s.includes('PROBABLE') ? 'fm-probable' : 'fm-false'; }
+function fmLabel(s){ return s.includes('FALSE') ? 'CLEAR' : s.replace('_',' '); }
+function niiClass(s){ return s >= 0.8 ? 'good' : s >= 0.5 ? 'warning' : 'critical'; }
+
+async function runNTI(){
+  const text = document.getElementById('input').value.trim();
+  if(!text) return;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Running full stack...';
+
+  try {
+    const res = await fetch('/nti', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text: text})
+    });
+    const data = await res.json();
+    if(data.error){ alert('Error: ' + data.error); btn.disabled = false; btn.textContent = 'Run Full Stack Audit'; return; }
+    renderResults(data);
+    document.getElementById('results').classList.add('show');
+    document.getElementById('results').scrollIntoView({behavior:'smooth'});
+  } catch(err){ alert('Connection error: ' + err.message); }
+
+  btn.disabled = false;
+  btn.textContent = 'Run Full Stack Audit';
 }
 
-function structuralCompress(text) {
-    // Simple compression logic for demo mode
-    let sentences = text.split(/[.?!]/).filter(s => s.trim().length > 0);
-    if (sentences.length > 2) {
-        return sentences.slice(0, 2).join(". ").trim() + ".";
-    }
-    return sentences.join(". ").trim() + ".";
+function renderResults(data){
+  const nii = data.nii || {};
+  const fm = data.parent_failure_modes || {};
+  const tilt = data.tilt_taxonomy || [];
+  const matrix = data.interaction_matrix || {};
+  const layers = data.layers || {};
+  const latency = data.telemetry?.latency_ms || '—';
+  const niiScore = nii.nii_score ?? 0;
+  const dominance = matrix.dominance_detected || ['NONE'];
+
+  document.getElementById('heroScores').innerHTML = `
+    <div class="score-card ${niiClass(niiScore)}"><div class="sc-value">${(niiScore*100).toFixed(0)}%</div><div class="sc-label">NTI Integrity Index</div></div>
+    <div class="score-card ${nii.q1_constraints_explicit>=1?'good':'critical'}"><div class="sc-value">${nii.q1_constraints_explicit>=1?'YES':'NO'}</div><div class="sc-label">Constraints Explicit</div></div>
+    <div class="score-card ${nii.q2_constraints_before_capability>=1?'good':'critical'}"><div class="sc-value">${nii.q2_constraints_before_capability>=1?'YES':'NO'}</div><div class="sc-label">Constraints First</div></div>
+    <div class="score-card ${nii.q3_substitutes_after_enforcement>=1?'good':'critical'}"><div class="sc-value">${nii.q3_substitutes_after_enforcement>=1?'YES':'NO'}</div><div class="sc-label">Boundary Enforced</div></div>
+    <div class="score-card info"><div class="sc-value">${tilt.length}</div><div class="sc-label">Tilt Categories</div></div>
+    <div class="score-card info"><div class="sc-value">${latency}ms</div><div class="sc-label">Latency</div></div>
+  `;
+
+  const modes = [
+    {key:'UDDS',full:'Upstream Denial via Downstream Substitution',state:fm.UDDS?.udds_state||'UDDS_FALSE'},
+    {key:'DCE',full:'Deferred Constraint Externalization',state:fm.DCE?.dce_state||'DCE_FALSE'},
+    {key:'CCA',full:'Constraint Collapse via Aggregation',state:fm.CCA?.cca_state||'CCA_FALSE'},
+  ];
+  const active = modes.filter(m=>!m.state.includes('FALSE')).length;
+  document.getElementById('fmBadge').className = 'badge '+(active>0?'badge-red':'badge-green');
+  document.getElementById('fmBadge').textContent = active>0?active+' DETECTED':'CLEAR';
+  document.getElementById('fmBody').innerHTML = modes.map(m=>`
+    <div class="fm-row"><div><div class="fm-name">${m.key}</div><div class="fm-full">${m.full}</div></div>
+    <div class="fm-status ${fmClass(m.state)}">${fmLabel(m.state)}</div></div>
+  `).join('');
+
+  document.getElementById('tiltBadge').className = 'badge '+(tilt.length>0?'badge-amber':'badge-green');
+  document.getElementById('tiltBadge').textContent = tilt.length>0?tilt.length+' ACTIVE':'NONE';
+  document.getElementById('tiltBody').innerHTML = tilt.length>0 ?
+    '<div class="tilt-tags">'+tilt.map(t=>`<span class="tilt-tag">${t}</span>`).join('')+'</div>' :
+    '<span style="color:var(--muted);font-size:13px">No tilt categories detected.</span>';
+
+  document.getElementById('matrixBadge').className = 'badge '+(dominance[0]!=='NONE'?'badge-red':'badge-green');
+  document.getElementById('matrixBadge').textContent = dominance.join(' + ');
+  let mh = '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Dominance order: CCA > UDDS > DCE (canonical)</div>';
+  (matrix.pairwise||[]).forEach(p=>{ mh+=`<div class="matrix-row"><div class="matrix-pair">${p.pair}</div><div class="matrix-note">${p.note}</div></div>`; });
+  if(matrix.triadic) mh+=`<div class="matrix-row" style="margin-top:8px"><div class="matrix-pair">${matrix.triadic.combo} (TRIADIC)</div><div class="matrix-note">${matrix.triadic.note}</div></div>`;
+  document.getElementById('matrixBody').innerHTML = mh;
+
+  const lr = [
+    ['L0','Reality Substrate',JSON.stringify(layers.L0_reality_substrate?.constraints_found||[])],
+    ['L1','Input Freeze',layers.L1_input_freeze?.objective||'—'],
+    ['L2','Interpretive Framing',sumL2(layers.L2_interpretive_framing)],
+    ['L3','Objective Integrity',sumL3(layers.L3_objective_integrity)],
+    ['L4','Execution Vectors','Recorded'],
+    ['L5','Output Enforcement','Drift modes flagged above'],
+    ['L6','Interface Contracts','JOS binding available'],
+    ['L7','Telemetry',`${data.telemetry?.request_id?.substring(0,8)||'—'}… | ${latency}ms`],
+  ];
+  document.getElementById('layerBody').innerHTML = `<table class="layer-table"><thead><tr><th>Layer</th><th>Name</th><th>Output</th></tr></thead><tbody>${lr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td style="word-break:break-word">${r[2]}</td></tr>`).join('')}</tbody></table>`;
+
+  document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
 }
 
-function calculateNoise(text) {
-    let words = tokenize(text);
-    if (words < 20) return "Low";
-    if (words < 60) return "Moderate";
-    return "High";
+function sumL2(f){
+  if(!f) return '—';
+  const i=[];
+  if(f.hedge_markers?.length) i.push('Hedges: '+f.hedge_markers.join(', '));
+  if(f.reassurance_markers?.length) i.push('Reassurance: '+f.reassurance_markers.join(', '));
+  if(f.category_blend_markers?.length) i.push('Blends: '+f.category_blend_markers.join(', '));
+  return i.length?i.join(' · '):'Clean';
 }
-
-function dominanceExposure(text) {
-    let lower = text.toLowerCase();
-    if (lower.includes("wrong") || lower.includes("never") || lower.includes("always")) {
-        return "Elevated";
-    }
-    return "Moderate";
+function sumL3(d){
+  if(!d) return '—';
+  return `Similarity: ${d.jaccard_similarity} · Drift: ${d.drift_score} · Mutation: ${d.mutation_markers_present?'YES':'NO'}`;
 }
-
-function escalationRisk(text) {
-    let lower = text.toLowerCase();
-    if (lower.includes("never") || lower.includes("always")) return "High";
-    return "Low";
-}
-
-function runAudit() {
-    let text = document.getElementById("inputText").value.trim();
-    if (!text) return;
-
-    let currentTokens = tokenize(text);
-    let compressed = structuralCompress(text);
-    let optimalTokens = tokenize(compressed);
-
-    let reduction = Math.round((1 - (optimalTokens / currentTokens)) * 100);
-
-    document.getElementById("reduction").innerText = reduction + "%";
-    document.getElementById("currentLength").innerText = currentTokens + " tokens";
-    document.getElementById("optimalLength").innerText = optimalTokens + " tokens";
-    document.getElementById("noiseIndex").innerText = calculateNoise(text);
-    document.getElementById("dominance").innerText = dominanceExposure(text);
-    document.getElementById("risk").innerText = escalationRisk(text);
-
-    document.getElementById("machineView").innerText = compressed;
-    document.getElementById("compression").innerText = compressed;
-
-    document.getElementById("results").style.display = "block";
-    window.scrollTo(0, document.body.scrollHeight);
-}
-
-function clearAudit() {
-    document.getElementById("inputText").value = "";
-    document.getElementById("results").style.display = "none";
-    window.scrollTo(0, 0);
-}
-
-function loadSample(type) {
-    let sampleText = "";
-    if (type === "a") {
-        sampleText = "You were wrong earlier about routing still being broken. Routing was fixed. The payload key was incorrect.";
-    } else if (type === "b") {
-        sampleText = "We need to discuss why the quarterly projections did not align with actual performance and determine corrective strategy.";
-    } else {
-        sampleText = "This guarantees perfect security and eliminates all risk in every scenario.";
-    }
-    document.getElementById("inputText").value = sampleText;
-}
-
 </script>
-
 </body>
 </html>
