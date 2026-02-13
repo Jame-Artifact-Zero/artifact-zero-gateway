@@ -9,7 +9,6 @@ app = Flask(__name__)
 # ==========================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-NTI_AUTH_TOKEN = os.getenv("NTI_AUTH_TOKEN")
 
 if not OPENAI_API_KEY:
     print("WARNING: OPENAI_API_KEY not set")
@@ -33,17 +32,11 @@ def health():
 
 @app.route("/nti", methods=["POST"])
 def nti():
-    auth_header = request.headers.get("Authorization")
-
-    if not auth_header:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    token = auth_header.replace("Bearer ", "")
-
-    if token != NTI_AUTH_TOKEN:
-        return jsonify({"error": "Unauthorized"}), 401
-
     data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON payload received"}), 400
+
     user_input = data.get("input")
 
     if not user_input:
@@ -55,7 +48,7 @@ def nti():
             messages=[
                 {
                     "role": "system",
-                    "content": "You are NTI. You do structural clarity analysis only. Remove emotional guidance. Identify structural signals, leverage points, distortions, and execution vectors."
+                    "content": "You are NTI. You perform structural clarity analysis only. Remove emotional framing. Identify distortions, leverage points, signal separation, execution vectors, and structural instability."
                 },
                 {
                     "role": "user",
