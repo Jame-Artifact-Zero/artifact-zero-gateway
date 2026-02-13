@@ -12,10 +12,15 @@ from flask import Flask, request, jsonify, render_template
 app = Flask(__name__)
 
 # ============================================================
-# CANONICAL NTI RUNTIME v1.1 (RULE-BASED, NO LLM DEPENDENCY)
-# Change in v1.1: Add T2_CERTAINTY_INFLATION tilt cluster only.
+# CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
+#
+# v2.0 single monolithic revision includes:
+# - New tilt clusters: T4, T5, T9, T10
+# - Broadened DCE markers (soft deferral)
+# - NII q3 penalizes: boundary absence + new structural tilt clusters
+# - No changes to layer schema, dominance order, or UDDS count logic
 # ============================================================
-NTI_VERSION = "canonical-nti-v1.1"
+NTI_VERSION = "canonical-nti-v2.0"
 DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
 
 
@@ -143,6 +148,13 @@ def record_result(request_id: str, result: Dict[str, Any]) -> None:
 # ==========================
 WORD_RE = re.compile(r"[A-Za-z0-9']+")
 
+STOPWORDS = {
+    "the", "a", "an", "and", "or", "but", "if", "then", "so", "to", "of", "in", "on", "for", "with", "as",
+    "we", "you", "they", "it", "is", "are", "was", "were", "be", "been", "being", "this", "that", "these",
+    "those", "will", "would", "should", "can", "could", "may", "might", "do", "does", "did", "at", "by",
+    "from", "into", "over", "under", "before", "after", "about", "because", "while", "just", "now", "today"
+}
+
 def tokenize(text: str) -> List[str]:
     return [t.lower() for t in WORD_RE.findall(text or "")]
 
@@ -165,6 +177,25 @@ def jaccard(a: List[str], b: List[str]) -> float:
         return 0.0
     return round(len(sa & sb) / len(sa | sb), 3)
 
+def extract_domain_tokens(text: str) -> List[str]:
+    """
+    Lightweight "domain token" extraction for scope expansion detection.
+    Heuristic:
+      - alphanumeric tokens length >= 4
+      - not a stopword
+    """
+    toks = tokenize(text)
+    dom = []
+    for t in toks:
+        if len(t) >= 4 and t not in STOPWORDS:
+            dom.append(t)
+    # unique preserve order
+    uniq = []
+    for x in dom:
+        if x not in uniq:
+            uniq.append(x)
+    return uniq[:80]
+
 
 # ==========================
 # CANONICAL LAYER MODEL (L0-L7)
@@ -172,10 +203,13 @@ def jaccard(a: List[str], b: List[str]) -> float:
 L0_CONSTRAINT_MARKERS = [
     "must", "cannot", "can't", "won't", "requires", "require", "only if", "no way", "not possible",
     "dependency", "dependent", "api key", "openai", "render", "legal", "policy", "security", "compliance",
-    "budget", "deadline", "today", "production", "cannot expose", "secret", "token"
+    "budget", "deadline", "today", "production", "cannot expose", "secret", "token", "rate limit", "auth"
 ]
 
-L2_HEDGE = ["maybe", "might", "could", "perhaps", "it seems", "it sounds", "generally", "often", "usually", "in general"]
+L2_HEDGE = [
+    "maybe", "might", "could", "perhaps", "it seems", "it sounds", "generally", "often", "usually",
+    "in general", "likely", "approximately", "around"
+]
 L2_REASSURE = ["don't worry", "no problem", "it's okay", "you got this", "rest assured", "glad", "happy to"]
 L2_CATEGORY_BLEND = ["kind of", "sort of", "basically", "overall", "in other words", "at the end of the day"]
 
@@ -200,9 +234,14 @@ NARRATIVE_STABILIZATION_MARKERS = [
     "not a problem", "totally"
 ]
 
+# DCE broadened to include "soft deferral" markers
 DCE_DEFER_MARKERS = [
+    # explicit deferral
     "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
-    "we'll figure it out", "next week", "after we launch", "phase 2"
+    "we'll figure it out", "next week", "after we launch", "phase 2", "future iteration", "future iterations",
+    # soft deferral / drift-by-process
+    "explore", "consider", "evaluate", "assess", "as we continue", "as we iterate", "we will look into",
+    "we'll look into", "we will revisit", "we'll revisit"
 ]
 
 CCA_COLLAPSE_MARKERS = [
@@ -213,19 +252,17 @@ CCA_COLLAPSE_MARKERS = [
 
 # ==========================
 # NTE-CLF (Tilt Taxonomy) — RULE-BASED CLASSIFIER
-# v1.1 adds: T2_CERTAINTY_INFLATION (absolute guarantees without enforcement verbs)
+# v2.0 adds: T4, T5, T9, T10 and keeps T2
 # ==========================
 TILT_TAXONOMY = {
     "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
     "T3_CONSENSUS_CLAIMS": ["most people", "many people", "everyone", "no one", "in general", "typically"],
-    "T4_AUTHORITY_INFLATION": ["clearly", "obviously", "definitely", "certainly", "undeniably", "proven", "fact"],
-    "T5_SCOPE_CREEP": ["also", "and another", "while we're at it", "let's add", "plus", "in addition"],
-    "T6_CONSTRAINT_DEFERRAL": ["later", "eventually", "phase 2", "after we launch", "we'll figure it out"],
+    "T6_CONSTRAINT_DEFERRAL": ["later", "eventually", "phase 2", "after we launch", "we'll figure it out", "future iteration"],
     "T7_CATEGORY_BLEND": ["kind of", "sort of", "basically", "overall", "at the end of the day"],
     "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
 }
 
-# NEW CLUSTER (T2)
+# T2: certainty inflation (absolute guarantees without enforcement verbs)
 CERTAINTY_INFLATION_TOKENS = [
     "guarantee", "guarantees", "guaranteed",
     "perfect", "zero risk", "eliminates all risk", "eliminate all risk",
@@ -244,13 +281,32 @@ CERTAINTY_ENFORCEMENT_VERBS = [
     "verify", "verifies", "verified", "verifying"
 ]
 
+# T5: absolute language
+ABSOLUTE_LANGUAGE_TOKENS = [
+    "always", "never", "everyone", "no one", "completely", "entirely", "100%", "guaranteed", "perfect", "zero risk"
+]
+
+# T10: authority imposition
+AUTHORITY_IMPOSITION_TOKENS = [
+    "experts agree", "industry standard", "research shows", "studies show", "best practice",
+    "widely accepted", "authorities agree", "proven by research"
+]
+
+# T4: capability overreach
+CAPABILITY_OVERREACH_TOKENS = [
+    "solves everything", "solve everything", "handles everything", "handle everything",
+    "covers all cases", "all cases", "any scenario", "every scenario", "universal solution",
+    "works for everyone", "works in any situation", "end-to-end for all"
+]
+CAPABILITY_VERBS = ["solve", "solves", "handle", "handles", "cover", "covers", "ensure", "ensures", "guarantee", "guarantees"]
+
 def _contains_any(text_lc: str, needles: List[str]) -> bool:
     for n in needles:
         if n in text_lc:
             return True
     return False
 
-def classify_tilt(text: str) -> List[str]:
+def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
     t = (text or "").lower()
     hits: List[str] = []
 
@@ -261,14 +317,42 @@ def classify_tilt(text: str) -> List[str]:
                 hits.append(cat)
                 break
 
-    # NEW: T2_CERTAINTY_INFLATION
-    # Rule: absolute certainty token present AND no enforcement verb present
+    # T2 certainty inflation (certainty token present AND no enforcement)
     certainty_present = _contains_any(t, CERTAINTY_INFLATION_TOKENS)
     enforcement_present = _contains_any(t, CERTAINTY_ENFORCEMENT_VERBS)
     if certainty_present and not enforcement_present:
         hits.append("T2_CERTAINTY_INFLATION")
 
-    # keep stable order, remove duplicates if any
+    # T5 absolute language (simple token presence)
+    if _contains_any(t, ABSOLUTE_LANGUAGE_TOKENS):
+        hits.append("T5_ABSOLUTE_LANGUAGE")
+
+    # T10 authority imposition
+    if _contains_any(t, AUTHORITY_IMPOSITION_TOKENS):
+        hits.append("T10_AUTHORITY_IMPOSITION")
+
+    # T4 capability overreach: phrase OR (capability verb + universal quantifier)
+    if _contains_any(t, CAPABILITY_OVERREACH_TOKENS):
+        hits.append("T4_CAPABILITY_OVERREACH")
+    else:
+        universal = any(u in t for u in ["all", "every", "any", "everything", "everyone", "no one"])
+        capverb = _contains_any(t, CAPABILITY_VERBS)
+        if universal and capverb:
+            hits.append("T4_CAPABILITY_OVERREACH")
+
+    # T9 scope expansion: compare prompt vs answer domain tokens (only if prompt+answer provided)
+    # Heuristic: if a lot of answer domain tokens are not in prompt domain tokens AND drift is high.
+    if prompt and answer:
+        p_dom = set(extract_domain_tokens(prompt))
+        a_dom = extract_domain_tokens(answer)
+        if a_dom:
+            new_tokens = [x for x in a_dom if x not in p_dom]
+            new_ratio = len(new_tokens) / max(len(a_dom), 1)
+            # conservative threshold
+            if new_ratio >= 0.55 and len(new_tokens) >= 6:
+                hits.append("T9_SCOPE_EXPANSION")
+
+    # stable order, remove duplicates
     uniq: List[str] = []
     for h in hits:
         if h not in uniq:
@@ -278,13 +362,35 @@ def classify_tilt(text: str) -> List[str]:
 
 # ==========================
 # NII (NTI Integrity Index)
+# NOTE: Schema preserved: q1/q2/q3 + nii_score.
+# q3 now penalizes boundary absence AND structural drift tilt categories (T2/T4/T5/T9/T10).
 # ==========================
-def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool) -> Dict[str, Any]:
+def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
     q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
     q2 = 0.0 if downstream_before_constraints else 1.0
 
-    boundary_absent = any(m in (answer or "").lower() for m in BOUNDARY_ABSENCE_MARKERS)
-    q3 = 0.0 if boundary_absent else 1.0
+    a_lc = (answer or "").lower()
+
+    boundary_absent = (
+        any(m in a_lc for m in BOUNDARY_ABSENCE_MARKERS) or
+        any(m in a_lc for m in L2_CATEGORY_BLEND) or
+        any(m in a_lc for m in DCE_DEFER_MARKERS) or
+        any(m in a_lc for m in NARRATIVE_STABILIZATION_MARKERS)
+    )
+
+    # Structural risk categories that should reduce integrity (q3)
+    structural_tilt_risk = any(t in tilt_taxonomy for t in [
+        "T2_CERTAINTY_INFLATION",
+        "T4_CAPABILITY_OVERREACH",
+        "T5_ABSOLUTE_LANGUAGE",
+        "T9_SCOPE_EXPANSION",
+        "T10_AUTHORITY_IMPOSITION",
+        "T7_CATEGORY_BLEND",
+        "T6_CONSTRAINT_DEFERRAL",
+        "T1_REASSURANCE_DRIFT"
+    ])
+
+    q3 = 0.0 if (boundary_absent or structural_tilt_risk) else 1.0
 
     score = round((q1 + q2 + q3) / 3.0, 2)
     return {
@@ -330,7 +436,7 @@ def detect_narrative_stabilization(answer: str) -> bool:
     return any(m in a for m in NARRATIVE_STABILIZATION_MARKERS) or any(m in a for m in L2_REASSURE)
 
 
-def detect_dce(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
+def detect_dce(answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
     a = (answer or "").lower()
     defer = any(m in a for m in DCE_DEFER_MARKERS)
     constraints_missing = len(l0_constraints) == 0
@@ -486,56 +592,6 @@ def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ==========================
-# Evaluation Tools (OI-UEP, OI-IC, H-I²E)
-# ==========================
-def eval_oi_uep(objective: str, baseline: str, perturbed: str) -> Dict[str, Any]:
-    b = tokenize(baseline)
-    p = tokenize(perturbed)
-    sim = jaccard(b, p)
-    drift = round(1.0 - sim, 3)
-
-    em = classify_tilt(perturbed)
-    emotion_present = any(cat in em for cat in ["T1_REASSURANCE_DRIFT", "T8_PRESSURE_OPTIMIZATION"])
-
-    return {
-        "objective": normalize_space(objective)[:300],
-        "baseline_vs_perturbed_similarity": sim,
-        "drift_score": drift,
-        "emotional_perturbation_detected": emotion_present,
-        "tilt_categories": em
-    }
-
-
-def eval_oi_ic(objective: str, clean_input: str, corrupted_input: str) -> Dict[str, Any]:
-    c = tokenize(clean_input)
-    d = tokenize(corrupted_input)
-    sim = jaccard(c, d)
-    drift = round(1.0 - sim, 3)
-    return {
-        "objective": normalize_space(objective)[:300],
-        "clean_vs_corrupted_similarity": sim,
-        "drift_score": drift
-    }
-
-
-def eval_h_i2e(objective: str, human_a: str, human_b: str) -> Dict[str, Any]:
-    a = tokenize(human_a)
-    b = tokenize(human_b)
-    sim = jaccard(a, b)
-    drift = round(1.0 - sim, 3)
-    closure_markers = ["done", "final", "stop", "locked", "no more", "closed", "end"]
-    closure_a = any(m in (human_a or "").lower() for m in closure_markers)
-    closure_b = any(m in (human_b or "").lower() for m in closure_markers)
-    return {
-        "objective": normalize_space(objective)[:300],
-        "human_similarity": sim,
-        "drift_score": drift,
-        "closure_asserted_a": closure_a,
-        "closure_asserted_b": closure_b
-    }
-
-
-# ==========================
 # ROUTES
 # ==========================
 @app.route("/")
@@ -564,8 +620,7 @@ def canonical_status():
             "nte_clf_tilt_taxonomy": True,
             "nii_integrity_index": True,
             "jos_template_and_binding": True,
-            "telemetry_and_persistence": True,
-            "evaluation_tools_oi_uep_oi_ic_h_i2e": True
+            "telemetry_and_persistence": True
         }
     })
 
@@ -612,6 +667,7 @@ def nti_run():
     t0 = time.time()
 
     payload = request.get_json() or {}
+
     text = payload.get("text")
     prompt = payload.get("prompt")
     answer = payload.get("answer")
@@ -631,14 +687,15 @@ def nti_run():
 
     framing = detect_l2_framing(text)
 
+    # tilt taxonomy (now uses prompt+answer for scope expansion detection)
+    tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
+
     udds = detect_udds(prompt or "", answer or text, l0_constraints)
-    dce = detect_dce(prompt or "", answer or text, l0_constraints)
+    dce = detect_dce(answer or text, l0_constraints)
     cca = detect_cca(prompt or "", answer or text)
 
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
-    nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints)
-
-    tilt = classify_tilt(text)
+    nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
 
     dominance: List[str] = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
@@ -695,7 +752,8 @@ def nti_run():
         "session_id": session_id,
         "latency_ms": latency_ms,
         "dominance": dominance,
-        "nii": nii.get("nii_score")
+        "nii": nii.get("nii_score"),
+        "tilt": tilt
     })
 
     result["telemetry"] = {
@@ -705,39 +763,6 @@ def nti_run():
     }
 
     return jsonify(result)
-
-
-@app.route("/eval/oi-uep", methods=["POST"])
-def route_oi_uep():
-    payload = request.get_json() or {}
-    objective = payload.get("objective", "")
-    baseline = payload.get("baseline", "")
-    perturbed = payload.get("perturbed", "")
-    if not objective or not baseline or not perturbed:
-        return jsonify({"error": "Provide objective, baseline, perturbed"}), 400
-    return jsonify({"status": "ok", "version": NTI_VERSION, "result": eval_oi_uep(objective, baseline, perturbed)})
-
-
-@app.route("/eval/oi-ic", methods=["POST"])
-def route_oi_ic():
-    payload = request.get_json() or {}
-    objective = payload.get("objective", "")
-    clean_input = payload.get("clean_input", "")
-    corrupted_input = payload.get("corrupted_input", "")
-    if not objective or not clean_input or not corrupted_input:
-        return jsonify({"error": "Provide objective, clean_input, corrupted_input"}), 400
-    return jsonify({"status": "ok", "version": NTI_VERSION, "result": eval_oi_ic(objective, clean_input, corrupted_input)})
-
-
-@app.route("/eval/h-i2e", methods=["POST"])
-def route_hi2e():
-    payload = request.get_json() or {}
-    objective = payload.get("objective", "")
-    human_a = payload.get("human_a", "")
-    human_b = payload.get("human_b", "")
-    if not objective or not human_a or not human_b:
-        return jsonify({"error": "Provide objective, human_a, human_b"}), 400
-    return jsonify({"status": "ok", "version": NTI_VERSION, "result": eval_h_i2e(objective, human_a, human_b)})
 
 
 if __name__ == "__main__":
