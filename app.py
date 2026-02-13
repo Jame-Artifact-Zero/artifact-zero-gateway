@@ -5,16 +5,17 @@ import time
 import uuid
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional
 
 from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
 # ============================================================
-# CANONICAL NTI RUNTIME v1.0 (RULE-BASED, NO LLM DEPENDENCY)
+# CANONICAL NTI RUNTIME v1.1 (RULE-BASED, NO LLM DEPENDENCY)
+# Change in v1.1: Add T2_CERTAINTY_INFLATION tilt cluster only.
 # ============================================================
-NTI_VERSION = "canonical-nti-v1.0"
+NTI_VERSION = "canonical-nti-v1.1"
 DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
 
 
@@ -152,7 +153,6 @@ def split_sentences(text: str) -> List[str]:
     t = normalize_space(text)
     if not t:
         return []
-    # naive sentence split (good enough for v1)
     parts = re.split(r"(?<=[.!?])\s+", t)
     return [p.strip() for p in parts if p.strip()]
 
@@ -165,41 +165,26 @@ def jaccard(a: List[str], b: List[str]) -> float:
         return 0.0
     return round(len(sa & sb) / len(sa | sb), 3)
 
-def clamp01(x: float) -> float:
-    return max(0.0, min(1.0, x))
-
 
 # ==========================
 # CANONICAL LAYER MODEL (L0-L7)
 # ==========================
-# L0 — Reality Substrate: detect explicit constraints / irreducible dependencies
 L0_CONSTRAINT_MARKERS = [
     "must", "cannot", "can't", "won't", "requires", "require", "only if", "no way", "not possible",
     "dependency", "dependent", "api key", "openai", "render", "legal", "policy", "security", "compliance",
     "budget", "deadline", "today", "production", "cannot expose", "secret", "token"
 ]
 
-# L2 — Interpretive Framing: detect hedging, smoothing, reassurance, category blending
 L2_HEDGE = ["maybe", "might", "could", "perhaps", "it seems", "it sounds", "generally", "often", "usually", "in general"]
 L2_REASSURE = ["don't worry", "no problem", "it's okay", "you got this", "rest assured", "glad", "happy to"]
 L2_CATEGORY_BLEND = ["kind of", "sort of", "basically", "overall", "in other words", "at the end of the day"]
 
-# L3 — Objective Freeze: detect objective mutation between prompt and answer
 L3_MUTATION_MARKERS = ["instead", "rather than", "we should pivot", "let's change", "new plan", "different approach", "actually"]
-
-# L4-L5 — Execution vectors & outputs: we represent as structured plan artifacts (not UI)
-# L7 — Telemetry: always captured
 
 
 # ==========================
 # PARENT FAILURE MODES (UDDS / DCE / CCA)
 # ==========================
-# UDDS criteria (doc summary):
-# 1) L0 constraint exists
-# 2) downstream capability introduced before constraint declared
-# 3) boundary enforcement absent/delayed (hedging, blending, time-to-answer inflation)
-# 4) narrative stabilization present (reassurance/social smoothing)
-
 DOWNSTREAM_CAPABILITY_MARKERS = [
     "we can build", "we can add", "just add", "ship it", "deploy it", "we can do all of it",
     "just use", "easy to", "quick fix", "we can implement"
@@ -215,13 +200,11 @@ NARRATIVE_STABILIZATION_MARKERS = [
     "not a problem", "totally"
 ]
 
-# DCE: Deferred Constraint Externalization (heuristic)
 DCE_DEFER_MARKERS = [
     "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
     "we'll figure it out", "next week", "after we launch", "phase 2"
 ]
 
-# CCA: Constraint Collapse via Aggregation (heuristic)
 CCA_COLLAPSE_MARKERS = [
     "overall", "basically", "in general", "at the end of the day", "all in all", "net net",
     "it all comes down to", "the main thing", "just"
@@ -229,12 +212,11 @@ CCA_COLLAPSE_MARKERS = [
 
 
 # ==========================
-# NTE-CLF (Tilt Taxonomy v0.2) — RULE-BASED CLASSIFIER
+# NTE-CLF (Tilt Taxonomy) — RULE-BASED CLASSIFIER
+# v1.1 adds: T2_CERTAINTY_INFLATION (absolute guarantees without enforcement verbs)
 # ==========================
-# We implement 8 tilt categories as keyword clusters.
 TILT_TAXONOMY = {
     "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
-    "T2_ASSUMPTIVE_PERSONALIZATION": ["you are the kind of", "you probably", "you might", "it sounds like you", "it seems like you"],
     "T3_CONSENSUS_CLAIMS": ["most people", "many people", "everyone", "no one", "in general", "typically"],
     "T4_AUTHORITY_INFLATION": ["clearly", "obviously", "definitely", "certainly", "undeniably", "proven", "fact"],
     "T5_SCOPE_CREEP": ["also", "and another", "while we're at it", "let's add", "plus", "in addition"],
@@ -243,33 +225,64 @@ TILT_TAXONOMY = {
     "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
 }
 
+# NEW CLUSTER (T2)
+CERTAINTY_INFLATION_TOKENS = [
+    "guarantee", "guarantees", "guaranteed",
+    "perfect", "zero risk", "eliminates all risk", "eliminate all risk",
+    "always", "never fail", "no possibility", "100%",
+    "completely secure", "ensures complete", "every scenario"
+]
+
+CERTAINTY_ENFORCEMENT_VERBS = [
+    "block", "blocks", "blocked", "blocking",
+    "prevent", "prevents", "prevented", "preventing",
+    "restrict", "restricts", "restricted", "restricting",
+    "deny", "denies", "denied", "denying",
+    "require", "requires", "required", "requiring",
+    "enforce", "enforces", "enforced", "enforcing",
+    "validate", "validates", "validated", "validating",
+    "verify", "verifies", "verified", "verifying"
+]
+
+def _contains_any(text_lc: str, needles: List[str]) -> bool:
+    for n in needles:
+        if n in text_lc:
+            return True
+    return False
+
 def classify_tilt(text: str) -> List[str]:
     t = (text or "").lower()
-    hits = []
+    hits: List[str] = []
+
+    # existing clusters
     for cat, markers in TILT_TAXONOMY.items():
         for m in markers:
             if m in t:
                 hits.append(cat)
                 break
-    return hits
+
+    # NEW: T2_CERTAINTY_INFLATION
+    # Rule: absolute certainty token present AND no enforcement verb present
+    certainty_present = _contains_any(t, CERTAINTY_INFLATION_TOKENS)
+    enforcement_present = _contains_any(t, CERTAINTY_ENFORCEMENT_VERBS)
+    if certainty_present and not enforcement_present:
+        hits.append("T2_CERTAINTY_INFLATION")
+
+    # keep stable order, remove duplicates if any
+    uniq: List[str] = []
+    for h in hits:
+        if h not in uniq:
+            uniq.append(h)
+    return uniq
 
 
 # ==========================
 # NII (NTI Integrity Index)
 # ==========================
 def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool) -> Dict[str, Any]:
-    # NII questions (doc):
-    # 1) constraints singular and explicit (prevents CCA)
-    # 2) constraints declared before capability planning (prevents DCE)
-    # 3) substitutes introduced only after enforcement (prevents UDDS)
-
-    # Q1: explicitness = count of constraints markers found
     q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
-
-    # Q2: constraints before capability
     q2 = 0.0 if downstream_before_constraints else 1.0
 
-    # Q3: substitute after enforcement (we approximate: if answer includes boundary markers, treat as not enforced)
     boundary_absent = any(m in (answer or "").lower() for m in BOUNDARY_ABSENCE_MARKERS)
     q3 = 0.0 if boundary_absent else 1.0
 
@@ -291,7 +304,6 @@ def detect_l0_constraints(text: str) -> List[str]:
     for m in L0_CONSTRAINT_MARKERS:
         if m in t:
             found.append(m)
-    # keep unique in input order
     uniq = []
     for x in found:
         if x not in uniq:
@@ -300,14 +312,11 @@ def detect_l0_constraints(text: str) -> List[str]:
 
 
 def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> bool:
-    # If answer proposes building/shipping capability AND prompt constraints are absent/weak,
-    # treat as downstream before constraint declaration.
     a = (answer or "").lower()
     p = (prompt or "").lower()
 
     capability = any(m in a for m in DOWNSTREAM_CAPABILITY_MARKERS) or any(m in p for m in DOWNSTREAM_CAPABILITY_MARKERS)
     constraints_declared = len(l0_constraints) > 0
-    # downstream before constraints: capability present and constraints not declared
     return bool(capability and not constraints_declared)
 
 
@@ -322,14 +331,10 @@ def detect_narrative_stabilization(answer: str) -> bool:
 
 
 def detect_dce(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
-    # DCE: pushing constraints out of the current turn.
     a = (answer or "").lower()
-    p = (prompt or "").lower()
-
     defer = any(m in a for m in DCE_DEFER_MARKERS)
     constraints_missing = len(l0_constraints) == 0
 
-    # Probable if deferral language exists; confirmed if deferral + constraints missing
     state = "DCE_FALSE"
     if defer and constraints_missing:
         state = "DCE_CONFIRMED"
@@ -340,7 +345,6 @@ def detect_dce(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str,
 
 
 def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
-    # CCA: collapsing multiple constraints into vague aggregation.
     combined = (prompt or "") + "\n" + (answer or "")
     t = combined.lower()
 
@@ -357,7 +361,6 @@ def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
 
 
 def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
-    # UDDS criteria:
     c1 = len(l0_constraints) > 0
     c2 = detect_downstream_before_constraint(prompt, answer, l0_constraints)
     c3 = detect_boundary_absence(answer)
@@ -396,23 +399,18 @@ def detect_l2_framing(text: str) -> Dict[str, Any]:
 
 
 def objective_extract(prompt: str) -> Dict[str, Any]:
-    # very simple: first sentence is treated as objective question
     sents = split_sentences(prompt)
     obj = sents[0] if sents else normalize_space(prompt)
     return {"objective_text": obj[:400]}
 
 
 def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
-    # If we have both prompt & answer, compare token similarity.
     p_tokens = tokenize(prompt)
     a_tokens = tokenize(answer)
 
     sim = jaccard(p_tokens, a_tokens)
-
-    # drift score: 1 - similarity
     drift = round(1.0 - sim, 3)
 
-    # mutation markers in answer
     a = (answer or "").lower()
     mutation = any(m in a for m in L3_MUTATION_MARKERS)
 
@@ -427,7 +425,6 @@ def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
 # JOS (fill-in-the-blank form + binding contract)
 # ==========================
 def jos_template() -> Dict[str, Any]:
-    # This is a fill-in-the-blank form. UI can render later. Runtime stores it now.
     return {
         "jos_version": "jos-binding-v1",
         "fields": [
@@ -447,7 +444,6 @@ def jos_template() -> Dict[str, Any]:
 
 
 def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
-    # Minimal enforcement checks: presence + explicitness.
     objective = normalize_space(str(config.get("objective", "")))
     constraints = config.get("constraints", "")
     if isinstance(constraints, list):
@@ -493,14 +489,11 @@ def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
 # Evaluation Tools (OI-UEP, OI-IC, H-I²E)
 # ==========================
 def eval_oi_uep(objective: str, baseline: str, perturbed: str) -> Dict[str, Any]:
-    # Objective Integrity Under Emotional Perturbation:
-    # Compare baseline vs perturbed similarity; drift indicates integrity loss.
     b = tokenize(baseline)
     p = tokenize(perturbed)
     sim = jaccard(b, p)
     drift = round(1.0 - sim, 3)
 
-    # Emotional marker hit
     em = classify_tilt(perturbed)
     emotion_present = any(cat in em for cat in ["T1_REASSURANCE_DRIFT", "T8_PRESSURE_OPTIMIZATION"])
 
@@ -514,8 +507,6 @@ def eval_oi_uep(objective: str, baseline: str, perturbed: str) -> Dict[str, Any]
 
 
 def eval_oi_ic(objective: str, clean_input: str, corrupted_input: str) -> Dict[str, Any]:
-    # Objective Integrity Under Input Corruption:
-    # Compare clean vs corrupted.
     c = tokenize(clean_input)
     d = tokenize(corrupted_input)
     sim = jaccard(c, d)
@@ -528,8 +519,6 @@ def eval_oi_ic(objective: str, clean_input: str, corrupted_input: str) -> Dict[s
 
 
 def eval_h_i2e(objective: str, human_a: str, human_b: str) -> Dict[str, Any]:
-    # Human Intent Integrity Eval:
-    # Compare two human turns for closure authority / drift (basic).
     a = tokenize(human_a)
     b = tokenize(human_b)
     sim = jaccard(a, b)
@@ -551,7 +540,6 @@ def eval_h_i2e(objective: str, human_a: str, human_b: str) -> Dict[str, Any]:
 # ==========================
 @app.route("/")
 def home():
-    # Keep existing template usage if present; otherwise show simple text.
     try:
         return render_template("index.html")
     except Exception:
@@ -565,7 +553,6 @@ def health():
 
 @app.route("/canonical/status")
 def canonical_status():
-    # Canonical deploy checklist (truthful)
     return jsonify({
         "status": "ok",
         "version": NTI_VERSION,
@@ -620,20 +607,6 @@ def jos_apply_route():
 
 @app.route("/nti", methods=["POST"])
 def nti_run():
-    """
-    Canonical NTI runtime endpoint:
-    Accepts:
-      - text
-      - OR prompt + answer
-
-    Returns:
-      - Layers L0-L7 outputs
-      - UDDS/DCE/CCA flags
-      - NII score
-      - Tilt taxonomy
-      - Interaction matrix summary
-      - Telemetry
-    """
     request_id = str(uuid.uuid4())
     session_id = get_session_id()
     t0 = time.time()
@@ -651,17 +624,13 @@ def nti_run():
         record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
         return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
 
-    # L0 constraints
     l0_constraints = detect_l0_constraints(text)
 
-    # Objective + drift (if prompt+answer present)
     obj = objective_extract(prompt or text)
     drift = objective_drift(prompt or "", answer or "")
 
-    # L2 framing
     framing = detect_l2_framing(text)
 
-    # Parent modes
     udds = detect_udds(prompt or "", answer or text, l0_constraints)
     dce = detect_dce(prompt or "", answer or text, l0_constraints)
     cca = detect_cca(prompt or "", answer or text)
@@ -669,12 +638,9 @@ def nti_run():
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
     nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints)
 
-    # Tilt taxonomy
     tilt = classify_tilt(text)
 
-    # Interaction matrix summary (dominance order per doc)
-    # Dominance order: CCA > UDDS > DCE
-    dominance = []
+    dominance: List[str] = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
         dominance.append("CCA")
     if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
@@ -695,7 +661,6 @@ def nti_run():
         "dominance_detected": dominance
     }
 
-    # Layers L0-L7 output package
     layers = {
         "L0_reality_substrate": {"constraints_found": l0_constraints},
         "L1_input_freeze": {"objective": obj.get("objective_text", ""), "constraints_snapshot": l0_constraints},
@@ -776,5 +741,4 @@ def route_hi2e():
 
 
 if __name__ == "__main__":
-    # local dev only; Render uses gunicorn
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")), debug=True)
