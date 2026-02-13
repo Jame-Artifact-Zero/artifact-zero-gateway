@@ -903,7 +903,7 @@
   async function callNTI(inputText){
     const url = (BASE_URL || "") + ENDPOINT;
 
-    const res = await fetch(url, {
+    const res = await fetch("/nti", {
       method: "POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ input: inputText })
