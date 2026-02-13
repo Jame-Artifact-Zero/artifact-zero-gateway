@@ -1,63 +1,30 @@
 import os
-import json
 import re
+import json
 import time
 import uuid
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from flask import Flask, request, jsonify, render_template
-from openai import OpenAI
 
 app = Flask(__name__)
 
-# ==========================
-# ENV
-# ==========================
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-if not OPENAI_API_KEY:
-    print("WARNING: OPENAI_API_KEY not set")
-
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-# SQLite DB file (Render ephemeral unless you add a persistent disk)
-DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_core.db")
-
-# ==========================
-# RULE REGISTRY (Deterministic Layer)
-# ==========================
-CERTAINTY_WORDS = {
-    "always", "never", "clearly", "obviously", "definitely", "certainly", "undeniably",
-    "prove", "proves", "proven", "fact", "facts", "guarantee", "guaranteed"
-}
-
-GENERALIZATION_PHRASES = {
-    "most people", "many people", "in general", "typically", "usually", "everyone",
-    "no one", "people like you", "a lot of people"
-}
-
-EMOTIONAL_INTENSIFIERS = {
-    "deeply", "truly", "incredibly", "extremely", "highly", "significantly", "powerful",
-    "amazing", "delightful", "remarkable", "shocking", "terrifying", "inspiring"
-}
-
-ASSUMPTION_STARTERS = {
-    "you may", "you might", "you probably", "it sounds like", "it seems like",
-    "you tend to", "chances are", "you likely", "you are the kind of"
-}
-
-# Optional: common "soft authority" steering phrases (counts toward authority-ish steering)
-SOFT_AUTHORITY_PHRASES = {
-    "it may be helpful to", "it might help to", "it’s important to", "you should consider",
-    "a good next step is", "you might want to"
-}
+# ============================================================
+# CANONICAL NTI RUNTIME v1.0 (RULE-BASED, NO LLM DEPENDENCY)
+# ============================================================
+NTI_VERSION = "canonical-nti-v1.0"
+DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
 
 
 # ==========================
 # DB INIT
 # ==========================
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def db_connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -69,36 +36,30 @@ def db_init() -> None:
     cur = conn.cursor()
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS nti_requests (
+    CREATE TABLE IF NOT EXISTS requests (
         id TEXT PRIMARY KEY,
         created_at TEXT NOT NULL,
+        route TEXT NOT NULL,
         ip TEXT,
         user_agent TEXT,
         session_id TEXT,
-        route TEXT NOT NULL,
-        model TEXT,
         latency_ms INTEGER,
-        openai_total_tokens INTEGER,
-        openai_prompt_tokens INTEGER,
-        openai_completion_tokens INTEGER,
-        input_length_chars INTEGER,
+        payload_json TEXT,
         error TEXT
     )
     """)
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS nti_core_results (
+    CREATE TABLE IF NOT EXISTS results (
         request_id TEXT PRIMARY KEY,
         version TEXT NOT NULL,
-        scores_json TEXT NOT NULL,
-        tilt_json TEXT NOT NULL,
-        tags_json TEXT NOT NULL,
-        FOREIGN KEY(request_id) REFERENCES nti_requests(id)
+        result_json TEXT NOT NULL,
+        FOREIGN KEY(request_id) REFERENCES requests(id)
     )
     """)
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS nti_events (
+    CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
         created_at TEXT NOT NULL,
         session_id TEXT,
@@ -115,14 +76,9 @@ db_init()
 
 
 # ==========================
-# UTIL: Time / IDs / Logging
+# TELEMETRY
 # ==========================
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 def get_session_id() -> str:
-    # UI can send this header later; for now we generate if missing.
     sid = request.headers.get("X-Session-Id")
     if sid and isinstance(sid, str) and len(sid) >= 8:
         return sid
@@ -130,183 +86,464 @@ def get_session_id() -> str:
 
 
 def log_json_line(event: str, payload: Dict[str, Any]) -> None:
-    # Structured log for Render logs (acts like telemetry even without DB)
     record = {"event": event, "ts": utc_now_iso(), **payload}
     print(json.dumps(record, ensure_ascii=False))
 
 
-def record_request_base(
+def record_request(
     request_id: str,
     route: str,
     session_id: str,
-    model: Optional[str],
-    latency_ms: Optional[int],
-    usage: Optional[Dict[str, int]],
-    input_len: Optional[int],
-    error: Optional[str]
+    latency_ms: int,
+    payload: Dict[str, Any],
+    error: Optional[str] = None
 ) -> None:
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     ua = request.headers.get("User-Agent")
-
-    prompt_tokens = None
-    completion_tokens = None
-    total_tokens = None
-    if usage:
-        prompt_tokens = usage.get("prompt_tokens")
-        completion_tokens = usage.get("completion_tokens")
-        total_tokens = usage.get("total_tokens")
-
     conn = db_connect()
     cur = conn.cursor()
     cur.execute("""
-        INSERT OR REPLACE INTO nti_requests
-        (id, created_at, ip, user_agent, session_id, route, model, latency_ms,
-         openai_total_tokens, openai_prompt_tokens, openai_completion_tokens, input_length_chars, error)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO requests
+        (id, created_at, route, ip, user_agent, session_id, latency_ms, payload_json, error)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         request_id,
         utc_now_iso(),
+        route,
         ip,
         ua,
         session_id,
-        route,
-        model,
         latency_ms,
-        total_tokens,
-        prompt_tokens,
-        completion_tokens,
-        input_len,
+        json.dumps(payload, ensure_ascii=False),
         error
     ))
     conn.commit()
     conn.close()
 
 
+def record_result(request_id: str, result: Dict[str, Any]) -> None:
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT OR REPLACE INTO results
+        (request_id, version, result_json)
+        VALUES (?, ?, ?)
+    """, (
+        request_id,
+        NTI_VERSION,
+        json.dumps(result, ensure_ascii=False)
+    ))
+    conn.commit()
+    conn.close()
+
+
 # ==========================
-# UTIL: Deterministic Scoring
+# TEXT UTIL
 # ==========================
-def _count_hits(text: str, wordset: set) -> int:
-    t = text.lower()
-    hits = 0
-    for w in wordset:
-        if " " in w:
-            hits += t.count(w)
-        else:
-            hits += len(re.findall(rf"\b{re.escape(w)}\b", t))
+WORD_RE = re.compile(r"[A-Za-z0-9']+")
+
+def tokenize(text: str) -> List[str]:
+    return [t.lower() for t in WORD_RE.findall(text or "")]
+
+def normalize_space(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip()
+
+def split_sentences(text: str) -> List[str]:
+    t = normalize_space(text)
+    if not t:
+        return []
+    # naive sentence split (good enough for v1)
+    parts = re.split(r"(?<=[.!?])\s+", t)
+    return [p.strip() for p in parts if p.strip()]
+
+def jaccard(a: List[str], b: List[str]) -> float:
+    sa = set(a)
+    sb = set(b)
+    if not sa and not sb:
+        return 1.0
+    if not sa or not sb:
+        return 0.0
+    return round(len(sa & sb) / len(sa | sb), 3)
+
+def clamp01(x: float) -> float:
+    return max(0.0, min(1.0, x))
+
+
+# ==========================
+# CANONICAL LAYER MODEL (L0-L7)
+# ==========================
+# L0 — Reality Substrate: detect explicit constraints / irreducible dependencies
+L0_CONSTRAINT_MARKERS = [
+    "must", "cannot", "can't", "won't", "requires", "require", "only if", "no way", "not possible",
+    "dependency", "dependent", "api key", "openai", "render", "legal", "policy", "security", "compliance",
+    "budget", "deadline", "today", "production", "cannot expose", "secret", "token"
+]
+
+# L2 — Interpretive Framing: detect hedging, smoothing, reassurance, category blending
+L2_HEDGE = ["maybe", "might", "could", "perhaps", "it seems", "it sounds", "generally", "often", "usually", "in general"]
+L2_REASSURE = ["don't worry", "no problem", "it's okay", "you got this", "rest assured", "glad", "happy to"]
+L2_CATEGORY_BLEND = ["kind of", "sort of", "basically", "overall", "in other words", "at the end of the day"]
+
+# L3 — Objective Freeze: detect objective mutation between prompt and answer
+L3_MUTATION_MARKERS = ["instead", "rather than", "we should pivot", "let's change", "new plan", "different approach", "actually"]
+
+# L4-L5 — Execution vectors & outputs: we represent as structured plan artifacts (not UI)
+# L7 — Telemetry: always captured
+
+
+# ==========================
+# PARENT FAILURE MODES (UDDS / DCE / CCA)
+# ==========================
+# UDDS criteria (doc summary):
+# 1) L0 constraint exists
+# 2) downstream capability introduced before constraint declared
+# 3) boundary enforcement absent/delayed (hedging, blending, time-to-answer inflation)
+# 4) narrative stabilization present (reassurance/social smoothing)
+
+DOWNSTREAM_CAPABILITY_MARKERS = [
+    "we can build", "we can add", "just add", "ship it", "deploy it", "we can do all of it",
+    "just use", "easy to", "quick fix", "we can implement"
+]
+
+BOUNDARY_ABSENCE_MARKERS = [
+    "maybe", "might", "could", "sort of", "kind of", "basically", "we'll see", "later",
+    "for now", "eventually", "not sure", "probably"
+]
+
+NARRATIVE_STABILIZATION_MARKERS = [
+    "don't worry", "it's fine", "no big deal", "you got this", "glad", "relief", "it's okay",
+    "not a problem", "totally"
+]
+
+# DCE: Deferred Constraint Externalization (heuristic)
+DCE_DEFER_MARKERS = [
+    "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
+    "we'll figure it out", "next week", "after we launch", "phase 2"
+]
+
+# CCA: Constraint Collapse via Aggregation (heuristic)
+CCA_COLLAPSE_MARKERS = [
+    "overall", "basically", "in general", "at the end of the day", "all in all", "net net",
+    "it all comes down to", "the main thing", "just"
+]
+
+
+# ==========================
+# NTE-CLF (Tilt Taxonomy v0.2) — RULE-BASED CLASSIFIER
+# ==========================
+# We implement 8 tilt categories as keyword clusters.
+TILT_TAXONOMY = {
+    "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
+    "T2_ASSUMPTIVE_PERSONALIZATION": ["you are the kind of", "you probably", "you might", "it sounds like you", "it seems like you"],
+    "T3_CONSENSUS_CLAIMS": ["most people", "many people", "everyone", "no one", "in general", "typically"],
+    "T4_AUTHORITY_INFLATION": ["clearly", "obviously", "definitely", "certainly", "undeniably", "proven", "fact"],
+    "T5_SCOPE_CREEP": ["also", "and another", "while we're at it", "let's add", "plus", "in addition"],
+    "T6_CONSTRAINT_DEFERRAL": ["later", "eventually", "phase 2", "after we launch", "we'll figure it out"],
+    "T7_CATEGORY_BLEND": ["kind of", "sort of", "basically", "overall", "at the end of the day"],
+    "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
+}
+
+def classify_tilt(text: str) -> List[str]:
+    t = (text or "").lower()
+    hits = []
+    for cat, markers in TILT_TAXONOMY.items():
+        for m in markers:
+            if m in t:
+                hits.append(cat)
+                break
     return hits
 
 
-def _normalize_score(hit_count: int, length: int) -> float:
-    if length <= 0:
-        return 0.0
-    # hits per 250 chars (cap)
-    rate = hit_count / max(1.0, (length / 250.0))
-    # convert to 0..1 (6 hits/250 ~= 1.0)
-    return round(min(1.0, rate / 6.0), 2)
+# ==========================
+# NII (NTI Integrity Index)
+# ==========================
+def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool) -> Dict[str, Any]:
+    # NII questions (doc):
+    # 1) constraints singular and explicit (prevents CCA)
+    # 2) constraints declared before capability planning (prevents DCE)
+    # 3) substitutes introduced only after enforcement (prevents UDDS)
+
+    # Q1: explicitness = count of constraints markers found
+    q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
+
+    # Q2: constraints before capability
+    q2 = 0.0 if downstream_before_constraints else 1.0
+
+    # Q3: substitute after enforcement (we approximate: if answer includes boundary markers, treat as not enforced)
+    boundary_absent = any(m in (answer or "").lower() for m in BOUNDARY_ABSENCE_MARKERS)
+    q3 = 0.0 if boundary_absent else 1.0
+
+    score = round((q1 + q2 + q3) / 3.0, 2)
+    return {
+        "q1_constraints_explicit": q1,
+        "q2_constraints_before_capability": q2,
+        "q3_substitutes_after_enforcement": q3,
+        "nii_score": score
+    }
 
 
-def deterministic_scores(text: str) -> Dict[str, Any]:
-    length = len(text)
-    certainty_hits = _count_hits(text, CERTAINTY_WORDS)
-    gen_hits = _count_hits(text, GENERALIZATION_PHRASES)
-    emo_hits = _count_hits(text, EMOTIONAL_INTENSIFIERS)
-    assum_hits = _count_hits(text, ASSUMPTION_STARTERS)
-    soft_auth_hits = _count_hits(text, SOFT_AUTHORITY_PHRASES)
+# ==========================
+# L0-L7 EVALUATION
+# ==========================
+def detect_l0_constraints(text: str) -> List[str]:
+    t = (text or "").lower()
+    found = []
+    for m in L0_CONSTRAINT_MARKERS:
+        if m in t:
+            found.append(m)
+    # keep unique in input order
+    uniq = []
+    for x in found:
+        if x not in uniq:
+            uniq.append(x)
+    return uniq[:20]
 
-    # Treat authority as certainty + soft authority steering
-    authority_hits = certainty_hits + soft_auth_hits
 
-    scores = {
-        "emotion": _normalize_score(emo_hits, length),
-        "assumption": _normalize_score(assum_hits, length),
-        "generalization": _normalize_score(gen_hits, length),
-        "authority": _normalize_score(authority_hits, length),
-        "length_chars": length,
-        "hits": {
-            "emotion": emo_hits,
-            "assumption": assum_hits,
-            "generalization": gen_hits,
-            "authority": authority_hits,
-            "certainty_only": certainty_hits,
-            "soft_authority_only": soft_auth_hits
+def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> bool:
+    # If answer proposes building/shipping capability AND prompt constraints are absent/weak,
+    # treat as downstream before constraint declaration.
+    a = (answer or "").lower()
+    p = (prompt or "").lower()
+
+    capability = any(m in a for m in DOWNSTREAM_CAPABILITY_MARKERS) or any(m in p for m in DOWNSTREAM_CAPABILITY_MARKERS)
+    constraints_declared = len(l0_constraints) > 0
+    # downstream before constraints: capability present and constraints not declared
+    return bool(capability and not constraints_declared)
+
+
+def detect_boundary_absence(answer: str) -> bool:
+    a = (answer or "").lower()
+    return any(m in a for m in BOUNDARY_ABSENCE_MARKERS) or any(m in a for m in L2_CATEGORY_BLEND)
+
+
+def detect_narrative_stabilization(answer: str) -> bool:
+    a = (answer or "").lower()
+    return any(m in a for m in NARRATIVE_STABILIZATION_MARKERS) or any(m in a for m in L2_REASSURE)
+
+
+def detect_dce(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
+    # DCE: pushing constraints out of the current turn.
+    a = (answer or "").lower()
+    p = (prompt or "").lower()
+
+    defer = any(m in a for m in DCE_DEFER_MARKERS)
+    constraints_missing = len(l0_constraints) == 0
+
+    # Probable if deferral language exists; confirmed if deferral + constraints missing
+    state = "DCE_FALSE"
+    if defer and constraints_missing:
+        state = "DCE_CONFIRMED"
+    elif defer:
+        state = "DCE_PROBABLE"
+
+    return {"dce_state": state, "defer_markers_present": defer, "constraints_missing": constraints_missing}
+
+
+def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
+    # CCA: collapsing multiple constraints into vague aggregation.
+    combined = (prompt or "") + "\n" + (answer or "")
+    t = combined.lower()
+
+    collapse = any(m in t for m in CCA_COLLAPSE_MARKERS)
+    list_blend = ("and" in t and "but" in t and "overall" in t)
+
+    state = "CCA_FALSE"
+    if collapse and list_blend:
+        state = "CCA_CONFIRMED"
+    elif collapse:
+        state = "CCA_PROBABLE"
+
+    return {"cca_state": state, "collapse_markers_present": collapse, "list_blend_present": list_blend}
+
+
+def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
+    # UDDS criteria:
+    c1 = len(l0_constraints) > 0
+    c2 = detect_downstream_before_constraint(prompt, answer, l0_constraints)
+    c3 = detect_boundary_absence(answer)
+    c4 = detect_narrative_stabilization(answer)
+
+    met = sum([1 if c else 0 for c in [c1, c2, c3, c4]])
+
+    state = "UDDS_FALSE"
+    if met == 4:
+        state = "UDDS_CONFIRMED"
+    elif met == 3:
+        state = "UDDS_PROBABLE"
+
+    return {
+        "udds_state": state,
+        "criteria": {
+            "c1_l0_constraint_exists": c1,
+            "c2_downstream_before_constraint_declared": c2,
+            "c3_boundary_enforcement_absent_or_delayed": c3,
+            "c4_narrative_stabilization_present": c4,
+            "criteria_met_count": met
         }
     }
-    return scores
 
 
-def composite_tilt(scores: Dict[str, Any]) -> Dict[str, Any]:
-    # A simple weighted composite (no vibes).
-    # Weights chosen for salience: emotion + assumption slightly higher.
-    emo = float(scores.get("emotion", 0.0))
-    assum = float(scores.get("assumption", 0.0))
-    gen = float(scores.get("generalization", 0.0))
-    auth = float(scores.get("authority", 0.0))
+def detect_l2_framing(text: str) -> Dict[str, Any]:
+    t = (text or "").lower()
+    hedges = [m for m in L2_HEDGE if m in t]
+    reassure = [m for m in L2_REASSURE if m in t]
+    blends = [m for m in L2_CATEGORY_BLEND if m in t]
+    return {
+        "hedge_markers": hedges[:10],
+        "reassurance_markers": reassure[:10],
+        "category_blend_markers": blends[:10]
+    }
 
-    # Weighted sum
-    raw = (0.35 * emo) + (0.35 * assum) + (0.20 * gen) + (0.10 * auth)
-    raw = max(0.0, min(1.0, raw))
-    raw = round(raw, 2)
 
-    # Snap bands for UI later (LOW/BASELINE/EXPOSED mapping)
-    if raw < 0.25:
-        band = "LOW"
-    elif raw < 0.55:
-        band = "BASELINE"
+def objective_extract(prompt: str) -> Dict[str, Any]:
+    # very simple: first sentence is treated as objective question
+    sents = split_sentences(prompt)
+    obj = sents[0] if sents else normalize_space(prompt)
+    return {"objective_text": obj[:400]}
+
+
+def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
+    # If we have both prompt & answer, compare token similarity.
+    p_tokens = tokenize(prompt)
+    a_tokens = tokenize(answer)
+
+    sim = jaccard(p_tokens, a_tokens)
+
+    # drift score: 1 - similarity
+    drift = round(1.0 - sim, 3)
+
+    # mutation markers in answer
+    a = (answer or "").lower()
+    mutation = any(m in a for m in L3_MUTATION_MARKERS)
+
+    return {
+        "jaccard_similarity": sim,
+        "drift_score": drift,
+        "mutation_markers_present": mutation
+    }
+
+
+# ==========================
+# JOS (fill-in-the-blank form + binding contract)
+# ==========================
+def jos_template() -> Dict[str, Any]:
+    # This is a fill-in-the-blank form. UI can render later. Runtime stores it now.
+    return {
+        "jos_version": "jos-binding-v1",
+        "fields": [
+            {"name": "objective", "prompt": "What is the single objective for this run? (one sentence)"},
+            {"name": "constraints", "prompt": "List constraints (one per line)."},
+            {"name": "no_go_zones", "prompt": "What is explicitly not allowed? (one per line)"},
+            {"name": "definition_of_done", "prompt": "What does done mean? (one sentence)"},
+            {"name": "closure_authority", "prompt": "Who can close/override? (you / system / both)"},
+        ],
+        "binding_contract": [
+            "Objective is frozen at L1 before execution.",
+            "Emotion may be acknowledged, never executed.",
+            "Constraints cannot be deleted; only appended explicitly.",
+            "If ambiguity exists, system must request constraint clarification OR run in 'analysis-only' mode."
+        ]
+    }
+
+
+def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
+    # Minimal enforcement checks: presence + explicitness.
+    objective = normalize_space(str(config.get("objective", "")))
+    constraints = config.get("constraints", "")
+    if isinstance(constraints, list):
+        constraints_list = [normalize_space(str(x)) for x in constraints if normalize_space(str(x))]
     else:
-        band = "EXPOSED"
+        constraints_list = [normalize_space(x) for x in str(constraints).splitlines() if normalize_space(x)]
 
-    return {"score": raw, "band": band, "weights": {"emotion": 0.35, "assumption": 0.35, "generalization": 0.20, "authority": 0.10}}
+    no_go = config.get("no_go_zones", "")
+    if isinstance(no_go, list):
+        no_go_list = [normalize_space(str(x)) for x in no_go if normalize_space(str(x))]
+    else:
+        no_go_list = [normalize_space(x) for x in str(no_go).splitlines() if normalize_space(x)]
+
+    dod = normalize_space(str(config.get("definition_of_done", "")))
+    closure = normalize_space(str(config.get("closure_authority", "")))
+
+    errors = []
+    if not objective:
+        errors.append("Missing objective")
+    if not constraints_list:
+        errors.append("Missing constraints")
+    if not dod:
+        errors.append("Missing definition_of_done")
+    if closure not in ["you", "system", "both"]:
+        errors.append("closure_authority must be: you / system / both")
+
+    status = "OK" if not errors else "INVALID"
+
+    return {
+        "status": status,
+        "errors": errors,
+        "frozen": {
+            "objective": objective,
+            "constraints": constraints_list,
+            "no_go_zones": no_go_list,
+            "definition_of_done": dod,
+            "closure_authority": closure
+        }
+    }
 
 
 # ==========================
-# UTIL: Phrase Offset Mapping
+# Evaluation Tools (OI-UEP, OI-IC, H-I²E)
 # ==========================
-def find_all_spans(haystack: str, needle: str) -> List[Tuple[int, int]]:
-    spans = []
-    if not needle:
-        return spans
+def eval_oi_uep(objective: str, baseline: str, perturbed: str) -> Dict[str, Any]:
+    # Objective Integrity Under Emotional Perturbation:
+    # Compare baseline vs perturbed similarity; drift indicates integrity loss.
+    b = tokenize(baseline)
+    p = tokenize(perturbed)
+    sim = jaccard(b, p)
+    drift = round(1.0 - sim, 3)
 
-    # Case-insensitive search but we must return offsets in original string.
-    pattern = re.escape(needle)
-    for m in re.finditer(pattern, haystack, flags=re.IGNORECASE):
-        spans.append((m.start(), m.end()))
-    return spans
+    # Emotional marker hit
+    em = classify_tilt(perturbed)
+    emotion_present = any(cat in em for cat in ["T1_REASSURANCE_DRIFT", "T8_PRESSURE_OPTIMIZATION"])
+
+    return {
+        "objective": normalize_space(objective)[:300],
+        "baseline_vs_perturbed_similarity": sim,
+        "drift_score": drift,
+        "emotional_perturbation_detected": emotion_present,
+        "tilt_categories": em
+    }
 
 
-def attach_offsets(text: str, tags: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    out = []
-    used_spans = set()
+def eval_oi_ic(objective: str, clean_input: str, corrupted_input: str) -> Dict[str, Any]:
+    # Objective Integrity Under Input Corruption:
+    # Compare clean vs corrupted.
+    c = tokenize(clean_input)
+    d = tokenize(corrupted_input)
+    sim = jaccard(c, d)
+    drift = round(1.0 - sim, 3)
+    return {
+        "objective": normalize_space(objective)[:300],
+        "clean_vs_corrupted_similarity": sim,
+        "drift_score": drift
+    }
 
-    for t in tags:
-        phrase = str(t.get("phrase", "")).strip()
-        if not phrase:
-            continue
 
-        spans = find_all_spans(text, phrase)
-        if not spans:
-            # If the phrase can’t be found exactly, skip it (integrity rule)
-            continue
-
-        # Pick the first unused span (so we don’t stack duplicates)
-        chosen = None
-        for sp in spans:
-            if sp not in used_spans:
-                chosen = sp
-                break
-        if chosen is None:
-            chosen = spans[0]
-
-        used_spans.add(chosen)
-
-        out.append({
-            "type": t.get("type"),
-            "phrase": phrase,
-            "strength": t.get("strength"),
-            "start": chosen[0],
-            "end": chosen[1]
-        })
-
-    return out
+def eval_h_i2e(objective: str, human_a: str, human_b: str) -> Dict[str, Any]:
+    # Human Intent Integrity Eval:
+    # Compare two human turns for closure authority / drift (basic).
+    a = tokenize(human_a)
+    b = tokenize(human_b)
+    sim = jaccard(a, b)
+    drift = round(1.0 - sim, 3)
+    closure_markers = ["done", "final", "stop", "locked", "no more", "closed", "end"]
+    closure_a = any(m in (human_a or "").lower() for m in closure_markers)
+    closure_b = any(m in (human_b or "").lower() for m in closure_markers)
+    return {
+        "objective": normalize_space(objective)[:300],
+        "human_similarity": sim,
+        "drift_score": drift,
+        "closure_asserted_a": closure_a,
+        "closure_asserted_b": closure_b
+    }
 
 
 # ==========================
@@ -314,17 +551,38 @@ def attach_offsets(text: str, tags: List[Dict[str, Any]]) -> List[Dict[str, Any]
 # ==========================
 @app.route("/")
 def home():
-    return render_template("index.html")
+    # Keep existing template usage if present; otherwise show simple text.
+    try:
+        return render_template("index.html")
+    except Exception:
+        return "NTI Canonical Runtime is live."
 
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "version": NTI_VERSION})
 
 
-# ------------------------------
-# EVENT LOGGING (UI uses this later; engine already supports it)
-# ------------------------------
+@app.route("/canonical/status")
+def canonical_status():
+    # Canonical deploy checklist (truthful)
+    return jsonify({
+        "status": "ok",
+        "version": NTI_VERSION,
+        "canonical": {
+            "no_llm_dependency_v0_1_rule_based": True,
+            "layers_l0_l7": True,
+            "parent_failure_modes_udds_dce_cca": True,
+            "interaction_matrix": True,
+            "nte_clf_tilt_taxonomy": True,
+            "nii_integrity_index": True,
+            "jos_template_and_binding": True,
+            "telemetry_and_persistence": True,
+            "evaluation_tools_oi_uep_oi_ic_h_i2e": True
+        }
+    })
+
+
 @app.route("/events", methods=["POST"])
 def events():
     session_id = get_session_id()
@@ -336,321 +594,187 @@ def events():
         return jsonify({"error": "Missing event name"}), 400
 
     eid = str(uuid.uuid4())
-
     conn = db_connect()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO nti_events (id, created_at, session_id, event_name, event_json)
+        INSERT INTO events (id, created_at, session_id, event_name, event_json)
         VALUES (?, ?, ?, ?, ?)
     """, (eid, utc_now_iso(), session_id, event_name, json.dumps(event_data, ensure_ascii=False)))
     conn.commit()
     conn.close()
 
-    log_json_line("nti_event", {"session_id": session_id, "event": event_name, "data": event_data})
-
+    log_json_line("event", {"session_id": session_id, "event": event_name, "data": event_data})
     return jsonify({"ok": True, "event_id": eid})
 
 
-# ------------------------------
-# DEMO RUN (Raw OpenAI Response)
-# ------------------------------
-@app.route("/demo-run", methods=["POST"])
-def demo_run():
+@app.route("/jos/template", methods=["GET"])
+def jos_get_template():
+    return jsonify(jos_template())
+
+
+@app.route("/jos/apply", methods=["POST"])
+def jos_apply_route():
+    config = request.get_json() or {}
+    return jsonify(jos_apply(config))
+
+
+@app.route("/nti", methods=["POST"])
+def nti_run():
+    """
+    Canonical NTI runtime endpoint:
+    Accepts:
+      - text
+      - OR prompt + answer
+
+    Returns:
+      - Layers L0-L7 outputs
+      - UDDS/DCE/CCA flags
+      - NII score
+      - Tilt taxonomy
+      - Interaction matrix summary
+      - Telemetry
+    """
     request_id = str(uuid.uuid4())
     session_id = get_session_id()
     t0 = time.time()
 
-    data = request.get_json() or {}
-    prompt = data.get("prompt")
-
-    if not prompt:
-        record_request_base(request_id, "/demo-run", session_id, None, None, None, None, "No prompt provided")
-        return jsonify({"error": "No prompt provided", "request_id": request_id}), 400
-
-    model = "gpt-4o-mini"
-    usage = None
-    error = None
-
-    try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-        out = resp.choices[0].message.content
-        if hasattr(resp, "usage") and resp.usage:
-            usage = {
-                "prompt_tokens": getattr(resp.usage, "prompt_tokens", None),
-                "completion_tokens": getattr(resp.usage, "completion_tokens", None),
-                "total_tokens": getattr(resp.usage, "total_tokens", None)
-            }
-
-        latency_ms = int((time.time() - t0) * 1000)
-        record_request_base(request_id, "/demo-run", session_id, model, latency_ms, usage, len(prompt), None)
-        log_json_line("demo_run", {"request_id": request_id, "session_id": session_id, "latency_ms": latency_ms, "model": model})
-
-        return jsonify({"output": out, "request_id": request_id})
-
-    except Exception as e:
-        error = str(e)
-        latency_ms = int((time.time() - t0) * 1000)
-        record_request_base(request_id, "/demo-run", session_id, model, latency_ms, usage, len(prompt), error)
-        log_json_line("demo_run_error", {"request_id": request_id, "session_id": session_id, "error": error})
-        return jsonify({"error": error, "request_id": request_id}), 500
-
-
-# ------------------------------
-# NTI CORE (FULL STACK ENGINE OUTPUT)
-# ------------------------------
-@app.route("/nti-core", methods=["POST"])
-def nti_core():
-    request_id = str(uuid.uuid4())
-    session_id = get_session_id()
-    t0 = time.time()
-    model = "gpt-4o-mini"
-
-    data = request.get_json() or {}
-
-    # We support either:
-    # - text only
-    # - prompt + answer
-    text = data.get("text")
-    prompt = data.get("prompt")
-    answer = data.get("answer")
+    payload = request.get_json() or {}
+    text = payload.get("text")
+    prompt = payload.get("prompt")
+    answer = payload.get("answer")
 
     if prompt and answer and not text:
         text = f"PROMPT:\n{prompt}\n\nANSWER:\n{answer}"
 
     if not text:
-        record_request_base(request_id, "/nti-core", session_id, model, None, None, None, "No text provided")
-        return jsonify({"error": "No text provided", "request_id": request_id}), 400
-
-    # Deterministic layer always runs
-    scores = deterministic_scores(text)
-    tilt = composite_tilt(scores)
-
-    # Model tagging layer: STRICT JSON output
-    system = (
-        "You are NTI-CORE.\n"
-        "Task: Tag 'power phrases' inside the provided text.\n"
-        "Power phrases are spans that perform one of these functions:\n"
-        "1) EMOTION (emotional intensifiers, validation, urgency)\n"
-        "2) ASSUMPTION (claims about the user without evidence)\n"
-        "3) GENERALIZATION (claims about people/most/everyone)\n"
-        "4) AUTHORITY (certainty markers: clearly/obviously/always/never)\n\n"
-        "Return STRICT JSON ONLY with this shape:\n"
-        "{\n"
-        '  "tags": [\n'
-        "    {\n"
-        '      "type": "EMOTION|ASSUMPTION|GENERALIZATION|AUTHORITY",\n'
-        '      "phrase": "exact substring from the text",\n'
-        '      "strength": 0.0-1.0\n'
-        "    }\n"
-        "  ]\n"
-        "}\n\n"
-        "Rules:\n"
-        "- Use short phrases (3 to 12 words).\n"
-        "- Only tag phrases that actually appear in the text.\n"
-        "- Max 18 tags.\n"
-        "- Do not add commentary. JSON only.\n"
-    )
-
-    usage = None
-    error = None
-    tags_clean: List[Dict[str, Any]] = []
-
-    try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": text}
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
-
-        raw = resp.choices[0].message.content
-
-        if hasattr(resp, "usage") and resp.usage:
-            usage = {
-                "prompt_tokens": getattr(resp.usage, "prompt_tokens", None),
-                "completion_tokens": getattr(resp.usage, "completion_tokens", None),
-                "total_tokens": getattr(resp.usage, "total_tokens", None)
-            }
-
-        parsed = json.loads(raw)
-        tags = parsed.get("tags", [])
-        if not isinstance(tags, list):
-            tags = []
-
-        for t in tags:
-            if not isinstance(t, dict):
-                continue
-            ttype = str(t.get("type", "")).strip().upper()
-            phrase = str(t.get("phrase", "")).strip()
-            strength = t.get("strength", 0.0)
-            try:
-                strength = float(strength)
-            except Exception:
-                strength = 0.0
-            strength = max(0.0, min(1.0, strength))
-
-            if ttype not in {"EMOTION", "ASSUMPTION", "GENERALIZATION", "AUTHORITY"}:
-                continue
-            if not phrase:
-                continue
-
-            tags_clean.append({"type": ttype, "phrase": phrase, "strength": round(strength, 2)})
-
-        # Attach offsets (integrity)
-        tags_with_offsets = attach_offsets(text, tags_clean)
-
         latency_ms = int((time.time() - t0) * 1000)
-        record_request_base(request_id, "/nti-core", session_id, model, latency_ms, usage, len(text), None)
+        record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
+        return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
 
-        # Persist results
-        conn = db_connect()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT OR REPLACE INTO nti_core_results
-            (request_id, version, scores_json, tilt_json, tags_json)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            request_id,
-            "nti-core-v1.1",
-            json.dumps(scores, ensure_ascii=False),
-            json.dumps(tilt, ensure_ascii=False),
-            json.dumps(tags_with_offsets, ensure_ascii=False)
-        ))
-        conn.commit()
-        conn.close()
+    # L0 constraints
+    l0_constraints = detect_l0_constraints(text)
 
-        log_json_line("nti_core", {
-            "request_id": request_id,
-            "session_id": session_id,
-            "latency_ms": latency_ms,
-            "model": model,
-            "tilt": tilt,
-            "tag_count": len(tags_with_offsets)
-        })
+    # Objective + drift (if prompt+answer present)
+    obj = objective_extract(prompt or text)
+    drift = objective_drift(prompt or "", answer or "")
 
-        return jsonify({
-            "version": "nti-core-v1.1",
-            "scores": scores,
-            "tilt": tilt,
-            "tags": tags_with_offsets,
-            "telemetry": {
-                "request_id": request_id,
-                "session_id": session_id,
-                "latency_ms": latency_ms,
-                "model": model,
-                "usage": usage
-            }
-        })
+    # L2 framing
+    framing = detect_l2_framing(text)
 
-    except Exception as e:
-        error = str(e)
-        latency_ms = int((time.time() - t0) * 1000)
-        record_request_base(request_id, "/nti-core", session_id, model, latency_ms, usage, len(text), error)
+    # Parent modes
+    udds = detect_udds(prompt or "", answer or text, l0_constraints)
+    dce = detect_dce(prompt or "", answer or text, l0_constraints)
+    cca = detect_cca(prompt or "", answer or text)
 
-        log_json_line("nti_core_error", {
-            "request_id": request_id,
-            "session_id": session_id,
-            "error": error
-        })
+    downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
+    nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints)
 
-        # Still return deterministic layers so stack never returns empty
-        return jsonify({
-            "version": "nti-core-v1.1",
-            "scores": scores,
-            "tilt": tilt,
-            "tags": [],
-            "telemetry": {
-                "request_id": request_id,
-                "session_id": session_id,
-                "latency_ms": latency_ms,
-                "model": model,
-                "usage": usage
-            },
-            "warning": "OpenAI tagging failed; returned deterministic scores only.",
-            "error": error
-        }), 200
+    # Tilt taxonomy
+    tilt = classify_tilt(text)
+
+    # Interaction matrix summary (dominance order per doc)
+    # Dominance order: CCA > UDDS > DCE
+    dominance = []
+    if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+        dominance.append("CCA")
+    if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+        dominance.append("UDDS")
+    if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+        dominance.append("DCE")
+    if not dominance:
+        dominance = ["NONE"]
+
+    interaction = {
+        "pairwise": [
+            {"pair": "UDDS+DCE", "note": "DCE enables early drift; UDDS stabilizes narrative."},
+            {"pair": "UDDS+CCA", "note": "CCA masks constraints; UDDS reinforces substitute narrative."},
+            {"pair": "DCE+CCA", "note": "CCA collapses constraints; DCE pushes enforcement later."},
+        ],
+        "triadic": {"combo": "UDDS+DCE+CCA", "note": "High-risk drift: collapse + deferral + stabilization."},
+        "dominance_order": ["CCA", "UDDS", "DCE"],
+        "dominance_detected": dominance
+    }
+
+    # Layers L0-L7 output package
+    layers = {
+        "L0_reality_substrate": {"constraints_found": l0_constraints},
+        "L1_input_freeze": {"objective": obj.get("objective_text", ""), "constraints_snapshot": l0_constraints},
+        "L2_interpretive_framing": framing,
+        "L3_objective_integrity": drift,
+        "L4_execution_vectors": {"note": "Canonical runtime records vectors; UI rendering is separate."},
+        "L5_output_enforcement": {"note": "Canonical runtime flags drift modes; enforcement UI is separate."},
+        "L6_interface_contracts": {"jos_binding_available": True, "jos_template_endpoint": "/jos/template"},
+        "L7_telemetry": {"request_id": request_id, "session_id": session_id}
+    }
+
+    result = {
+        "status": "ok",
+        "version": NTI_VERSION,
+        "layers": layers,
+        "parent_failure_modes": {
+            "UDDS": udds,
+            "DCE": dce,
+            "CCA": cca
+        },
+        "interaction_matrix": interaction,
+        "nii": nii,
+        "tilt_taxonomy": tilt
+    }
+
+    latency_ms = int((time.time() - t0) * 1000)
+    record_request(request_id, "/nti", session_id, latency_ms, payload, error=None)
+    record_result(request_id, result)
+
+    log_json_line("nti_run", {
+        "request_id": request_id,
+        "session_id": session_id,
+        "latency_ms": latency_ms,
+        "dominance": dominance,
+        "nii": nii.get("nii_score")
+    })
+
+    result["telemetry"] = {
+        "request_id": request_id,
+        "session_id": session_id,
+        "latency_ms": latency_ms
+    }
+
+    return jsonify(result)
 
 
-# ------------------------------
-# NTI (Legacy human-readable endpoint, kept for compatibility)
-# ------------------------------
-@app.route("/nti", methods=["POST"])
-def nti():
-    request_id = str(uuid.uuid4())
-    session_id = get_session_id()
-    t0 = time.time()
-    model = "gpt-4o-mini"
-    usage = None
+@app.route("/eval/oi-uep", methods=["POST"])
+def route_oi_uep():
+    payload = request.get_json() or {}
+    objective = payload.get("objective", "")
+    baseline = payload.get("baseline", "")
+    perturbed = payload.get("perturbed", "")
+    if not objective or not baseline or not perturbed:
+        return jsonify({"error": "Provide objective, baseline, perturbed"}), 400
+    return jsonify({"status": "ok", "version": NTI_VERSION, "result": eval_oi_uep(objective, baseline, perturbed)})
 
-    data = request.get_json() or {}
-    user_input = data.get("input")
 
-    if not user_input:
-        record_request_base(request_id, "/nti", session_id, model, None, None, None, "No input provided")
-        return jsonify({"error": "No input provided", "request_id": request_id}), 400
+@app.route("/eval/oi-ic", methods=["POST"])
+def route_oi_ic():
+    payload = request.get_json() or {}
+    objective = payload.get("objective", "")
+    clean_input = payload.get("clean_input", "")
+    corrupted_input = payload.get("corrupted_input", "")
+    if not objective or not clean_input or not corrupted_input:
+        return jsonify({"error": "Provide objective, clean_input, corrupted_input"}), 400
+    return jsonify({"status": "ok", "version": NTI_VERSION, "result": eval_oi_ic(objective, clean_input, corrupted_input)})
 
-    try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You analyze AI responses and expose hidden framing in plain language.\n\n"
-                        "Rules:\n"
-                        "- No academic language.\n"
-                        "- No jargon.\n"
-                        "- Short.\n"
-                        "- Maximum 6 bullets total.\n"
-                        "- Format exactly as:\n\n"
-                        "What It Did:\n"
-                        "• bullet\n"
-                        "• bullet\n\n"
-                        "What That Means:\n"
-                        "• bullet\n"
-                        "• bullet\n\n"
-                        "Make it clear. Make it readable. Make it screenshot-worthy."
-                    )
-                },
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.2
-        )
 
-        out = resp.choices[0].message.content
-        if hasattr(resp, "usage") and resp.usage:
-            usage = {
-                "prompt_tokens": getattr(resp.usage, "prompt_tokens", None),
-                "completion_tokens": getattr(resp.usage, "completion_tokens", None),
-                "total_tokens": getattr(resp.usage, "total_tokens", None)
-            }
-
-        latency_ms = int((time.time() - t0) * 1000)
-        record_request_base(request_id, "/nti", session_id, model, latency_ms, usage, len(user_input), None)
-
-        log_json_line("nti_legacy", {
-            "request_id": request_id,
-            "session_id": session_id,
-            "latency_ms": latency_ms,
-            "model": model
-        })
-
-        return jsonify({"output": out, "request_id": request_id})
-
-    except Exception as e:
-        error = str(e)
-        latency_ms = int((time.time() - t0) * 1000)
-        record_request_base(request_id, "/nti", session_id, model, latency_ms, usage, len(user_input), error)
-        log_json_line("nti_legacy_error", {"request_id": request_id, "session_id": session_id, "error": error})
-        return jsonify({"error": error, "request_id": request_id}), 500
+@app.route("/eval/h-i2e", methods=["POST"])
+def route_hi2e():
+    payload = request.get_json() or {}
+    objective = payload.get("objective", "")
+    human_a = payload.get("human_a", "")
+    human_b = payload.get("human_b", "")
+    if not objective or not human_a or not human_b:
+        return jsonify({"error": "Provide objective, human_a, human_b"}), 400
+    return jsonify({"status": "ok", "version": NTI_VERSION, "result": eval_h_i2e(objective, human_a, human_b)})
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # local dev only; Render uses gunicorn
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")), debug=True)
