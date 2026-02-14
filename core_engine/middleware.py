@@ -1,5 +1,7 @@
 from typing import Callable, Dict, Any, Optional
 from .convergence import run_core_pipeline
+from .relational_field import compute_relational_field
+
 
 def process_request(
     user_text: str,
@@ -16,13 +18,12 @@ def process_request(
       Human → V2 → AI → V3 → Human
     """
 
-    # If no LLM is wired yet, use a deterministic placeholder that won't break.
-    # (Swap this later with your real model call function.)
     if ai_callable is None:
         def ai_callable(x: str) -> str:
-            return x  # pass-through (zero-LLM mode)
+            return x
 
-    return run_core_pipeline(
+    # --- Run structural pipeline ---
+    result = run_core_pipeline(
         user_text=user_text,
         ai_callable=ai_callable,
         threshold=threshold,
@@ -30,3 +31,17 @@ def process_request(
         v3_max_tokens=v3_max_tokens,
         objective=objective,
     )
+
+    # --- Relational Field Overlay (Additive Only) ---
+    relational = compute_relational_field(user_text)
+
+    result["relational_field"] = relational
+
+    # --- Advisory Non-Invocation Hint ---
+    if (
+        relational["relational_band"] == "HIGH"
+        and result.get("status") == "SHADOW_COMPLETE"
+    ):
+        result["route_hint"] = "HUMAN_REVIEW"
+
+    return result
