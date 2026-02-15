@@ -1,47 +1,103 @@
-from typing import Callable, Dict, Any, Optional
-from .convergence import run_core_pipeline
-from .relational_field import compute_relational_field
+# core_engine/middleware.py
+# Unified NTI Middleware Layer
+# Frozen core preserved
+# Deterministic extensions only
+
+from core_engine.v2_engine import run_v2
+from core_engine.v3_engine import run_v3
+from core_engine.routing_engine import route
+from core_engine.trace import start_trace, end_trace
+
+from core_engine.edge_engine import compute_relational_field
+from core_engine.economic_layer import compute_economic_layer
+from core_engine.banding import band_cost
+from core_engine.invocation_governance import evaluate_invocation
+from core_engine.observability_layer import attach_observability
 
 
-def process_request(
-    user_text: str,
-    ai_callable: Optional[Callable[[str], str]] = None,
-    threshold: float = 0.80,
-    max_iter: int = 3,
-    v3_max_tokens: int = 400,
-    objective: Optional[str] = None,
-) -> Dict[str, Any]:
+def process_request(text: str) -> dict:
     """
-    Clean production boundary.
-    Middleware does NOT import routing_engine / v2_engine directly.
-    It wraps the canonical pipeline:
-      Human → V2 → AI → V3 → Human
+    Unified processing pipeline:
+
+    Human → V2 → AI → V3 → Human
+    + Relational Field
+    + Economic Layer
+    + Banding
+    + Invocation Governance
+    + Observability
+
+    Deterministic.
+    No LLM calls here.
     """
 
-    if ai_callable is None:
-        def ai_callable(x: str) -> str:
-            return x
+    if text is None:
+        text = ""
 
-    # --- Run structural pipeline ---
-    result = run_core_pipeline(
-        user_text=user_text,
-        ai_callable=ai_callable,
-        threshold=threshold,
-        max_iter=max_iter,
-        v3_max_tokens=v3_max_tokens,
-        objective=objective,
+    trace = start_trace(text)
+
+    # =========================
+    # Spine (Frozen Core Flow)
+    # =========================
+
+    v2_output = run_v2(text)
+    route_decision = route(v2_output)
+    v3_output = run_v3(v2_output)
+
+    structural_field = {
+        "v2": v2_output,
+        "route": route_decision,
+        "v3": v3_output
+    }
+
+    # =========================
+    # Relational Field (Axis 2 equivalent)
+    # =========================
+
+    relational_field = compute_relational_field(text)
+
+    # =========================
+    # Economic Layer
+    # =========================
+
+    economic = compute_economic_layer(text)
+
+    # =========================
+    # Band Classification
+    # =========================
+
+    estimated_cost = float(economic.get("estimated_roundtrip_cost", 0.0))
+    economic["band"] = band_cost(estimated_cost)
+
+    # =========================
+    # Invocation Governance
+    # =========================
+
+    invocation = evaluate_invocation(
+        structural_field=structural_field,
+        relational_field=relational_field,
+        economic=economic
     )
 
-    # --- Relational Field Overlay (Additive Only) ---
-    relational = compute_relational_field(user_text)
+    # =========================
+    # Unified Response Object
+    # =========================
 
-    result["relational_field"] = relational
+    response = {
+        "structural_field": structural_field,
+        "relational_field": relational_field,
+        "economic": economic,
+        "invocation_governance": invocation,
+    }
 
-    # --- Advisory Non-Invocation Hint ---
-    if (
-        relational["relational_band"] == "HIGH"
-        and result.get("status") == "SHADOW_COMPLETE"
-    ):
-        result["route_hint"] = "HUMAN_REVIEW"
+    # =========================
+    # Observability Attachment
+    # =========================
 
-    return result
+    response = attach_observability(
+        trace=trace,
+        response=response
+    )
+
+    end_trace(trace)
+
+    return response
