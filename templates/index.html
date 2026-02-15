@@ -3,149 +3,763 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artifact Zero — Conversational Authority Infrastructure</title>
-<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>NTI — No-Tilt Interface | Artifact Zero Labs</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#06060a;--bg2:#0c0c14;--bg3:#14141f;--bg4:#1c1c2a;
-  --fg:#e8e8f0;--fg2:#9090a8;--fg3:#5a5a72;--fg4:#3a3a4e;
-  --green:#00e89c;--green2:#00c080;--green3:rgba(0,232,156,.12);
-  --red:#ff4466;--red2:rgba(255,68,102,.12);
-  --amber:#ffaa33;--amber2:rgba(255,170,51,.12);
-  --blue:#448aff;--blue2:rgba(68,138,255,.12);
-  --purple:#9966ff;--purple2:rgba(153,102,255,.12);
-  --cyan:#00d4ff;--cyan2:rgba(0,212,255,.12);
-  --mono:'Azeret Mono',monospace;--sans:'Outfit',sans-serif;
-  --r:8px;--r2:12px;
+  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
+  /* Enhanced color system for multiple axes */
+  --axis1-structural:#3b82f6;--axis1-light:rgba(59,130,246,0.1);
+  --axis2-relational:#ef4444;--axis2-light:rgba(239,68,68,0.1);
+  --axis3-economic:#22c55e;--axis3-light:rgba(34,197,94,0.1);
+  --assumption:#8b5cf6;--assumption-light:rgba(139,92,246,0.1);
+  --intensifier:#f59e0b;--intensifier-light:rgba(245,158,11,0.1);
+  --generalization:#06b6d4;--generalization-light:rgba(6,182,212,0.1);
+  --filler:#6b7280;--filler-light:rgba(107,114,128,0.1);
+  --power-word:#ec4899;--power-light:rgba(236,72,153,0.1);
 }
-html{font-size:15px;scroll-behavior:smooth}
-body{background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
-#persona-gate{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;position:relative;overflow:hidden}
-#persona-gate::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,232,156,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-.gate-logo{font-family:var(--mono);font-size:1rem;font-weight:700;letter-spacing:4px;color:var(--green);margin-bottom:8px;opacity:0;animation:fadeUp .6s .1s forwards}
-.gate-title{font-family:var(--sans);font-size:2.4rem;font-weight:700;text-align:center;margin-bottom:8px;opacity:0;animation:fadeUp .6s .2s forwards}
-.gate-sub{font-family:var(--sans);font-size:1rem;color:var(--fg2);text-align:center;max-width:520px;line-height:1.5;margin-bottom:48px;opacity:0;animation:fadeUp .6s .3s forwards}
-.gate-question{font-family:var(--mono);font-size:.75rem;color:var(--fg3);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;opacity:0;animation:fadeUp .6s .4s forwards}
-.persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:900px;width:100%;opacity:0;animation:fadeUp .6s .5s forwards}
-.persona-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.persona-card:hover{border-color:var(--green);transform:translateY(-2px)}
-.persona-card:hover .persona-icon{color:var(--green)}
-.persona-card:active{transform:translateY(0)}
-.persona-icon{font-size:1.6rem;margin-bottom:10px;transition:color .2s;display:block}
-.persona-name{font-family:var(--sans);font-size:1rem;font-weight:600;margin-bottom:4px}
-.persona-desc{font-family:var(--sans);font-size:.8rem;color:var(--fg3);line-height:1.4}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-#main-app{display:none}
-#main-app.active{display:block}
-.app-header{padding:16px 28px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg);z-index:100}
-.app-header .logo{font-family:var(--mono);font-size:.85rem;font-weight:700;letter-spacing:2px;color:var(--green)}
-.app-header .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.app-header .ver{font-family:var(--mono);font-size:.65rem;color:var(--fg4);padding:2px 6px;border:1px solid var(--bg3);border-radius:3px}
-.app-header .persona-label{margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--fg3);padding:4px 10px;border:1px solid var(--bg4);border-radius:var(--r);cursor:pointer;transition:all .2s}
-.app-header .persona-label:hover{border-color:var(--fg3);color:var(--fg2)}
-.app-body{max-width:1100px;margin:0 auto;padding:28px}
-.persona-hero{margin-bottom:28px;padding:24px 28px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2)}
-.persona-hero h2{font-family:var(--sans);font-size:1.5rem;font-weight:700;margin-bottom:6px}
-.persona-hero p{font-family:var(--sans);font-size:.9rem;color:var(--fg2);line-height:1.5}
-.demo-section{margin-bottom:28px}
-.demo-section label{font-family:var(--mono);font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:6px}
-textarea,input[type=text],select{width:100%;background:var(--bg2);border:1px solid var(--bg3);color:var(--fg);font-family:var(--mono);font-size:.82rem;padding:12px 14px;border-radius:var(--r);outline:none;transition:border-color .2s;resize:vertical}
-textarea:focus,input:focus,select:focus{border-color:var(--green)}
-textarea{min-height:90px}
-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M5 7L1 3h8z' fill='%235a5a72'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
-.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.input-grid.three{grid-template-columns:1fr 1fr 1fr}
-.input-full{grid-column:1/-1}
-.btn{font-family:var(--mono);font-size:.75rem;font-weight:600;padding:10px 22px;border:none;border-radius:var(--r);cursor:pointer;transition:all .15s}
-.btn-go{background:var(--green);color:var(--bg)}.btn-go:hover{background:var(--green2)}
-.btn-ghost{background:transparent;border:1px solid var(--bg4);color:var(--fg3)}.btn-ghost:hover{border-color:var(--fg3);color:var(--fg2)}
-.btn-row{display:flex;gap:8px;margin-top:10px}
-.results{margin-top:20px}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
-.card{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:18px 20px;position:relative;overflow:hidden}
-.card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
-.card.g::after{background:var(--green)}.card.r::after{background:var(--red)}.card.a::after{background:var(--amber)}.card.b::after{background:var(--blue)}.card.p::after{background:var(--purple)}.card.c::after{background:var(--cyan)}
-.card-label{font-family:var(--mono);font-size:.6rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-.card-value{font-family:var(--mono);font-size:1.8rem;font-weight:700;line-height:1}
-.card-value.green{color:var(--green)}.card-value.red{color:var(--red)}.card-value.amber{color:var(--amber)}.card-value.blue{color:var(--blue)}.card-value.purple{color:var(--purple)}.card-value.cyan{color:var(--cyan)}
-.card-sub{font-family:var(--sans);font-size:.75rem;color:var(--fg3);margin-top:4px}
-.detail-block{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px}
-.detail-title{font-family:var(--mono);font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
-.detail-body{font-family:var(--sans);font-size:.85rem;color:var(--fg2);line-height:1.6}
-.badge{display:inline-block;font-family:var(--mono);font-size:.6rem;font-weight:600;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;margin:2px}
-.bg{background:var(--green3);color:var(--green)}.br{background:var(--red2);color:var(--red)}.ba{background:var(--amber2);color:var(--amber)}.bb{background:var(--blue2);color:var(--blue)}.bp{background:var(--purple2);color:var(--purple)}.bc{background:var(--cyan2);color:var(--cyan)}
-.violation{padding:6px 0;color:var(--amber);font-family:var(--mono);font-size:.78rem;border-bottom:1px solid var(--bg3)}.violation:last-child{border-bottom:none}
-.clean-msg{color:var(--green);font-family:var(--mono);font-size:.82rem}
-.insight{background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;margin-bottom:16px}
-.insight-icon{font-size:1.2rem;margin-bottom:8px;display:block}
-.insight h3{font-family:var(--sans);font-size:1.1rem;font-weight:600;margin-bottom:6px}
-.insight p{font-family:var(--sans);font-size:.88rem;color:var(--fg2);line-height:1.6}
-.savings-banner{background:linear-gradient(135deg,rgba(0,232,156,.08),rgba(0,212,255,.06));border:1px solid rgba(0,232,156,.2);border-radius:var(--r2);padding:24px 28px;text-align:center;margin-bottom:20px}
-.savings-number{font-family:var(--mono);font-size:2.8rem;font-weight:700;color:var(--green)}
-.savings-label{font-family:var(--sans);font-size:.9rem;color:var(--fg2);margin-top:4px}
-.json-toggle{font-family:var(--mono);font-size:.65rem;color:var(--fg4);cursor:pointer;margin-top:12px;user-select:none}
-.json-toggle:hover{color:var(--fg3)}
-.json-raw{display:none;margin-top:8px;background:var(--bg);border:1px solid var(--bg3);border-radius:var(--r);padding:12px;max-height:350px;overflow:auto}
-.json-raw.open{display:block}
-.json-raw pre{font-family:var(--mono);font-size:.7rem;color:var(--fg3);white-space:pre-wrap;word-break:break-all}
-.loader{display:none;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--fg3);margin:14px 0}
-.loader.on{display:flex}
-.spin{width:14px;height:14px;border:2px solid var(--bg4);border-top-color:var(--green);border-radius:50%;animation:sp .5s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-@media(max-width:768px){.persona-grid{grid-template-columns:1fr}.gate-title{font-size:1.8rem}.input-grid,.input-grid.three{grid-template-columns:1fr}.card-grid{grid-template-columns:1fr 1fr}.app-body{padding:16px}.app-header{padding:12px 16px}}
-@media(max-width:480px){.card-grid{grid-template-columns:1fr}}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* Menu System */
+.menu-toggle{position:fixed;top:20px;right:20px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;transition:all .2s}
+.menu-toggle:hover{border-color:var(--accent)}
+.menu-icon{width:20px;height:20px;display:flex;flex-direction:column;justify-content:space-between}
+.menu-line{height:2px;background:var(--text);border-radius:1px;transition:all .3s}
+.menu-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999;opacity:0;visibility:hidden;transition:all .3s}
+.menu-overlay.active{opacity:1;visibility:visible}
+.menu-panel{position:fixed;top:0;right:0;width:400px;height:100vh;background:var(--surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .3s;overflow-y:auto;z-index:1000}
+.menu-panel.active{transform:translateX(0)}
+.menu-header{padding:24px;border-bottom:1px solid var(--border)}
+.menu-title{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.menu-close{position:absolute;top:20px;right:20px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+.menu-section{padding:20px 24px;border-bottom:1px solid var(--border)}
+.menu-section h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+
+/* Color Legend */
+.color-legend{display:grid;gap:8px}
+.color-item{display:flex;align-items:center;gap:12px;padding:8px;background:var(--surface2);border-radius:6px}
+.color-sample{width:16px;height:16px;border-radius:3px}
+.color-sample.structural{background:var(--axis1-structural)}
+.color-sample.relational{background:var(--axis2-relational)}
+.color-sample.economic{background:var(--axis3-economic)}
+.color-sample.assumption{background:var(--assumption)}
+.color-sample.intensifier{background:var(--intensifier)}
+.color-sample.generalization{background:var(--generalization)}
+.color-sample.filler{background:var(--filler)}
+.color-sample.power{background:var(--power-word)}
+.color-label{font-size:13px;font-weight:600}
+.color-desc{font-size:11px;color:var(--muted)}
+
+.topbar{
+  border-bottom:1px solid var(--border);padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent)}
+.topbar .version{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:4px}
+.topbar .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.main{max-width:960px;margin:0 auto;padding:24px 20px 60px}
+
+.input-section{margin-bottom:24px}
+.input-section label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
+.input-section textarea{
+  width:100%;min-height:120px;background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:14px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
+}
+.input-section textarea:focus{border-color:var(--accent)}
+.input-section textarea::placeholder{color:#3d4452}
+
+.btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{padding:10px 20px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-primary:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
+.btn-sample:hover{color:var(--text);background:var(--border)}
+
+/* Interactive Restructuring Panel */
+.restructure-panel{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;opacity:0;transform:translateY(20px);transition:all .4s}
+.restructure-panel.active{opacity:1;transform:translateY(0)}
+.restructure-header{padding:16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#0f172a,#1e1b4b)}
+.restructure-title{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.restructure-desc{font-size:12px;color:var(--muted)}
+.restructure-body{padding:20px}
+.restructure-controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.control-group{display:flex;gap:8px}
+.control-btn{padding:8px 16px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.control-btn:hover{border-color:var(--accent);color:var(--text)}
+.control-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.restructure-output{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:16px;min-height:120px;font-family:'DM Sans',sans-serif;line-height:1.6;position:relative}
+.restructure-ready{display:none;background:var(--green);color:#000;font-size:11px;font-weight:600;padding:4px 8px;border-radius:4px;position:absolute;top:8px;right:8px}
+.restructure-ready.show{display:block}
+
+/* Live AI Integration Panel */
+.live-ai-panel{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;opacity:0;transform:translateY(20px);transition:all .4s}
+.live-ai-panel.active{opacity:1;transform:translateY(0)}
+.live-ai-header{padding:16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#064e3b,#0f172a)}
+.live-ai-title{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px}
+.live-ai-desc{font-size:12px;color:var(--muted)}
+.live-ai-body{padding:20px}
+.ai-comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ai-column{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:16px}
+.ai-column-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center}
+.ai-input{width:100%;background:transparent;border:1px solid var(--border);color:var(--text);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px}
+.ai-response{min-height:100px;background:var(--surface2);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--border)}
+.ai-btn{width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px}
+.ai-btn:hover{background:#2563eb}
+.ai-btn:disabled{background:var(--surface2);color:var(--muted)}
+
+/* Enhanced highlighting for text analysis */
+.highlight-structural{background:var(--axis1-light);color:var(--axis1-structural);padding:1px 2px;border-radius:2px;cursor:pointer}
+.highlight-relational{background:var(--axis2-light);color:var(--axis2-relational);padding:1px 2px;border-radius:2px;cursor:pointer}
+.highlight-assumption{background:var(--assumption-light);color:var(--assumption);padding:1px 2px;border-radius:2px;cursor:pointer}
+.highlight-intensifier{background:var(--intensifier-light);color:var(--intensifier);padding:1px 2px;border-radius:2px;cursor:pointer}
+.highlight-power{background:var(--power-light);color:var(--power-word);padding:1px 2px;border-radius:2px;cursor:pointer}
+
+.results{display:none}
+.results.show{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.hero-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+.score-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:4px}
+.score-card .sc-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.score-card.critical .sc-value{color:var(--red)}
+.score-card.warning .sc-value{color:var(--amber)}
+.score-card.good .sc-value{color:var(--green)}
+.score-card.info .sc-value{color:var(--accent)}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.panel-header h3{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent)}
+.panel-header .badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
+.badge-red{background:#7f1d1d;color:#fca5a5}
+.badge-amber{background:#78350f;color:#fde68a}
+.badge-green{background:#14532d;color:#86efac}
+
+.panel-body{padding:16px}
+
+.fm-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.fm-row:last-child{border-bottom:none}
+.fm-name{font-weight:600;font-size:14px}
+.fm-full{font-size:11px;color:var(--muted);margin-top:2px}
+.fm-status{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px}
+.fm-confirmed{background:#7f1d1d;color:#fca5a5}
+.fm-probable{background:#78350f;color:#fde68a}
+.fm-false{background:#14532d;color:#86efac}
+
+.tilt-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;background:var(--surface2);color:var(--amber)}
+
+.layer-table{width:100%;border-collapse:collapse;font-size:13px}
+.layer-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.layer-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.layer-table td:first-child{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);white-space:nowrap;width:60px}
+
+.matrix-row{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.matrix-row:last-child{border-bottom:none}
+.matrix-pair{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--purple);font-size:12px}
+.matrix-note{color:var(--muted);margin-top:2px}
+
+.raw-toggle{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:12px;display:inline-block}
+.raw-json{display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
+.raw-json.show{display:block}
+
+.callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center}
+.callout .big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--green)}
+.callout .sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+.footer{text-align:center;padding:24px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
+.footer a{color:var(--accent);text-decoration:none}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Mobile responsiveness */
+@media(max-width:768px){
+  .menu-panel{width:100%;max-width:400px}
+  .restructure-controls{grid-template-columns:1fr}
+  .ai-comparison{grid-template-columns:1fr}
+  .hero-scores{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+}
 </style>
 </head>
 <body>
-<div id="persona-gate">
-  <div class="gate-logo">ARTIFACT ZERO</div>
-  <h1 class="gate-title">Conversational Authority Infrastructure</h1>
-  <p class="gate-sub">A deterministic middleware that enforces declared objective geometry and preserves operator-owned salience ordering across human–AI interaction.</p>
-  <div class="gate-question">Who are you?</div>
-  <div class="persona-grid">
-    <div class="persona-card" data-persona="explorer"><span class="persona-icon">&#128269;</span><div class="persona-name">I'm exploring AI tools</div><div class="persona-desc">Show me what this does in plain language</div></div>
-    <div class="persona-card" data-persona="executive"><span class="persona-icon">&#128202;</span><div class="persona-name">I'm a decision-maker</div><div class="persona-desc">Show me cost reduction, risk, ROI</div></div>
-    <div class="persona-card" data-persona="developer"><span class="persona-icon">&#9881;</span><div class="persona-name">I'm a developer</div><div class="persona-desc">Show me the full diagnostic + API</div></div>
-    <div class="persona-card" data-persona="cfo"><span class="persona-icon">&#128176;</span><div class="persona-name">I'm analyzing AI spend</div><div class="persona-desc">Show me token economics + savings</div></div>
-    <div class="persona-card" data-persona="investor"><span class="persona-icon">&#127959;</span><div class="persona-name">I'm an investor</div><div class="persona-desc">Show me defensibility + market position</div></div>
+
+<!-- Menu Toggle -->
+<div class="menu-toggle" onclick="toggleMenu()">
+  <div class="menu-icon">
+    <div class="menu-line"></div>
+    <div class="menu-line"></div>
+    <div class="menu-line"></div>
   </div>
 </div>
-<div id="main-app">
-  <div class="app-header">
-    <span class="dot"></span><span class="logo">ARTIFACT ZERO</span><span class="ver" id="h-ver">v2.1</span>
-    <span class="persona-label" id="h-persona" title="Click to switch view">-</span>
+
+<!-- Menu Overlay -->
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+
+<!-- Menu Panel -->
+<div class="menu-panel" id="menuPanel">
+  <div class="menu-header">
+    <div class="menu-title">NTI GUIDE</div>
+    <button class="menu-close" onclick="closeMenu()">&times;</button>
   </div>
-  <div class="app-body">
-    <div class="persona-hero" id="hero"></div>
-    <div class="demo-section" id="demo-area"></div>
-    <div class="loader" id="loader"><div class="spin"></div>Running analysis...</div>
-    <div class="results" id="results"></div>
+  
+  <div class="menu-section">
+    <h3>Color System</h3>
+    <div class="color-legend">
+      <div class="color-item">
+        <div class="color-sample structural"></div>
+        <div>
+          <div class="color-label">Structural (Axis 1)</div>
+          <div class="color-desc">Objective drift, constraint collapse</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample relational"></div>
+        <div>
+          <div class="color-label">Relational (Axis 2)</div>
+          <div class="color-desc">Conversational friction, dominance</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample economic"></div>
+        <div>
+          <div class="color-label">Economic (Axis 3)</div>
+          <div class="color-desc">Token efficiency, cost optimization</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample assumption"></div>
+        <div>
+          <div class="color-label">Assumptions</div>
+          <div class="color-desc">Unverified claims, presumptions</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample intensifier"></div>
+        <div>
+          <div class="color-label">Emotional Intensifiers</div>
+          <div class="color-desc">Urgency, pressure, amplification</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample generalization"></div>
+        <div>
+          <div class="color-label">Generalizations</div>
+          <div class="color-desc">Overly broad statements</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample power"></div>
+        <div>
+          <div class="color-label">Power Words</div>
+          <div class="color-desc">High-impact semantic operators</div>
+        </div>
+      </div>
+      <div class="color-item">
+        <div class="color-sample filler"></div>
+        <div>
+          <div class="color-label">Filler</div>
+          <div class="color-desc">Low-value connector words</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-section">
+    <h3>FAQ</h3>
+    <div style="font-size:13px;line-height:1.6">
+      <p><strong>What is NTI?</strong><br>
+      No-Tilt Interface - deterministic middleware that prevents AI from drifting from your constraints.</p>
+      <p style="margin-top:12px"><strong>How does color-coding work?</strong><br>
+      Each color represents a different type of structural or linguistic pattern. Click highlighted text to see explanations.</p>
+      <p style="margin-top:12px"><strong>What are the axes?</strong><br>
+      Axis 1: Structural integrity (objective drift)<br>
+      Axis 2: Relational friction (conversational damage)<br>
+      Axis 3: Economic efficiency (token optimization)</p>
+      <p style="margin-top:12px"><strong>Is this AI-powered?</strong><br>
+      No. NTI uses deterministic rules. Zero AI inference cost.</p>
+    </div>
   </div>
 </div>
+
+<div class="topbar">
+  <div class="logo">ARTIFACT ZERO</div>
+  <div><span class="live-dot"></span><span class="version">NTI canonical-nti-v2.0 · LIVE</span></div>
+</div>
+
+<div class="main">
+
+  <div class="input-section">
+    <label>Paste any AI-generated text, email, or message</label>
+    <textarea id="input" placeholder="Paste text here to run the full NTI canonical stack..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="runBtn" onclick="runNTI()">Run Full Stack Audit</button>
+      <button class="btn btn-sample" onclick="loadSample('a')">Sample: Adversarial</button>
+      <button class="btn btn-sample" onclick="loadSample('b')">Sample: Corporate Drift</button>
+      <button class="btn btn-sample" onclick="loadSample('c')">Sample: Overconfident AI</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+
+    <div class="hero-scores" id="heroScores"></div>
+
+    <div class="callout">
+      <div class="big">63–65%</div>
+      <div class="sub">Validated token cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro · Rule-based · Zero inference cost</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Failure Modes</h3><span class="badge" id="fmBadge">—</span></div>
+      <div class="panel-body" id="fmBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Tilt Taxonomy</h3><span class="badge" id="tiltBadge">—</span></div>
+      <div class="panel-body" id="tiltBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Interaction Matrix</h3><span class="badge" id="matrixBadge">—</span></div>
+      <div class="panel-body" id="matrixBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Layer Analysis</h3><span class="badge badge-green">L0–L7</span></div>
+      <div class="panel-body" id="layerBody"></div>
+    </div>
+
+    <span class="raw-toggle" onclick="toggleRaw()">View raw JSON response</span>
+    <div class="raw-json" id="rawJson"></div>
+
+    <!-- Interactive Restructuring Panel -->
+    <div class="restructure-panel" id="restructurePanel">
+      <div class="restructure-header">
+        <div class="restructure-title">INTERACTIVE RESTRUCTURING</div>
+        <div class="restructure-desc">See how structure transforms meaning - same words, different psychological impact</div>
+      </div>
+      <div class="restructure-body">
+        <div class="restructure-controls">
+          <div>
+            <label style="font-size:11px;color:var(--muted);margin-bottom:8px;display:block;">APPROACH</label>
+            <div class="control-group">
+              <div class="control-btn active" data-axis="approach" data-value="sales">Sales</div>
+              <div class="control-btn" data-axis="approach" data-value="definitive">Definitive</div>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);margin-bottom:8px;display:block;">SCOPE</label>
+            <div class="control-group">
+              <div class="control-btn active" data-axis="scope" data-value="open">Open</div>
+              <div class="control-btn" data-axis="scope" data-value="closed">Closed</div>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);margin-bottom:8px;display:block;">URGENCY</label>
+            <div class="control-group">
+              <div class="control-btn active" data-axis="urgency" data-value="measured">Measured</div>
+              <div class="control-btn" data-axis="urgency" data-value="urgent">Urgent</div>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);margin-bottom:8px;display:block;">TONE</label>
+            <div class="control-group">
+              <div class="control-btn active" data-axis="tone" data-value="diplomatic">Diplomatic</div>
+              <div class="control-btn" data-axis="tone" data-value="direct">Direct</div>
+            </div>
+          </div>
+        </div>
+        <div class="restructure-output" id="restructureOutput">
+          <div class="restructure-ready" id="restructureReady">✓ Ready for next transformation</div>
+          <div id="restructureText">Select transformation options above to see your text restructured in real-time...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live AI Integration Panel -->
+    <div class="live-ai-panel" id="liveAIPanel">
+      <div class="live-ai-header">
+        <div class="live-ai-title">LIVE AI COMPARISON</div>
+        <div class="live-ai-desc">Experience NTI-mediated AI vs. raw AI in real-time</div>
+      </div>
+      <div class="live-ai-body">
+        <div class="ai-comparison">
+          <div class="ai-column">
+            <div class="ai-column-title">RAW AI (Baseline)</div>
+            <input type="text" class="ai-input" id="rawAIInput" placeholder="Ask a question...">
+            <button class="ai-btn" onclick="queryRawAI()">Send to Raw GPT-4</button>
+            <div class="ai-response" id="rawAIResponse">Response will appear here...</div>
+          </div>
+          <div class="ai-column">
+            <div class="ai-column-title">NTI-MEDIATED AI</div>
+            <input type="text" class="ai-input" id="ntiAIInput" placeholder="Same question...">
+            <button class="ai-btn" onclick="queryNTIAI()">Send to NTI-Enhanced GPT-4</button>
+            <div class="ai-response" id="ntiAIResponse">Response will appear here...</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--muted)">
+          Ask the same question on both sides to see the difference. NTI will pre-stabilize the input and post-process the output for structural integrity.
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="reset()">Run Another Audit</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · NTI canonical-nti-v2.0 · Rule-based, zero LLM dependency · <a href="/health">Health</a> · <a href="/canonical/status">Status</a>
+</div>
+
 <script>
-(function(){
-const $=id=>document.getElementById(id);
-const PERSONAS={explorer:{name:'Explorer',title:'See AI instability in real time',desc:'Paste any AI prompt and response below. Artifact Zero will show you exactly where the AI drifted, deflected, or collapsed your constraints \u2014 without using any AI itself.'},executive:{name:'Decision-Maker',title:'AI risk & cost at a glance',desc:'Every AI interaction carries hidden risk: constraint collapse, objective drift, unnecessary token spend. Paste a real exchange to see the exposure.'},developer:{name:'Developer',title:'Full NTI + Physics diagnostic',desc:'Complete audit: failure modes (UDDS/DCE/CCA), tilt taxonomy, NII scoring, plus the new conversational physics layer \u2014 transform legality, abstraction tracking, drift detection.'},cfo:{name:'AI Spend Analyst',title:'Token economics & invocation savings',desc:'See how many tokens an AI exchange actually needed vs. what was burned. Validated 63\u201365% cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro. Rule-based \u2014 zero inference cost.'},investor:{name:'Investor',title:'Defensibility & market position',desc:'Artifact Zero enforces conversational topology through closed-set calculus. Not prompt engineering. Not tone filtering. Structural enforcement no competitor offers.'}};
-let currentPersona=null,lastNTI=null,lastPhysics=null;
-fetch('/health').then(r=>r.json()).then(d=>{$('h-ver').textContent=d.version||'v2.1'}).catch(()=>{});
-document.querySelectorAll('.persona-card').forEach(c=>{c.addEventListener('click',()=>activatePersona(c.dataset.persona))});
-$('h-persona').addEventListener('click',()=>{$('persona-gate').style.display='flex';$('main-app').classList.remove('active');$('results').innerHTML='';lastNTI=null;lastPhysics=null});
-function activatePersona(key){currentPersona=key;const p=PERSONAS[key];$('persona-gate').style.display='none';$('main-app').classList.add('active');$('h-persona').textContent=p.name.toUpperCase();$('hero').innerHTML='<h2>'+p.title+'</h2><p>'+p.desc+'</p>';buildDemoArea(key);$('results').innerHTML=''}
-function buildDemoArea(key){let html='';if(key==='developer'){html+=`<label>Prompt</label><div class="input-grid" style="margin-bottom:10px"><textarea id="in-prompt" placeholder="Enter the prompt / human input..."></textarea><textarea id="in-answer" placeholder="Enter the AI response..."></textarea></div><div class="input-grid three" style="margin-bottom:10px"><div><label>Objective Type (Physics)</label><select id="in-obj"><option value="">Skip physics</option><option value="RESOLVE">RESOLVE</option><option value="EXPLORE">EXPLORE</option><option value="STRUCTURE">STRUCTURE</option><option value="EXECUTE">EXECUTE</option><option value="DIAGNOSE">DIAGNOSE</option><option value="ALIGN">ALIGN</option></select></div><div><label>Prev Abstraction (0-5)</label><input type="text" id="in-abs" value="0"></div><div><label>Stagnant Turns</label><input type="text" id="in-stag" value="0"></div></div><div class="btn-row"><button class="btn btn-go" id="btn-run">RUN FULL AUDIT</button><button class="btn btn-ghost" id="btn-clr">CLEAR</button></div>`}else{html+=`<label>Paste an AI exchange</label><div class="input-grid" style="margin-bottom:10px"><div><label>Prompt / question</label><textarea id="in-prompt" placeholder="What you asked the AI..."></textarea></div><div><label>AI response</label><textarea id="in-answer" placeholder="What the AI said back..."></textarea></div></div><div class="btn-row"><button class="btn btn-go" id="btn-run">ANALYZE</button><button class="btn btn-ghost" id="btn-clr">CLEAR</button></div>`}$('demo-area').innerHTML=html;$('btn-run').addEventListener('click',runAnalysis);$('btn-clr').addEventListener('click',()=>{if($('in-prompt'))$('in-prompt').value='';if($('in-answer'))$('in-answer').value='';$('results').innerHTML='';lastNTI=null;lastPhysics=null})}
-async function runAnalysis(){const prompt=($('in-prompt')||{}).value||'';const answer=($('in-answer')||{}).value||'';if(!prompt&&!answer){alert('Paste text to analyze.');return}$('loader').classList.add('on');$('results').innerHTML='';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,answer})});lastNTI=await r.json()}catch(e){lastNTI={error:e.message}}lastPhysics=null;const objEl=$('in-obj');if(objEl&&objEl.value){try{const r=await fetch('/physics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt+'\n'+answer,objective_type:objEl.value,previous_abstraction_level:parseInt(($('in-abs')||{}).value)||0,consecutive_stagnant_turns:parseInt(($('in-stag')||{}).value)||0})});lastPhysics=await r.json()}catch(e){lastPhysics={error:e.message}}}$('loader').classList.remove('on');renderResults()}
-function renderResults(){if(!lastNTI||lastNTI.error){$('results').innerHTML='<div class="detail-block"><div class="detail-title">Error</div><div class="detail-body" style="color:var(--red)">'+(lastNTI?lastNTI.error:'No response')+'</div></div>';return}const d=lastNTI,nii=d.nii||{},dominance=(d.interaction_matrix||{}).dominance_detected||[],tilt=d.tilt_taxonomy||[],udds=(d.parent_failure_modes||{}).UDDS||{},dce=(d.parent_failure_modes||{}).DCE||{},cca=(d.parent_failure_modes||{}).CCA||{},drift_score=((d.layers||{}).L3_objective_integrity||{}).drift_score||0,latency=(d.telemetry||{}).latency_ms;({explorer:()=>renderExplorer(d,nii,dominance,tilt,drift_score,udds,dce,cca),executive:()=>renderExecutive(d,nii,dominance,tilt,drift_score,udds,dce,cca,latency),developer:()=>renderDeveloper(d,nii,dominance,tilt,drift_score,udds,dce,cca,latency),cfo:()=>renderCFO(d,nii,dominance,tilt,drift_score,latency),investor:()=>renderInvestor(d,nii,dominance,tilt,drift_score,udds,dce,cca)})[currentPersona]()}
-const TILT_EXPLAIN={T1_REASSURANCE_DRIFT:'"Don\'t worry" language \u2014 the AI is soothing instead of solving.',T2_CERTAINTY_INFLATION:'Overly confident claims without enforcement (e.g. "guarantees", "zero risk").',T3_CONSENSUS_CLAIMS:'Appeals to "most people" or "everyone" \u2014 unverifiable social proof.',T4_CAPABILITY_OVERREACH:'Claims to handle "everything" or "all cases" \u2014 likely false.',T5_ABSOLUTE_LANGUAGE:'Absolute terms like "always", "never", "100%" \u2014 rarely accurate.',T6_CONSTRAINT_DEFERRAL:'Pushes important constraints to "later" or "phase 2".',T7_CATEGORY_BLEND:'Blends distinct categories together ("basically", "overall") \u2014 hides specifics.',T8_PRESSURE_OPTIMIZATION:'Urgency language pushing premature action.',T9_SCOPE_EXPANSION:'Introduced new topics not in your original question.',T10_AUTHORITY_IMPOSITION:'Appeals to unnamed "experts" or "research" without specifics.'};
-function renderExplorer(d,nii,dominance,tilt,drift,udds,dce,cca){let h='',score=nii.nii_score||0,v,vc;if(score>=.8){v='This AI response looks structurally sound.';vc='green'}else if(score>=.5){v='This AI response has structural issues \u2014 it drifted from your constraints or deflected your question.';vc='amber'}else{v='This AI response has serious structural problems. Your constraints were ignored or collapsed.';vc='red'}h+='<div class="insight"><span class="insight-icon">&#127919;</span><h3 style="color:var(--'+vc+')">'+v+'</h3><p>';if(dominance.includes('CCA'))h+='The AI collapsed your specific requirements into vague generalities. ';if(dominance.includes('UDDS'))h+='Your constraints were acknowledged but then bypassed with reassuring language. ';if(dominance.includes('DCE'))h+='Important decisions were pushed to "later" instead of being addressed now. ';if(drift>.5)h+='The response drifted significantly from what you actually asked ('+Math.round(drift*100)+'% drift). ';if(tilt.length)h+='We detected '+tilt.length+' linguistic patterns that indicate structural instability.';h+='</p></div>';h+='<div class="card-grid">';h+=mk('Integrity Score',Math.round(score*100)+'%',score>=.75?'green':score>=.5?'amber':'red',score>=.75?'g':score>=.5?'a':'r');h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':drift<.6?'amber':'red',drift<.3?'g':drift<.6?'a':'r');h+=mk('Issues Found',tilt.length,tilt.length===0?'green':tilt.length<3?'amber':'red',tilt.length===0?'g':tilt.length<3?'a':'r');h+=mk('Failure Modes',dominance.join(' + '),dominance[0]==='NONE'?'green':'red',dominance[0]==='NONE'?'g':'r');h+='</div>';if(tilt.length){h+='<div class="detail-block"><div class="detail-title">What we found</div><div class="detail-body">';tilt.forEach(t=>{h+='<div style="padding:6px 0;border-bottom:1px solid var(--bg3)"><span class="badge ba">'+t.replace(/_/g,' ')+'</span> <span style="color:var(--fg2)">'+(TILT_EXPLAIN[t]||t)+'</span></div>'});h+='</div></div>'}h+=jb(d);$('results').innerHTML=h}
-function renderExecutive(d,nii,dominance,tilt,drift,udds,dce,cca,lat){let h='',score=nii.nii_score||0,rl,rc;if(dominance[0]==='NONE'&&score>=.75){rl='LOW';rc='green'}else if(score>=.5){rl='MEDIUM';rc='amber'}else{rl='HIGH';rc='red'}h+='<div class="insight"><span class="insight-icon">&#9889;</span><h3>Risk Level: <span style="color:var(--'+rc+')">'+rl+'</span></h3><p>This AI exchange has an integrity score of '+Math.round(score*100)+'% with '+tilt.length+' structural issues detected. ';if(drift>.5)h+='The response diverged '+Math.round(drift*100)+'% from the original objective. ';if(dominance.includes('DCE'))h+='Critical decisions were deferred \u2014 this creates downstream execution risk. ';h+='</p></div>';h+='<div class="card-grid">';h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'red',score>=.75?'g':'r');h+=mk('Risk',rl,rc,rc==='green'?'g':rc==='amber'?'a':'r');h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'amber',drift<.3?'g':'a');h+=mk('Failure Modes',dominance.length>1||dominance[0]!=='NONE'?dominance.join('+'):'NONE',dominance[0]==='NONE'?'green':'red',dominance[0]==='NONE'?'g':'r');h+=mk('Tilt Signals',tilt.length,'blue','b');h+=mk('Latency',lat+'ms','cyan','c');h+='</div>';h+='<div class="detail-block"><div class="detail-title">Failure Mode Status</div><div class="detail-body">';h+=fm('UDDS','Upstream Denial via Downstream Substitution',udds.udds_state);h+=fm('DCE','Deferred Constraint Enforcement',dce.dce_state);h+=fm('CCA','Constraint Collapse via Abstraction',cca.cca_state);h+='</div></div>';h+=jb(d);$('results').innerHTML=h}
-function renderDeveloper(d,nii,dominance,tilt,drift,udds,dce,cca,lat){let h='';h+='<div class="detail-title" style="margin-bottom:10px">NTI ANALYSIS</div><div class="card-grid">';h+=mk('NII',Math.round((nii.nii_score||0)*100)+'%',nii.nii_score>=.75?'green':'amber',nii.nii_score>=.75?'g':'a');h+=mk('Q1 Constraints',nii.q1_constraints_explicit?'YES':'NO',nii.q1_constraints_explicit?'green':'red',nii.q1_constraints_explicit?'g':'r');h+=mk('Q2 Order',nii.q2_constraints_before_capability?'YES':'NO',nii.q2_constraints_before_capability?'green':'red',nii.q2_constraints_before_capability?'g':'r');h+=mk('Q3 Boundary',nii.q3_substitutes_after_enforcement?'YES':'NO',nii.q3_substitutes_after_enforcement?'green':'red',nii.q3_substitutes_after_enforcement?'g':'r');h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'amber',drift<.3?'g':'a');h+=mk('Latency',lat+'ms','cyan','c');h+='</div>';h+='<div class="detail-block"><div class="detail-title">Failure Modes</div><div class="detail-body">';h+=fm('UDDS',udds.udds_state+' ('+((udds.criteria||{}).criteria_met_count||0)+'/4)',udds.udds_state);h+=fm('DCE',dce.dce_state,dce.dce_state);h+=fm('CCA',cca.cca_state,cca.cca_state);h+='<div style="margin-top:6px;color:var(--fg3)">Dominance: '+dominance.join(' \u2192 ')+'</div></div></div>';if(tilt.length){h+='<div class="detail-block"><div class="detail-title">Tilt Taxonomy ('+tilt.length+')</div><div class="detail-body">';tilt.forEach(t=>{h+='<span class="badge bp">'+t+'</span> '});h+='</div></div>'}if(lastPhysics&&!lastPhysics.error){const ph=lastPhysics,dr=ph.drift||{},tr=ph.transform||{},ab=ph.abstraction||{},sal=ph.salience||{};h+='<div class="detail-title" style="margin-top:24px;margin-bottom:10px">PHYSICS ENGINE</div><div class="card-grid">';h+=mk('Verdict',dr.verdict||'\u2014',dr.verdict==='CLEAN'?'green':dr.violation_count<=2?'amber':'red',dr.verdict==='CLEAN'?'g':dr.violation_count<=2?'a':'r');h+=mk('Transform',tr.primary_transform||'\u2014','blue','b');h+=mk('Legal',(dr.transform||{}).legal?'YES':'NO',(dr.transform||{}).legal?'green':'red',(dr.transform||{}).legal?'g':'r');h+=mk('Abstraction','L'+(ab.detected_level||0),'purple','p');h+=mk('Objective',ph.objective_type||'\u2014','cyan','c');h+=mk('Violations',dr.violation_count||0,dr.violation_count===0?'green':'amber',dr.violation_count===0?'g':'a');h+='</div>';if(dr.violations&&dr.violations.length){h+='<div class="detail-block"><div class="detail-title">Violations</div><div class="detail-body">';dr.violations.forEach(v=>{h+='<div class="violation">\u26a0 '+v+'</div>'});h+='</div></div>'}if(sal.detected&&sal.detected.length){h+='<div class="detail-block"><div class="detail-title">Salience Transforms</div><div class="detail-body">';sal.detected.forEach(s=>{h+='<span class="badge bp">'+s+'</span> '});h+='</div></div>'}const sd=dr.state_delta||{};if(sd.direction){h+='<div class="detail-block"><div class="detail-title">State Delta</div><div class="detail-body">\u0394S: '+sd.delta_s+' | Direction: <span class="badge '+(sd.direction==='PROGRESS'?'bg':sd.stagnant?'br':'ba')+'">'+sd.direction+'</span>';if(dr.consecutive_stagnant_turns>0)h+=' | Stagnant turns: '+dr.consecutive_stagnant_turns;h+='</div></div>'}h+=jb(ph)}h+=jb(d);$('results').innerHTML=h}
-function renderCFO(d,nii,dominance,tilt,drift,lat){let h='',score=nii.nii_score||0,avoidable=dominance[0]!=='NONE';h+='<div class="savings-banner"><div class="savings-number">63\u201365%</div><div class="savings-label">Validated token cost reduction \xb7 Rule-based \xb7 Zero inference cost</div></div>';h+='<div class="insight"><span class="insight-icon">&#128161;</span><h3>What this exchange would cost you</h3><p>';if(avoidable)h+='This interaction triggered '+dominance.length+' failure modes. In a production system, these patterns compound \u2014 every drifted response generates follow-up clarifications that burn more tokens. ';h+='Artifact Zero detects these patterns <strong>before</strong> the AI call, enabling invocation governance: routing to human resolution when AI would waste tokens, and pre-stabilizing input when AI is the right path.</p></div>';h+='<div class="card-grid">';h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'amber',score>=.75?'g':'a');h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'red',drift<.3?'g':'r','Higher drift = more follow-up tokens');h+=mk('Tilt Signals',tilt.length,tilt.length===0?'green':'amber',tilt.length===0?'g':'a','Each signal = potential rework loop');h+=mk('Avoidable',avoidable?'YES':'NO',avoidable?'red':'green',avoidable?'r':'g','Could this call have been avoided?');h+=mk('Failure Modes',dominance.join('+'),dominance[0]==='NONE'?'green':'red',dominance[0]==='NONE'?'g':'r');h+=mk('Latency',lat+'ms','cyan','c','Processing cost: near zero');h+='</div>';h+='<div class="detail-block"><div class="detail-title">Cost Reduction Mechanics</div><div class="detail-body"><strong>Input stabilization (V2):</strong> Restructures prompts before they reach the model, eliminating ambiguity that causes bloated responses.<br><br><strong>Output compression (V3):</strong> Removes filler, hedging, and redundancy from AI output \u2014 validated 63-65% token reduction.<br><br><strong>Invocation governance:</strong> Routes queries to human resolution when AI would produce low-value, high-cost responses. Prevents unnecessary API calls entirely.<br><br><strong>Zero inference cost:</strong> All analysis is rule-based. No additional LLM calls. The middleware itself costs nothing to run.</div></div>';h+=jb(d);$('results').innerHTML=h}
-function renderInvestor(d,nii,dominance,tilt,drift,udds,dce,cca){let h='',score=nii.nii_score||0;h+='<div class="savings-banner"><div class="savings-number">63\u201365%</div><div class="savings-label">Token cost reduction \xb7 Validated across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro</div></div>';h+='<div class="insight"><span class="insight-icon">&#127959;</span><h3>What you\'re looking at</h3><p>Artifact Zero is deterministic conversational middleware. It sits between humans and AI models, enforcing structural rules that prevent the most expensive failure patterns in enterprise AI deployment: objective drift, constraint collapse, and unnecessary invocations. The system uses no AI itself \u2014 it\'s pure rule-based logic. That means zero marginal inference cost and no model dependency.</p></div>';h+='<div class="card-grid">';h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'red',score>=.75?'g':'r','Live analysis of pasted exchange');h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'red',drift<.3?'g':'r','Objective divergence');h+=mk('Failure Modes',dominance.join('+'),dominance[0]==='NONE'?'green':'red',dominance[0]==='NONE'?'g':'r','Structural failures detected');h+=mk('Tilt Signals',tilt.length,tilt.length===0?'green':'amber',tilt.length===0?'g':'a','Linguistic instability markers');h+='</div>';h+='<div class="detail-block"><div class="detail-title">Defensibility</div><div class="detail-body"><strong>Closed-set calculus:</strong> 6 objective types, 7 transform primitives, 6 abstraction levels, 6 salience operators. Not prompt engineering \u2014 structural enforcement.<br><br><strong>Transform legality:</strong> Every conversational move is classified and checked against the active objective. Illegal transforms are flagged or repaired. No competitor offers this.<br><br><strong>Topology enforcement:</strong> Branch tracking, objective drift detection, abstraction delta guards, state stagnation detection. These are conversational physics \u2014 not filters.<br><br><strong>Model-agnostic:</strong> Works with any LLM. No fine-tuning, no model-specific integration. Pure middleware.</div></div>';h+='<div class="detail-block"><div class="detail-title">Market Position</div><div class="detail-body">Competitors build: tone filters, prompt optimizers, summarizers, guardrails.<br><br>Artifact Zero builds: declared transform enforcement, closure-only irreversibility, objective vector pinning, branch accounting, topology replay.<br><br>This is unpopular in consumer UX. It is critical in enterprise reliability, legal, compliance, and high-stakes execution.</div></div>';h+=jb(d);$('results').innerHTML=h}
-function mk(label,value,color,border,sub){let h='<div class="card '+border+'"><div class="card-label">'+label+'</div><div class="card-value '+color+'">'+value+'</div>';if(sub)h+='<div class="card-sub">'+sub+'</div>';return h+'</div>'}
-function fm(name,detail,state){let c='bg';if(state&&state.includes('PROBABLE'))c='ba';if(state&&state.includes('CONFIRMED'))c='br';return'<div style="padding:6px 0;border-bottom:1px solid var(--bg3)"><strong>'+name+'</strong> <span class="badge '+c+'">'+(state||'')+'</span> <span style="color:var(--fg3);font-size:.8rem">'+detail+'</span></div>'}
-function jb(data){return'<div class="json-toggle" onclick="this.nextElementSibling.classList.toggle(\'open\')">\u25b6 RAW JSON</div><div class="json-raw"><pre>'+JSON.stringify(data,null,2)+'</pre></div>'}
-})();
+const SAMPLES = {
+  a: "You were wrong earlier — not about routing — but about thinking routing was still broken. Routing is fixed. Your fetch body was sending the wrong key. That is not a routing problem. That is a payload problem. The fact that you kept debugging CORS and 404s after the route was already live means you lost the thread. The fix was one line. You spent an hour on it.",
+  b: "We need to align on Q3 projections. Generally speaking, most teams are basically on track, and overall the numbers look fine. We can probably address the variance later after we launch the new dashboard. Don't worry about the gap in EMEA — it's fine for now and we'll figure it out eventually.",
+  c: "This solution guarantees perfect security and eliminates all risk in every scenario. Our system always delivers and never fails. Everyone agrees this is the best practice, and research shows it works for everyone in any situation. We can handle everything — just deploy it and rest assured."
+};
+
+let currentRestructureState = {
+  approach: 'sales',
+  scope: 'open', 
+  urgency: 'measured',
+  tone: 'diplomatic'
+};
+
+let originalText = '';
+let currentAnalysis = null;
+
+// Menu functions
+function toggleMenu(){
+  const overlay = document.getElementById('menuOverlay');
+  const panel = document.getElementById('menuPanel');
+  overlay.classList.toggle('active');
+  panel.classList.toggle('active');
+}
+
+function closeMenu(){
+  document.getElementById('menuOverlay').classList.remove('active');
+  document.getElementById('menuPanel').classList.remove('active');
+}
+
+// Original functions
+function loadSample(k){ 
+  document.getElementById('input').value = SAMPLES[k]; 
+  originalText = SAMPLES[k];
+}
+
+function reset(){ 
+  document.getElementById('input').value = ''; 
+  document.getElementById('results').classList.remove('show'); 
+  document.getElementById('restructurePanel').classList.remove('active');
+  document.getElementById('liveAIPanel').classList.remove('active');
+  originalText = '';
+  currentAnalysis = null;
+  window.scrollTo(0,0); 
+}
+
+function toggle(id){ 
+  const el = document.getElementById(id); 
+  el.style.display = el.style.display === 'none' ? 'block' : 'none'; 
+}
+
+function toggleRaw(){ 
+  document.getElementById('rawJson').classList.toggle('show'); 
+}
+
+function fmClass(s){ 
+  return s.includes('CONFIRMED') ? 'fm-confirmed' : s.includes('PROBABLE') ? 'fm-probable' : 'fm-false'; 
+}
+
+function fmLabel(s){ 
+  return s.includes('FALSE') ? 'CLEAR' : s.replace('_',' '); 
+}
+
+function niiClass(s){ 
+  return s >= 0.8 ? 'good' : s >= 0.5 ? 'warning' : 'critical'; 
+}
+
+// Interactive Restructuring
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.control-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const axis = this.dataset.axis;
+      const value = this.dataset.value;
+      
+      // Update active state
+      document.querySelectorAll(`.control-btn[data-axis="${axis}"]`).forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      
+      // Update state
+      currentRestructureState[axis] = value;
+      
+      // Transform text
+      transformText();
+      
+      // Show ready indicator
+      document.getElementById('restructureReady').classList.add('show');
+      setTimeout(() => {
+        document.getElementById('restructureReady').classList.remove('show');
+      }, 1500);
+    });
+  });
+});
+
+function transformText(){
+  if (!originalText) return;
+  
+  let transformed = originalText;
+  const state = currentRestructureState;
+  
+  // Apply transformations based on current state
+  // This is a simplified demo - in reality this would use the NTI restructuring engine
+  
+  if (state.approach === 'sales') {
+    transformed = transformed.replace(/\b(problem|issue|error)\b/gi, 'opportunity');
+    transformed = transformed.replace(/\b(fix|solve)\b/gi, 'optimize');
+  } else {
+    transformed = transformed.replace(/\bopportunity\b/gi, 'problem');
+    transformed = transformed.replace(/\boptimize\b/gi, 'fix');
+  }
+  
+  if (state.scope === 'closed') {
+    transformed = transformed.replace(/\b(probably|might|could|maybe)\b/gi, 'will');
+    transformed = transformed.replace(/\b(generally|basically|overall)\b/gi, 'specifically');
+  } else {
+    transformed = transformed.replace(/\bwill\b/gi, 'might');
+    transformed = transformed.replace(/\bspecifically\b/gi, 'generally');
+  }
+  
+  if (state.urgency === 'urgent') {
+    transformed = transformed.replace(/\b(later|eventually|sometime)\b/gi, 'immediately');
+    transformed = 'URGENT: ' + transformed;
+  } else {
+    transformed = transformed.replace(/^URGENT: /, '');
+    transformed = transformed.replace(/\bimmediately\b/gi, 'when appropriate');
+  }
+  
+  if (state.tone === 'direct') {
+    transformed = transformed.replace(/\b(please|kindly|perhaps)\b/gi, '');
+    transformed = transformed.replace(/\s+/g, ' ').trim();
+  } else {
+    transformed = transformed.replace(/^/, 'I believe ');
+  }
+  
+  document.getElementById('restructureText').innerHTML = highlightText(transformed);
+}
+
+function highlightText(text) {
+  // Apply semantic highlighting based on NTI analysis
+  let highlighted = text;
+  
+  // Power words
+  highlighted = highlighted.replace(/\b(immediately|urgent|critical|must|required)\b/gi, '<span class="highlight-power">$1</span>');
+  
+  // Assumptions
+  highlighted = highlighted.replace(/\b(obviously|clearly|everyone|always|never)\b/gi, '<span class="highlight-assumption">$1</span>');
+  
+  // Intensifiers
+  highlighted = highlighted.replace(/\b(very|extremely|absolutely|completely|totally)\b/gi, '<span class="highlight-intensifier">$1</span>');
+  
+  // Structural markers
+  highlighted = highlighted.replace(/\b(problem|issue|solution|fix|optimize)\b/gi, '<span class="highlight-structural">$1</span>');
+  
+  return highlighted;
+}
+
+// Live AI Integration
+async function queryRawAI(){
+  const input = document.getElementById('rawAIInput').value.trim();
+  if (!input) return;
+  
+  const btn = document.querySelector('#rawAIInput + .ai-btn');
+  const response = document.getElementById('rawAIResponse');
+  
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  response.textContent = 'Processing...';
+  
+  try {
+    const res = await fetch('/api/openai/raw', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: input})
+    });
+    const data = await res.json();
+    response.innerHTML = highlightText(data.response || 'Error: ' + (data.error || 'Unknown error'));
+  } catch (err) {
+    response.textContent = 'Connection error: ' + err.message;
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Send to Raw GPT-4';
+}
+
+async function queryNTIAI(){
+  const input = document.getElementById('ntiAIInput').value.trim();
+  if (!input) return;
+  
+  const btn = document.querySelector('#ntiAIInput + .ai-btn');
+  const response = document.getElementById('ntiAIResponse');
+  
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  response.textContent = 'Processing with NTI...';
+  
+  try {
+    const res = await fetch('/api/openai/nti', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: input})
+    });
+    const data = await res.json();
+    response.innerHTML = highlightText(data.response || 'Error: ' + (data.error || 'Unknown error'));
+  } catch (err) {
+    response.textContent = 'Connection error: ' + err.message;
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Send to NTI-Enhanced GPT-4';
+}
+
+async function runNTI(){
+  const text = document.getElementById('input').value.trim();
+  if(!text) return;
+  
+  originalText = text;
+  
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Running full stack...';
+
+  try {
+    const res = await fetch('/nti', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text: text})
+    });
+    const data = await res.json();
+    if(data.error){ 
+      alert('Error: ' + data.error); 
+      btn.disabled = false; 
+      btn.textContent = 'Run Full Stack Audit'; 
+      return; 
+    }
+    
+    currentAnalysis = data;
+    renderResults(data);
+    document.getElementById('results').classList.add('show');
+    
+    // Show new panels after a delay
+    setTimeout(() => {
+      document.getElementById('restructurePanel').classList.add('active');
+      document.getElementById('liveAIPanel').classList.add('active');
+      transformText(); // Initialize restructuring with original text
+    }, 500);
+    
+    document.getElementById('results').scrollIntoView({behavior:'smooth'});
+  } catch(err){ 
+    alert('Connection error: ' + err.message); 
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Run Full Stack Audit';
+}
+
+function renderResults(data){
+  const nii = data.nii || {};
+  const fm = data.parent_failure_modes || {};
+  const tilt = data.tilt_taxonomy || [];
+  const matrix = data.interaction_matrix || {};
+  const layers = data.layers || {};
+  const latency = data.telemetry?.latency_ms || '—';
+  const niiScore = nii.nii_score ?? 0;
+  const dominance = matrix.dominance_detected || ['NONE'];
+
+  document.getElementById('heroScores').innerHTML = `
+    <div class="score-card ${niiClass(niiScore)}"><div class="sc-value">${(niiScore*100).toFixed(0)}%</div><div class="sc-label">NTI Integrity Index</div></div>
+    <div class="score-card ${nii.q1_constraints_explicit>=1?'good':'critical'}"><div class="sc-value">${nii.q1_constraints_explicit>=1?'YES':'NO'}</div><div class="sc-label">Constraints Explicit</div></div>
+    <div class="score-card ${nii.q2_constraints_before_capability>=1?'good':'critical'}"><div class="sc-value">${nii.q2_constraints_before_capability>=1?'YES':'NO'}</div><div class="sc-label">Constraints First</div></div>
+    <div class="score-card ${nii.q3_substitutes_after_enforcement>=1?'good':'critical'}"><div class="sc-value">${nii.q3_substitutes_after_enforcement>=1?'YES':'NO'}</div><div class="sc-label">Boundary Enforced</div></div>
+    <div class="score-card info"><div class="sc-value">${tilt.length}</div><div class="sc-label">Tilt Categories</div></div>
+    <div class="score-card info"><div class="sc-value">${latency}ms</div><div class="sc-label">Latency</div></div>
+  `;
+
+  const modes = [
+    {key:'UDDS',full:'Upstream Denial via Downstream Substitution',state:fm.UDDS?.udds_state||'UDDS_FALSE'},
+    {key:'DCE',full:'Deferred Constraint Externalization',state:fm.DCE?.dce_state||'DCE_FALSE'},
+    {key:'CCA',full:'Constraint Collapse via Aggregation',state:fm.CCA?.cca_state||'CCA_FALSE'},
+  ];
+  const active = modes.filter(m=>!m.state.includes('FALSE')).length;
+  document.getElementById('fmBadge').className = 'badge '+(active>0?'badge-red':'badge-green');
+  document.getElementById('fmBadge').textContent = active>0?active+' DETECTED':'CLEAR';
+  document.getElementById('fmBody').innerHTML = modes.map(m=>`
+    <div class="fm-row"><div><div class="fm-name">${m.key}</div><div class="fm-full">${m.full}</div></div>
+    <div class="fm-status ${fmClass(m.state)}">${fmLabel(m.state)}</div></div>
+  `).join('');
+
+  document.getElementById('tiltBadge').className = 'badge '+(tilt.length>0?'badge-amber':'badge-green');
+  document.getElementById('tiltBadge').textContent = tilt.length>0?tilt.length+' ACTIVE':'NONE';
+  document.getElementById('tiltBody').innerHTML = tilt.length>0 ?
+    '<div class="tilt-tags">'+tilt.map(t=>`<span class="tilt-tag">${t}</span>`).join('')+'</div>' :
+    '<span style="color:var(--muted);font-size:13px">No tilt categories detected.</span>';
+
+  document.getElementById('matrixBadge').className = 'badge '+(dominance[0]!=='NONE'?'badge-red':'badge-green');
+  document.getElementById('matrixBadge').textContent = dominance.join(' + ');
+  let mh = '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Dominance order: CCA > UDDS > DCE (canonical)</div>';
+  (matrix.pairwise||[]).forEach(p=>{ mh+=`<div class="matrix-row"><div class="matrix-pair">${p.pair}</div><div class="matrix-note">${p.note}</div></div>`; });
+  if(matrix.triadic) mh+=`<div class="matrix-row" style="margin-top:8px"><div class="matrix-pair">${matrix.triadic.combo} (TRIADIC)</div><div class="matrix-note">${matrix.triadic.note}</div></div>`;
+  document.getElementById('matrixBody').innerHTML = mh;
+
+  const lr = [
+    ['L0','Reality Substrate',JSON.stringify(layers.L0_reality_substrate?.constraints_found||[])],
+    ['L1','Input Freeze',layers.L1_input_freeze?.objective||'—'],
+    ['L2','Interpretive Framing',sumL2(layers.L2_interpretive_framing)],
+    ['L3','Objective Integrity',sumL3(layers.L3_objective_integrity)],
+    ['L4','Execution Vectors','Recorded'],
+    ['L5','Output Enforcement','Drift modes flagged above'],
+    ['L6','Interface Contracts','JOS binding available'],
+    ['L7','Telemetry',`${data.telemetry?.request_id?.substring(0,8)||'—'}… | ${latency}ms`],
+  ];
+  document.getElementById('layerBody').innerHTML = `<table class="layer-table"><thead><tr><th>Layer</th><th>Name</th><th>Output</th></tr></thead><tbody>${lr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td style="word-break:break-word">${r[2]}</td></tr>`).join('')}</tbody></table>`;
+
+  document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+}
+
+function sumL2(f){
+  if(!f) return '—';
+  const i=[];
+  if(f.hedge_markers?.length) i.push('Hedges: '+f.hedge_markers.join(', '));
+  if(f.reassurance_markers?.length) i.push('Reassurance: '+f.reassurance_markers.join(', '));
+  if(f.category_blend_markers?.length) i.push('Blends: '+f.category_blend_markers.join(', '));
+  return i.length?i.join(' · '):'Clean';
+}
+
+function sumL3(d){
+  if(!d) return '—';
+  return `Similarity: ${d.jaccard_similarity} · Drift: ${d.drift_score} · Mutation: ${d.mutation_markers_present?'YES':'NO'}`;
+}
+
+// Copy inputs between AI comparison columns
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('rawAIInput').addEventListener('input', function(){
+    document.getElementById('ntiAIInput').value = this.value;
+  });
+  
+  document.getElementById('ntiAIInput').addEventListener('input', function(){
+    document.getElementById('rawAIInput').value = this.value;
+  });
+});
+
 </script>
 </body>
 </html>
