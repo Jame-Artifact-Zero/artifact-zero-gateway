@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
+from rss_proxy import rss_bp
+app.register_blueprint(rss_bp)
 
 # ============================================================
 # CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
