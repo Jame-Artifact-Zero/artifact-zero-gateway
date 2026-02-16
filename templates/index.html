@@ -552,16 +552,7 @@ let currentEmailState={approach:'sales',urgency:'measured',tone:'diplomatic'};
 
 fetch('/health').then(r=>r.json()).then(d=>{$('h-ver').textContent=d.version||'v2.1'}).catch(()=>{});
 
-// Question Physics Service URL Detection
-function getQuestionPhysicsURL() {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:5001';
-    } else {
-        // For production - adjust this to your Question Physics service URL
-        return `https://${hostname}:5001`;
-    }
-}
+// Question Physics URL detection temporarily removed for speed optimization
 
 // Menu functions
 function toggleMenu(){
@@ -633,25 +624,8 @@ async function runAnalysis(){
         lastNTI={error:e.message};
     }
     
-    // Call Question Physics service (SURGICAL CHANGE - now calls standalone service)
-    try {
-        const qpURL = getQuestionPhysicsURL();
-        const qpResponse = await fetch(`${qpURL}/analyze`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({text: originalText})
-        });
-        
-        if (qpResponse.ok) {
-            const qpData = await qpResponse.json();
-            if (lastNTI && qpData.question_physics) {
-                lastNTI.question_physics = qpData.question_physics;
-            }
-        }
-    } catch(e) {
-        console.log('Question Physics service unavailable:', e);
-        // Continue without Question Physics - graceful fallback
-    }
+    // Question Physics temporarily disabled for speed optimization
+    // Will be re-enabled when standalone service is deployed
     
     lastPhysics=null;
     const objEl=$('in-obj');
