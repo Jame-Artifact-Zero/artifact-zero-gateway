@@ -471,30 +471,30 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
           </button>
         </div>
 
-        <!-- Step 3: AI Comparison -->
+        <!-- Step 3: Raw Input vs NTI Analysis -->
         <div class="result-section" id="aiSection">
           <div class="result-section-header">
-            <div class="result-section-title">Live AI Comparison</div>
+            <div class="result-section-title">Raw Input vs NTI Analysis</div>
             <div class="result-section-step">Step 3 of 4</div>
           </div>
           <div class="ai-comparison-tool">
             <div style="padding:20px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2)">
               <div style="margin-bottom:16px">
-                <div style="font-family:var(--mono);font-size:14px;color:var(--green);margin-bottom:8px">COMPARE RAW AI VS NTI-ENHANCED</div>
-                <div style="font-size:12px;color:var(--fg3)">Ask the same question to see the difference</div>
+                <div style="font-family:var(--mono);font-size:14px;color:var(--green);margin-bottom:8px">COMPARE RAW INPUT VS STRUCTURAL ANALYSIS</div>
+                <div style="font-size:12px;color:var(--fg3)">Type any text to see how NTI analyzes its structural integrity</div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
                 <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px">
-                  <div style="font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center">RAW AI (Baseline)</div>
-                  <input type="text" id="rawAIInput" placeholder="Ask a question..." style="width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px">
-                  <button onclick="queryRawAI()" style="width:100%;padding:8px;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px">Send to Raw AI</button>
-                  <div id="rawAIResponse" style="min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)">Response will appear here...</div>
+                  <div style="font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center">RAW INPUT (What You Type)</div>
+                  <input type="text" id="rawAIInput" placeholder="Type any question or text..." style="width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px">
+                  <button onclick="queryRawAI()" style="width:100%;padding:8px;background:var(--amber);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px">Show Raw Input</button>
+                  <div id="rawAIResponse" style="min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)">Your input will appear here...</div>
                 </div>
                 <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px">
-                  <div style="font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center">NTI-MEDIATED AI</div>
-                  <input type="text" id="ntiAIInput" placeholder="Same question..." style="width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px">
-                  <button onclick="queryNTIAI()" style="width:100%;padding:8px;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px">Send to NTI AI</button>
-                  <div id="ntiAIResponse" style="min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)">Response will appear here...</div>
+                  <div style="font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center">NTI STRUCTURAL ANALYSIS</div>
+                  <input type="text" id="ntiAIInput" placeholder="Same text..." style="width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px">
+                  <button onclick="queryNTIAI()" style="width:100%;padding:8px;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px">Run NTI Analysis</button>
+                  <div id="ntiAIResponse" style="min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)">Analysis results will appear here...</div>
                 </div>
               </div>
             </div>
@@ -824,42 +824,68 @@ function transformEmail(){
     $('emailOutput').textContent = transformed;
 }
 
-// AI Comparison Functions
+// AI Comparison Functions - Fixed to use existing /nti endpoint
 async function queryRawAI(){
-    const input=$('rawAIInput').value.trim();
-    if(!input)return;
+    const input = $('rawAIInput').value.trim();
+    if (!input) return;
     
-    $('rawAIResponse').textContent='Processing...';
+    $('rawAIResponse').textContent = 'Processing...';
     
-    try{
-        const res=await fetch('/api/openai/raw',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({query:input})
-        });
-        const data=await res.json();
-        $('rawAIResponse').textContent=data.response||'Error: '+(data.error||'Unknown error');
-    }catch(err){
-        $('rawAIResponse').textContent='Connection error: '+err.message;
-    }
+    // Simply show the raw input as "baseline"
+    setTimeout(() => {
+        $('rawAIResponse').textContent = input;
+    }, 500);
 }
 
 async function queryNTIAI(){
-    const input=$('ntiAIInput').value.trim();
-    if(!input)return;
+    const input = $('ntiAIInput').value.trim();
+    if (!input) return;
     
-    $('ntiAIResponse').textContent='Processing with NTI...';
+    $('ntiAIResponse').textContent = 'Processing with NTI...';
     
-    try{
-        const res=await fetch('/api/openai/nti',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({query:input})
+    try {
+        // Call existing /nti endpoint
+        const res = await fetch('/nti', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: input})
         });
-        const data=await res.json();
-        $('ntiAIResponse').textContent=data.response||'Error: '+(data.error||'Unknown error');
-    }catch(err){
-        $('ntiAIResponse').textContent='Connection error: '+err.message;
+        
+        const data = await res.json();
+        
+        if (data.error) {
+            $('ntiAIResponse').textContent = 'Error: ' + data.error;
+            return;
+        }
+        
+        // Create a summary of NTI analysis
+        const nii = data.nii || {};
+        const score = Math.round((nii.nii_score || 0) * 100);
+        const dominance = (data.interaction_matrix || {}).dominance_detected || [];
+        const tilt = data.tilt_taxonomy || [];
+        
+        let summary = `NTI Analysis Results:\n\n`;
+        summary += `• Integrity Score: ${score}%\n`;
+        summary += `• Structural Issues: ${tilt.length} detected\n`;
+        summary += `• Failure Modes: ${dominance.join(', ') || 'None'}\n`;
+        
+        if (data.question_physics && data.question_physics.question_present) {
+            const qp = data.question_physics;
+            summary += `\nQuestion Physics:\n`;
+            summary += `• Type: ${qp.question_types.join(', ')}\n`;
+            summary += `• Structural Risk: ${qp.structural_risk}%\n`;
+        }
+        
+        if (score < 75) {
+            summary += `\nRecommendation: This input shows structural instability. Consider rephrasing with clearer constraints.`;
+        } else {
+            summary += `\nRecommendation: Input structure is stable and well-formed.`;
+        }
+        
+        $('ntiAIResponse').textContent = summary;
+        
+    } catch(err) {
+        $('ntiAIResponse').textContent = 'Connection error: ' + err.message;
     }
 }
 
