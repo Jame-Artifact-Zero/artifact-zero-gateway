@@ -18,237 +18,80 @@
   --cyan:#00d4ff;--cyan2:rgba(0,212,255,.12);
   --mono:'Azeret Mono',monospace;--sans:'Outfit',sans-serif;
   --r:8px;--r2:12px;
-  /* Enhanced color system for multiple axes */
-  --axis1-structural:#448aff;--axis1-light:rgba(68,138,255,0.1);
-  --axis2-relational:#ff4466;--axis2-light:rgba(255,68,102,0.1);
-  --axis3-economic:#00e89c;--axis3-light:rgba(0,232,156,0.1);
-  --assumption:#9966ff;--assumption-light:rgba(153,102,255,0.1);
-  --intensifier:#ffaa33;--intensifier-light:rgba(255,170,51,0.1);
-  --generalization:#00d4ff;--generalization-light:rgba(0,212,255,0.1);
-  --filler:#5a5a72;--filler-light:rgba(90,90,114,0.1);
-  --power-word:#ec4899;--power-light:rgba(236,72,153,0.1);
 }
-html{font-size:15px;scroll-behavior:smooth}
-body{background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+html{font-size:15px;overflow-x:hidden}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100vh;overflow-x:hidden;scroll-behavior:auto}
 
-/* Menu System */
-.menu-toggle{position:fixed;top:20px;right:20px;z-index:1000;background:var(--bg2);border:1px solid var(--bg3);border-radius:8px;padding:8px;cursor:pointer;transition:all .2s}
-.menu-toggle:hover{border-color:var(--green)}
-.menu-icon{width:20px;height:20px;display:flex;flex-direction:column;justify-content:space-between}
-.menu-line{height:2px;background:var(--fg);border-radius:1px;transition:all .3s}
-.menu-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999;opacity:0;visibility:hidden;transition:all .3s}
-.menu-overlay.active{opacity:1;visibility:visible}
-.menu-panel{position:fixed;top:0;right:0;width:400px;height:100vh;background:var(--bg2);border-left:1px solid var(--bg3);transform:translateX(100%);transition:transform .3s;overflow-y:auto;z-index:1000}
-.menu-panel.active{transform:translateX(0)}
-.menu-header{padding:24px;border-bottom:1px solid var(--bg3)}
-.menu-title{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green);margin-bottom:4px}
-.menu-close{position:absolute;top:20px;right:20px;background:none;border:none;color:var(--fg3);font-size:20px;cursor:pointer;padding:4px}
-.menu-section{padding:20px 24px;border-bottom:1px solid var(--bg3)}
-.menu-section h3{font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
-
-/* Color Legend */
-.color-legend{display:grid;gap:8px}
-.color-item{display:flex;align-items:center;gap:12px;padding:8px;background:var(--bg3);border-radius:6px}
-.color-sample{width:16px;height:16px;border-radius:3px}
-.color-sample.structural{background:var(--axis1-structural)}
-.color-sample.relational{background:var(--axis2-relational)}
-.color-sample.economic{background:var(--axis3-economic)}
-.color-sample.assumption{background:var(--assumption)}
-.color-sample.intensifier{background:var(--intensifier)}
-.color-sample.generalization{background:var(--generalization)}
-.color-sample.filler{background:var(--filler)}
-.color-sample.power{background:var(--power-word)}
-.color-label{font-size:13px;font-weight:600}
-.color-desc{font-size:11px;color:var(--fg3)}
+/* App Layout - No Jumping */
+.app-container{min-height:100vh;display:flex;flex-direction:column}
+.app-header{padding:16px 28px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:12px;background:var(--bg);z-index:100;flex-shrink:0}
+.app-header .logo{font-family:var(--mono);font-size:.85rem;font-weight:700;letter-spacing:2px;color:var(--green)}
+.app-header .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.app-body{flex:1;overflow-y:auto;padding:0}
+.sections-container{max-width:1100px;margin:0 auto;padding:28px}
 
 /* Persona Gate */
-#persona-gate{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;position:relative;overflow:hidden}
-#persona-gate::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,232,156,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+#persona-gate{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;position:relative}
 .gate-logo{font-family:var(--mono);font-size:1rem;font-weight:700;letter-spacing:4px;color:var(--green);margin-bottom:8px;opacity:0;animation:fadeUp .6s .1s forwards}
 .gate-title{font-family:var(--sans);font-size:2.4rem;font-weight:700;text-align:center;margin-bottom:8px;opacity:0;animation:fadeUp .6s .2s forwards}
 .gate-sub{font-family:var(--sans);font-size:1rem;color:var(--fg2);text-align:center;max-width:520px;line-height:1.5;margin-bottom:48px;opacity:0;animation:fadeUp .6s .3s forwards}
 .gate-question{font-family:var(--mono);font-size:.75rem;color:var(--fg3);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;opacity:0;animation:fadeUp .6s .4s forwards}
 .persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:900px;width:100%;opacity:0;animation:fadeUp .6s .5s forwards}
-.persona-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.persona-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;cursor:pointer;transition:all .2s}
 .persona-card:hover{border-color:var(--green);transform:translateY(-2px)}
-.persona-card:hover .persona-icon{color:var(--green)}
-.persona-card:active{transform:translateY(0)}
-.persona-icon{font-size:1.6rem;margin-bottom:10px;transition:color .2s;display:block}
+.persona-icon{font-size:1.6rem;margin-bottom:10px;display:block}
 .persona-name{font-family:var(--sans);font-size:1rem;font-weight:600;margin-bottom:4px}
 .persona-desc{font-family:var(--sans);font-size:.8rem;color:var(--fg3);line-height:1.4}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
 /* Main App */
-#main-app{display:none}
-#main-app.active{display:block}
-.app-header{padding:16px 28px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg);z-index:100}
-.app-header .logo{font-family:var(--mono);font-size:.85rem;font-weight:700;letter-spacing:2px;color:var(--green)}
-.app-header .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.app-header .ver{font-family:var(--mono);font-size:.65rem;color:var(--fg4);padding:2px 6px;border:1px solid var(--bg3);border-radius:3px}
-.app-header .persona-label{margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--fg3);padding:4px 10px;border:1px solid var(--bg4);border-radius:var(--r);cursor:pointer;transition:all .2s}
-.app-header .persona-label:hover{border-color:var(--fg3);color:var(--fg2)}
-
-.app-body{max-width:1100px;margin:0 auto;padding:28px}
+#main-app{display:none;height:100vh;flex-direction:column}
+#main-app.active{display:flex}
 .persona-hero{margin-bottom:28px;padding:24px 28px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2)}
 .persona-hero h2{font-family:var(--sans);font-size:1.5rem;font-weight:700;margin-bottom:6px}
 .persona-hero p{font-family:var(--sans);font-size:.9rem;color:var(--fg2);line-height:1.5}
 
+/* Demo Section */
 .demo-section{margin-bottom:28px}
 .demo-section label{font-family:var(--mono);font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:6px}
-textarea,input[type=text],input[type=number],select{width:100%;background:var(--bg2);border:1px solid var(--bg3);color:var(--fg);font-family:var(--mono);font-size:.82rem;padding:12px 14px;border-radius:var(--r);outline:none;transition:border-color .2s;resize:vertical}
+textarea,input[type=text],select{width:100%;background:var(--bg2);border:1px solid var(--bg3);color:var(--fg);font-family:var(--mono);font-size:.82rem;padding:12px 14px;border-radius:var(--r);outline:none;transition:border-color .2s;resize:vertical}
 textarea:focus,input:focus,select:focus{border-color:var(--green)}
 textarea{min-height:90px}
-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M5 7L1 3h8z' fill='%235a5a72'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
-
 .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.input-grid.three{grid-template-columns:1fr 1fr 1fr}
-.input-full{grid-column:1/-1}
-
 .btn{font-family:var(--mono);font-size:.75rem;font-weight:600;padding:10px 22px;border:none;border-radius:var(--r);cursor:pointer;transition:all .15s}
 .btn-go{background:var(--green);color:var(--bg)}.btn-go:hover{background:var(--green2)}
 .btn-ghost{background:transparent;border:1px solid var(--bg4);color:var(--fg3)}.btn-ghost:hover{border-color:var(--fg3);color:var(--fg2)}
 .btn-row{display:flex;gap:8px;margin-top:10px}
 
-/* Conversion & Urgency Styles */
-.urgency-banner{background:linear-gradient(135deg,rgba(255,68,102,.15),rgba(239,68,68,.1));border:1px solid var(--red);border-radius:8px;padding:20px;text-align:center;margin-bottom:20px;animation:pulse-urgent 2s infinite}
-.urgency-number{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--red);margin-bottom:4px}
-.urgency-label{font-size:12px;color:var(--fg2);text-transform:uppercase;letter-spacing:1px}
-@keyframes pulse-urgent{0%,100%{border-color:var(--red)}50%{border-color:var(--amber)}}
-
-.investor-urgency{border-left:4px solid var(--red) !important}
-.investor-action{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:24px;margin:20px 0}
-.action-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red);text-align:center;margin-bottom:20px;text-transform:uppercase;letter-spacing:2px}
-.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
-.action-card{background:var(--bg);border:1px solid var(--bg3);border-radius:var(--r);padding:20px;text-align:center;position:relative;overflow:hidden}
-.action-card.urgent{border-color:var(--red);background:linear-gradient(135deg,var(--bg),rgba(255,68,102,.05))}
-.action-card.premium{border-color:var(--amber);background:linear-gradient(135deg,var(--bg),rgba(255,170,51,.05))}
-.action-card.urgent::before{content:'LIMITED';position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700}
-.action-amount{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--green);margin-bottom:8px}
-.action-label{font-family:var(--mono);font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.action-desc{font-size:13px;color:var(--fg2);line-height:1.4;margin-bottom:16px}
-.action-btn{width:100%;padding:12px 20px;border:none;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
-.action-btn.red{background:var(--red);color:#fff}
-.action-btn.red:hover{background:#dc2626;transform:translateY(-1px)}
-.action-btn.green{background:var(--green);color:#000}
-.action-btn.green:hover{background:#16a34a;transform:translateY(-1px)}
-.action-btn.premium{background:linear-gradient(135deg,var(--amber),var(--green));color:#000}
-.action-btn.premium:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(255,170,51,.3)}
-
-.savings-calculator{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:20px;margin:20px 0}
-.calc-title{font-family:var(--mono);font-size:14px;color:var(--green);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}
-.calc-row{display:grid;grid-template-columns:200px 1fr 100px;gap:12px;align-items:center;margin-bottom:12px}
-.calc-label{font-size:13px;color:var(--fg2)}
-.calc-input{background:var(--bg);border:1px solid var(--bg3);color:var(--fg);padding:8px 12px;border-radius:4px;font-family:var(--mono);font-size:13px}
-.calc-result{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);text-align:right}
-.savings-projection{background:linear-gradient(135deg,rgba(0,232,156,.08),rgba(0,212,255,.06));border:1px solid rgba(0,232,156,.2);border-radius:var(--r);padding:16px;margin-top:16px;text-align:center}
-.projection-amount{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--green)}
-.projection-timeline{font-size:12px;color:var(--fg2);margin-top:4px}
-
-/* Interactive Restructuring Panel */
-.restructure-panel{margin-top:24px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);overflow:hidden;opacity:0;transform:translateY(20px);transition:all .4s}
-.restructure-panel.active{opacity:1;transform:translateY(0)}
-.restructure-header{padding:16px;border-bottom:1px solid var(--bg3);background:linear-gradient(135deg,var(--bg3),var(--bg2))}
-.restructure-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px}
-.restructure-desc{font-size:12px;color:var(--fg3)}
-.restructure-body{padding:20px}
-.restructure-controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.control-group{display:flex;gap:8px}
-.control-btn{padding:8px 16px;border:1px solid var(--bg3);background:var(--bg3);color:var(--fg3);font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:all .2s;font-family:var(--sans)}
-.control-btn:hover{border-color:var(--green);color:var(--fg)}
-.control-btn.active{background:var(--green);color:var(--bg);border-color:var(--green)}
-.restructure-output{background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px;min-height:120px;font-family:var(--sans);line-height:1.6;position:relative}
-.restructure-ready{display:none;background:var(--green);color:var(--bg);font-size:11px;font-weight:600;padding:4px 8px;border-radius:4px;position:absolute;top:8px;right:8px}
-.restructure-ready.show{display:block}
-
-/* Live AI Integration Panel */
-.live-ai-panel{margin-top:24px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);overflow:hidden;opacity:0;transform:translateY(20px);transition:all .4s}
-.live-ai-panel.active{opacity:1;transform:translateY(0)}
-.live-ai-header{padding:16px;border-bottom:1px solid var(--bg3);background:linear-gradient(135deg,var(--bg4),var(--bg3))}
-.live-ai-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px}
-.live-ai-desc{font-size:12px;color:var(--fg3)}
-.live-ai-body{padding:20px}
-.ai-comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.ai-column{background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px}
-.ai-column-title{font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center}
-.ai-input{width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px}
-.ai-response{min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)}
-.ai-btn{width:100%;padding:8px;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px}
-.ai-btn:hover{background:var(--green2)}
-.ai-btn:disabled{background:var(--bg3);color:var(--fg3)}
-
-/* Interactive Demo Styles */
-.interactive-demo-section{margin-top:32px;padding:24px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);opacity:0;transform:translateY(20px);transition:all .4s}
-.interactive-demo-section.active{opacity:1;transform:translateY(0)}
-.demo-selector{text-align:center;margin-bottom:24px}
-.demo-selector h3{font-family:var(--mono);font-size:18px;color:var(--green);margin-bottom:8px}
-.demo-selector p{font-size:14px;color:var(--fg2);margin-bottom:20px}
-.demo-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;max-width:600px;margin:0 auto}
-.demo-select-btn{padding:12px 16px;background:var(--bg3);border:1px solid var(--bg4);color:var(--fg);border-radius:var(--r);font-family:var(--sans);font-size:14px;cursor:pointer;transition:all .2s}
-.demo-select-btn:hover{border-color:var(--green);background:var(--bg4);transform:translateY(-1px)}
-
-.demo-container{background:var(--bg);border:1px solid var(--bg3);border-radius:var(--r2);margin:20px 0;overflow:hidden}
-.demo-header{padding:20px 24px;background:linear-gradient(135deg,var(--bg3),var(--bg2));border-bottom:1px solid var(--bg3)}
-.demo-header h3{font-family:var(--mono);font-size:16px;color:var(--green);margin-bottom:4px}
-.demo-header p{font-size:13px;color:var(--fg3)}
-.demo-context{padding:20px 24px;background:var(--bg2);border-bottom:1px solid var(--bg3)}
-.email-context,.ticket-context,.meeting-context{background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--r);overflow:hidden}
-.email-header,.ticket-header,.meeting-header{padding:12px 16px;background:var(--bg4);font-size:12px;color:var(--fg2);font-family:var(--mono)}
-.email-body,.ticket-body,.situation{padding:16px;font-size:14px;line-height:1.6;color:var(--fg);white-space:pre-wrap}
-.demo-input-section{padding:20px 24px}
-.demo-input-section label{display:block;font-family:var(--mono);font-size:12px;color:var(--fg2);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
-.demo-input-section textarea{width:100%;background:var(--bg2);border:1px solid var(--bg3);color:var(--fg);padding:14px;border-radius:var(--r);font-family:var(--sans);font-size:14px;line-height:1.6;resize:vertical;margin-bottom:12px;transition:border-color .2s}
-.demo-input-section textarea:focus{outline:none;border-color:var(--green)}
-.demo-btn{padding:10px 20px;border:none;border-radius:var(--r);font-family:var(--mono);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
-.demo-btn.primary{background:var(--green);color:var(--bg)}
-.demo-btn.primary:hover{background:var(--green2);transform:translateY(-1px)}
-.demo-btn.nti-btn{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;font-size:14px;padding:12px 24px}
-.demo-btn.nti-btn:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(68,138,255,.3)}
-.demo-btn.secondary{background:transparent;border:1px solid var(--bg4);color:var(--fg3)}
-.demo-btn.secondary:hover{border-color:var(--fg3);color:var(--fg2)}
-.demo-results{border-top:1px solid var(--bg3)}
-.demo-loading{padding:40px;text-align:center;color:var(--fg3);font-style:italic}
-.demo-error{padding:20px;background:var(--red2);color:var(--red);text-align:center}
-.demo-step-1,.demo-step-2{padding:24px;border-bottom:1px solid var(--bg3)}
-.demo-step-2{background:linear-gradient(135deg,rgba(0,232,156,.02),rgba(68,138,255,.02));border-bottom:none}
-.demo-step-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.step-number{width:28px;height:28px;border-radius:50%;background:var(--green);color:var(--bg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:700}
-.demo-step-2 .step-number{background:var(--blue)}
-.demo-step-header h4{font-family:var(--mono);font-size:14px;color:var(--fg);margin:0}
-.user-response-box,.enhanced-response-box{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:16px;margin:16px 0;font-style:italic;line-height:1.6}
-.enhanced-response-box{border-color:var(--blue);background:linear-gradient(135deg,var(--bg2),rgba(68,138,255,.05))}
-.problems-analysis,.improvements-analysis{margin:16px 0}
-.problems-title,.improvements-title{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:600;margin-bottom:12px}
-.problems-title{color:var(--red)}
-.improvements-title{color:var(--green)}
-.warning-icon,.success-icon{font-size:16px}
-.problems-list,.improvements-list{list-style:none;margin:0;padding:0}
-.problems-list li{padding:8px 0;border-bottom:1px solid rgba(255,68,102,.1);color:var(--fg2);position:relative;padding-left:20px}
-.problems-list li::before{content:'×';position:absolute;left:0;color:var(--red);font-weight:700}
-.improvements-list li{padding:8px 0;border-bottom:1px solid rgba(0,232,156,.1);color:var(--fg2);position:relative;padding-left:20px}
-.improvements-list li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700}
-.nti-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:16px;padding:12px;background:var(--bg3);border-radius:var(--r)}
-.score-item{text-align:center}
-.score-label{display:block;font-family:var(--mono);font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.score-value{display:block;font-family:var(--mono);font-size:16px;font-weight:700}
-.score-value.good{color:var(--green)}
-.score-value.bad{color:var(--red)}
-.demo-reveal-button{text-align:center;margin:20px 0}
-.demo-cta{margin-top:24px;padding:20px;background:var(--bg3);border-radius:var(--r)}
-.mic-drop{margin-bottom:20px;padding:16px;background:linear-gradient(135deg,rgba(255,170,51,.1),rgba(255,68,102,.1));border:1px solid var(--amber);border-radius:var(--r)}
-.mic-drop strong{color:var(--amber);font-family:var(--mono);font-size:14px}
-.mic-drop p{margin:8px 0 0 0;font-style:italic;line-height:1.5}
-.mic-drop em{color:var(--green);font-weight:600}
-.demo-next-steps{display:flex;gap:12px;justify-content:center}
-
-/* Enhanced highlighting for text analysis */
-.highlight-structural{background:var(--axis1-light);color:var(--axis1-structural);padding:1px 2px;border-radius:2px;cursor:pointer}
-.highlight-relational{background:var(--axis2-light);color:var(--axis2-relational);padding:1px 2px;border-radius:2px;cursor:pointer}
-.highlight-assumption{background:var(--assumption-light);color:var(--assumption);padding:1px 2px;border-radius:2px;cursor:pointer}
-.highlight-intensifier{background:var(--intensifier-light);color:var(--intensifier);padding:1px 2px;border-radius:2px;cursor:pointer}
-.highlight-power{background:var(--power-light);color:var(--power-word);padding:1px 2px;border-radius:2px;cursor:pointer}
-
+/* Results */
 .results{margin-top:20px}
+.loader{display:none;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--fg3);margin:14px 0}
+.loader.on{display:flex}
+.spin{width:14px;height:14px;border:2px solid var(--bg4);border-top-color:var(--green);border-radius:50%;animation:sp .5s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Question Physics Panel */
+.question-physics{background:var(--bg2);border:1px solid var(--purple);border-radius:var(--r2);padding:20px;margin-bottom:20px;border-left:4px solid var(--purple)}
+.question-physics-header{margin-bottom:16px}
+.question-physics-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--purple);margin-bottom:4px}
+.question-physics-desc{font-size:12px;color:var(--fg3)}
+.question-type-badges{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.question-type-badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
+.question-type-badge.constraint{background:var(--red2);color:var(--red);border:1px solid var(--red)}
+.question-type-badge.authority{background:var(--amber2);color:var(--amber);border:1px solid var(--amber)}
+.question-type-badge.framing{background:var(--purple2);color:var(--purple);border:1px solid var(--purple)}
+.question-type-badge.info{background:var(--blue2);color:var(--blue);border:1px solid var(--blue)}
+.question-risk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.question-risk-item{text-align:center;padding:12px;background:var(--bg3);border-radius:var(--r)}
+.question-risk-label{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.question-risk-value{font-family:var(--mono);font-size:16px;font-weight:700}
+.question-risk-value.high{color:var(--red)}
+.question-risk-value.medium{color:var(--amber)}
+.question-risk-value.low{color:var(--green)}
+
+/* Analysis Results */
+.analysis-results{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:20px}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
 .card{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:18px 20px;position:relative;overflow:hidden}
 .card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
@@ -258,152 +101,26 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .card-value.green{color:var(--green)}.card-value.red{color:var(--red)}.card-value.amber{color:var(--amber)}.card-value.blue{color:var(--blue)}.card-value.purple{color:var(--purple)}.card-value.cyan{color:var(--cyan)}
 .card-sub{font-family:var(--sans);font-size:.75rem;color:var(--fg3);margin-top:4px}
 
-.detail-block{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px}
-.detail-title{font-family:var(--mono);font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
-.detail-body{font-family:var(--sans);font-size:.85rem;color:var(--fg2);line-height:1.6}
-
-.badge{display:inline-block;font-family:var(--mono);font-size:.6rem;font-weight:600;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;margin:2px}
-.bg{background:var(--green3);color:var(--green)}.br{background:var(--red2);color:var(--red)}.ba{background:var(--amber2);color:var(--amber)}.bb{background:var(--blue2);color:var(--blue)}.bp{background:var(--purple2);color:var(--purple)}.bc{background:var(--cyan2);color:var(--cyan)}
-
 .insight{background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;margin-bottom:16px}
 .insight-icon{font-size:1.2rem;margin-bottom:8px;display:block}
 .insight h3{font-family:var(--sans);font-size:1.1rem;font-weight:600;margin-bottom:6px}
 .insight p{font-family:var(--sans);font-size:.88rem;color:var(--fg2);line-height:1.6}
 
-.loader{display:none;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--fg3);margin:14px 0}
-.loader.on{display:flex}
-.spin{width:14px;height:14px;border:2px solid var(--bg4);border-top-color:var(--green);border-radius:50%;animation:sp .5s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-
-.json-toggle{font-family:var(--mono);font-size:.65rem;color:var(--fg4);cursor:pointer;margin-top:12px;user-select:none}
-.json-toggle:hover{color:var(--fg3)}
-.json-raw{display:none;margin-top:8px;background:var(--bg);border:1px solid var(--bg3);border-radius:var(--r);padding:12px;max-height:350px;overflow:auto}
-.json-raw.open{display:block}
-.json-raw pre{font-family:var(--mono);font-size:.7rem;color:var(--fg3);white-space:pre-wrap;word-break:break-all}
-
-/* Mobile responsiveness */
+/* Mobile responsive */
 @media(max-width:768px){
-  .menu-panel{width:100%;max-width:400px}
   .persona-grid{grid-template-columns:1fr}
-  .gate-title{font-size:1.8rem}
-  .input-grid,.input-grid.three{grid-template-columns:1fr}
+  .input-grid{grid-template-columns:1fr}
   .card-grid{grid-template-columns:1fr 1fr}
-  .app-body{padding:16px}
-  .app-header{padding:12px 16px}
-  .action-grid{grid-template-columns:1fr}
-  .calc-row{grid-template-columns:1fr}
-  .calc-result{text-align:left;margin-top:4px}
-  .restructure-controls{grid-template-columns:1fr}
-  .ai-comparison{grid-template-columns:1fr}
-  .demo-buttons{grid-template-columns:1fr}
-  .demo-next-steps{flex-direction:column;align-items:center}
-  .demo-btn{width:100%;max-width:200px}
-  .nti-scores{grid-template-columns:1fr 1fr}
+  .sections-container{padding:16px}
+  .question-risk-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:480px){
   .card-grid{grid-template-columns:1fr}
+  .question-risk-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
-
-<!-- Menu Toggle -->
-<div class="menu-toggle" onclick="toggleMenu()">
-  <div class="menu-icon">
-    <div class="menu-line"></div>
-    <div class="menu-line"></div>
-    <div class="menu-line"></div>
-  </div>
-</div>
-
-<!-- Menu Overlay -->
-<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
-
-<!-- Menu Panel -->
-<div class="menu-panel" id="menuPanel">
-  <div class="menu-header">
-    <div class="menu-title">NTI GUIDE</div>
-    <button class="menu-close" onclick="closeMenu()">&times;</button>
-  </div>
-  
-  <div class="menu-section">
-    <h3>Color System</h3>
-    <div class="color-legend">
-      <div class="color-item">
-        <div class="color-sample structural"></div>
-        <div>
-          <div class="color-label">Structural (Axis 1)</div>
-          <div class="color-desc">Objective drift, constraint collapse</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample relational"></div>
-        <div>
-          <div class="color-label">Relational (Axis 2)</div>
-          <div class="color-desc">Conversational friction, dominance</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample economic"></div>
-        <div>
-          <div class="color-label">Economic (Axis 3)</div>
-          <div class="color-desc">Token efficiency, cost optimization</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample assumption"></div>
-        <div>
-          <div class="color-label">Assumptions</div>
-          <div class="color-desc">Unverified claims, presumptions</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample intensifier"></div>
-        <div>
-          <div class="color-label">Emotional Intensifiers</div>
-          <div class="color-desc">Urgency, pressure, amplification</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample generalization"></div>
-        <div>
-          <div class="color-label">Generalizations</div>
-          <div class="color-desc">Overly broad statements</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample power"></div>
-        <div>
-          <div class="color-label">Power Words</div>
-          <div class="color-desc">High-impact semantic operators</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample filler"></div>
-        <div>
-          <div class="color-label">Filler</div>
-          <div class="color-desc">Low-value connector words</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="menu-section">
-    <h3>FAQ</h3>
-    <div style="font-size:13px;line-height:1.6">
-      <p><strong>What is NTI?</strong><br>
-      No-Tilt Interface - deterministic middleware that prevents AI from drifting from your constraints.</p>
-      <p style="margin-top:12px"><strong>How does color-coding work?</strong><br>
-      Each color represents a different type of structural or linguistic pattern. Click highlighted text to see explanations.</p>
-      <p style="margin-top:12px"><strong>What are the axes?</strong><br>
-      Axis 1: Structural integrity (objective drift)<br>
-      Axis 2: Relational friction (conversational damage)<br>
-      Axis 3: Economic efficiency (token optimization)</p>
-      <p style="margin-top:12px"><strong>Is this AI-powered?</strong><br>
-      No. NTI uses deterministic rules. Zero AI inference cost.</p>
-    </div>
-  </div>
-</div>
 
 <div id="persona-gate">
   <div class="gate-logo">ARTIFACT ZERO</div>
@@ -414,994 +131,91 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
     <div class="persona-card" data-persona="explorer"><span class="persona-icon">🔍</span><div class="persona-name">I'm exploring AI tools</div><div class="persona-desc">Show me what this does in plain language</div></div>
     <div class="persona-card" data-persona="executive"><span class="persona-icon">📊</span><div class="persona-name">I'm a decision-maker</div><div class="persona-desc">Show me cost reduction, risk, ROI</div></div>
     <div class="persona-card" data-persona="developer"><span class="persona-icon">⚙️</span><div class="persona-name">I'm a developer</div><div class="persona-desc">Show me the full diagnostic + API</div></div>
-    <div class="persona-card" data-persona="cfo"><span class="persona-icon">💰</span><div class="persona-name">I'm analyzing AI spend</div><div class="persona-desc">Show me token economics + savings</div></div>
     <div class="persona-card" data-persona="investor"><span class="persona-icon">🚀</span><div class="persona-name">I'm an investor</div><div class="persona-desc">Show me defensibility + market position</div></div>
   </div>
 </div>
 
-<div id="main-app">
+<div id="main-app" class="app-container">
   <div class="app-header">
     <span class="dot"></span><span class="logo">ARTIFACT ZERO</span><span class="ver" id="h-ver">v2.1</span>
-    <span class="persona-label" id="h-persona" title="Click to switch view">-</span>
   </div>
   
   <div class="app-body">
-    <div class="persona-hero" id="hero"></div>
-    <div class="demo-section" id="demo-area"></div>
-    <div class="loader" id="loader"><div class="spin"></div>Running analysis...</div>
-    <div class="results" id="results"></div>
-
-    <!-- Interactive Restructuring Panel -->
-    <div class="restructure-panel" id="restructurePanel">
-      <div class="restructure-header">
-        <div class="restructure-title">INTERACTIVE RESTRUCTURING</div>
-        <div class="restructure-desc">See how structure transforms meaning - same words, different psychological impact</div>
+    <div class="sections-container">
+      <div class="persona-hero" id="hero"></div>
+      
+      <div class="demo-section" id="demo-area"></div>
+      
+      <div class="loader" id="loader">
+        <div class="spin"></div>Running analysis...
       </div>
-      <div class="restructure-body">
-        <div class="restructure-controls">
-          <div>
-            <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">APPROACH</label>
-            <div class="control-group">
-              <div class="control-btn active" data-axis="approach" data-value="sales">Sales</div>
-              <div class="control-btn" data-axis="approach" data-value="definitive">Definitive</div>
-            </div>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">SCOPE</label>
-            <div class="control-group">
-              <div class="control-btn active" data-axis="scope" data-value="open">Open</div>
-              <div class="control-btn" data-axis="scope" data-value="closed">Closed</div>
-            </div>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">URGENCY</label>
-            <div class="control-group">
-              <div class="control-btn active" data-axis="urgency" data-value="measured">Measured</div>
-              <div class="control-btn" data-axis="urgency" data-value="urgent">Urgent</div>
-            </div>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">TONE</label>
-            <div class="control-group">
-              <div class="control-btn active" data-axis="tone" data-value="diplomatic">Diplomatic</div>
-              <div class="control-btn" data-axis="tone" data-value="direct">Direct</div>
-            </div>
-          </div>
-        </div>
-        <div class="restructure-output" id="restructureOutput">
-          <div class="restructure-ready" id="restructureReady">✓ Ready for next transformation</div>
-          <div id="restructureText">Select transformation options above to see your text restructured in real-time...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Live AI Integration Panel -->
-    <div class="live-ai-panel" id="liveAIPanel">
-      <div class="live-ai-header">
-        <div class="live-ai-title">LIVE AI COMPARISON</div>
-        <div class="live-ai-desc">Experience NTI-mediated AI vs. raw AI in real-time</div>
-      </div>
-      <div class="live-ai-body">
-        <div class="ai-comparison">
-          <div class="ai-column">
-            <div class="ai-column-title">RAW AI (Baseline)</div>
-            <input type="text" class="ai-input" id="rawAIInput" placeholder="Ask a question...">
-            <button class="ai-btn" onclick="queryRawAI()">Send to Raw GPT-4</button>
-            <div class="ai-response" id="rawAIResponse">Response will appear here...</div>
-          </div>
-          <div class="ai-column">
-            <div class="ai-column-title">NTI-MEDIATED AI</div>
-            <input type="text" class="ai-input" id="ntiAIInput" placeholder="Same question...">
-            <button class="ai-btn" onclick="queryNTIAI()">Send to NTI-Enhanced GPT-4</button>
-            <div class="ai-response" id="ntiAIResponse">Response will appear here...</div>
-          </div>
-        </div>
-        <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:6px;font-size:12px;color:var(--fg3)">
-          Ask the same question on both sides to see the difference. NTI will pre-stabilize the input and post-process the output for structural integrity.
-        </div>
-      </div>
-    </div>
-
-    <!-- Interactive Demo Section -->
-    <div class="interactive-demo-section" id="interactiveDemoSection">
-      <div class="demo-selector" id="demoSelector">
-        <h3>Experience NTI in Action</h3>
-        <p>See exactly what NTI fixes in real-time with interactive scenarios</p>
-        <div class="demo-buttons">
-          <button class="demo-select-btn" onclick="startDemo('email_response')">
-            📧 Fix Email Response
-          </button>
-          <button class="demo-select-btn" onclick="startDemo('customer_support')">
-            🚨 Handle Customer Crisis  
-          </button>
-          <button class="demo-select-btn" onclick="startDemo('project_update')">
-            📊 Project Status Update
-          </button>
-        </div>
-      </div>
-      <div id="interactiveDemoContainer"></div>
+      
+      <div class="results" id="results"></div>
     </div>
   </div>
 </div>
 
 <script>
-// ===== FRONTEND ANALYTICS =====
-class FrontendAnalytics {
-    constructor() {
-        this.sessionId = this.generateSessionId();
-        this.userId = this.getUserId();
-        this.startTime = Date.now();
-        this.eventQueue = [];
-        
-        this.session = {
-            persona: null,
-            analysisCount: 0,
-            conversionPath: [],
-            interactions: {
-                clicks: 0,
-                keystrokes: 0,
-                scrollDepth: 0,
-                timeOnPage: 0
-            }
-        };
-        
-        this.init();
-    }
-
-    init() {
-        this.setupEventListeners();
-        this.trackPageLoad();
-        setInterval(() => this.flushEvents(), 10000);
-        window.addEventListener('beforeunload', () => this.flushEvents(true));
-    }
-
-    generateSessionId() {
-        return 'frontend_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    getUserId() {
-        let userId = localStorage.getItem('artifact_user_id');
-        if (!userId) {
-            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('artifact_user_id', userId);
-        }
-        return userId;
-    }
-
-    setupEventListeners() {
-        document.addEventListener('click', (e) => this.handleClick(e), true);
-        document.addEventListener('input', (e) => {
-            if (e.target.matches('#in-prompt, #in-answer, textarea')) {
-                this.handleInput(e);
-            }
-        });
-
-        let scrollTimeout;
-        window.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => this.updateScrollDepth(), 200);
-        });
-
-        document.addEventListener('focus', (e) => {
-            if (e.target.matches('input, textarea, select')) {
-                this.trackEvent('form_focus', {
-                    elementId: e.target.id,
-                    elementType: e.target.type || e.target.tagName.toLowerCase()
-                });
-            }
-        }, true);
-    }
-
-    handleClick(event) {
-        this.session.interactions.clicks++;
-        
-        const element = event.target;
-        const clickData = {
-            tagName: element.tagName,
-            id: element.id,
-            className: element.className,
-            text: element.textContent?.substring(0, 50) || '',
-            position: { x: event.clientX, y: event.clientY }
-        };
-
-        if (element.closest('.persona-card')) {
-            const persona = element.closest('.persona-card').dataset.persona;
-            this.trackPersonaSelection(persona, clickData);
-        } else if (element.matches('.btn-go, #btn-run')) {
-            this.trackAnalysisStart(clickData);
-        } else if (element.closest('.action-btn')) {
-            const amount = this.extractAmount(element.textContent);
-            this.trackInvestmentClick(amount, clickData);
-        } else if (element.closest('.control-btn')) {
-            this.trackRestructureControl(element.dataset.axis, element.dataset.value, clickData);
-        } else if (element.closest('.menu-toggle, .menu-panel')) {
-            this.trackMenuInteraction(element.className, clickData);
-        } else if (element.closest('.demo-select-btn, .demo-btn')) {
-            this.trackDemoInteraction(element.textContent, clickData);
-        } else {
-            this.trackEvent('click', clickData);
-        }
-    }
-
-    handleInput(event) {
-        const target = event.target;
-        this.session.interactions.keystrokes++;
-        
-        this.trackEvent('text_input', {
-            elementId: target.id,
-            valueLength: target.value.length,
-            isPaste: event.inputType === 'insertFromPaste',
-            inputType: event.inputType
-        });
-    }
-
-    trackPersonaSelection(persona, clickData) {
-        this.session.persona = persona;
-        this.session.conversionPath.push({
-            step: 'persona_selection',
-            persona: persona,
-            timestamp: Date.now()
-        });
-
-        this.trackEvent('persona_selection', {
-            persona: persona,
-            sessionStep: this.session.conversionPath.length,
-            ...clickData
-        });
-    }
-
-    trackAnalysisStart(clickData) {
-        this.session.analysisCount++;
-        this.session.conversionPath.push({
-            step: 'analysis_start',
-            count: this.session.analysisCount,
-            timestamp: Date.now()
-        });
-
-        this.trackEvent('nti_analysis_start', {
-            analysisNumber: this.session.analysisCount,
-            persona: this.session.persona,
-            sessionStep: this.session.conversionPath.length,
-            ...clickData
-        });
-    }
-
-    trackInvestmentClick(amount, clickData) {
-        this.session.conversionPath.push({
-            step: 'investment_click',
-            amount: amount,
-            timestamp: Date.now()
-        });
-
-        this.trackEvent('investment_click', {
-            amount: amount,
-            persona: this.session.persona,
-            analysisCount: this.session.analysisCount,
-            conversionPath: this.session.conversionPath,
-            ...clickData
-        });
-    }
-
-    trackRestructureControl(axis, value, clickData) {
-        this.trackEvent('restructure_control', {
-            axis: axis,
-            value: value,
-            persona: this.session.persona,
-            ...clickData
-        });
-    }
-
-    trackMenuInteraction(elementClass, clickData) {
-        this.trackEvent('menu_interaction', {
-            action: elementClass.includes('toggle') ? 'open' : 'navigate',
-            ...clickData
-        });
-    }
-
-    trackDemoInteraction(buttonText, clickData) {
-        this.trackEvent('demo_interaction', {
-            demoAction: buttonText.substring(0, 30),
-            persona: this.session.persona,
-            ...clickData
-        });
-    }
-
-    trackNTIResult(result) {
-        this.session.conversionPath.push({
-            step: 'analysis_complete',
-            integrityScore: result.nii?.nii_score,
-            timestamp: Date.now()
-        });
-
-        this.trackEvent('nti_analysis_complete', {
-            integrityScore: result.nii?.nii_score,
-            failureModes: result.interaction_matrix?.dominance_detected,
-            tiltCount: result.tilt_taxonomy?.length || 0,
-            latency: result.telemetry?.latency_ms,
-            persona: this.session.persona,
-            analysisNumber: this.session.analysisCount,
-            sessionStep: this.session.conversionPath.length
-        });
-    }
-
-    trackConversionComplete(type, data = {}) {
-        this.session.conversionPath.push({
-            step: 'conversion_complete',
-            type: type,
-            timestamp: Date.now()
-        });
-
-        this.trackEvent('conversion_complete', {
-            conversionType: type,
-            persona: this.session.persona,
-            analysisCount: this.session.analysisCount,
-            sessionDuration: Date.now() - this.startTime,
-            fullConversionPath: this.session.conversionPath,
-            ...data
-        });
-    }
-
-    updateScrollDepth() {
-        const scrollTop = window.pageYOffset;
-        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const scrollPercent = Math.round((scrollTop / scrollHeight) * 100) || 0;
-        
-        if (scrollPercent > this.session.interactions.scrollDepth) {
-            this.session.interactions.scrollDepth = scrollPercent;
-            
-            if ([25, 50, 75, 90, 100].includes(scrollPercent)) {
-                this.trackEvent('scroll_milestone', {
-                    scrollPercent: scrollPercent,
-                    persona: this.session.persona
-                });
-            }
-        }
-    }
-
-    trackPageLoad() {
-        this.trackEvent('page_load', {
-            url: window.location.href,
-            referrer: document.referrer,
-            userAgent: navigator.userAgent,
-            viewport: { width: window.innerWidth, height: window.innerHeight },
-            loadTime: performance.now()
-        });
-    }
-
-    trackEvent(eventName, eventData = {}) {
-        const event = {
-            event: eventName,
-            data: {
-                sessionId: this.sessionId,
-                userId: this.userId,
-                timestamp: Date.now(),
-                timeOnPage: Date.now() - this.startTime,
-                sessionInteractions: this.session.interactions,
-                ...eventData
-            }
-        };
-        this.eventQueue.push(event);
-    }
-
-    async flushEvents(immediate = false) {
-        if (this.eventQueue.length === 0) return;
-
-        const events = [...this.eventQueue];
-        this.eventQueue = [];
-
-        try {
-            if (immediate && navigator.sendBeacon) {
-                for (const event of events) {
-                    navigator.sendBeacon('/events', JSON.stringify(event));
-                }
-            } else {
-                for (const event of events) {
-                    await fetch('/events', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(event)
-                    });
-                }
-            }
-        } catch (error) {
-            this.eventQueue.unshift(...events);
-            console.error('Analytics flush failed:', error);
-        }
-    }
-
-    extractAmount(text) {
-        const match = text.match(/\$?([\d,]+)K?\+?/);
-        return match ? match[1] + (text.includes('K') ? 'K' : '') : null;
-    }
-
-    getSessionData() {
-        return {
-            sessionId: this.sessionId,
-            userId: this.userId,
-            persona: this.session.persona,
-            analysisCount: this.session.analysisCount,
-            conversionPath: this.session.conversionPath,
-            interactions: this.session.interactions,
-            timeOnPage: Date.now() - this.startTime
-        };
-    }
-}
-
-// ===== INTERACTIVE DEMOS =====
-class InteractiveDemos {
-    constructor() {
-        this.currentDemo = null;
-        this.demoData = this.getDemoScenarios();
-    }
-
-    getDemoScenarios() {
-        return {
-            email_response: {
-                title: "Email Response Demo",
-                description: "Help respond to John's urgent email",
-                context: {
-                    from: "John Martinez <john@techcorp.com>",
-                    to: "You",
-                    subject: "Q1 Budget Approval - Need Decision by EOD",
-                    email: `Hey,
-
-The budget committee is meeting tomorrow morning and I need your sign-off on the Q1 marketing spend increase. We're looking at:
-
-- $50K additional for digital ads
-- $25K for the new analytics platform  
-- $15K for conference sponsorships
-
-Legal is asking about compliance requirements and Finance wants ROI projections. Can you get back to me with your thoughts? This needs to go to the board packet tonight.
-
-Also, Sarah mentioned some concerns about the analytics vendor - something about data privacy? Not sure if that affects the decision.
-
-Let me know ASAP.
-
-Thanks,
-John`
-                },
-                prompt: "Type your response to John's email:",
-                placeholder: "Hi John, regarding the budget...",
-                problemAnalysis: {
-                    title: "Problems with your response:",
-                    issues: [
-                        "Multiple unaddressed questions (Legal compliance? ROI projections?)",
-                        "Vague language creates more back-and-forth",
-                        "Missing deadline acknowledgment",
-                        "Sarah's privacy concerns ignored",
-                        "No clear next steps"
-                    ]
-                },
-                ntiSolution: {
-                    title: "NTI-Enhanced Response:",
-                    improvements: [
-                        "Addresses all 4 specific questions",
-                        "Clear decision on each line item", 
-                        "Acknowledges EOD deadline",
-                        "Delegates privacy concern to appropriate owner",
-                        "Specific next steps with timeline"
-                    ]
-                }
-            },
-            
-            customer_support: {
-                title: "Customer Support Demo",
-                description: "Handle an escalated customer complaint",
-                context: {
-                    from: "Sarah Chen <sarah@innovatetech.com>",
-                    to: "Support Team",
-                    subject: "URGENT: System Down for 3 Hours - Losing Revenue",
-                    ticket: `This is completely unacceptable. Our entire sales team can't access the CRM and we're losing deals by the hour.
-
-Your system has been down for 3 hours. THREE HOURS. Do you understand what that means for a business like ours?
-
-I've called support twice and gotten generic responses about "looking into it." I need:
-1. Exact timeline for resolution
-2. Root cause explanation  
-3. Compensation for lost revenue
-4. Guarantee this won't happen again
-
-I'm escalating to our legal team if I don't hear something concrete in the next hour. We're evaluating other vendors.
-
-This is my final attempt at getting actual help.
-
-Sarah Chen
-CTO, InnovateTech`
-                },
-                prompt: "Write your response to this escalated customer:",
-                placeholder: "Dear Sarah, we apologize for the inconvenience...",
-                problemAnalysis: {
-                    title: "Your response triggered these issues:",
-                    issues: [
-                        "Generic apology language increases frustration",
-                        "Failed to address specific timeline demand",
-                        "No concrete compensation offer",
-                        "Defensive tone escalates conflict",
-                        "Missing executive escalation protocol"
-                    ]
-                }
-            },
-
-            project_update: {
-                title: "Project Status Demo", 
-                description: "Update stakeholders on a delayed project",
-                context: {
-                    meeting: "Weekly Project Steering Committee",
-                    attendees: "CEO, CTO, Product VP, Engineering Director",
-                    situation: "The Q1 product launch is 3 weeks behind schedule due to integration issues with the new payment system. The engineering team discovered security vulnerabilities that require additional testing. Marketing has already committed to launch dates with customers."
-                },
-                prompt: "Write your status update for the steering committee:",
-                placeholder: "Hi everyone, wanted to give you an update on the Q1 launch...",
-                problemAnalysis: {
-                    title: "Communication failures in your update:",
-                    issues: [
-                        "Buried the lead (3-week delay mentioned casually)",
-                        "No revised timeline or milestones",
-                        "Blame-shifting language creates defensiveness", 
-                        "Missing impact assessment on customer commitments",
-                        "No risk mitigation plan presented"
-                    ]
-                }
-            }
-        };
-    }
-
-    initializeDemo(demoType, containerId) {
-        this.currentDemo = demoType;
-        const container = document.getElementById(containerId);
-        const demo = this.demoData[demoType];
-        
-        container.innerHTML = this.renderDemoInterface(demo);
-        this.attachDemoEventListeners();
-        
-        if (window.frontendAnalytics) {
-            window.frontendAnalytics.trackEvent('interactive_demo_start', {
-                demoType: demoType,
-                title: demo.title
-            });
-        }
-    }
-
-    renderDemoInterface(demo) {
-        return `
-            <div class="demo-container">
-                <div class="demo-header">
-                    <h3>${demo.title}</h3>
-                    <p>${demo.description}</p>
-                </div>
-                
-                <div class="demo-context">
-                    ${this.renderContext(demo.context)}
-                </div>
-                
-                <div class="demo-input-section">
-                    <label>${demo.prompt}</label>
-                    <textarea 
-                        id="demoUserInput" 
-                        placeholder="${demo.placeholder}"
-                        rows="6"
-                    ></textarea>
-                    <button class="demo-btn primary" onclick="interactiveDemos.analyzeResponse()">
-                        Send Response
-                    </button>
-                </div>
-                
-                <div class="demo-results" id="demoResults" style="display:none;">
-                    <!-- Results will be populated here -->
-                </div>
-            </div>
-        `;
-    }
-
-    renderContext(context) {
-        if (context.email) {
-            return `
-                <div class="email-context">
-                    <div class="email-header">
-                        <strong>From:</strong> ${context.from}<br>
-                        <strong>To:</strong> ${context.to}<br>
-                        <strong>Subject:</strong> ${context.subject}
-                    </div>
-                    <div class="email-body">${context.email.replace(/\n/g, '<br>')}</div>
-                </div>
-            `;
-        } else if (context.ticket) {
-            return `
-                <div class="ticket-context">
-                    <div class="ticket-header">
-                        <strong>From:</strong> ${context.from}<br>
-                        <strong>Subject:</strong> ${context.subject}
-                    </div>
-                    <div class="ticket-body">${context.ticket.replace(/\n/g, '<br>')}</div>
-                </div>
-            `;
-        } else if (context.situation) {
-            return `
-                <div class="meeting-context">
-                    <div class="meeting-header">
-                        <strong>Meeting:</strong> ${context.meeting}<br>
-                        <strong>Attendees:</strong> ${context.attendees}
-                    </div>
-                    <div class="situation">${context.situation}</div>
-                </div>
-            `;
-        }
-        return '';
-    }
-
-    async analyzeResponse() {
-        const userInput = document.getElementById('demoUserInput').value.trim();
-        if (!userInput) {
-            alert('Please write a response first!');
-            return;
-        }
-
-        const resultsDiv = document.getElementById('demoResults');
-        resultsDiv.style.display = 'block';
-        resultsDiv.innerHTML = '<div class="demo-loading">Analyzing your response...</div>';
-
-        try {
-            await this.showProblems(userInput);
-            setTimeout(() => this.showNTISolution(userInput), 2000);
-        } catch (error) {
-            resultsDiv.innerHTML = '<div class="demo-error">Analysis failed. Please try again.</div>';
-        }
-    }
-
-    async showProblems(userInput) {
-        const demo = this.demoData[this.currentDemo];
-        const resultsDiv = document.getElementById('demoResults');
-        
-        let ntiResult = null;
-        try {
-            const response = await fetch('/nti', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({text: userInput})
-            });
-            ntiResult = await response.json();
-        } catch (error) {
-            console.log('NTI analysis failed:', error);
-        }
-
-        const problemsHtml = `
-            <div class="demo-step-1">
-                <div class="demo-step-header">
-                    <span class="step-number">1</span>
-                    <h4>Your Response (Without NTI)</h4>
-                </div>
-                
-                <div class="user-response-box">
-                    "${userInput}"
-                </div>
-                
-                <div class="problems-analysis">
-                    <div class="problems-title">
-                        <span class="warning-icon">⚠️</span>
-                        ${demo.problemAnalysis.title}
-                    </div>
-                    <ul class="problems-list">
-                        ${demo.problemAnalysis.issues.map(issue => 
-                            `<li>${issue}</li>`
-                        ).join('')}
-                    </ul>
-                    ${ntiResult ? this.renderNTIScores(ntiResult) : ''}
-                </div>
-                
-                <div class="demo-reveal-button">
-                    <button class="demo-btn nti-btn" onclick="interactiveDemos.showNTISolution('${userInput.replace(/'/g, "\\'")}')">
-                        🚀 Use NTI to Fix This
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        resultsDiv.innerHTML = problemsHtml;
-        
-        if (window.frontendAnalytics) {
-            window.frontendAnalytics.trackEvent('demo_problems_shown', {
-                demoType: this.currentDemo,
-                responseLength: userInput.length,
-                integrityScore: ntiResult?.nii?.nii_score
-            });
-        }
-    }
-
-    showNTISolution(userInput) {
-        const demo = this.demoData[this.currentDemo];
-        const resultsDiv = document.getElementById('demoResults');
-        
-        const enhancedResponse = this.generateEnhancedResponse(userInput, demo);
-        
-        const solutionHtml = `
-            ${resultsDiv.innerHTML}
-            
-            <div class="demo-step-2">
-                <div class="demo-step-header">
-                    <span class="step-number">2</span>
-                    <h4>NTI-Enhanced Response</h4>
-                </div>
-                
-                <div class="enhanced-response-box">
-                    "${enhancedResponse}"
-                </div>
-                
-                <div class="improvements-analysis">
-                    <div class="improvements-title">
-                        <span class="success-icon">✅</span>
-                        What NTI Fixed:
-                    </div>
-                    <ul class="improvements-list">
-                        ${demo.ntiSolution.improvements.map(improvement => 
-                            `<li>${improvement}</li>`
-                        ).join('')}
-                    </ul>
-                </div>
-                
-                <div class="demo-cta">
-                    <div class="demo-cta-content">
-                        <div class="mic-drop">
-                            <strong>🎤 Mic Drop Moment:</strong>
-                            <p>Instead of manually fixing emails, just tell your boss: 
-                            <em>"Pasting emails one-by-one is a waste of time. NTI is an API."</em></p>
-                        </div>
-                        
-                        <div class="demo-next-steps">
-                            <button class="demo-btn primary" onclick="interactiveDemos.tryAnother()">
-                                Try Another Demo
-                            </button>
-                            <button class="demo-btn secondary" onclick="interactiveDemos.showAPIInfo()">
-                                Show Me the API
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        resultsDiv.innerHTML = solutionHtml;
-        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
-        if (window.frontendAnalytics) {
-            window.frontendAnalytics.trackEvent('demo_solution_shown', {
-                demoType: this.currentDemo,
-                originalLength: userInput.length,
-                enhancedLength: enhancedResponse.length
-            });
-        }
-    }
-
-    generateEnhancedResponse(userInput, demo) {
-        const enhancedResponses = {
-            email_response: `Hi John,
-
-Budget approval status for Q1 marketing spend:
-
-✅ APPROVED: $50K digital ads (ROI projection: 3.2x based on Q4 data)
-✅ APPROVED: $25K analytics platform (Legal compliance review completed)
-⚠️ CONDITIONAL: $15K conference sponsorships (pending ROI analysis by Thursday)
-
-Re: Sarah's data privacy concerns - I'm connecting her directly with our compliance officer (cc: mike@compliance.com) for vendor security review.
-
-Board packet timeline: All approvals and documentation will be submitted by 6 PM today.
-
-Next steps:
-- Finance: Send ROI projections to Legal by 3 PM
-- Sarah: Complete vendor security review by Thursday  
-- You: Submit board packet tonight as planned
-
-Call me if any blockers arise.`,
-
-            customer_support: `Sarah,
-
-I understand the severity of this outage and I'm personally overseeing the resolution.
-
-Immediate answers to your specific questions:
-
-1. TIMELINE: System restoration expected within 45 minutes (by 4:30 PM EST)
-2. ROOT CAUSE: Database cluster failover issue - full technical post-mortem will follow
-3. COMPENSATION: $5,000 service credit applied to your account + waived fees for February
-4. PREVENTION: Implementing redundant failover systems (completion: March 15)
-
-I'm escalating this to our CTO and will provide hourly updates until resolved. My direct line: (555) 123-4567.
-
-Your business matters to us. We will make this right.
-
-David Chen, VP Customer Success`,
-
-            project_update: `Executive Summary: Q1 launch delayed 3 weeks due to payment system security vulnerabilities.
-
-IMPACT ASSESSMENT:
-- Customer commitments at risk: 5 major clients expecting March 1 launch
-- Revenue impact: $2.3M Q1 revenue delayed to Q2
-- Competitive risk: Delayed window gives competitors advantage
-
-REVISED TIMELINE:
-- Security testing completion: February 28
-- QA validation: March 7-14  
-- Production deployment: March 21
-- Customer rollout: March 28
-
-IMMEDIATE ACTIONS:
-- Customer communication: Marketing will notify affected clients today with revised timeline + compensation (extended trial periods)
-- Resource allocation: Adding 2 senior security engineers to accelerate testing
-- Risk mitigation: Implementing parallel development track for Q2 features
-
-Board presentation: Full impact analysis and recovery plan ready for Friday's board meeting.
-
-Next steering committee: March 7 for go/no-go decision.`
-        };
-
-        return enhancedResponses[this.currentDemo] || this.applyNTITransformations(userInput);
-    }
-
-    applyNTITransformations(text) {
-        let enhanced = text;
-        enhanced = enhanced.replace(/\b(maybe|might|could|perhaps|possibly)\b/gi, '');
-        enhanced = enhanced.replace(/\b(we'll try to|we hope to|we should)\b/gi, 'we will');
-        
-        if (!enhanced.includes('Next steps:')) {
-            enhanced += '\n\nNext steps:\n- Follow up within 24 hours\n- Provide status update';
-        }
-        
-        return enhanced.trim();
-    }
-
-    renderNTIScores(ntiResult) {
-        const score = ntiResult.nii?.nii_score || 0;
-        const drift = ((ntiResult.layers?.L3_objective_integrity || {}).drift_score || 0) * 100;
-        const failureModes = ntiResult.interaction_matrix?.dominance_detected || ['NONE'];
-        
-        return `
-            <div class="nti-scores">
-                <div class="score-item">
-                    <span class="score-label">Integrity:</span>
-                    <span class="score-value ${score >= 0.75 ? 'good' : 'bad'}">${Math.round(score * 100)}%</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">Drift:</span>
-                    <span class="score-value ${drift < 30 ? 'good' : 'bad'}">${Math.round(drift)}%</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">Failure Modes:</span>
-                    <span class="score-value">${failureModes.join(', ')}</span>
-                </div>
-            </div>
-        `;
-    }
-
-    tryAnother() {
-        const demoTypes = Object.keys(this.demoData);
-        const currentIndex = demoTypes.indexOf(this.currentDemo);
-        const nextIndex = (currentIndex + 1) % demoTypes.length;
-        const nextDemo = demoTypes[nextIndex];
-        
-        this.initializeDemo(nextDemo, 'interactiveDemoContainer');
-    }
-
-    showAPIInfo() {
-        alert('API Documentation: POST /nti with prompt+answer → returns integrity score, drift analysis, and enhanced output. Zero AI inference cost. 63-65% token reduction validated.');
-    }
-
-    attachDemoEventListeners() {
-        const textarea = document.getElementById('demoUserInput');
-        if (textarea) {
-            textarea.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                    this.analyzeResponse();
-                }
-            });
-        }
-    }
-}
-
-// ===== MAIN APPLICATION =====
 (function(){
 const $=id=>document.getElementById(id);
 
-// WEBSITE COPY TO BE RUN THROUGH NTI STACK
-const WEBSITE_COPY_FOR_NTI_ANALYSIS = [
-    {
-        id: "gate_title",
-        text: "Conversational Authority Infrastructure",
-        context: "Main landing page title"
-    },
-    {
-        id: "gate_description", 
-        text: "A deterministic middleware that enforces declared objective geometry and preserves operator-owned salience ordering across human–AI interaction.",
-        context: "Main value proposition"
-    },
-    {
-        id: "investor_urgency",
-        text: "This analysis ran in <100ms using zero AI calls. Pure deterministic logic caught structural failures that would cost thousands in rework tokens. Every enterprise with >$50K/month AI spend needs this. We're raising $2.5M to lock in first-mover advantage before competitors figure out conversational physics.",
-        context: "Investor urgency messaging"
-    }
-];
-
 const PERSONAS={
-    explorer:{name:'Explorer',title:'See AI instability in real time',desc:'Paste any AI prompt and response below. Artifact Zero will show you exactly where the AI drifted, deflected, or collapsed your constraints — without using any AI itself.'},
+    explorer:{name:'Explorer',title:'See AI instability in real time',desc:'Paste any AI prompt and response below. Artifact Zero will show you exactly where the AI drifted, deflected, or collapsed your constraints.'},
     executive:{name:'Decision-Maker',title:'AI risk & cost at a glance',desc:'Every AI interaction carries hidden risk: constraint collapse, objective drift, unnecessary token spend. Paste a real exchange to see the exposure.'},
-    developer:{name:'Developer',title:'Full NTI + Physics diagnostic',desc:'Complete audit: failure modes (UDDS/DCE/CCA), tilt taxonomy, NII scoring, plus the new conversational physics layer — transform legality, abstraction tracking, drift detection.'},
-    cfo:{name:'AI Spend Analyst',title:'Token economics & invocation savings',desc:'See how many tokens an AI exchange actually needed vs. what was burned. Validated 63–65% cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro. Rule-based — zero inference cost.'},
+    developer:{name:'Developer',title:'Full NTI + Question Physics diagnostic',desc:'Complete audit: failure modes (UDDS/DCE/CCA), tilt taxonomy, NII scoring, plus new Question Physics layer for conversational authority protection.'},
     investor:{name:'Investor',title:'Defensibility & market position',desc:'Artifact Zero enforces conversational topology through closed-set calculus. Not prompt engineering. Not tone filtering. Structural enforcement no competitor offers.'}
 };
 
-let currentPersona=null,lastNTI=null,lastPhysics=null,originalText='';
-let currentRestructureState={approach:'sales',scope:'open',urgency:'measured',tone:'diplomatic'};
+let currentPersona=null,lastNTI=null,questionPhysicsService=null;
 
-// Initialize components
-window.frontendAnalytics = new FrontendAnalytics();
-window.interactiveDemos = new InteractiveDemos();
-
-// Auto-analyze website copy through NTI stack
-async function analyzeWebsiteCopy() {
-    console.log('Starting NTI analysis of website copy...');
-    for (const copyItem of WEBSITE_COPY_FOR_NTI_ANALYSIS) {
-        try {
-            const response = await fetch('/nti', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({text: copyItem.text})
-            });
-            const analysis = await response.json();
-            console.log(`NTI Analysis - ${copyItem.id}:`, {
-                text: copyItem.text,
-                integrity_score: analysis.nii?.nii_score,
-                failure_modes: analysis.interaction_matrix?.dominance_detected,
-                context: copyItem.context
-            });
-        } catch (error) {
-            console.log(`NTI Analysis failed for ${copyItem.id}:`, error);
-        }
+// Detect Question Physics service URL
+function getQuestionPhysicsURL() {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:5001';
+    } else {
+        // For production, assume service is on same domain, different port
+        return `https://${hostname}:5001`;
     }
 }
 
-fetch('/health').then(r=>r.json()).then(d=>{$('h-ver').textContent=d.version||'v2.1'}).catch(()=>{});
-
-// Menu functions
-function toggleMenu(){
-    const overlay=$('menuOverlay');
-    const panel=$('menuPanel');
-    overlay.classList.toggle('active');
-    panel.classList.toggle('active');
-}
-
-function closeMenu(){
-    $('menuOverlay').classList.remove('active');
-    $('menuPanel').classList.remove('active');
-}
-
 document.querySelectorAll('.persona-card').forEach(c=>{c.addEventListener('click',()=>activatePersona(c.dataset.persona))});
-$('h-persona').addEventListener('click',()=>{$('persona-gate').style.display='flex';$('main-app').classList.remove('active');$('results').innerHTML='';lastNTI=null;lastPhysics=null});
 
 function activatePersona(key){
     currentPersona=key;
     const p=PERSONAS[key];
     $('persona-gate').style.display='none';
     $('main-app').classList.add('active');
-    $('h-persona').textContent=p.name.toUpperCase();
     $('hero').innerHTML='<h2>'+p.title+'</h2><p>'+p.desc+'</p>';
     buildDemoArea(key);
     $('results').innerHTML='';
-    
-    setTimeout(analyzeWebsiteCopy, 1000);
 }
 
 function buildDemoArea(key){
-    let html='';
-    if(key==='developer'){
-        html+=`<label>Prompt</label><div class="input-grid" style="margin-bottom:10px"><textarea id="in-prompt" placeholder="Enter the prompt / human input..."></textarea><textarea id="in-answer" placeholder="Enter the AI response..."></textarea></div><div class="input-grid three" style="margin-bottom:10px"><div><label>Objective Type (Physics)</label><select id="in-obj"><option value="">Skip physics</option><option value="RESOLVE">RESOLVE</option><option value="EXPLORE">EXPLORE</option><option value="STRUCTURE">STRUCTURE</option><option value="EXECUTE">EXECUTE</option><option value="DIAGNOSE">DIAGNOSE</option><option value="ALIGN">ALIGN</option></select></div><div><label>Prev Abstraction (0-5)</label><input type="text" id="in-abs" value="0"></div><div><label>Stagnant Turns</label><input type="text" id="in-stag" value="0"></div></div><div class="btn-row"><button class="btn btn-go" id="btn-run">RUN FULL AUDIT</button><button class="btn btn-ghost" id="btn-clr">CLEAR</button></div>`;
-    }else{
-        html+=`<label>Paste an AI exchange</label><div class="input-grid" style="margin-bottom:10px"><div><label>Prompt / question</label><textarea id="in-prompt" placeholder="What you asked the AI..."></textarea></div><div><label>AI response</label><textarea id="in-answer" placeholder="What the AI said back..."></textarea></div></div><div class="btn-row"><button class="btn btn-go" id="btn-run">ANALYZE</button><button class="btn btn-ghost" id="btn-clr">CLEAR</button></div>`;
-    }
+    let html = `
+        <label>Paste an AI exchange</label>
+        <div class="input-grid" style="margin-bottom:10px">
+            <div>
+                <label>Prompt / question</label>
+                <textarea id="in-prompt" placeholder="What you asked the AI..."></textarea>
+            </div>
+            <div>
+                <label>AI response</label>
+                <textarea id="in-answer" placeholder="What the AI said back..."></textarea>
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-go" id="btn-run">ANALYZE</button>
+            <button class="btn btn-ghost" id="btn-clr">CLEAR</button>
+        </div>
+    `;
+    
     $('demo-area').innerHTML=html;
     $('btn-run').addEventListener('click',runAnalysis);
     $('btn-clr').addEventListener('click',()=>{
-        if($('in-prompt'))$('in-prompt').value='';
-        if($('in-answer'))$('in-answer').value='';
+        $('in-prompt').value='';
+        $('in-answer').value='';
         $('results').innerHTML='';
-        lastNTI=null;
-        lastPhysics=null;
     });
 }
 
@@ -1410,11 +224,12 @@ async function runAnalysis(){
     const answer=($('in-answer')||{}).value||'';
     if(!prompt&&!answer){alert('Paste text to analyze.');return}
     
-    originalText=prompt+' '+answer;
+    const text = prompt + ' ' + answer;
     
     $('loader').classList.add('on');
     $('results').innerHTML='';
     
+    // Call main NTI analysis
     try{
         const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,answer})});
         lastNTI=await r.json();
@@ -1422,411 +237,136 @@ async function runAnalysis(){
         lastNTI={error:e.message};
     }
     
-    lastPhysics=null;
-    const objEl=$('in-obj');
-    if(objEl&&objEl.value){
-        try{
-            const r=await fetch('/physics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt+'\n'+answer,objective_type:objEl.value,previous_abstraction_level:parseInt(($('in-abs')||{}).value)||0,consecutive_stagnant_turns:parseInt(($('in-stag')||{}).value)||0})});
-            lastPhysics=await r.json();
-        }catch(e){
-            lastPhysics={error:e.message};
+    // Call Question Physics service (independent)
+    let questionPhysics = null;
+    try {
+        const qpURL = getQuestionPhysicsURL();
+        const qpResponse = await fetch(`${qpURL}/analyze`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        
+        if (qpResponse.ok) {
+            const qpData = await qpResponse.json();
+            questionPhysics = qpData.question_physics;
         }
+    } catch(e) {
+        console.log('Question Physics service unavailable:', e);
+        // Continue without Question Physics
     }
     
     $('loader').classList.remove('on');
+    
+    // Render results with Question Physics if available
+    if (questionPhysics) {
+        lastNTI.question_physics = questionPhysics;
+    }
+    
     renderResults();
 }
 
 function renderResults(){
     if(!lastNTI||lastNTI.error){
-        $('results').innerHTML='<div class="detail-block"><div class="detail-title">Error</div><div class="detail-body" style="color:var(--red)">'+(lastNTI?lastNTI.error:'No response')+'</div></div>';
+        $('results').innerHTML='<div class="analysis-results"><div style="color:var(--red)">Error: '+(lastNTI?lastNTI.error:'No response')+'</div></div>';
         return;
     }
     
-    const d=lastNTI,nii=d.nii||{},dominance=(d.interaction_matrix||{}).dominance_detected||[],tilt=d.tilt_taxonomy||[],udds=(d.parent_failure_modes||{}).UDDS||{},dce=(d.parent_failure_modes||{}).DCE||{},cca=(d.parent_failure_modes||{}).CCA||{},drift_score=((d.layers||{}).L3_objective_integrity||{}).drift_score||0,latency=(d.telemetry||{}).latency_ms;
+    const d=lastNTI;
+    let html = '';
     
-    ({
-        explorer:()=>renderExplorer(d,nii,dominance,tilt,drift_score,udds,dce,cca),
-        executive:()=>renderExecutive(d,nii,dominance,tilt,drift_score,udds,dce,cca,latency),
-        developer:()=>renderDeveloper(d,nii,dominance,tilt,drift_score,udds,dce,cca,latency),
-        cfo:()=>renderCFO(d,nii,dominance,tilt,drift_score,latency),
-        investor:()=>renderInvestor(d,nii,dominance,tilt,drift_score,udds,dce,cca)
-    })[currentPersona]();
-    
-    // Track NTI result
-    if (window.frontendAnalytics) {
-        window.frontendAnalytics.trackNTIResult(d);
+    // Add Question Physics if available
+    if (d.question_physics && d.question_physics.question_present) {
+        html += renderQuestionPhysics(d.question_physics);
     }
     
-    // Show additional panels after analysis
-    setTimeout(()=>{
-        $('restructurePanel').classList.add('active');
-        $('liveAIPanel').classList.add('active');
-        showInteractiveDemos();
-        transformText();
-    },500);
-}
-
-function showInteractiveDemos() {
-    $('interactiveDemoSection').classList.add('active');
-    setTimeout(() => {
-        $('interactiveDemoSection').scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-        });
-    }, 300);
-}
-
-function startDemo(demoType) {
-    window.interactiveDemos.initializeDemo(demoType, 'interactiveDemoContainer');
-    $('demoSelector').style.display = 'none';
-}
-
-function renderInvestor(d,nii,dominance,tilt,drift,udds,dce,cca){
-    let h='',score=nii.nii_score||0;
-    h+='<div class="urgency-banner"><div class="urgency-number">LIVE DEMO</div><div class="urgency-label">You just experienced the product working in real-time · This is not a mockup</div></div>';
-    h+='<div class="insight investor-urgency"><span class="insight-icon">🚨</span><h3>What you just witnessed</h3><p>This analysis ran in <strong>'+(d.telemetry?.latency_ms||'<100')+'ms</strong> using zero AI calls. Pure deterministic logic caught structural failures that would cost thousands in rework tokens. <strong>Every enterprise with >$50K/month AI spend needs this.</strong> We\'re raising $2.5M to lock in first-mover advantage before competitors figure out conversational physics.</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Your Demo',Math.round(score*100)+'%',score>=.75?'green':'red','g','Live integrity analysis');
-    h+=mk('Market Gap','MASSIVE','green','g','No one else does this');
-    h+=mk('Defensibility','PATENT-READY','green','g','Conversational physics IP');
-    h+=mk('Revenue Model','VALIDATED','green','g','63-65% cost reduction proven');
-    h+='</div>';
-    h+='<div class="investor-action"><div class="action-title">This Round Closes March 31st</div><div class="action-grid"><div class="action-card urgent"><div class="action-amount">$25K</div><div class="action-label">DEMO + DUE DILIGENCE</div><div class="action-desc">1hr technical demo, full codebase review, 3 pilot customers included</div><button class="action-btn red" onclick="investNow(25000)">SECURE DEMO SLOT</button></div><div class="action-card"><div class="action-amount">$100K</div><div class="action-label">STRATEGIC POSITION</div><div class="action-desc">Board observer rights, quarterly business reviews, co-marketing rights</div><button class="action-btn green" onclick="investNow(100000)">RESERVE ALLOCATION</button></div><div class="action-card premium"><div class="action-amount">$250K+</div><div class="action-label">LEAD INVESTOR</div><div class="action-desc">Board seat, IP licensing, enterprise partner channel</div><button class="action-btn premium" onclick="investNow(250000)">LEAD THE ROUND</button></div></div></div>';
-    h+='<div class="detail-block"><div class="detail-title">Why Now (Market Timing)</div><div class="detail-body"><strong>AI spend exploding:</strong> Enterprise AI budgets growing 300%/year. Token costs becoming line items.<br><br><strong>Quality crisis emerging:</strong> AI hallucination, drift, compliance failures creating enterprise liability.<br><br><strong>No solution exists:</strong> Everyone building prompt wrappers. No one building conversational physics.<br><br><strong>Window closing:</strong> Big Tech will figure this out. First mover takes enterprise market.</div></div>';
-    h+='<div class="detail-block"><div class="detail-title">Traction Evidence</div><div class="detail-body"><strong>Technical proof:</strong> You just used it. It worked.<br><br><strong>Economic validation:</strong> 63-65% cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro.<br><br><strong>Market demand:</strong> Every enterprise CTO asks "how do we control AI costs and quality?"<br><br><strong>Defensible IP:</strong> Conversational physics, transform legality, topology enforcement — no competitor has this.</div></div>';
-    h+=jb(d);
-    $('results').innerHTML=h;
-}
-
-function renderCFO(d,nii,dominance,tilt,drift,lat){
-    let h='',score=nii.nii_score||0,avoidable=dominance[0]!=='NONE';
-    h+='<div class="savings-calculator"><div class="calc-title">Calculate Your AI Savings</div><div class="calc-row"><div class="calc-label">Employees using AI:</div><input type="number" class="calc-input" id="calc-employees" value="200" onchange="calculateSavings()"><div class="calc-result" id="current-spend">$16,000</div></div><div class="calc-row"><div class="calc-label">Average salary:</div><input type="number" class="calc-input" id="calc-salary" value="80000" onchange="calculateSavings()"><div class="calc-result" id="monthly-savings">$10,400</div></div><div class="calc-row"><div class="calc-label">AI hours/employee/month:</div><input type="number" class="calc-input" id="calc-usage" value="20" onchange="calculateSavings()"><div class="calc-result">Current</div></div><div class="savings-projection"><div class="projection-amount" id="total-projection">$400,000</div><div class="projection-timeline">Feb: <span id="feb-savings">$150K</span> • Mar: <span id="mar-savings">$150K</span> • Apr: <span id="apr-savings">$100K</span></div><button class="action-btn green" style="margin-top:12px" onclick="buyCFODemo()">GET LIVE DEMO - $2,500</button></div></div>';
-    h+='<div class="insight"><span class="insight-icon">💰</span><h3>What this exchange would cost you</h3><p>';
-    if(avoidable)h+='This interaction triggered '+dominance.length+' failure modes. In a production system, these patterns compound — every drifted response generates follow-up clarifications that burn more tokens. ';
-    h+='Artifact Zero detects these patterns <strong>before</strong> the AI call, enabling invocation governance: routing to human resolution when AI would waste tokens, and pre-stabilizing input when AI is the right path.</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'amber','g');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'red','r','Higher drift = more follow-up tokens');
-    h+=mk('Tilt Signals',tilt.length,tilt.length===0?'green':'amber','a','Each signal = potential rework loop');
-    h+=mk('Avoidable',avoidable?'YES':'NO',avoidable?'red':'green',avoidable?'r':'g','Could this call have been avoided?');
-    h+=mk('Failure Modes',dominance.join('+'),dominance[0]==='NONE'?'green':'red',dominance[0]==='NONE'?'g':'r');
-    h+=mk('Latency',lat+'ms','cyan','c','Processing cost: near zero');
-    h+='</div>';
-    h+='<div class="detail-block"><div class="detail-title">Cost Reduction Mechanics</div><div class="detail-body"><strong>Input stabilization (V2):</strong> Restructures prompts before they reach the model, eliminating ambiguity that causes bloated responses.<br><br><strong>Output compression (V3):</strong> Removes filler, hedging, and redundancy from AI output — validated 63-65% token reduction.<br><br><strong>Invocation governance:</strong> Routes queries to human resolution when AI would produce low-value, high-cost responses. Prevents unnecessary API calls entirely.<br><br><strong>Zero inference cost:</strong> All analysis is rule-based. No additional LLM calls. The middleware itself costs nothing to run.</div></div>';
-    h+=jb(d);
-    $('results').innerHTML=h;
-    setTimeout(calculateSavings,100);
-}
-
-function renderExplorer(d,nii,dominance,tilt,drift,udds,dce,cca){
-    let h='',score=nii.nii_score||0,v,vc;
-    if(score>=.8){v='This AI response looks structurally sound.';vc='green'}
-    else if(score>=.5){v='This AI response has structural issues — it drifted from your constraints or deflected your question.';vc='amber'}
-    else{v='This AI response has serious structural problems. Your constraints were ignored or collapsed.';vc='red'}
-    h+='<div class="insight"><span class="insight-icon">🔍</span><h3 style="color:var(--'+vc+')">'+v+'</h3><p>';
-    if(dominance.includes('CCA'))h+='The AI collapsed your specific requirements into vague generalities. ';
-    if(dominance.includes('UDDS'))h+='Your constraints were acknowledged but then bypassed with reassuring language. ';
-    if(dominance.includes('DCE'))h+='Important decisions were pushed to "later" instead of being addressed now. ';
-    if(drift>.5)h+='The response drifted significantly from what you actually asked ('+Math.round(drift*100)+'% drift). ';
-    if(tilt.length)h+='We detected '+tilt.length+' linguistic patterns that indicate structural instability.';
-    h+='</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Integrity Score',Math.round(score*100)+'%',score>=.75?'green':'red','g');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'red','r');
-    h+=mk('Issues Found',tilt.length,tilt.length===0?'green':'red','r');
-    h+=mk('Failure Modes',dominance.join(' + '),dominance[0]==='NONE'?'green':'red','r');
-    h+='</div>';
-    h+=jb(d);
-    $('results').innerHTML=h;
-}
-
-function renderExecutive(d,nii,dominance,tilt,drift,udds,dce,cca,lat){
-    let h='',score=nii.nii_score||0,rl,rc;
-    if(dominance[0]==='NONE'&&score>=.75){rl='LOW';rc='green'}
-    else if(score>=.5){rl='MEDIUM';rc='amber'}
-    else{rl='HIGH';rc='red'}
-    h+='<div class="insight"><span class="insight-icon">⚡</span><h3>Risk Level: <span style="color:var(--'+rc+')">'+rl+'</span></h3><p>This AI exchange has an integrity score of '+Math.round(score*100)+'% with '+tilt.length+' structural issues detected. ';
-    if(drift>.5)h+='The response diverged '+Math.round(drift*100)+'% from the original objective. ';
-    if(dominance.includes('DCE'))h+='Critical decisions were deferred — this creates downstream execution risk. ';
-    h+='</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'red','g');
-    h+=mk('Risk',rl,rc,rc==='green'?'g':'r');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'amber','a');
-    h+=mk('Failure Modes',dominance.length>1||dominance[0]!=='NONE'?dominance.join('+'):'NONE',dominance[0]==='NONE'?'green':'red','g');
-    h+=mk('Tilt Signals',tilt.length,'blue','b');
-    h+=mk('Latency',lat+'ms','cyan','c');
-    h+='</div>';
-    h+=jb(d);
-    $('results').innerHTML=h;
-}
-
-function renderDeveloper(d,nii,dominance,tilt,drift,udds,dce,cca,lat){
-    let h='';
-    h+='<div class="detail-title" style="margin-bottom:10px">NTI ANALYSIS</div><div class="card-grid">';
-    h+=mk('NII',Math.round((nii.nii_score||0)*100)+'%',nii.nii_score>=.75?'green':'amber','g');
-    h+=mk('Q1 Constraints',nii.q1_constraints_explicit?'YES':'NO',nii.q1_constraints_explicit?'green':'red','g');
-    h+=mk('Q2 Order',nii.q2_constraints_before_capability?'YES':'NO',nii.q2_constraints_before_capability?'green':'red','g');
-    h+=mk('Q3 Boundary',nii.q3_substitutes_after_enforcement?'YES':'NO',nii.q3_substitutes_after_enforcement?'green':'red','g');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'amber','a');
-    h+=mk('Latency',lat+'ms','cyan','c');
-    h+='</div>';
-    if(lastPhysics&&!lastPhysics.error){
-        const ph=lastPhysics,dr=ph.drift||{},tr=ph.transform||{},ab=ph.abstraction||{},sal=ph.salience||{};
-        h+='<div class="detail-title" style="margin-top:24px;margin-bottom:10px">PHYSICS ENGINE</div><div class="card-grid">';
-        h+=mk('Verdict',dr.verdict||'—',dr.verdict==='CLEAN'?'green':dr.violation_count<=2?'amber':'red',dr.verdict==='CLEAN'?'g':dr.violation_count<=2?'a':'r');
-        h+=mk('Transform',tr.primary_transform||'—','blue','b');
-        h+=mk('Legal',(dr.transform||{}).legal?'YES':'NO',(dr.transform||{}).legal?'green':'red',(dr.transform||{}).legal?'g':'r');
-        h+=mk('Abstraction','L'+(ab.detected_level||0),'purple','p');
-        h+=mk('Objective',ph.objective_type||'—','cyan','c');
-        h+=mk('Violations',dr.violation_count||0,dr.violation_count===0?'green':'amber',dr.violation_count===0?'g':'a');
-        h+='</div>';
+    // Basic analysis results
+    html += '<div class="analysis-results">';
+    html += '<div class="insight"><span class="insight-icon">⚡</span><h3>Analysis Complete</h3><p>NTI analysis completed successfully. ';
+    
+    if (d.question_physics) {
+        html += 'Question Physics analysis included. ';
+    } else {
+        html += 'Question Physics service unavailable. ';
     }
-    h+=jb(d);
-    $('results').innerHTML=h;
+    
+    html += 'See detailed results below.</p></div>';
+    
+    // Simple card display
+    const nii = d.nii || {};
+    const score = nii.nii_score || 0;
+    
+    html += '<div class="card-grid">';
+    html += `<div class="card g"><div class="card-label">Integrity Score</div><div class="card-value ${score >= 0.75 ? 'green' : 'red'}">${Math.round(score * 100)}%</div></div>`;
+    
+    const dominance = (d.interaction_matrix || {}).dominance_detected || [];
+    html += `<div class="card r"><div class="card-label">Failure Modes</div><div class="card-value ${dominance[0] === 'NONE' ? 'green' : 'red'}">${dominance.join(' + ')}</div></div>`;
+    
+    html += '</div>';
+    html += '</div>';
+    
+    $('results').innerHTML = html;
 }
 
-function mk(label,value,color,border,sub){
-    let h='<div class="card '+border+'"><div class="card-label">'+label+'</div><div class="card-value '+color+'">'+value+'</div>';
-    if(sub)h+='<div class="card-sub">'+sub+'</div>';
-    return h+'</div>';
-}
-
-function jb(data){
-    return'<div class="json-toggle" onclick="this.nextElementSibling.classList.toggle(\'open\')">▶ RAW JSON</div><div class="json-raw"><pre>'+JSON.stringify(data,null,2)+'</pre></div>';
-}
-
-// Interactive Restructuring Functions
-document.addEventListener('DOMContentLoaded',function(){
-    document.querySelectorAll('.control-btn').forEach(btn=>{
-        btn.addEventListener('click',function(){
-            const axis=this.dataset.axis;
-            const value=this.dataset.value;
+// Question Physics rendering function
+function renderQuestionPhysics(qp) {
+    let html = '<div class="question-physics">';
+    html += '<div class="question-physics-header">';
+    html += '<div class="question-physics-title">QUESTION PHYSICS</div>';
+    html += '<div class="question-physics-desc">Structural analysis of question intent - detects authority shift, constraint injection, framing traps</div>';
+    html += '</div>';
+    
+    // Question type badges
+    if (qp.question_types && qp.question_types.length > 0) {
+        html += '<div class="question-type-badges">';
+        for (const type of qp.question_types) {
+            const badgeClass = {
+                'CONSTRAINT_INJECTION': 'constraint',
+                'AUTHORITY_SHIFT': 'authority', 
+                'FRAMING_TRAP': 'framing',
+                'INFORMATION_EXPANSION': 'info'
+            }[type] || 'info';
             
-            document.querySelectorAll(`.control-btn[data-axis="${axis}"]`).forEach(b=>b.classList.remove('active'));
-            this.classList.add('active');
-            
-            currentRestructureState[axis]=value;
-            transformText();
-            
-            $('restructureReady').classList.add('show');
-            setTimeout(()=>{
-                $('restructureReady').classList.remove('show');
-            },1500);
-        });
-    });
-});
-
-function transformText(){
-    if(!originalText)return;
-    
-    let transformed=originalText;
-    const state=currentRestructureState;
-    
-    if(state.approach==='sales'){
-        transformed=transformed.replace(/\b(problem|issue|error)\b/gi,'opportunity');
-        transformed=transformed.replace(/\b(fix|solve)\b/gi,'optimize');
-    }else{
-        transformed=transformed.replace(/\bopportunity\b/gi,'problem');
-        transformed=transformed.replace(/\boptimize\b/gi,'fix');
-    }
-    
-    if(state.scope==='closed'){
-        transformed=transformed.replace(/\b(probably|might|could|maybe)\b/gi,'will');
-        transformed=transformed.replace(/\b(generally|basically|overall)\b/gi,'specifically');
-    }else{
-        transformed=transformed.replace(/\bwill\b/gi,'might');
-        transformed=transformed.replace(/\bspecifically\b/gi,'generally');
-    }
-    
-    if(state.urgency==='urgent'){
-        transformed=transformed.replace(/\b(later|eventually|sometime)\b/gi,'immediately');
-        transformed='URGENT: '+transformed;
-    }else{
-        transformed=transformed.replace(/^URGENT: /,'');
-        transformed=transformed.replace(/\bimmediately\b/gi,'when appropriate');
-    }
-    
-    if(state.tone==='direct'){
-        transformed=transformed.replace(/\b(please|kindly|perhaps)\b/gi,'');
-        transformed=transformed.replace(/\s+/g,' ').trim();
-    }else{
-        transformed=transformed.replace(/^/,'I believe ');
-    }
-    
-    $('restructureText').innerHTML=highlightText(transformed);
-}
-
-function highlightText(text){
-    let highlighted=text;
-    
-    highlighted=highlighted.replace(/\b(immediately|urgent|critical|must|required)\b/gi,'<span class="highlight-power">$1</span>');
-    highlighted=highlighted.replace(/\b(obviously|clearly|everyone|always|never)\b/gi,'<span class="highlight-assumption">$1</span>');
-    highlighted=highlighted.replace(/\b(very|extremely|absolutely|completely|totally)\b/gi,'<span class="highlight-intensifier">$1</span>');
-    highlighted=highlighted.replace(/\b(problem|issue|solution|fix|optimize)\b/gi,'<span class="highlight-structural">$1</span>');
-    
-    return highlighted;
-}
-
-// Investment and conversion functions
-async function investNow(amount){
-    if(confirm(`Proceed with $${amount.toLocaleString()} investment commitment?`)){
-        try{
-            const res=await fetch('/api/stripe/invest',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({
-                    amount:amount,
-                    type:amount>=250000?'lead':amount>=100000?'strategic':'demo',
-                    analysis:lastNTI
-                })
-            });
-            const data=await res.json();
-            if(data.url){
-                if (window.frontendAnalytics) {
-                    window.frontendAnalytics.trackConversionComplete('investment_initiated', { amount });
-                }
-                window.location.href=data.url;
-            }else{
-                alert('Error: '+(data.error||'Payment processing failed'));
-            }
-        }catch(err){
-            alert('Connection error: '+err.message);
+            html += `<div class="question-type-badge ${badgeClass}">${type.replace('_', ' ')}</div>`;
         }
-    }
-}
-
-function calculateSavings(){
-    const employees=parseInt($('calc-employees').value)||0;
-    const salary=parseInt($('calc-salary').value)||80000;
-    const aiUsage=parseInt($('calc-usage').value)||20;
-    
-    const avgTokensPerEmployee=aiUsage*50000;
-    const costPerMToken=8;
-    const monthlySpend=(employees*avgTokensPerEmployee*costPerMToken)/1000000;
-    
-    const monthlySavings=monthlySpend*0.65;
-    const feb=Math.min(monthlySavings,150000);
-    const mar=Math.min(monthlySavings,150000);
-    const apr=Math.min(monthlySavings,100000);
-    
-    $('current-spend').textContent='$'+Math.round(monthlySpend).toLocaleString();
-    $('monthly-savings').textContent='$'+Math.round(monthlySavings).toLocaleString();
-    $('feb-savings').textContent='$'+Math.round(feb).toLocaleString();
-    $('mar-savings').textContent='$'+Math.round(mar).toLocaleString();
-    $('apr-savings').textContent='$'+Math.round(apr).toLocaleString();
-    
-    const total=feb+mar+apr;
-    $('total-projection').textContent='$'+Math.round(total).toLocaleString();
-}
-
-async function buyCFODemo(){
-    const employees=parseInt($('calc-employees').value)||0;
-    if(employees<50){
-        alert('Demo available for companies with 50+ employees');
-        return;
+        html += '</div>';
     }
     
-    try{
-        const res=await fetch('/api/stripe/cfo-demo',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                employees:employees,
-                projectedSavings:$('total-projection').textContent,
-                analysis:lastNTI
-            })
-        });
-        const data=await res.json();
-        if(data.url){
-            if (window.frontendAnalytics) {
-                window.frontendAnalytics.trackConversionComplete('cfo_demo_initiated', { employees });
-            }
-            window.location.href=data.url;
-        }else{
-            alert('Error: '+(data.error||'Demo booking failed'));
-        }
-    }catch(err){
-        alert('Connection error: '+err.message);
-    }
-}
-
-// Live AI Integration Functions
-async function queryRawAI(){
-    const input=$('rawAIInput').value.trim();
-    if(!input)return;
+    // Risk metrics grid
+    html += '<div class="question-risk-grid">';
     
-    const btn=document.querySelector('#rawAIInput + .ai-btn');
-    const response=$('rawAIResponse');
+    const riskLevel = qp.structural_risk >= 60 ? 'high' : qp.structural_risk >= 30 ? 'medium' : 'low';
+    html += '<div class="question-risk-item">';
+    html += '<div class="question-risk-label">Structural Risk</div>';
+    html += `<div class="question-risk-value ${riskLevel}">${qp.structural_risk}%</div>`;
+    html += '</div>';
     
-    btn.disabled=true;
-    btn.textContent='Sending...';
-    response.textContent='Processing...';
-    
-    try{
-        const res=await fetch('/api/openai/raw',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({query:input})
-        });
-        const data=await res.json();
-        response.innerHTML=highlightText(data.response||'Error: '+(data.error||'Unknown error'));
-    }catch(err){
-        response.textContent='Connection error: '+err.message;
+    if (qp.frame_shift_detected !== undefined) {
+        html += '<div class="question-risk-item">';
+        html += '<div class="question-risk-label">Frame Shift</div>';
+        html += `<div class="question-risk-value ${qp.frame_shift_detected ? 'medium' : 'low'}">${qp.frame_shift_detected ? 'YES' : 'NO'}</div>`;
+        html += '</div>';
     }
     
-    btn.disabled=false;
-    btn.textContent='Send to Raw GPT-4';
-}
-
-async function queryNTIAI(){
-    const input=$('ntiAIInput').value.trim();
-    if(!input)return;
-    
-    const btn=document.querySelector('#ntiAIInput + .ai-btn');
-    const response=$('ntiAIResponse');
-    
-    btn.disabled=true;
-    btn.textContent='Sending...';
-    response.textContent='Processing with NTI...';
-    
-    try{
-        const res=await fetch('/api/openai/nti',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({query:input})
-        });
-        const data=await res.json();
-        response.innerHTML=highlightText(data.response||'Error: '+(data.error||'Unknown error'));
-    }catch(err){
-        response.textContent='Connection error: '+err.message;
+    if (qp.constraint_injection_detected !== undefined) {
+        html += '<div class="question-risk-item">';
+        html += '<div class="question-risk-label">Constraint Injection</div>';
+        html += `<div class="question-risk-value ${qp.constraint_injection_detected ? 'high' : 'low'}">${qp.constraint_injection_detected ? 'YES' : 'NO'}</div>`;
+        html += '</div>';
     }
     
-    btn.disabled=false;
-    btn.textContent='Send to NTI-Enhanced GPT-4';
-}
-
-// Sync inputs between AI comparison columns
-document.addEventListener('DOMContentLoaded',function(){
-    $('rawAIInput').addEventListener('input',function(){
-        $('ntiAIInput').value=this.value;
-    });
+    if (qp.authority_shift_detected !== undefined) {
+        html += '<div class="question-risk-item">';
+        html += '<div class="question-risk-label">Authority Shift</div>';
+        html += `<div class="question-risk-value ${qp.authority_shift_detected ? 'medium' : 'low'}">${qp.authority_shift_detected ? 'YES' : 'NO'}</div>`;
+        html += '</div>';
+    }
     
-    $('ntiAIInput').addEventListener('input',function(){
-        $('rawAIInput').value=this.value;
-    });
-});
-
-// Expose global functions
-window.toggleMenu = toggleMenu;
-window.closeMenu = closeMenu;
-window.startDemo = startDemo;
-window.investNow = investNow;
-window.calculateSavings = calculateSavings;
-window.buyCFODemo = buyCFODemo;
-window.queryRawAI = queryRawAI;
-window.queryNTIAI = queryNTIAI;
+    html += '</div>';
+    html += '</div>';
+    
+    return html;
+}
 
 })();
 </script>
