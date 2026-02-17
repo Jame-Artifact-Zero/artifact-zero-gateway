@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NTI Political Pulse — Knox County 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080c14;--surface:#0e1320;--surface2:#141a2b;--surface3:#1a2236;
+  --text:#e8ecf4;--dim:#a0aabf;--muted:#6b7894;
+  --green:#00e89c;--red:#ef4444;--amber:#f59e0b;--cyan:#22d3ee;
+  --purple:#a78bfa;--pink:#ec4899;--blue:#3b82f6;
+  --border:#1e2940;--border2:#2a3550;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+a{color:var(--green);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-brand a{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--green);letter-spacing:2px;text-decoration:none}
+.topbar-nav{display:flex;gap:16px}
+.topbar-nav a{font-size:12px;color:var(--muted);font-weight:600;text-decoration:none;letter-spacing:1px;text-transform:uppercase}
+.topbar-nav a:hover{color:var(--text)}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);font-weight:600}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Hero */
+.hero{text-align:center;padding:48px 24px 24px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,232,156,.08);border:1px solid rgba(0,232,156,.2);padding:6px 16px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);font-weight:600;letter-spacing:2px;margin-bottom:20px}
+.hero h1{font-size:clamp(28px,5vw,48px);font-weight:700;color:var(--text);margin-bottom:8px}
+.hero h1 span{color:var(--green)}
+.hero-sub{font-size:16px;color:var(--dim);max-width:680px;margin:0 auto 8px}
+.hero-meta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:8px}
+.hero-meta strong{color:var(--amber)}
+
+/* Race Overview */
+.race-header{max-width:1200px;margin:32px auto 0;padding:0 24px}
+.race-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px}
+
+/* Candidate Grid */
+.candidates{max-width:1200px;margin:0 auto;padding:0 24px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+
+.candidate-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;transition:all .3s ease;position:relative;
+}
+.candidate-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.candidate-card.active{border-color:var(--green)}
+
+.card-party{position:absolute;top:0;left:0;right:0;height:3px}
+.card-party.republican{background:linear-gradient(90deg,#ef4444,#dc2626)}
+.card-party.democrat{background:linear-gradient(90deg,#3b82f6,#2563eb)}
+
+.card-header{padding:20px 20px 12px;display:flex;align-items:flex-start;gap:16px}
+.card-avatar{
+  width:56px;height:56px;border-radius:12px;
+  background:var(--surface3);display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--green);
+  flex-shrink:0;border:1px solid var(--border);
+}
+.card-info h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px}
+.card-info .card-role{font-size:12px;color:var(--muted);line-height:1.4}
+.card-info .card-party-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;margin-top:4px}
+.card-info .card-party-label.rep{color:var(--red)}
+.card-info .card-party-label.dem{color:var(--blue)}
+
+/* HCS Score Ring */
+.card-score{padding:0 20px 16px;display:flex;align-items:center;gap:20px}
+.score-ring{position:relative;width:80px;height:80px;flex-shrink:0}
+.score-ring svg{width:80px;height:80px;transform:rotate(-90deg)}
+.score-ring-bg{fill:none;stroke:var(--surface3);stroke-width:6}
+.score-ring-fill{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1s ease}
+.score-ring-text{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;
+}
+.score-ring-label{
+  position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
+  font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:600;color:var(--muted);
+  letter-spacing:1.5px;white-space:nowrap;
+}
+.score-detail{flex:1}
+.score-detail-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
+.score-detail-row .label{color:var(--muted)}
+.score-detail-row .val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
+.score-bar{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-top:2px}
+.score-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+
+/* Card Stats Row */
+.card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-top:1px solid var(--border)}
+.card-stat{background:var(--surface);padding:12px 8px;text-align:center}
+.card-stat-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--text)}
+.card-stat-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* Card Footer */
+.card-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.card-footer-link{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--green);cursor:pointer}
+.card-footer-link:hover{text-decoration:underline}
+.card-footer-updated{font-size:10px;color:var(--muted)}
+
+/* Live Feed Section */
+.feed-section{max-width:1200px;margin:0 auto;padding:0 24px 48px}
+.feed-section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.feed-section-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);letter-spacing:3px;font-weight:700}
+.feed-section-meta{font-size:12px;color:var(--muted)}
+
+.feed-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;transition:border-color .2s}
+.feed-item:hover{border-color:var(--border2)}
+.feed-item-header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.feed-item-source{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--green)}
+.feed-item-time{font-size:11px;color:var(--muted)}
+.feed-item-body{padding:14px 16px}
+.feed-item-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;cursor:pointer}
+.feed-item-title:hover{color:var(--green)}
+.feed-item-summary{font-size:13px;color:var(--dim);line-height:1.5;margin-bottom:8px}
+.feed-item-tags{display:flex;gap:6px;flex-wrap:wrap}
+.feed-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
+.feed-tag.hcs{background:rgba(0,232,156,.1);color:var(--green);border:1px solid rgba(0,232,156,.2)}
+.feed-tag.tilt{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.feed-tag.candidate{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+
+/* Score Methodology */
+.methodology{max-width:1200px;margin:0 auto;padding:0 24px 48px}
+.method-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px}
+.method-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px}
+.method-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:16px}
+.method-item{padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+.method-item-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:4px}
+.method-item-desc{font-size:12px;color:var(--dim);line-height:1.4}
+.method-item-weight{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px}
+
+/* Disclaimer */
+.disclaimer-bar{max-width:1200px;margin:0 auto 32px;padding:0 24px}
+.disclaimer-bar-inner{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 20px;text-align:center;font-size:12px;color:var(--muted)}
+.disclaimer-bar-inner strong{color:var(--amber)}
+
+/* Footer */
+.footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:var(--surface)}
+.footer a{color:var(--green)}
+
+/* Loading */
+.loading-shimmer{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Responsive */
+@media(max-width:768px){
+  .candidates{grid-template-columns:1fr}
+  .hero{padding:32px 16px 16px}
+  .hero h1{font-size:28px}
+  .method-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <a href="/">ARTIFACT ZERO</a>
+  </div>
+  <div class="topbar-nav">
+    <a href="/">Dashboard</a>
+    <a href="/live">Live Feed</a>
+    <a href="/health">Health</a>
+  </div>
+  <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+</div>
+
+<div class="hero">
+  <div class="hero-badge">POLITICAL PULSE — KNOXVILLE</div>
+  <h1>Knox County <span>Mayor's Race</span></h1>
+  <div class="hero-sub">Real-time structural analysis of candidate messaging. No opinions. No endorsements. Just the structural integrity of what's being said — measured by the NTI engine.</div>
+  <div class="hero-meta">Primary: <strong>May 5, 2026</strong> · Candidates: <strong id="candidateCount">4</strong> · Statements Analyzed: <strong id="totalStatements">0</strong></div>
+</div>
+
+<div class="disclaimer-bar">
+  <div class="disclaimer-bar-inner">
+    <strong>⚡ Nonpartisan Analysis</strong> — NTI does not evaluate policy positions. It measures structural integrity of language: attribution, emotional charge, assertion density, and clarity. We don't say correct. We say different. You decide.
+  </div>
+</div>
+
+<div class="race-header">
+  <div class="race-title">◆ REPUBLICAN PRIMARY — CANDIDATES</div>
+</div>
+
+<div class="candidates" id="repCandidates"></div>
+
+<div class="race-header">
+  <div class="race-title">◆ DEMOCRATIC PRIMARY — CANDIDATES</div>
+</div>
+
+<div class="candidates" id="demCandidates"></div>
+
+<div class="feed-section">
+  <div class="feed-section-header">
+    <div class="feed-section-title">◆ LATEST LOCAL COVERAGE</div>
+    <div class="feed-section-meta">Auto-updates every 120s · <a href="/live">View full feed →</a></div>
+  </div>
+  <div id="localFeed">
+    <div class="feed-item"><div class="feed-item-body" style="text-align:center;padding:32px;color:var(--muted)">Loading local news coverage...</div></div>
+  </div>
+</div>
+
+<div class="methodology">
+  <div class="method-card">
+    <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
+    <p style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:16px">The HCS is a composite score (0–100) that measures how structurally clear and honest a statement is. It combines six weighted signals from the NTI engine and client-side analysis. Higher is better. The score changes with every new statement analyzed.</p>
+    <div class="method-grid">
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--cyan)">READABILITY</div>
+        <div class="method-item-desc">Flesch-Kincaid grade level. Lower grade = more accessible = higher score.</div>
+        <div class="method-item-weight">Weight: 15%</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--green)">EMOTIONAL CHARGE</div>
+        <div class="method-item-desc">Density of charged language. Lower emotional charge = higher score.</div>
+        <div class="method-item-weight">Weight: 20%</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--amber)">ASSERTION DENSITY</div>
+        <div class="method-item-desc">Ratio of attributed vs unattributed claims. More attribution = higher score.</div>
+        <div class="method-item-weight">Weight: 20%</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--purple)">TILT PENALTY</div>
+        <div class="method-item-desc">Deduction for structural tilt patterns (T1–T10): certainty inflation, absolute language, consensus claims, etc.</div>
+        <div class="method-item-weight">Penalty: -8 per tag</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--pink)">FAILURE MODES</div>
+        <div class="method-item-desc">Critical deductions for CCA, UDDS, or DCE detection. These indicate structural breakdown.</div>
+        <div class="method-item-weight">Penalty: -15 per mode</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--blue)">INFO DENSITY</div>
+        <div class="method-item-desc">Ratio of factual elements (numbers, dates, names, data) to total words. More facts = higher score.</div>
+        <div class="method-item-weight">Weight: 10%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · NTI Political Pulse · Rule-based structural analysis, zero LLM dependency · <a href="/">Main Dashboard</a> · <a href="/live">Live Feed</a>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// CANDIDATES DATA
+// ══════════════════════════════════════
+const CANDIDATES = [
+  {
+    id: 'larsen-jay',
+    name: 'Larsen Jay',
+    initials: 'LJ',
+    party: 'republican',
+    role: 'Knox County Commissioner, At-Large Seat 10',
+    raised: '$542K',
+    endorsements: 'Haslam family, Lt. Gov. McNally, Sheriff Spangler, Rep. Burchett',
+    statements: [
+      "We used to call this the County Executive, and I want to be the executive to run the business of Knox County.",
+      "This is not about politics. It's about public service.",
+      "I will promise never to lie to you. I'll always tell you the truth. I will always listen.",
+      "Knox County is the best place in the country to live. This is where you chose to live, work and raise your children.",
+      "I want to live in a Knox County where we don't have a single homeless veteran.",
+      "I want to live in a Knox County where we have the best teachers who have world class facilities for teachers to teach and students to learn.",
+      "I feel very proud about it. I'm really happy and honestly humbled about how many people have already joined the campaign with still so much time left to go.",
+    ]
+  },
+  {
+    id: 'betsy-henderson',
+    name: 'Betsy Henderson',
+    initials: 'BH',
+    party: 'republican',
+    role: 'Knox County Board of Education Chair',
+    raised: '$82K',
+    endorsements: '',
+    statements: [
+      "We have the opportunity to keep our county a place where families thrive, where conservative Christian values guide us, and where personal freedom, responsibility, and hard work are celebrated.",
+      "Over the past few months, I have been so encouraged by the heartfelt conversations I've had with people throughout Knox County.",
+      "It is clear that we find ourselves at a crossroads.",
+      "Our campaign has received incredible early support which shows the strength of our message and the energy behind our campaign.",
+    ]
+  },
+  {
+    id: 'kim-frazier',
+    name: 'Kim Frazier',
+    initials: 'KF',
+    party: 'republican',
+    role: 'Knox County Commissioner, At-Large · Vice Chair',
+    raised: 'Undisclosed',
+    endorsements: '',
+    statements: [
+      "It has been an incredible privilege to serve all of Knox County as an At-Large Commissioner.",
+      "I'm running for Mayor to continue that service — to continue to be a voice for the hard-working people of our county.",
+      "I want to lead with efficiency, invest where it matters most, and preserve what makes our county so special.",
+    ]
+  },
+  {
+    id: 'beau-hawk',
+    name: 'Beau Hawk',
+    initials: 'BH',
+    party: 'democrat',
+    role: 'Knoxville-Oak Ridge Central Labor Council President',
+    raised: 'New Entry',
+    endorsements: '',
+    statements: [
+      "Knox County doesn't have leadership that puts working families first.",
+      "This campaign is by and for the people who make this community work, and I'm fighting for a Knox County that's affordable and prosperous for all of us.",
+    ]
+  }
+];
+
+// ══════════════════════════════════════
+// CLIENT-SIDE ANALYSIS (same as live-feed)
+// ══════════════════════════════════════
+function countSyllables(word) {
+  word = word.toLowerCase().replace(/[^a-z]/g, '');
+  if (word.length <= 2) return 1;
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+  word = word.replace(/^y/, '');
+  const m = word.match(/[aeiouy]{1,2}/g);
+  return m ? m.length : 1;
+}
+
+function analyzeReadability(text) {
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const sentCount = Math.max(sentences.length, 1);
+  const wordCount = Math.max(words.length, 1);
+  const syllCount = words.reduce((sum, w) => sum + countSyllables(w), 0);
+  const grade = Math.max(0, Math.min(18, 0.39 * (wordCount / sentCount) + 11.8 * (syllCount / wordCount) - 15.59));
+  return { grade: Math.round(grade * 10) / 10 };
+}
+
+const EMOTIONAL_WORDS = {
+  high: ['slammed','devastating','outrage','fury','shocking','horrifying','terrifying','explosive','catastrophic','nightmare','brutal','crushed','destroyed','chaos','panic','crisis','tragic','heartbreaking','alarming','dire','desperate','rage','furious','bombshell','firestorm','backlash','meltdown','uproar','plunged','collapsed','shattered','rocked','stunned','bloodbath'],
+  moderate: ['concerns','tensions','controversial','criticized','warned','demanded','clashed','accused','rejected','condemned','fears','threatened','escalated','sparked','triggered','struggling','embattled','contentious','divisive','heated','pressured','volatile','strained','grim','stark','severe','mounting','fighting','incredible','heartfelt','encouraged','proud','humbled','prosperous']
+};
+
+function analyzeEmotionalCharge(text) {
+  const lower = text.toLowerCase();
+  const words = lower.split(/\s+/);
+  const total = Math.max(words.length, 1);
+  let highHits = 0, modHits = 0;
+  EMOTIONAL_WORDS.high.forEach(w => { if (lower.includes(w)) highHits++; });
+  EMOTIONAL_WORDS.moderate.forEach(w => { if (lower.includes(w)) modHits++; });
+  const rawScore = (highHits * 3 + modHits * 1.5) / total * 100;
+  return { score: Math.min(100, Math.round(rawScore * 8)) };
+}
+
+const ATTRIBUTION_MARKERS = [
+  'according to','said','told','reported by','citing','sources say','officials say',
+  'spokesperson','statement from','confirmed by','data shows','studies show','research indicates',
+  'analysts say','experts say','the department said','officials said','police said'
+];
+
+function analyzeAssertionDensity(text) {
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 2);
+  const sentCount = Math.max(sentences.length, 1);
+  let attributed = 0;
+  sentences.forEach(sent => {
+    const sl = sent.toLowerCase();
+    if (ATTRIBUTION_MARKERS.some(m => sl.includes(m))) attributed++;
+  });
+  return { score: Math.round(((sentCount - attributed) / sentCount) * 100), attributed, total: sentCount };
+}
+
+function analyzeInfoDensity(text) {
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const total = Math.max(words.length, 1);
+  const numbers = (text.match(/\b\d[\d,.]*\b/g) || []).length;
+  const dates = (text.match(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4}|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi) || []).length;
+  const names = (text.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+  const percents = (text.match(/\d+\s*%/g) || []).length;
+  const money = (text.match(/[\$£€]\s*[\d,.]+|\d+\s*(?:billion|million|trillion|thousand)/gi) || []).length;
+  const factualElements = numbers + dates + names + percents + money;
+  return { score: Math.min(100, Math.round((factualElements / total) * 250)) };
+}
+
+// Tilt detection (simplified client-side)
+const ABSOLUTE_WORDS = ['never','always','every','all','none','no one','everyone','everything','nothing','certainly','definitely','absolutely','guaranteed','promise','impossible','undoubtedly'];
+const CERTAINTY_WORDS = ['will definitely','guarantee','promise','ensure','without a doubt','no question','certainly will','I assure','we assure'];
+const CONSENSUS_WORDS = ['everyone knows','everyone agrees','people are saying','many people','most people','the people','we all know','nobody disagrees','clearly','obviously'];
+const PRESSURE_WORDS = ['act now','don\'t miss','limited time','before it\'s too late','running out','already joined','momentum','can\'t afford','must act','time is running'];
+
+function detectTilt(text) {
+  const lower = text.toLowerCase();
+  const tags = [];
+  if (CERTAINTY_WORDS.some(w => lower.includes(w))) tags.push('T2');
+  if (ABSOLUTE_WORDS.filter(w => lower.includes(w)).length >= 2) tags.push('T5');
+  if (CONSENSUS_WORDS.some(w => lower.includes(w))) tags.push('T3');
+  if (PRESSURE_WORDS.some(w => lower.includes(w))) tags.push('T8');
+  // Superlative check
+  if (/\b(best|worst|greatest|most|least|biggest|smallest|strongest|weakest)\b/i.test(text) && !ATTRIBUTION_MARKERS.some(m => lower.includes(m))) {
+    tags.push('T6');
+  }
+  return tags;
+}
+
+// ══════════════════════════════════════
+// HUMAN CLARITY SCORE (HCS)
+// ══════════════════════════════════════
+function computeHCS(text) {
+  const read = analyzeReadability(text);
+  const emo = analyzeEmotionalCharge(text);
+  const assert = analyzeAssertionDensity(text);
+  const info = analyzeInfoDensity(text);
+  const tilt = detectTilt(text);
+
+  // Readability component (15%): grade 6 = 100, grade 18 = 0
+  const readScore = Math.max(0, Math.min(100, (18 - read.grade) / 12 * 100));
+
+  // Emotional charge component (20%): lower = better
+  const emoScore = Math.max(0, 100 - emo.score);
+
+  // Assertion component (20%): lower unattributed ratio = better
+  const assertScore = Math.max(0, 100 - assert.score);
+
+  // Info density component (10%): higher = better
+  const infoScore = Math.min(100, info.score * 1.5);
+
+  // Base composite
+  let hcs = (readScore * 0.15) + (emoScore * 0.20) + (assertScore * 0.20) + (infoScore * 0.10);
+
+  // Normalize to roughly 0-65 range, then add baseline
+  hcs = 35 + (hcs * 0.65 / 65 * 65);
+
+  // Tilt penalties
+  hcs -= tilt.length * 8;
+
+  // Clamp
+  hcs = Math.max(5, Math.min(98, Math.round(hcs)));
+
+  return {
+    score: hcs,
+    components: { readScore, emoScore, assertScore, infoScore },
+    tiltCount: tilt.length,
+    tiltTags: tilt,
+    raw: { readability: read.grade, emotional: emo.score, assertion: assert.score, infoDensity: info.score }
+  };
+}
+
+function computeCandidateHCS(candidate) {
+  if (!candidate.statements.length) return { avg: 50, scores: [], components: {} };
+  const scores = candidate.statements.map(s => computeHCS(s));
+  const avg = Math.round(scores.reduce((a, b) => a + b.score, 0) / scores.length);
+  const totalTilt = scores.reduce((a, b) => a + b.tiltCount, 0);
+
+  // Average components
+  const avgRead = Math.round(scores.reduce((a, b) => a + b.raw.readability, 0) / scores.length * 10) / 10;
+  const avgEmo = Math.round(scores.reduce((a, b) => a + b.raw.emotional, 0) / scores.length);
+  const avgAssert = Math.round(scores.reduce((a, b) => a + b.raw.assertion, 0) / scores.length);
+  const avgInfo = Math.round(scores.reduce((a, b) => a + b.raw.infoDensity, 0) / scores.length);
+
+  return { avg, scores, totalTilt, avgRead, avgEmo, avgAssert, avgInfo };
+}
+
+// ══════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════
+function getScoreColor(score) {
+  if (score >= 75) return 'var(--green)';
+  if (score >= 55) return 'var(--cyan)';
+  if (score >= 40) return 'var(--amber)';
+  return 'var(--red)';
+}
+
+function getScoreLabel(score) {
+  if (score >= 80) return 'Excellent';
+  if (score >= 70) return 'Strong';
+  if (score >= 60) return 'Solid';
+  if (score >= 50) return 'Fair';
+  if (score >= 40) return 'Weak';
+  return 'Poor';
+}
+
+function renderCandidateCard(candidate) {
+  const hcs = computeCandidateHCS(candidate);
+  const color = getScoreColor(hcs.avg);
+  const circumference = 2 * Math.PI * 34;
+  const offset = circumference - (hcs.avg / 100) * circumference;
+
+  const barColor = (val, invert = false) => {
+    const v = invert ? 100 - val : val;
+    if (v >= 70) return 'var(--green)';
+    if (v >= 40) return 'var(--amber)';
+    return 'var(--red)';
+  };
+
+  return `
+    <div class="candidate-card" id="card-${candidate.id}">
+      <div class="card-party ${candidate.party}"></div>
+      <div class="card-header">
+        <div class="card-avatar">${candidate.initials}</div>
+        <div class="card-info">
+          <h3>${candidate.name}</h3>
+          <div class="card-role">${candidate.role}</div>
+          <div class="card-party-label ${candidate.party === 'republican' ? 'rep' : 'dem'}">${candidate.party.toUpperCase()}</div>
+        </div>
+      </div>
+      <div class="card-score">
+        <div class="score-ring">
+          <svg viewBox="0 0 80 80">
+            <circle class="score-ring-bg" cx="40" cy="40" r="34"/>
+            <circle class="score-ring-fill" cx="40" cy="40" r="34" 
+              stroke="${color}" 
+              stroke-dasharray="${circumference}" 
+              stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="score-ring-text" style="color:${color}">${hcs.avg}</div>
+          <div class="score-ring-label">HCS</div>
+        </div>
+        <div class="score-detail">
+          <div class="score-detail-row">
+            <span class="label">Readability</span>
+            <span class="val" style="color:${barColor(hcs.avgRead, true)}">Grade ${hcs.avgRead}</span>
+          </div>
+          <div class="score-detail-row">
+            <span class="label">Emotion</span>
+            <span class="val" style="color:${barColor(hcs.avgEmo, true)}">${hcs.avgEmo}%</span>
+          </div>
+          <div class="score-detail-row">
+            <span class="label">Unattributed</span>
+            <span class="val" style="color:${barColor(hcs.avgAssert, true)}">${hcs.avgAssert}%</span>
+          </div>
+          <div class="score-detail-row">
+            <span class="label">Tilt Flags</span>
+            <span class="val" style="color:${hcs.totalTilt > 2 ? 'var(--red)' : hcs.totalTilt > 0 ? 'var(--amber)' : 'var(--green)'}">${hcs.totalTilt}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-stats">
+        <div class="card-stat">
+          <div class="card-stat-val">${candidate.statements.length}</div>
+          <div class="card-stat-label">Statements</div>
+        </div>
+        <div class="card-stat">
+          <div class="card-stat-val">${candidate.raised}</div>
+          <div class="card-stat-label">Raised</div>
+        </div>
+        <div class="card-stat">
+          <div class="card-stat-val">${getScoreLabel(hcs.avg)}</div>
+          <div class="card-stat-label">Rating</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-footer-link" onclick="showStatements('${candidate.id}')">View all statements →</span>
+        <span class="card-footer-updated">Last updated: Today</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderDashboard() {
+  const repDiv = document.getElementById('repCandidates');
+  const demDiv = document.getElementById('demCandidates');
+
+  const reps = CANDIDATES.filter(c => c.party === 'republican');
+  const dems = CANDIDATES.filter(c => c.party === 'democrat');
+
+  // Sort by HCS score descending
+  reps.sort((a, b) => computeCandidateHCS(b).avg - computeCandidateHCS(a).avg);
+  dems.sort((a, b) => computeCandidateHCS(b).avg - computeCandidateHCS(a).avg);
+
+  repDiv.innerHTML = reps.map(c => renderCandidateCard(c)).join('');
+  demDiv.innerHTML = dems.map(c => renderCandidateCard(c)).join('');
+
+  // Update total
+  const total = CANDIDATES.reduce((a, c) => a + c.statements.length, 0);
+  document.getElementById('totalStatements').textContent = total;
+}
+
+function showStatements(candidateId) {
+  const candidate = CANDIDATES.find(c => c.id === candidateId);
+  if (!candidate) return;
+
+  const scores = candidate.statements.map(s => ({ text: s, hcs: computeHCS(s) }));
+
+  const html = scores.map((s, i) => `
+    <div class="feed-item" style="margin-bottom:10px">
+      <div class="feed-item-header">
+        <div class="feed-item-source">${candidate.name} — Statement ${i + 1}</div>
+        <div class="feed-item-time" style="color:${getScoreColor(s.hcs.score)};font-weight:700">HCS: ${s.hcs.score}</div>
+      </div>
+      <div class="feed-item-body">
+        <div class="feed-item-title" style="cursor:default">"${s.text}"</div>
+        <div class="feed-item-tags">
+          <span class="feed-tag hcs">HCS ${s.hcs.score}</span>
+          <span class="feed-tag" style="background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)">Grade ${s.hcs.raw.readability}</span>
+          <span class="feed-tag" style="background:rgba(236,72,153,.1);color:var(--pink);border:1px solid rgba(236,72,153,.2)">Emo ${s.hcs.raw.emotional}%</span>
+          ${s.hcs.tiltTags.length ? s.hcs.tiltTags.map(t => `<span class="feed-tag tilt">${t}</span>`).join('') : '<span class="feed-tag" style="background:rgba(0,232,156,.1);color:var(--green);border:1px solid rgba(0,232,156,.2)">Clean</span>'}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Simple modal
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);overflow-y:auto;padding:40px 20px';
+  overlay.innerHTML = `
+    <div style="max-width:800px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="font-size:20px;color:var(--text)">${candidate.name} — All Statements</h2>
+        <button onclick="this.closest('div[style]').parentElement.remove()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
+      </div>
+      ${html}
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ══════════════════════════════════════
+// LOCAL FEED (pull from live feed sources)
+// ══════════════════════════════════════
+const LOCAL_SOURCES = [
+  { id: 'wate', name: 'WATE 6', rss: 'https://wate.com/feed/' },
+  { id: 'wbir', name: 'WBIR 10', rss: 'https://rssfeeds.wbir.com/wbir/local' },
+  { id: 'wvlt', name: 'WVLT 8', rss: 'https://www.wvlt.tv/feed/' },
+  { id: 'knoxfocus', name: 'Knox Focus', rss: 'https://feeds.feedburner.com/KnoxFocus' },
+];
+
+let localItems = [];
+
+async function fetchLocalFeed() {
+  for (const source of LOCAL_SOURCES) {
+    try {
+      const res = await fetch('/api/rss-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: source.rss, max_items: 10 })
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!data.items) continue;
+
+      const existing = new Set(localItems.map(i => i.title));
+      for (const item of data.items) {
+        if (existing.has(item.title)) continue;
+        const hcs = computeHCS(`${item.title}. ${item.summary || item.description || ''}`);
+        const tilt = detectTilt(`${item.title}. ${item.summary || item.description || ''}`);
+
+        // Check if mentions any candidate
+        const fullText = `${item.title} ${item.summary || ''}`.toLowerCase();
+        const mentionedCandidates = CANDIDATES.filter(c =>
+          fullText.includes(c.name.toLowerCase()) ||
+          fullText.includes(c.name.split(' ')[1].toLowerCase())
+        );
+
+        localItems.push({
+          title: item.title || '',
+          summary: item.summary || item.description || '',
+          link: item.link || '',
+          pubDate: item.pubDate || '',
+          source: source.name,
+          hcs,
+          tilt,
+          candidates: mentionedCandidates
+        });
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  // Sort by date
+  localItems.sort((a, b) => {
+    const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+    const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+    return db - da;
+  });
+
+  renderLocalFeed();
+}
+
+function renderLocalFeed() {
+  const div = document.getElementById('localFeed');
+  if (!localItems.length) {
+    div.innerHTML = '<div class="feed-item"><div class="feed-item-body" style="text-align:center;padding:32px;color:var(--muted)">No local stories loaded yet. Check back shortly.</div></div>';
+    return;
+  }
+
+  // Show top 10
+  div.innerHTML = localItems.slice(0, 10).map(item => {
+    const timeStr = item.pubDate ? formatTime(item.pubDate) : '';
+    const color = getScoreColor(item.hcs.score);
+
+    return `
+      <div class="feed-item">
+        <div class="feed-item-header">
+          <div class="feed-item-source">${item.source}</div>
+          <div class="feed-item-time">${timeStr}</div>
+        </div>
+        <div class="feed-item-body">
+          <div class="feed-item-title" onclick="window.open('${item.link}','_blank')">${escHtml(item.title)}</div>
+          <div class="feed-item-summary">${escHtml(item.summary).slice(0, 200)}${item.summary.length > 200 ? '...' : ''}</div>
+          <div class="feed-item-tags">
+            <span class="feed-tag hcs" style="color:${color};border-color:${color}40;background:${color}15">HCS ${item.hcs.score}</span>
+            ${item.tilt.length ? item.tilt.map(t => `<span class="feed-tag tilt">${t}</span>`).join('') : ''}
+            ${item.candidates.map(c => `<span class="feed-tag candidate">${c.name}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatTime(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 60000);
+    if (diff < 1) return 'Just now';
+    if (diff < 60) return `${diff}m ago`;
+    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch { return dateStr; }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  renderDashboard();
+  fetchLocalFeed();
+  setInterval(fetchLocalFeed, 120000);
+});
+</script>
+</body>
+</html>

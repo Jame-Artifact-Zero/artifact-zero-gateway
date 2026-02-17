@@ -45,8 +45,16 @@ ALLOWED_DOMAINS = [
     'search.cnbc.com',
     'www.cnbc.com',
     'rss.medicalnewstoday.com',
-    'feeds.feedburner.com',
     'www.statnews.com',
+    # Knoxville Local
+    'www.wate.com',
+    'wate.com',
+    'rssfeeds.wbir.com',
+    'www.wbir.com',
+    'www.wvlt.tv',
+    'wvlt.tv',
+    'www.knoxfocus.com',
+    'knoxfocus.com',
 ]
 
 
@@ -183,6 +191,10 @@ def rss_sources():
             {"id": "ars", "name": "Ars Technica", "rss": "https://feeds.arstechnica.com/arstechnica/technology-lab"},
             {"id": "tc", "name": "TechCrunch", "rss": "https://techcrunch.com/feed"},
             {"id": "cnbc", "name": "CNBC", "rss": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"},
+            {"id": "wate", "name": "WATE 6", "rss": "https://wate.com/feed/"},
+            {"id": "wbir", "name": "WBIR 10", "rss": "https://rssfeeds.wbir.com/wbir/local"},
+            {"id": "wvlt", "name": "WVLT 8", "rss": "https://www.wvlt.tv/feed/"},
+            {"id": "knoxfocus", "name": "Knox Focus", "rss": "https://feeds.feedburner.com/KnoxFocus"},
         ]
     })
 
@@ -193,6 +205,18 @@ def live_feed_page():
     try:
         from flask import render_template
         return render_template('live-feed.html')
+    except Exception as e:
+        return f"Error loading live feed: {e}", 500
+
+
+@rss_bp.route('/live/knoxville')
+def knoxville_dashboard():
+    """Serve the Knoxville Political Pulse dashboard."""
+    try:
+        from flask import render_template
+        return render_template('knoxville-dashboard.html')
+    except Exception as e:
+        return f"Error loading dashboard: {e}", 500
 
 
 @rss_bp.route('/api/rss-proxy/article', methods=['POST'])
@@ -275,5 +299,3 @@ def _extract_article_text(html: str) -> str:
         text = text[:5000] + '...'
 
     return text.strip()
-    except Exception:
-        return "Live Feed page not found. Ensure live-feed.html is in templates/", 404

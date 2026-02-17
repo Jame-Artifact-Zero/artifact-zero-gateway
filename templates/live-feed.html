@@ -234,7 +234,7 @@ body{min-height:100vh;overflow-x:hidden}
 
 <div class="hero">
   <h1>NTI <span>LIVE FEED</span></h1>
-  <p>Real-time news pulled from major outlets and run through the NTI structural analysis engine. Same information, shown two ways — side by side.</p>
+  <p>Real-time news from national and local outlets, run through the NTI structural analysis engine. Same information, shown two ways — side by side.</p>
   <div class="disclaimer">We don't say correct. We say different. You decide.</div>
 </div>
 
@@ -285,6 +285,11 @@ const SOURCES = [
   { id: 'tc',       name: 'TECHCRUNCH',     rss: 'https://techcrunch.com/feed',                        cat: 'tech' },
   // BUSINESS
   { id: 'cnbc',     name: 'CNBC',           rss: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114', cat: 'biz' },
+  // LOCAL — KNOXVILLE
+  { id: 'wate',     name: 'WATE 6',         rss: 'https://wate.com/feed/',                               cat: 'local' },
+  { id: 'wbir',     name: 'WBIR 10',        rss: 'https://rssfeeds.wbir.com/wbir/local',                 cat: 'local' },
+  { id: 'wvlt',     name: 'WVLT 8',         rss: 'https://www.wvlt.tv/feed/',                            cat: 'local' },
+  { id: 'knoxfocus', name: 'KNOX FOCUS',    rss: 'https://feeds.feedburner.com/KnoxFocus',               cat: 'local' },
 ];
 
 const REFRESH_INTERVAL = 120000;
