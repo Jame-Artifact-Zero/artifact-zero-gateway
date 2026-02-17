@@ -15,13 +15,12 @@
   --red:#ef4444;--red-dim:#991b1b;
   --amber:#f59e0b;--amber-dim:#92400e;
   --purple:#a78bfa;
-  --cyan:#22d3ee;
+  --cyan:#22d3ee;--teal:#2dd4bf;--pink:#f472b6;--orange:#fb923c;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100vh;overflow-x:hidden}
 
-/* ── TOPBAR ── */
 .topbar{
   position:sticky;top:0;z-index:100;
   background:rgba(7,9,13,.92);backdrop-filter:blur(12px);
@@ -40,7 +39,6 @@ body{min-height:100vh;overflow-x:hidden}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ── HERO BANNER ── */
 .hero{
   text-align:center;padding:40px 24px 20px;
   background:linear-gradient(180deg,rgba(59,130,246,.04) 0%,transparent 100%);
@@ -53,10 +51,7 @@ body{min-height:100vh;overflow-x:hidden}
   font-family:'JetBrains Mono',monospace;letter-spacing:.3px;
 }
 
-/* ── SOURCE TABS ── */
-.source-bar{
-  display:flex;justify-content:center;gap:8px;padding:16px 24px 8px;flex-wrap:wrap;
-}
+.source-bar{display:flex;justify-content:center;gap:8px;padding:16px 24px 8px;flex-wrap:wrap}
 .source-tab{
   font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
   padding:10px 20px;border-radius:6px;cursor:pointer;
@@ -64,18 +59,13 @@ body{min-height:100vh;overflow-x:hidden}
   transition:all .2s;position:relative;
 }
 .source-tab:hover{border-color:var(--border2);color:var(--text)}
-.source-tab.active{
-  background:var(--accent);color:#fff;border-color:var(--accent);
-}
-.source-tab .tab-count{
-  font-size:10px;font-weight:400;opacity:.7;margin-left:6px;
-}
+.source-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.source-tab .tab-count{font-size:10px;font-weight:400;opacity:.7;margin-left:6px}
 .source-tab .tab-pulse{
   position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;
   background:var(--green);animation:pulse 2s infinite;
 }
 
-/* ── FEED CONTROLS ── */
 .feed-controls{
   display:flex;justify-content:space-between;align-items:center;
   max-width:1200px;margin:0 auto;padding:12px 24px;
@@ -84,29 +74,22 @@ body{min-height:100vh;overflow-x:hidden}
 .feed-stats{display:flex;gap:16px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
 .feed-stats span{display:flex;align-items:center;gap:4px}
 
-/* ── FEED CONTAINER ── */
 .feed{max-width:1200px;margin:0 auto;padding:0 24px 60px}
 
 .feed-item{
   background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  margin-bottom:14px;overflow:hidden;
-  transition:border-color .2s;
+  margin-bottom:14px;overflow:hidden;transition:border-color .2s;
 }
 .feed-item:hover{border-color:var(--border2)}
 
 .feed-item-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:12px 16px;border-bottom:1px solid var(--border);
-  background:var(--surface2);
+  padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);
 }
-.feed-source{
-  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
-  text-transform:uppercase;letter-spacing:1px;color:var(--cyan);
-}
+.feed-source{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--cyan)}
 .feed-time{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
 
 .feed-columns{display:grid;grid-template-columns:1fr 1fr;min-height:0}
-
 .feed-col{padding:16px;position:relative}
 .feed-col:first-child{border-right:1px solid var(--border)}
 .feed-col-label{
@@ -122,12 +105,9 @@ body{min-height:100vh;overflow-x:hidden}
 .feed-link{font-size:11px;color:var(--accent2);text-decoration:none;margin-top:8px;display:inline-block}
 .feed-link:hover{text-decoration:underline}
 
-/* NTI results side */
+/* NTI chips */
 .nti-score-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.nti-chip{
-  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
-  padding:3px 8px;border-radius:4px;
-}
+.nti-chip{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px}
 .chip-good{background:#14532d;color:#86efac}
 .chip-warn{background:#78350f;color:#fde68a}
 .chip-bad{background:#7f1d1d;color:#fca5a5}
@@ -136,58 +116,71 @@ body{min-height:100vh;overflow-x:hidden}
 .nti-findings{font-size:13px;color:var(--text);line-height:1.6}
 .nti-finding-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--purple);margin-top:8px;margin-bottom:3px}
 .nti-tilt-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.nti-tilt-tag{
-  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
-  padding:2px 7px;border-radius:3px;background:var(--surface3);color:var(--amber);
-}
+.nti-tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;background:var(--surface3);color:var(--amber)}
 
-.nti-spinner{
-  display:flex;align-items:center;gap:8px;
-  font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;
-  padding:20px 0;
-}
-.nti-spinner .spin{
-  width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
-  border-radius:50%;animation:spin .6s linear infinite;
-}
+.nti-spinner{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;padding:20px 0}
+.nti-spinner .spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── SKELETON LOADING ── */
-.skeleton-item{
-  background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  margin-bottom:14px;overflow:hidden;
+/* ── ANALYSIS GAUGES ── */
+.axis-section{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.axis-section-title{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.5px;color:var(--cyan);margin-bottom:8px;
 }
+.axis-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.axis-label{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  color:var(--muted);width:100px;flex-shrink:0;text-transform:uppercase;letter-spacing:.3px;
+}
+.axis-bar-track{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;position:relative}
+.axis-bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.axis-value{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+  width:42px;text-align:right;flex-shrink:0;
+}
+.axis-detail{font-size:11px;color:var(--dim);margin-top:2px;margin-bottom:6px;padding-left:108px}
+
+/* Color classes for axes */
+.bar-green .axis-bar-fill{background:var(--green)}
+.bar-amber .axis-bar-fill{background:var(--amber)}
+.bar-red .axis-bar-fill{background:var(--red)}
+.bar-blue .axis-bar-fill{background:var(--accent)}
+.bar-cyan .axis-bar-fill{background:var(--cyan)}
+.bar-teal .axis-bar-fill{background:var(--teal)}
+.bar-pink .axis-bar-fill{background:var(--pink)}
+.bar-purple .axis-bar-fill{background:var(--purple)}
+.bar-orange .axis-bar-fill{background:var(--orange)}
+
+.val-green{color:var(--green)}.val-amber{color:var(--amber)}.val-red{color:var(--red)}
+.val-blue{color:var(--accent)}.val-cyan{color:var(--cyan)}.val-teal{color:var(--teal)}
+.val-pink{color:var(--pink)}.val-purple{color:var(--purple)}.val-orange{color:var(--orange)}
+
+/* Skeleton */
+.skeleton-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
 .skeleton-header{height:40px;background:var(--surface2);border-bottom:1px solid var(--border)}
 .skeleton-body{display:grid;grid-template-columns:1fr 1fr;min-height:120px}
 .skeleton-col{padding:16px}
 .skeleton-col:first-child{border-right:1px solid var(--border)}
 .skeleton-line{height:12px;background:var(--surface2);border-radius:4px;margin-bottom:8px;animation:shimmer 1.5s infinite}
-.skeleton-line.w80{width:80%}
-.skeleton-line.w60{width:60%}
-.skeleton-line.w90{width:90%}
-.skeleton-line.w40{width:40%}
+.skeleton-line.w80{width:80%}.skeleton-line.w60{width:60%}.skeleton-line.w90{width:90%}.skeleton-line.w40{width:40%}
 @keyframes shimmer{0%{opacity:.4}50%{opacity:.7}100%{opacity:.4}}
 
-/* ── EMPTY STATE ── */
-.empty-state{
-  text-align:center;padding:60px 20px;
-  font-size:14px;color:var(--muted);
-}
+.empty-state{text-align:center;padding:60px 20px;font-size:14px;color:var(--muted)}
 .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.3}
 
-/* ── RESPONSIVE ── */
 @media(max-width:768px){
   .feed-columns{grid-template-columns:1fr;gap:0}
   .feed-col:first-child{border-right:none;border-bottom:1px solid var(--border)}
   .hero h1{font-size:18px}
   .source-tab{padding:8px 14px;font-size:11px}
+  .axis-label{width:80px;font-size:9px}
+  .axis-detail{padding-left:88px}
 }
 
-/* ── FOOTER ── */
 .footer{
   text-align:center;padding:24px;font-size:11px;color:var(--dim);
-  border-top:1px solid var(--border);margin-top:20px;
-  font-family:'JetBrains Mono',monospace;
+  border-top:1px solid var(--border);margin-top:20px;font-family:'JetBrains Mono',monospace;
 }
 .footer a{color:var(--accent);text-decoration:none}
 </style>
@@ -219,7 +212,6 @@ body{min-height:100vh;overflow-x:hidden}
 </div>
 
 <div class="feed" id="feed">
-  <!-- skeleton placeholders -->
   <div class="skeleton-item"><div class="skeleton-header"></div><div class="skeleton-body"><div class="skeleton-col"><div class="skeleton-line w80"></div><div class="skeleton-line w90"></div><div class="skeleton-line w60"></div></div><div class="skeleton-col"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div></div>
   <div class="skeleton-item"><div class="skeleton-header"></div><div class="skeleton-body"><div class="skeleton-col"><div class="skeleton-line w90"></div><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div></div><div class="skeleton-col"><div class="skeleton-line w40"></div><div class="skeleton-line w90"></div><div class="skeleton-line w60"></div></div></div></div>
   <div class="skeleton-item"><div class="skeleton-header"></div><div class="skeleton-body"><div class="skeleton-col"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w90"></div></div><div class="skeleton-col"><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div><div class="skeleton-line w60"></div></div></div></div>
@@ -230,23 +222,228 @@ body{min-height:100vh;overflow-x:hidden}
 </div>
 
 <script>
-// ── CONFIG ──
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
 const SOURCES = [
-  { id: 'reuters',  name: 'REUTERS',       rss: 'https://feeds.reuters.com/reuters/topNews' },
-  { id: 'ap',       name: 'AP NEWS',       rss: 'https://feeds.apnews.com/rss/apf-topnews' },
-  { id: 'bbc',      name: 'BBC WORLD',     rss: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+  { id: 'bbc',  name: 'BBC WORLD',  rss: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+  { id: 'npr',  name: 'NPR NEWS',   rss: 'https://feeds.npr.org/1001/rss.xml' },
+  { id: 'nbc',  name: 'NBC NEWS',   rss: 'https://feeds.nbcnews.com/nbcnews/public/news' },
 ];
 
-const REFRESH_INTERVAL = 120000; // 2 minutes
+const REFRESH_INTERVAL = 120000;
 const MAX_ITEMS = 15;
 
 let activeSource = SOURCES[0].id;
-let feedCache = {};     // { sourceId: [ {title, summary, link, pubDate, ntiResult} ] }
+let feedCache = {};
 let refreshTimer = null;
 let totalAnalyzed = 0;
 let niiSum = 0;
 
-// ── INIT ──
+// ══════════════════════════════════════
+// ANALYSIS AXIS 1: READABILITY (Flesch-Kincaid)
+// ══════════════════════════════════════
+function countSyllables(word) {
+  word = word.toLowerCase().replace(/[^a-z]/g, '');
+  if (word.length <= 2) return 1;
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+  word = word.replace(/^y/, '');
+  const m = word.match(/[aeiouy]{1,2}/g);
+  return m ? m.length : 1;
+}
+
+function analyzeReadability(text) {
+  if (!text || text.length < 10) return { grade: 0, label: 'N/A', detail: '' };
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const sentCount = Math.max(sentences.length, 1);
+  const wordCount = Math.max(words.length, 1);
+  const syllCount = words.reduce((sum, w) => sum + countSyllables(w), 0);
+
+  // Flesch-Kincaid Grade Level
+  const grade = Math.max(0, Math.min(18,
+    0.39 * (wordCount / sentCount) + 11.8 * (syllCount / wordCount) - 15.59
+  ));
+  const rounded = Math.round(grade * 10) / 10;
+
+  let label, detail;
+  if (rounded <= 6) { label = 'Elementary'; detail = 'Very easy to read'; }
+  else if (rounded <= 8) { label = 'Middle School'; detail = 'Accessible to general audience'; }
+  else if (rounded <= 10) { label = 'High School'; detail = 'Moderate complexity'; }
+  else if (rounded <= 13) { label = 'College'; detail = 'Requires higher education'; }
+  else { label = 'Graduate'; detail = 'Academic-level complexity'; }
+
+  return { grade: rounded, label, detail, sentCount, wordCount, syllCount };
+}
+
+// ══════════════════════════════════════
+// ANALYSIS AXIS 2: EMOTIONAL CHARGE
+// ══════════════════════════════════════
+const EMOTIONAL_WORDS = {
+  high: ['slammed','devastating','outrage','fury','shocking','horrifying','terrifying','explosive',
+    'catastrophic','nightmare','brutal','crushed','destroyed','chaos','panic','crisis','tragic',
+    'heartbreaking','alarming','dire','desperate','rage','furious','slamming','blasted','ripped',
+    'gutted','bombshell','firestorm','backlash','meltdown','uproar','revolt','erupted','plunged',
+    'collapsed','shattered','rocked','stunned','reeling','bloodbath','massacre','carnage','lethal'],
+  moderate: ['concerns','tensions','controversial','disputed','criticized','warned','urged','demanded',
+    'clashed','accused','rejected','condemned','fears','threatened','escalated','sparked','triggered',
+    'struggling','embattled','contentious','divisive','heated','intensified','pressured','volatile',
+    'strained','faltering','turbulent','fraught','grim','stark','severe','mounting','surging'],
+  neutral: ['said','reported','announced','stated','according','noted','indicated','confirmed',
+    'released','published','scheduled','proposed','discussed','examined','analyzed','reviewed',
+    'considered','observed','maintained','explained','described','outlined','addressed','presented']
+};
+
+function analyzeEmotionalCharge(text) {
+  if (!text || text.length < 10) return { score: 0, label: 'N/A', words: [] };
+  const lower = text.toLowerCase();
+  const words = lower.split(/\s+/);
+  const total = Math.max(words.length, 1);
+
+  let highHits = [];
+  let modHits = [];
+  let neutralCount = 0;
+
+  EMOTIONAL_WORDS.high.forEach(w => { if (lower.includes(w)) highHits.push(w); });
+  EMOTIONAL_WORDS.moderate.forEach(w => { if (lower.includes(w)) modHits.push(w); });
+  EMOTIONAL_WORDS.neutral.forEach(w => { if (lower.includes(w)) neutralCount++; });
+
+  const rawScore = (highHits.length * 3 + modHits.length * 1.5) / total * 100;
+  const score = Math.min(100, Math.round(rawScore * 8));
+
+  let label;
+  if (score <= 15) label = 'Clinical';
+  else if (score <= 35) label = 'Neutral';
+  else if (score <= 60) label = 'Moderate';
+  else if (score <= 80) label = 'Charged';
+  else label = 'Highly Charged';
+
+  return { score, label, highWords: highHits, modWords: modHits, neutralCount };
+}
+
+// ══════════════════════════════════════
+// ANALYSIS AXIS 3: ASSERTION DENSITY
+// ══════════════════════════════════════
+const ATTRIBUTION_MARKERS = [
+  'according to','said','told','reported by','citing','sources say','officials say',
+  'spokesperson','statement from','confirmed by','per ','as reported','witnesses said',
+  'in a statement','the report said','data shows','studies show','research indicates',
+  'analysts say','experts say','a spokesperson for','the department said','officials said',
+  'the company said','the government said','authorities said','police said','the court said'
+];
+
+function analyzeAssertionDensity(text) {
+  if (!text || text.length < 10) return { score: 0, label: 'N/A' };
+  const lower = text.toLowerCase();
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 2);
+  const sentCount = Math.max(sentences.length, 1);
+
+  let attributed = 0;
+  sentences.forEach(sent => {
+    const sl = sent.toLowerCase();
+    if (ATTRIBUTION_MARKERS.some(m => sl.includes(m))) attributed++;
+  });
+
+  const unattributed = sentCount - attributed;
+  const ratio = Math.round((unattributed / sentCount) * 100);
+
+  let label;
+  if (ratio <= 30) label = 'Well-Attributed';
+  else if (ratio <= 50) label = 'Mostly Attributed';
+  else if (ratio <= 70) label = 'Mixed';
+  else if (ratio <= 85) label = 'Mostly Unattributed';
+  else label = 'Assertion-Heavy';
+
+  return { score: ratio, label, attributed, unattributed, sentCount };
+}
+
+// ══════════════════════════════════════
+// ANALYSIS AXIS 4: INFORMATION DENSITY
+// ══════════════════════════════════════
+const NUMBER_RE = /\b\d[\d,.]*\b/g;
+const DATE_RE = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december|\d{4}|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi;
+const PROPER_NOUN_RE = /\b[A-Z][a-z]{2,}\b/g;
+const PERCENT_RE = /\d+\s*%/g;
+const MONEY_RE = /[\$£€]\s*[\d,.]+|\d+\s*(?:billion|million|trillion|thousand)/gi;
+
+function analyzeInfoDensity(text) {
+  if (!text || text.length < 10) return { score: 0, label: 'N/A' };
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const total = Math.max(words.length, 1);
+
+  const numbers = (text.match(NUMBER_RE) || []).length;
+  const dates = (text.match(DATE_RE) || []).length;
+  const names = (text.match(PROPER_NOUN_RE) || []).length;
+  const percents = (text.match(PERCENT_RE) || []).length;
+  const money = (text.match(MONEY_RE) || []).length;
+
+  const factualElements = numbers + dates + names + percents + money;
+  const ratio = factualElements / total;
+  const score = Math.min(100, Math.round(ratio * 250));
+
+  let label;
+  if (score >= 70) label = 'Very Dense';
+  else if (score >= 50) label = 'Dense';
+  else if (score >= 30) label = 'Moderate';
+  else if (score >= 15) label = 'Light';
+  else label = 'Sparse';
+
+  return { score, label, numbers, dates, names, percents, money, factualElements };
+}
+
+// ══════════════════════════════════════
+// ANALYSIS AXIS 5: SOURCE ATTRIBUTION
+// ══════════════════════════════════════
+const NAMED_SOURCE_RE = /(?:said|told|according to|confirmed by|spokesperson for|statement from)\s+[A-Z][a-z]+/g;
+const ANON_SOURCE_MARKERS = [
+  'sources say','sources said','anonymous source','unnamed source','officials say',
+  'officials said','people familiar','person familiar','those close to','insiders say',
+  'a source close','sources familiar','according to sources','people briefed',
+  'those with knowledge','a person with'
+];
+const DIRECT_QUOTE_RE = /[""][^""]{10,}[""]|["][^"]{10,}["]/g;
+
+function analyzeSourceAttribution(text) {
+  if (!text || text.length < 10) return { score: 0, label: 'N/A' };
+  const lower = text.toLowerCase();
+
+  const namedSources = (text.match(NAMED_SOURCE_RE) || []).length;
+  const anonSources = ANON_SOURCE_MARKERS.filter(m => lower.includes(m)).length;
+  const directQuotes = (text.match(DIRECT_QUOTE_RE) || []).length;
+
+  const totalSources = namedSources + anonSources;
+  const namedRatio = totalSources > 0 ? Math.round((namedSources / totalSources) * 100) : 0;
+
+  // Score: higher = more named attribution (better)
+  const score = Math.min(100, namedSources * 25 + directQuotes * 15 - anonSources * 10);
+  const finalScore = Math.max(0, score);
+
+  let label;
+  if (totalSources === 0 && directQuotes === 0) label = 'No Sources Cited';
+  else if (namedRatio >= 75) label = 'Named Sources';
+  else if (namedRatio >= 50) label = 'Mixed Sources';
+  else if (anonSources > 0) label = 'Anonymous Sources';
+  else label = 'Unattributed';
+
+  return { score: finalScore, label, namedSources, anonSources, directQuotes };
+}
+
+// ══════════════════════════════════════
+// COMBINED CLIENT-SIDE ANALYSIS
+// ══════════════════════════════════════
+function runClientAnalysis(text) {
+  return {
+    readability: analyzeReadability(text),
+    emotional: analyzeEmotionalCharge(text),
+    assertion: analyzeAssertionDensity(text),
+    infoDensity: analyzeInfoDensity(text),
+    sourceAttr: analyzeSourceAttribution(text)
+  };
+}
+
+// ══════════════════════════════════════
+// FEED LOGIC
+// ══════════════════════════════════════
 function init() {
   renderTabs();
   SOURCES.forEach(s => { feedCache[s.id] = []; });
@@ -254,7 +451,6 @@ function init() {
   refreshTimer = setInterval(fetchAllSources, REFRESH_INTERVAL);
 }
 
-// ── TABS ──
 function renderTabs() {
   const bar = document.getElementById('sourceTabs');
   bar.innerHTML = SOURCES.map(s => `
@@ -272,14 +468,9 @@ function switchSource(id) {
   renderFeed();
 }
 
-// ── FETCH RSS VIA BACKEND PROXY ──
 async function fetchAllSources() {
   for (const source of SOURCES) {
-    try {
-      await fetchSource(source);
-    } catch (e) {
-      console.error(`Failed to fetch ${source.name}:`, e);
-    }
+    try { await fetchSource(source); } catch (e) { console.error(`Failed: ${source.name}`, e); }
   }
   updateStats();
 }
@@ -298,8 +489,8 @@ async function fetchSource(source) {
     const existing = new Set(feedCache[source.id].map(i => i.title));
     const newItems = data.items.filter(i => !existing.has(i.title));
 
-    // Add new items and run NTI on each
     for (const item of newItems) {
+      const fullText = `${item.title}. ${item.summary || item.description || ''}`;
       const entry = {
         title: item.title || '',
         summary: item.summary || item.description || '',
@@ -308,19 +499,17 @@ async function fetchSource(source) {
         source: source.name,
         sourceId: source.id,
         ntiResult: null,
-        ntiLoading: true
+        ntiLoading: true,
+        clientAnalysis: runClientAnalysis(fullText)
       };
       feedCache[source.id].unshift(entry);
-
-      // Render immediately with loading state
       if (source.id === activeSource) renderFeed();
 
-      // Run NTI analysis
       try {
         const ntiRes = await fetch('/nti', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: `${entry.title}. ${entry.summary}` })
+          body: JSON.stringify({ text: fullText })
         });
         const ntiData = await ntiRes.json();
         entry.ntiResult = ntiData;
@@ -331,34 +520,29 @@ async function fetchSource(source) {
         entry.ntiLoading = false;
         entry.ntiError = true;
       }
-
       if (source.id === activeSource) renderFeed();
     }
 
-    // Cap items
     if (feedCache[source.id].length > MAX_ITEMS) {
       feedCache[source.id] = feedCache[source.id].slice(0, MAX_ITEMS);
     }
-
-    // Update tab count
     const countEl = document.getElementById(`count-${source.id}`);
     if (countEl) countEl.textContent = `(${feedCache[source.id].length})`;
-
   } catch (e) {
     console.error(`RSS fetch error for ${source.name}:`, e);
   }
 }
 
-// ── RENDER ──
+// ══════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════
 function renderFeed() {
   const feed = document.getElementById('feed');
   const items = feedCache[activeSource] || [];
-
   if (!items.length) {
     feed.innerHTML = `<div class="empty-state"><div class="icon">◎</div>Loading feed from ${SOURCES.find(s=>s.id===activeSource)?.name}...</div>`;
     return;
   }
-
   feed.innerHTML = items.map(item => renderItem(item)).join('');
 }
 
@@ -371,7 +555,7 @@ function renderItem(item) {
   } else if (item.ntiError) {
     ntiCol = `<div style="color:var(--dim);font-size:12px">Analysis unavailable</div>`;
   } else {
-    ntiCol = renderNTI(item.ntiResult);
+    ntiCol = renderNTI(item.ntiResult, item.clientAnalysis);
   }
 
   return `
@@ -396,7 +580,7 @@ function renderItem(item) {
   `;
 }
 
-function renderNTI(data) {
+function renderNTI(data, ca) {
   if (!data || data.error) return '<div style="color:var(--dim);font-size:12px">No data</div>';
 
   const nii = data.nii || {};
@@ -406,14 +590,12 @@ function renderNTI(data) {
   const scoreClass = score >= 0.8 ? 'chip-good' : score >= 0.5 ? 'chip-warn' : 'chip-bad';
   const scoreLabel = score >= 0.8 ? 'HIGH INTEGRITY' : score >= 0.5 ? 'MODERATE' : 'LOW INTEGRITY';
 
-  // Failure modes
   const modes = ['UDDS', 'DCE', 'CCA'];
   const activeFailures = modes.filter(m => {
-    const state = fm[m]?.[`${m.toLowerCase()}_state`] || fm[m]?.[`${m.toLowerCase()}_state`] || '';
+    const state = fm[m]?.[`${m.toLowerCase()}_state`] || '';
     return state && !state.includes('FALSE');
   });
 
-  // Build
   let html = `<div class="nti-score-row">`;
   html += `<span class="nti-chip ${scoreClass}">NII: ${(score * 100).toFixed(0)}% — ${scoreLabel}</span>`;
   if (activeFailures.length) {
@@ -423,7 +605,6 @@ function renderNTI(data) {
   }
   html += `</div>`;
 
-  // Breakdown
   html += `<div class="nti-findings">`;
 
   // Constraints
@@ -435,10 +616,7 @@ function renderNTI(data) {
 
   // Framing
   const framing = data.layers?.L2_interpretive_framing || {};
-  const hedges = framing.hedge_markers || [];
-  const reassurance = framing.reassurance_markers || [];
-  const blends = framing.category_blend_markers || [];
-  const framingItems = [...hedges, ...reassurance, ...blends];
+  const framingItems = [...(framing.hedge_markers||[]), ...(framing.reassurance_markers||[]), ...(framing.category_blend_markers||[])];
   if (framingItems.length) {
     html += `<div class="nti-finding-label">FRAMING MARKERS</div>`;
     html += `<div style="font-size:12px;color:var(--muted)">${framingItems.map(f => `"${escHtml(f)}"`).join(', ')}</div>`;
@@ -466,10 +644,58 @@ function renderNTI(data) {
   }
 
   html += `</div>`;
+
+  // ── EXTENDED ANALYSIS AXES ──
+  if (ca) {
+    html += `<div class="axis-section">`;
+    html += `<div class="axis-section-title">Extended Structural Analysis</div>`;
+
+    // 1. Readability
+    const r = ca.readability;
+    const rPct = Math.min(100, Math.round((r.grade / 16) * 100));
+    const rColor = r.grade <= 8 ? 'green' : r.grade <= 12 ? 'amber' : 'red';
+    html += renderGauge('Reading', `${r.grade}`, rPct, rColor, `${r.label} — Grade ${r.grade}`);
+
+    // 2. Emotional Charge
+    const e = ca.emotional;
+    const eColor = e.score <= 25 ? 'cyan' : e.score <= 50 ? 'amber' : 'pink';
+    html += renderGauge('Emotion', `${e.score}%`, e.score, eColor, `${e.label}${e.highWords.length ? ' — "' + e.highWords.slice(0,3).join('", "') + '"' : ''}`);
+
+    // 3. Assertion Density
+    const a = ca.assertion;
+    const aColor = a.score <= 40 ? 'green' : a.score <= 65 ? 'amber' : 'red';
+    html += renderGauge('Assertions', `${a.score}%`, a.score, aColor, `${a.label} — ${a.attributed}/${a.sentCount} attributed`);
+
+    // 4. Info Density
+    const id = ca.infoDensity;
+    const idColor = id.score >= 50 ? 'teal' : id.score >= 25 ? 'blue' : 'orange';
+    html += renderGauge('Info Dense', `${id.score}%`, id.score, idColor, `${id.label} — ${id.factualElements} facts in ${id.score > 0 ? Math.round(id.factualElements / (id.score/100) * 4) : '?'} words`);
+
+    // 5. Source Attribution
+    const sa = ca.sourceAttr;
+    const saColor = sa.score >= 60 ? 'green' : sa.score >= 30 ? 'purple' : 'red';
+    html += renderGauge('Sources', `${sa.score}%`, sa.score, saColor, `${sa.label}${sa.namedSources ? ' — ' + sa.namedSources + ' named' : ''}${sa.anonSources ? ', ' + sa.anonSources + ' anon' : ''}`);
+
+    html += `</div>`;
+  }
+
   return html;
 }
 
-// ── UTILS ──
+function renderGauge(label, value, pct, color, detail) {
+  return `
+    <div class="axis-row bar-${color}">
+      <div class="axis-label">${label}</div>
+      <div class="axis-bar-track"><div class="axis-bar-fill" style="width:${Math.max(2, pct)}%"></div></div>
+      <div class="axis-value val-${color}">${value}</div>
+    </div>
+    ${detail ? `<div class="axis-detail">${escHtml(detail)}</div>` : ''}
+  `;
+}
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
 function escHtml(s) {
   const d = document.createElement('div');
   d.textContent = s || '';
@@ -494,7 +720,6 @@ function updateStats() {
   document.getElementById('statTime').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── GO ──
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
