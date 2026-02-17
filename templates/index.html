@@ -2,1131 +2,734 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artifact Zero — Conversational Authority Infrastructure</title>
-<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NTI — No-Tilt Interface · Artifact Zero Labs</title>
+<meta name="description" content="Structural integrity engine for every communication between humans and AI. Three deterministic engines. Zero opinion. Buy access now.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#06060a;--bg2:#0c0c14;--bg3:#14141f;--bg4:#1c1c2a;
-  --fg:#e8e8f0;--fg2:#9090a8;--fg3:#5a5a72;--fg4:#3a3a4e;
-  --green:#00e89c;--green2:#00c080;--green3:rgba(0,232,156,.12);
-  --red:#ff4466;--red2:rgba(255,68,102,.12);
-  --amber:#ffaa33;--amber2:rgba(255,170,51,.12);
-  --blue:#448aff;--blue2:rgba(68,138,255,.12);
-  --purple:#9966ff;--purple2:rgba(153,102,255,.12);
-  --cyan:#00d4ff;--cyan2:rgba(0,212,255,.12);
-  --mono:'Azeret Mono',monospace;--sans:'Outfit',sans-serif;
-  --r:8px;--r2:12px;
-  /* Enhanced color system */
-  --axis1-structural:#448aff;--axis1-light:rgba(68,138,255,0.1);
-  --axis2-relational:#ff4466;--axis2-light:rgba(255,68,102,0.1);
-  --axis3-economic:#00e89c;--axis3-light:rgba(0,232,156,0.1);
-  --assumption:#9966ff;--assumption-light:rgba(153,102,255,0.1);
-  --intensifier:#ffaa33;--intensifier-light:rgba(255,170,51,0.1);
-  --generalization:#00d4ff;--generalization-light:rgba(0,212,255,0.1);
-  --filler:#5a5a72;--filler-light:rgba(90,90,114,0.1);
-  --power-word:#ec4899;--power-light:rgba(236,72,153,0.1);
+  --bg:#030711;--surface:#080d1a;--surface2:#0c1324;--surface3:#111a30;
+  --text:#e8ecf4;--dim:#a0aac0;--muted:#5a6880;--faint:#1e2e4a;
+  --green:#00e89c;--green-dim:#00b87d;--green-glow:rgba(0,232,156,.06);
+  --gold:#c9a84c;--gold-dim:rgba(201,168,76,.12);
+  --cyan:#22d3ee;--purple:#a78bfa;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;
+  --border:#141e38;--border2:#1e2e4a;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --mono:'JetBrains Mono',monospace;
+  --body:'DM Sans',sans-serif;
 }
-html{font-size:15px;overflow-x:hidden}
-body{background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100vh;overflow-x:hidden;scroll-behavior:auto}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--green);text-decoration:none}a:hover{text-decoration:underline}
+::selection{background:rgba(0,232,156,.2);color:#fff}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.02;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
-/* Fixed App Layout - No Jumping */
-.app-container{min-height:100vh;display:flex;flex-direction:column}
-.app-header{padding:16px 28px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:12px;background:var(--bg);z-index:100;flex-shrink:0}
-.app-header .logo{font-family:var(--mono);font-size:.85rem;font-weight:700;letter-spacing:2px;color:var(--green)}
-.app-header .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.app-header .ver{font-family:var(--mono);font-size:.65rem;color:var(--fg4);padding:2px 6px;border:1px solid var(--bg3);border-radius:3px}
-.app-header .persona-label{margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--fg3);padding:4px 10px;border:1px solid var(--bg4);border-radius:var(--r);cursor:pointer;transition:all .2s}
-.app-header .persona-label:hover{border-color:var(--fg3);color:var(--fg2)}
-.app-header .live-link{font-family:var(--mono);font-size:.65rem;color:var(--green);padding:4px 10px;border:1px solid rgba(0,232,156,.25);border-radius:var(--r);text-decoration:none;display:flex;align-items:center;gap:5px;transition:all .2s}
-.app-header .live-link:hover{border-color:var(--green);background:rgba(0,232,156,.08)}
-.app-header .live-link .blink{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+/* ═══ TOPBAR ═══ */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 40px;background:rgba(3,7,17,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.topbar-brand{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);letter-spacing:3px}
+.topbar-nav{display:flex;gap:32px}
+.topbar-nav a{font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:500;letter-spacing:2px;text-transform:uppercase;text-decoration:none;transition:color .25s}
+.topbar-nav a:hover{color:var(--text)}
 
-/* Menu System */
-.menu-toggle{position:fixed;top:20px;right:20px;z-index:1000;background:var(--bg2);border:1px solid var(--bg3);border-radius:8px;padding:8px;cursor:pointer;transition:all .2s}
-.menu-toggle:hover{border-color:var(--green)}
-.menu-icon{width:20px;height:20px;display:flex;flex-direction:column;justify-content:space-between}
-.menu-line{height:2px;background:var(--fg);border-radius:1px;transition:all .3s}
-.menu-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999;opacity:0;visibility:hidden;transition:all .3s}
-.menu-overlay.active{opacity:1;visibility:visible}
-.menu-panel{position:fixed;top:0;right:0;width:400px;height:100vh;background:var(--bg2);border-left:1px solid var(--bg3);transform:translateX(100%);transition:transform .3s;overflow-y:auto;z-index:1000}
-.menu-panel.active{transform:translateX(0)}
-.menu-header{padding:24px;border-bottom:1px solid var(--bg3)}
-.menu-title{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green);margin-bottom:4px}
-.menu-close{position:absolute;top:20px;right:20px;background:none;border:none;color:var(--fg3);font-size:20px;cursor:pointer;padding:4px}
-.menu-section{padding:20px 24px;border-bottom:1px solid var(--bg3)}
-.menu-section h3{font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+/* ═══ HERO ═══ */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:130px 24px 80px;position:relative;text-align:center}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 55% 40% at 50% 38%,rgba(0,232,156,.02),transparent 70%);pointer-events:none}
 
-/* Color Legend */
-.color-legend{display:grid;gap:8px}
-.color-item{display:flex;align-items:center;gap:12px;padding:8px;background:var(--bg3);border-radius:6px}
-.color-sample{width:16px;height:16px;border-radius:3px}
-.color-sample.structural{background:var(--axis1-structural)}
-.color-sample.relational{background:var(--axis2-relational)}
-.color-sample.economic{background:var(--axis3-economic)}
-.color-sample.assumption{background:var(--assumption)}
-.color-sample.intensifier{background:var(--intensifier)}
-.color-sample.generalization{background:var(--generalization)}
-.color-sample.filler{background:var(--filler)}
-.color-sample.power{background:var(--power-word)}
-.color-label{font-size:13px;font-weight:600}
-.color-desc{font-size:11px;color:var(--fg3)}
+.v1-strip{display:inline-flex;align-items:center;gap:20px;padding:10px 24px;border:1px solid rgba(0,232,156,.18);border-radius:4px;background:rgba(0,232,156,.03);margin-bottom:52px;animation:fadeDown .6s ease both}
+.v1-strip span{font-family:var(--mono);font-size:10px;letter-spacing:2px}
+.v1l{color:var(--green);font-weight:700;letter-spacing:3px}
+.v1d{color:var(--muted);font-weight:400}
 
-/* Persona Gate */
-#persona-gate{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;position:relative;overflow:hidden}
-#persona-gate::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,232,156,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-.gate-logo{font-family:var(--mono);font-size:1rem;font-weight:700;letter-spacing:4px;color:var(--green);margin-bottom:8px;opacity:0;animation:fadeUp .6s .1s forwards}
-.gate-title{font-family:var(--sans);font-size:2.4rem;font-weight:700;text-align:center;margin-bottom:8px;opacity:0;animation:fadeUp .6s .2s forwards}
-.gate-sub{font-family:var(--sans);font-size:1rem;color:var(--fg2);text-align:center;max-width:520px;line-height:1.5;margin-bottom:48px;opacity:0;animation:fadeUp .6s .3s forwards}
-.gate-question{font-family:var(--mono);font-size:.75rem;color:var(--fg3);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;opacity:0;animation:fadeUp .6s .4s forwards}
-.persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:900px;width:100%;opacity:0;animation:fadeUp .6s .5s forwards}
-.persona-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.persona-card:hover{border-color:var(--green);transform:translateY(-2px)}
-.persona-card:hover .persona-icon{color:var(--green)}
-.persona-card:active{transform:translateY(0)}
-.persona-icon{font-size:1.6rem;margin-bottom:10px;transition:color .2s;display:block}
-.persona-name{font-family:var(--sans);font-size:1rem;font-weight:600;margin-bottom:4px}
-.persona-desc{font-family:var(--sans);font-size:.8rem;color:var(--fg3);line-height:1.4}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+/* Architecture */
+.arch{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:56px;animation:fadeUp .7s ease .1s both}
+.arch-node{display:flex;flex-direction:column;align-items:center}
+.a-circ{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface);transition:all .5s}
+.a-circ:hover{box-shadow:0 0 40px rgba(0,232,156,.06)}
+.a-tag{font-family:var(--mono);letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;font-size:9px}
+.a-name{font-family:var(--serif);color:var(--text)}
+.a-sub{font-family:var(--mono);color:var(--muted)}
+.a-desc{font-family:var(--mono);color:var(--muted);text-align:center;margin-top:10px;line-height:1.5;font-size:9px;letter-spacing:1px;max-width:120px}
 
-/* Main App Layout - Fixed Container */
-#main-app{display:none;height:100vh;flex-direction:column}
-#main-app.active{display:flex}
-.app-body{flex:1;overflow-y:auto;padding:0}
+.a-circ.human{width:140px;height:140px}
+.a-circ.human .a-name{font-size:28px;font-weight:500;color:var(--dim)}
+.a-circ.human .a-sub{font-size:10px}
 
-/* Fixed Sections Container - No Jumping */
-.sections-container{max-width:1100px;margin:0 auto;padding:28px}
+.a-circ.eng{width:160px;height:160px;border-color:var(--green-dim);background:linear-gradient(145deg,rgba(0,232,156,.05),var(--surface))}
+.a-circ.eng .a-tag{color:var(--green-dim)}
+.a-circ.eng .a-name{font-family:var(--mono);font-size:40px;font-weight:700;color:var(--green)}
+.a-circ.eng .a-sub{font-size:9px;color:var(--green-dim)}
 
-/* Hero Section */
-.persona-hero{margin-bottom:28px;padding:24px 28px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2)}
-.persona-hero h2{font-family:var(--sans);font-size:1.5rem;font-weight:700;margin-bottom:6px}
-.persona-hero p{font-family:var(--sans);font-size:.9rem;color:var(--fg2);line-height:1.5}
+.a-circ.eng.v3c{border-color:var(--purple);background:linear-gradient(145deg,rgba(167,139,250,.05),var(--surface))}
+.a-circ.eng.v3c .a-tag{color:rgba(167,139,250,.5)}
+.a-circ.eng.v3c .a-name{color:var(--purple)}
+.a-circ.eng.v3c .a-sub{color:rgba(167,139,250,.5)}
 
-/* Demo Section - Always Visible */
-.demo-section{margin-bottom:28px}
-.demo-section label{font-family:var(--mono);font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:6px}
-textarea,input[type=text],input[type=number],select{width:100%;background:var(--bg2);border:1px solid var(--bg3);color:var(--fg);font-family:var(--mono);font-size:.82rem;padding:12px 14px;border-radius:var(--r);outline:none;transition:border-color .2s;resize:vertical}
-textarea:focus,input:focus,select:focus{border-color:var(--green)}
-textarea{min-height:90px}
-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M5 7L1 3h8z' fill='%235a5a72'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.a-circ.ai{width:170px;height:170px;border-color:var(--cyan);background:linear-gradient(145deg,rgba(34,211,238,.03),var(--surface));box-shadow:0 0 50px rgba(34,211,238,.03)}
+.a-circ.ai .a-tag{color:rgba(34,211,238,.5)}
+.a-circ.ai .a-name{font-size:26px;font-weight:600;color:var(--cyan)}
+.a-circ.ai .a-sub{font-size:8px;color:rgba(34,211,238,.4);max-width:110px;text-align:center}
 
-.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.input-grid.three{grid-template-columns:1fr 1fr 1fr}
-.input-full{grid-column:1/-1}
+.arch-arrow{width:56px;display:flex;align-items:center;position:relative;height:2px}
+.arch-arrow-line{width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--faint),transparent)}
+.arch-arrow .dot{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--green);animation:flowR 3s infinite ease-in-out}
+.arch-arrow.rev .dot{animation:flowL 3s infinite ease-in-out}
+@keyframes flowR{0%{left:0;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:calc(100% - 5px);opacity:0}}
+@keyframes flowL{0%{right:0;left:auto;opacity:0}12%{opacity:1}88%{opacity:1}100%{right:calc(100% - 5px);left:auto;opacity:0}}
 
-.btn{font-family:var(--mono);font-size:.75rem;font-weight:600;padding:10px 22px;border:none;border-radius:var(--r);cursor:pointer;transition:all .15s}
-.btn-go{background:var(--green);color:var(--bg)}.btn-go:hover{background:var(--green2)}
-.btn-ghost{background:transparent;border:1px solid var(--bg4);color:var(--fg3)}.btn-ghost:hover{border-color:var(--fg3);color:var(--fg2)}
-.btn-row{display:flex;gap:8px;margin-top:10px}
+.hero h1{font-family:var(--serif);font-size:clamp(30px,4.5vw,56px);font-weight:500;color:var(--text);line-height:1.25;margin-bottom:20px;max-width:740px;animation:fadeUp .7s ease .25s both}
+.hero h1 em{font-style:italic;color:var(--green)}
+.hero-sub{font-size:17px;font-weight:300;color:var(--dim);max-width:600px;line-height:1.75;margin-bottom:44px;animation:fadeUp .7s ease .35s both}
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;animation:fadeUp .7s ease .45s both}
+.btn{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:2px;padding:14px 28px;border-radius:5px;text-decoration:none;transition:all .3s;display:inline-flex;align-items:center;gap:8px}
+.btn-g{background:var(--green);color:var(--bg);border:1px solid var(--green)}
+.btn-g:hover{background:#00ffaa;transform:translateY(-1px);text-decoration:none}
+.btn-o{background:transparent;color:var(--dim);border:1px solid var(--border2)}
+.btn-o:hover{border-color:var(--green);color:var(--green);text-decoration:none}
 
-.loader{display:none;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--fg3);margin:14px 0}
-.loader.on{display:flex}
-.spin{width:14px;height:14px;border:2px solid var(--bg4);border-top-color:var(--green);border-radius:50%;animation:sp .5s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
+/* ═══ SECTIONS ═══ */
+.sec{max-width:1020px;margin:0 auto;padding:110px 32px 0}
+.sec-eye{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:4px;font-weight:700;margin-bottom:14px}
+.sec-h{font-family:var(--serif);font-size:clamp(28px,3.8vw,44px);font-weight:500;color:var(--text);line-height:1.2;margin-bottom:16px}
+.sec-p{font-size:16px;font-weight:300;color:var(--dim);line-height:1.75;max-width:620px;margin-bottom:44px}
 
-/* Progressive Results - Show One at a Time */
-.results-container{margin-top:20px}
-.result-section{display:none;margin-bottom:20px}
-.result-section.active{display:block;animation:fadeInUp .4s ease-out}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* ═══ THREE ENGINES ═══ */
+.engines{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:10px;overflow:hidden}
+.eng{background:var(--surface);padding:36px 28px;position:relative}
+.eng::after{content:'';position:absolute;top:20px;right:0;width:1px;height:calc(100% - 40px);background:var(--border)}
+.eng:last-child::after{display:none}
+.eng-ver{font-family:var(--mono);font-size:36px;font-weight:300;margin-bottom:4px}
+.eng-name{font-family:var(--mono);font-size:10px;letter-spacing:2.5px;font-weight:700;margin-bottom:14px}
+.eng-desc{font-size:14px;color:var(--dim);line-height:1.7;margin-bottom:14px}
+.eng-list{font-size:12px;color:var(--muted);line-height:2;font-family:var(--mono)}
+.eng-list span{color:var(--dim)}
 
-.result-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.result-section-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:2px}
-.result-section-step{font-family:var(--mono);font-size:12px;color:var(--fg4);background:var(--bg3);padding:4px 8px;border-radius:4px}
+/* ═══ POWER ESCALATION ═══ */
+.power{display:grid;grid-template-columns:1fr 40px 1fr;gap:0;align-items:stretch;margin-bottom:44px}
+.power-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:32px 28px}
+.power-card.full{border-color:var(--green-dim);background:linear-gradient(145deg,rgba(0,232,156,.03),var(--surface))}
+.power-tag{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;font-weight:700;margin-bottom:10px}
+.power-h{font-family:var(--serif);font-size:24px;font-weight:500;color:var(--text);margin-bottom:8px}
+.power-p{font-size:13px;color:var(--dim);line-height:1.7}
+.power-stat{font-family:var(--mono);font-size:28px;font-weight:700;margin-top:16px}
+.power-stat-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.5px;margin-top:2px}
+.power-arrow{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:20px;color:var(--faint)}
 
-/* Next Step Button */
-.next-step-btn{background:var(--blue);color:#fff;padding:10px 20px;border:none;border-radius:var(--r);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;margin-top:16px}
-.next-step-btn:hover{background:#3b74d4;transform:translateY(-1px)}
-.next-step-btn:disabled{background:var(--bg4);color:var(--fg4);cursor:not-allowed;transform:none}
+/* ═══ JOS ═══ */
+.jos{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:44px 36px;position:relative;overflow:hidden}
+.jos::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.jos-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:24px}
+.jos-field{border-left:2px solid var(--cyan);padding-left:16px}
+.jos-field-name{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:2px;font-weight:700;margin-bottom:4px}
+.jos-field-desc{font-size:13px;color:var(--dim);line-height:1.6}
+.jos-rules{margin-top:28px;padding:20px;background:var(--surface2);border-radius:6px}
+.jos-rules-h{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2.5px;font-weight:700;margin-bottom:10px}
+.jos-rule{font-size:12px;color:var(--dim);line-height:1.8;font-family:var(--mono);padding-left:12px;border-left:1px solid var(--faint);margin-bottom:4px}
 
-/* Analysis Results */
-.analysis-results{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:20px}
+/* ═══ FAILURE MODES ═══ */
+.failures{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:44px}
+.fail{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px;transition:border-color .3s}
+.fail:hover{border-color:var(--border2)}
+.fail-code{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:2px;margin-bottom:6px}
+.fail-name{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.3}
+.fail-desc{font-size:13px;color:var(--dim);line-height:1.65}
+.tilts{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:44px}
+.tilt{font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:6px 12px;border:1px solid var(--border);border-radius:3px;color:var(--muted);transition:all .3s;cursor:default}
+.tilt:hover{border-color:var(--green-dim);color:var(--green)}
 
-/* Question Physics Panel */
-.question-physics{background:var(--bg2);border:1px solid var(--purple);border-radius:var(--r2);padding:20px;margin-bottom:20px;border-left:4px solid var(--purple)}
-.question-physics-header{margin-bottom:16px}
-.question-physics-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--purple);margin-bottom:4px}
-.question-physics-desc{font-size:12px;color:var(--fg3)}
-.question-type-badges{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.question-type-badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
-.question-type-badge.constraint{background:var(--red2);color:var(--red);border:1px solid var(--red)}
-.question-type-badge.authority{background:var(--amber2);color:var(--amber);border:1px solid var(--amber)}
-.question-type-badge.framing{background:var(--purple2);color:var(--purple);border:1px solid var(--purple)}
-.question-type-badge.repetition{background:var(--cyan2);color:var(--cyan);border:1px solid var(--cyan)}
-.question-type-badge.info{background:var(--blue2);color:var(--blue);border:1px solid var(--blue)}
-.question-risk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
-.question-risk-item{text-align:center;padding:12px;background:var(--bg3);border-radius:var(--r)}
-.question-risk-label{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.question-risk-value{font-family:var(--mono);font-size:16px;font-weight:700}
-.question-risk-value.high{color:var(--red)}
-.question-risk-value.medium{color:var(--amber)}
-.question-risk-value.low{color:var(--green)}
+/* ═══ RESULTS ═══ */
+.results{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;border-radius:10px;overflow:hidden;margin-bottom:44px}
+.result-block{background:var(--surface);padding:32px 28px}
+.result-label{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:2.5px;font-weight:700;margin-bottom:18px}
+.result-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border)}
+.result-row:last-child{border-bottom:none}
+.result-metric{font-size:13px;color:var(--dim)}
+.result-val{font-family:var(--mono);font-size:14px;font-weight:600}
+.r-bad{color:var(--red)}.r-good{color:var(--green)}.r-dim{color:var(--dim)}
+.result-pass{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:2px;font-weight:700;margin-top:16px;padding:8px 14px;background:rgba(0,232,156,.06);border:1px solid rgba(0,232,156,.12);border-radius:3px;display:inline-block}
 
-/* Conversion & Urgency Styles */
-.urgency-banner{background:linear-gradient(135deg,rgba(255,68,102,.15),rgba(239,68,68,.1));border:1px solid var(--red);border-radius:8px;padding:20px;text-align:center;margin-bottom:20px;animation:pulse-urgent 2s infinite}
-.urgency-number{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--red);margin-bottom:4px}
-.urgency-label{font-size:12px;color:var(--fg2);text-transform:uppercase;letter-spacing:1px}
-@keyframes pulse-urgent{0%,100%{border-color:var(--red)}50%{border-color:var(--amber)}}
+/* ═══ TOKEN ECONOMICS ═══ */
+.econ-note{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7;padding:18px 22px;background:var(--surface);border-radius:6px;border-left:2px solid var(--green-dim);margin-bottom:28px}
+.econ-pair{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:10px;overflow:hidden;margin-bottom:28px}
+.econ-card{background:var(--surface);padding:28px 24px}
+.econ-card-label{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;font-weight:700;margin-bottom:14px}
+.econ-card-big{font-family:var(--mono);font-size:40px;font-weight:700;color:var(--green);margin-bottom:6px}
+.econ-card-desc{font-size:13px;color:var(--dim);line-height:1.6}
+.econ-table{width:100%;border-collapse:collapse;margin-bottom:28px}
+.econ-table th{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-align:left;padding:12px 14px;border-bottom:1px solid var(--border2);font-weight:600}
+.econ-table td{font-size:14px;padding:14px;border-bottom:1px solid var(--border);color:var(--dim)}
+.econ-table td:first-child{font-family:var(--mono);font-size:13px;color:var(--text);font-weight:500}
+.econ-table .save{color:var(--green);font-family:var(--mono);font-weight:600}
+.econ-table .pct{color:var(--green);font-family:var(--mono);font-weight:700}
+.econ-canonical{text-align:center;padding:28px;background:var(--surface);border:1px solid var(--green-dim);border-radius:10px;margin-bottom:44px}
+.econ-canonical-n{font-family:var(--mono);font-size:48px;font-weight:700;color:var(--green)}
+.econ-canonical-l{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:2px;margin-top:4px}
 
-.investor-urgency{border-left:4px solid var(--red) !important}
-.investor-action{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:24px;margin:20px 0}
-.action-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red);text-align:center;margin-bottom:20px;text-transform:uppercase;letter-spacing:2px}
-.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
-.action-card{background:var(--bg);border:1px solid var(--bg3);border-radius:var(--r);padding:20px;text-align:center;position:relative;overflow:hidden}
-.action-card.urgent{border-color:var(--red);background:linear-gradient(135deg,var(--bg),rgba(255,68,102,.05))}
-.action-card.premium{border-color:var(--amber);background:linear-gradient(135deg,var(--bg),rgba(255,170,51,.05))}
-.action-card.urgent::before{content:'LIMITED';position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700}
-.action-amount{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--green);margin-bottom:8px}
-.action-label{font-family:var(--mono);font-size:11px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.action-desc{font-size:13px;color:var(--fg2);line-height:1.4;margin-bottom:16px}
-.action-btn{width:100%;padding:12px 20px;border:none;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
-.action-btn.red{background:var(--red);color:#fff}
-.action-btn.red:hover{background:#dc2626;transform:translateY(-1px)}
-.action-btn.green{background:var(--green);color:#000}
-.action-btn.green:hover{background:#16a34a;transform:translateY(-1px)}
-.action-btn.premium{background:linear-gradient(135deg,var(--amber),var(--green));color:#000}
-.action-btn.premium:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(255,170,51,.3)}
+/* ═══ WHERE IT RUNS ═══ */
+.runs{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:44px}
+.run{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;transition:border-color .3s}
+.run:hover{border-color:var(--border2)}
+.run-industry{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:4px}
+.run-name{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
+.run-desc{font-size:12px;color:var(--dim);line-height:1.6}
+.run-found{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:8px}
+.run-found span{color:var(--amber)}
 
-.savings-calculator{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:20px;margin:20px 0}
-.calc-title{font-family:var(--mono);font-size:14px;color:var(--green);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}
-.calc-row{display:grid;grid-template-columns:200px 1fr 100px;gap:12px;align-items:center;margin-bottom:12px}
-.calc-label{font-size:13px;color:var(--fg2)}
-.calc-input{background:var(--bg);border:1px solid var(--bg3);color:var(--fg);padding:8px 12px;border-radius:4px;font-family:var(--mono);font-size:13px}
-.calc-result{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);text-align:right}
-.savings-projection{background:linear-gradient(135deg,rgba(0,232,156,.08),rgba(0,212,255,.06));border:1px solid rgba(0,232,156,.2);border-radius:var(--r);padding:16px;margin-top:16px;text-align:center}
-.projection-amount{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--green)}
-.projection-timeline{font-size:12px;color:var(--fg2);margin-top:4px}
+/* ═══ LIVE PROOF ═══ */
+.proof{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:44px;text-align:center;position:relative;overflow:hidden;margin-bottom:28px}
+.proof::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.proof-live{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.proof-live .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.proof-h{font-family:var(--serif);font-size:30px;font-weight:500;color:var(--text);margin-bottom:8px}
+.proof-p{font-size:15px;color:var(--dim);margin-bottom:28px}
+.proof-stats{display:flex;justify-content:center;gap:52px;margin-bottom:28px}
+.proof-stat-n{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--green)}
+.proof-stat-l{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:3px}
+.proof-btns{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
 
-/* Card System */
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
-.card{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:18px 20px;position:relative;overflow:hidden}
-.card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
-.card.g::after{background:var(--green)}.card.r::after{background:var(--red)}.card.a::after{background:var(--amber)}.card.b::after{background:var(--blue)}.card.p::after{background:var(--purple)}.card.c::after{background:var(--cyan)}
-.card-label{font-family:var(--mono);font-size:.6rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-.card-value{font-family:var(--mono);font-size:1.8rem;font-weight:700;line-height:1}
-.card-value.green{color:var(--green)}.card-value.red{color:var(--red)}.card-value.amber{color:var(--amber)}.card-value.blue{color:var(--blue)}.card-value.purple{color:var(--purple)}.card-value.cyan{color:var(--cyan)}
-.card-sub{font-family:var(--sans);font-size:.75rem;color:var(--fg3);margin-top:4px}
+/* ═══ VERTICALS ═══ */
+.verts{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border-radius:10px;overflow:hidden;margin-bottom:44px}
+.vert{background:var(--surface);padding:24px 20px;transition:background .3s;cursor:default}
+.vert:hover{background:var(--surface2)}
+.vert-icon{font-size:22px;margin-bottom:6px}
+.vert-name{font-family:var(--mono);font-size:11px;color:var(--text);letter-spacing:1.5px;font-weight:600;margin-bottom:5px}
+.vert-tag{font-family:var(--mono);font-size:9px;letter-spacing:2px;font-weight:700;padding:3px 8px;border-radius:2px;display:inline-block}
+.vert-tag.live{color:var(--green);background:rgba(0,232,156,.1)}
+.vert-tag.t1{color:var(--amber);background:rgba(251,191,36,.08)}
+.vert-tag.t2{color:var(--muted);background:rgba(90,104,128,.08)}
 
-.detail-block{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px}
-.detail-title{font-family:var(--mono);font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
-.detail-body{font-family:var(--sans);font-size:.85rem;color:var(--fg2);line-height:1.6}
+/* ═══ PRICING ═══ */
+.pricing-context{margin-bottom:32px}
+.pricing-context-h{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--text);margin-bottom:16px}
+.cost-table{width:100%;border-collapse:collapse;margin-bottom:32px}
+.cost-table th{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;text-align:left;padding:10px 14px;border-bottom:1px solid var(--border2);font-weight:600}
+.cost-table td{font-size:13px;padding:12px 14px;border-bottom:1px solid var(--border);color:var(--dim)}
+.cost-table td:first-child{color:var(--text);font-weight:500}
+.cost-table td.cost-bad{color:var(--red);font-family:var(--mono);font-weight:600}
+.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;border-radius:10px;overflow:hidden;margin-bottom:24px}
+.price-card{background:var(--surface);padding:32px 20px;text-align:center;position:relative}
+.price-card.pop{background:var(--surface2);border-top:2px solid var(--green)}
+.price-pop-tag{font-family:var(--mono);font-size:8px;color:var(--green);letter-spacing:2.5px;font-weight:700;margin-bottom:8px}
+.price-tier{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2.5px;font-weight:700;margin-bottom:8px}
+.price-amt{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--text)}
+.price-per{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px}
+.price-desc{font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:16px;min-height:72px}
+.price-feat{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:2;text-align:left;margin-bottom:20px}
+.price-feat span{color:var(--green)}
+.price-btn{display:block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:2px;padding:12px 16px;border-radius:4px;text-decoration:none;transition:all .3s;text-align:center}
+.price-btn.g{background:var(--green);color:var(--bg);border:1px solid var(--green)}
+.price-btn.g:hover{background:#00ffaa;text-decoration:none}
+.price-btn.o{background:transparent;color:var(--dim);border:1px solid var(--border2)}
+.price-btn.o:hover{border-color:var(--green);color:var(--green);text-decoration:none}
+.pricing-math{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7;padding:18px 22px;background:var(--surface);border-radius:6px;border-left:2px solid var(--green-dim);margin-bottom:20px}
+.pricing-compare{font-size:14px;color:var(--dim);line-height:1.7;max-width:620px;margin-bottom:44px}
 
-.insight{background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--bg4);border-radius:var(--r2);padding:20px 24px;margin-bottom:16px}
-.insight-icon{font-size:1.2rem;margin-bottom:8px;display:block}
-.insight h3{font-family:var(--sans);font-size:1.1rem;font-weight:600;margin-bottom:6px}
-.insight p{font-family:var(--sans);font-size:.88rem;color:var(--fg2);line-height:1.6}
+/* ═══ JAME ═══ */
+.jame{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:10px;overflow:hidden;margin-bottom:44px}
+.jame-story{background:var(--surface);padding:40px 32px}
+.jame-story p{font-size:15px;color:var(--dim);line-height:1.8;margin-bottom:16px}
+.jame-story p:last-child{margin-bottom:0}
+.jame-story strong{color:var(--text);font-weight:600}
+.jame-info{background:var(--surface2);padding:40px 32px}
+.jame-name{font-family:var(--serif);font-size:32px;font-weight:500;color:var(--text);margin-bottom:4px}
+.jame-role{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:2.5px;font-weight:700;margin-bottom:24px}
+.jame-co{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;font-weight:700;margin-bottom:8px}
+.jame-co-item{font-size:13px;color:var(--dim);margin-bottom:4px;line-height:1.5}
+.jame-divider{width:40px;height:1px;background:var(--border2);margin:20px 0}
+.jame-quote{font-family:var(--serif);font-size:18px;font-style:italic;color:var(--muted);line-height:1.5;margin-top:20px}
 
-.json-toggle{font-family:var(--mono);font-size:.65rem;color:var(--fg4);cursor:pointer;margin-top:12px;user-select:none}
-.json-toggle:hover{color:var(--fg3)}
-.json-raw{display:none;margin-top:8px;background:var(--bg);border:1px solid var(--bg3);border-radius:var(--r);padding:12px;max-height:350px;overflow:auto}
-.json-raw.open{display:block}
-.json-raw pre{font-family:var(--mono);font-size:.7rem;color:var(--fg3);white-space:pre-wrap;word-break:break-all}
+/* ═══ PRINCIPLE ═══ */
+.principle{text-align:center;padding:100px 32px 60px;max-width:700px;margin:0 auto}
+.principle-text{font-family:var(--serif);font-size:clamp(24px,3.5vw,38px);font-style:italic;color:var(--muted);line-height:1.5}
+.principle-text em{font-style:normal;color:var(--text)}
 
-/* Email Enhancement Tool - Separate Context */
-.email-tool{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:20px;margin-top:24px}
-.email-tool-header{margin-bottom:20px}
-.email-tool-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blue);margin-bottom:4px}
-.email-tool-desc{font-size:12px;color:var(--fg3)}
-.email-tool-input{margin-bottom:16px}
-.email-tool-input textarea{min-height:80px}
-.email-tool-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:20px}
-.email-control-group{display:flex;gap:8px}
-.email-control-btn{padding:6px 12px;border:1px solid var(--bg3);background:var(--bg3);color:var(--fg3);font-size:11px;font-weight:600;border-radius:4px;cursor:pointer;transition:all .2s;font-family:var(--sans)}
-.email-control-btn:hover{border-color:var(--blue);color:var(--fg)}
-.email-control-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
-.email-tool-output{background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px;min-height:80px;font-family:var(--sans);line-height:1.6;position:relative}
+/* ═══ FOOTER ═══ */
+.footer{text-align:center;padding:44px 32px;border-top:1px solid var(--border);margin-top:40px}
+.footer-brand{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:10px}
+.footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:12px}
+.footer-links a{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;text-decoration:none}
+.footer-links a:hover{color:var(--text)}
+.footer-copy{font-size:11px;color:var(--muted)}
 
-/* Interactive Demo Styles */
-.interactive-demo-section{margin-top:32px;padding:24px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2)}
-.demo-selector{text-align:center;margin-bottom:24px}
-.demo-selector h3{font-family:var(--mono);font-size:18px;color:var(--green);margin-bottom:8px}
-.demo-selector p{font-size:14px;color:var(--fg2);margin-bottom:20px}
-.demo-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;max-width:600px;margin:0 auto}
-.demo-select-btn{padding:12px 16px;background:var(--bg3);border:1px solid var(--bg4);color:var(--fg);border-radius:var(--r);font-family:var(--sans);font-size:14px;cursor:pointer;transition:all .2s}
-.demo-select-btn:hover{border-color:var(--green);background:var(--bg4);transform:translateY(-1px)}
+/* ═══ ANIMATIONS ═══ */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+.reveal{opacity:0;transform:translateY(18px);transition:all .65s ease}
+.reveal.v{opacity:1;transform:translateY(0)}
 
-/* Mobile responsive */
-@media(max-width:768px){
-  .menu-panel{width:100%;max-width:400px}
-  .persona-grid{grid-template-columns:1fr}
-  .gate-title{font-size:1.8rem}
-  .input-grid,.input-grid.three{grid-template-columns:1fr}
-  .card-grid{grid-template-columns:1fr 1fr}
-  .sections-container{padding:16px}
-  .action-grid{grid-template-columns:1fr}
-  .calc-row{grid-template-columns:1fr}
-  .calc-result{text-align:left;margin-top:4px}
-  .demo-buttons{grid-template-columns:1fr}
-  .email-tool-controls{grid-template-columns:1fr}
-  .question-risk-grid{grid-template-columns:1fr 1fr}
-  .question-type-badges{flex-direction:column;align-items:flex-start}
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:800px){
+  .arch{flex-direction:column;gap:0}
+  .arch-arrow{width:2px;height:28px;flex-direction:column}
+  .arch-arrow-line{width:1px;height:100%}
+  .a-circ.human{width:110px;height:110px}
+  .a-circ.eng{width:125px;height:125px}
+  .a-circ.ai{width:130px;height:130px}
+  .a-circ.eng .a-name{font-size:30px}
+  .v1-strip{flex-direction:column;gap:4px}
+  .engines,.failures,.results,.econ-pair,.jame{grid-template-columns:1fr}
+  .power{grid-template-columns:1fr;gap:12px}
+  .power-arrow{transform:rotate(90deg)}
+  .jos-grid{grid-template-columns:1fr}
+  .verts{grid-template-columns:1fr 1fr}
+  .runs{grid-template-columns:1fr}
+  .pricing-grid{grid-template-columns:1fr 1fr}
+  .proof-stats{flex-direction:column;gap:14px}
+  .hero-actions,.proof-btns{flex-direction:column;align-items:center}
+  .eng::after{display:none}
+  .topbar{padding:12px 20px}
+  .topbar-nav{gap:16px}
 }
-@media(max-width:480px){
-  .card-grid{grid-template-columns:1fr}
-  .question-risk-grid{grid-template-columns:1fr}
-}
+@media(max-width:500px){.verts,.pricing-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<!-- Menu Toggle -->
-<div class="menu-toggle" onclick="toggleMenu()">
-  <div class="menu-icon">
-    <div class="menu-line"></div>
-    <div class="menu-line"></div>
-    <div class="menu-line"></div>
+<!-- ═══ TOPBAR ═══ -->
+<nav class="topbar">
+  <div class="topbar-brand">ARTIFACT ZERO LABS</div>
+  <div class="topbar-nav">
+    <a href="#engines">HOW IT WORKS</a>
+    <a href="#results">RESULTS</a>
+    <a href="#demo">LIVE DEMO</a>
+    <a href="#pricing">PRICING</a>
   </div>
-</div>
+</nav>
 
-<!-- Menu Overlay -->
-<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
-
-<!-- Menu Panel -->
-<div class="menu-panel" id="menuPanel">
-  <div class="menu-header">
-    <div class="menu-title">NTI GUIDE</div>
-    <button class="menu-close" onclick="closeMenu()">&times;</button>
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="v1-strip">
+    <span class="v1l">NTI v1 — CORE LAYER</span>
+    <span class="v1d">7 layers · 10 tilt patterns · 3 failure modes · runs on every path</span>
   </div>
-  
-  <div class="menu-section" style="background:linear-gradient(135deg,rgba(0,232,156,.06),transparent);border-bottom:1px solid rgba(0,232,156,.15)">
-    <a href="/live" style="display:flex;align-items:center;gap:10px;text-decoration:none;padding:8px 0">
-      <span style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite"></span>
-      <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);letter-spacing:1px">NTI LIVE FEED</span>
-      <span style="font-size:11px;color:var(--fg3);margin-left:auto">Real-time news analysis →</span>
-    </a>
+  <div class="arch">
+    <div class="arch-node">
+      <div class="a-circ human"><div class="a-tag">source</div><div class="a-name">Human</div><div class="a-sub">or AI</div></div>
+    </div>
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="dot"></div></div>
+    <div class="arch-node">
+      <div class="a-circ eng"><div class="a-tag">clean for AI</div><div class="a-name">v2</div><div class="a-sub">AUDIT · ROUTE</div></div>
+      <div class="a-desc">HEDGE · CONFLICT<br>OBJECTIVE · GATE</div>
+    </div>
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="dot" style="animation-delay:.6s"></div></div>
+    <div class="arch-node">
+      <div class="a-circ ai"><div class="a-tag">processes</div><div class="a-name">AI</div><div class="a-sub">CLEAN IN · CLEAN OUT</div></div>
+      <div class="a-desc">ANY MODEL<br>ANY PROVIDER</div>
+    </div>
+    <div class="arch-arrow rev"><div class="arch-arrow-line"></div><div class="dot" style="animation-delay:1.2s"></div></div>
+    <div class="arch-node">
+      <div class="a-circ eng v3c"><div class="a-tag">stabilize</div><div class="a-name">v3</div><div class="a-sub">STRIP · ANCHOR</div></div>
+      <div class="a-desc">FILLER · DEDUPE<br>COMPRESS · CEILING</div>
+    </div>
+    <div class="arch-arrow rev"><div class="arch-arrow-line"></div><div class="dot" style="animation-delay:1.8s"></div></div>
+    <div class="arch-node">
+      <div class="a-circ human"><div class="a-tag">destination</div><div class="a-name">Human</div><div class="a-sub">or AI</div></div>
+    </div>
   </div>
+  <h1>Three engines. Zero opinion.<br>Every word <em>structurally governed.</em></h1>
+  <p class="hero-sub">NTI sits between every communication — human to AI, AI to human, AI to AI — and measures structural integrity. Rule-based. Deterministic. The same input always produces the same output.</p>
+  <div class="hero-actions">
+    <a href="#demo" class="btn btn-g">SEE IT LIVE →</a>
+    <a href="#pricing" class="btn btn-o">BUY ACCESS</a>
+  </div>
+</section>
 
-  <div class="menu-section">
-    <h3>Color System</h3>
-    <div class="color-legend">
-      <div class="color-item">
-        <div class="color-sample structural"></div>
-        <div>
-          <div class="color-label">Structural (Axis 1)</div>
-          <div class="color-desc">Objective drift, constraint collapse</div>
-        </div>
+<!-- ═══ THREE ENGINES ═══ -->
+<section class="sec" id="engines">
+  <div class="sec-eye">THE THREE ENGINES</div>
+  <div class="sec-h">v1 measures. v2 cleans in. v3 stabilizes out.</div>
+  <div class="sec-p">Three deterministic engines. No LLM dependency. Rule-based structural governance on every communication path.</div>
+  <div class="engines reveal">
+    <div class="eng">
+      <div class="eng-ver" style="color:var(--green)">v1</div>
+      <div class="eng-name" style="color:var(--green)">CORE · EVERYWHERE</div>
+      <div class="eng-desc">The brain. 7-layer structural analysis that runs on every input, every output, every path.</div>
+      <div class="eng-list"><span>L0</span> Reality constraints<br><span>L1</span> Objective freeze<br><span>L2</span> Framing analysis<br><span>L3</span> Drift measurement<br><span>L4–L5</span> Execution + enforcement<br><span>L6</span> Binding contracts<br><span>L7</span> Telemetry + trace</div>
+    </div>
+    <div class="eng">
+      <div class="eng-ver" style="color:var(--green)">v2</div>
+      <div class="eng-name" style="color:var(--green)">INBOUND · CLEAN FOR AI</div>
+      <div class="eng-desc">Audits human input before AI processes it. Catches structural noise that wastes tokens.</div>
+      <div class="eng-list"><span>→</span> Hedge word detection<br><span>→</span> Missing objective rejection<br><span>→</span> Conflicting directive flags<br><span>→</span> Deferred enforcement catch<br><span>→</span> Human routing<br><span>→</span> Score gate: 0.80 threshold</div>
+    </div>
+    <div class="eng">
+      <div class="eng-ver" style="color:var(--purple)">v3</div>
+      <div class="eng-name" style="color:var(--purple)">OUTBOUND · STABILIZE</div>
+      <div class="eng-desc">Strips everything that shouldn't be there. No rewriting. Removal and compression only.</div>
+      <div class="eng-list"><span>→</span> Hedge removal<br><span>→</span> Filler phrase stripping<br><span>→</span> Sentence deduplication<br><span>→</span> Objective anchoring<br><span>→</span> Token ceiling enforcement<br><span>→</span> Convergence loop (3 max)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ THE DIFFERENCE ═══ -->
+<section class="sec">
+  <div class="sec-eye">THE DIFFERENCE</div>
+  <div class="sec-h">One engine is powerful. Three engines change the economics.</div>
+  <div class="sec-p">v1 alone scores and detects. Add v2 and v3, and you eliminate the rework cycle entirely.</div>
+  <div class="power reveal">
+    <div class="power-card">
+      <div class="power-tag" style="color:var(--green)">v1 ALONE</div>
+      <div class="power-h">Structural Analysis</div>
+      <div class="power-p">Scores any communication. Detects tilt patterns, failure modes, drift. Tells you what's wrong. You still send it — the AI still processes it — but now you see the structural problems.</div>
+      <div class="power-stat" style="color:var(--amber)">49%</div>
+      <div class="power-stat-label">BASELINE FALSE COMMITMENT RATE</div>
+    </div>
+    <div class="power-arrow">→</div>
+    <div class="power-card full">
+      <div class="power-tag" style="color:var(--green)">v1 + v2 + v3</div>
+      <div class="power-h">Full Convergence Pipeline</div>
+      <div class="power-p">v2 cleans input before AI touches it. v3 stabilizes output before it reaches anyone. v1 runs on both sides. 3 turns become 1. False commitments get caught before they exist.</div>
+      <div class="power-stat" style="color:var(--green)">7%</div>
+      <div class="power-stat-label">NTI-MEDIATED FALSE COMMITMENT RATE</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ JOS ═══ -->
+<section class="sec">
+  <div class="sec-eye">JOS — BINDING CONTRACTS FOR AI</div>
+  <div class="sec-h">Define the objective. Lock the constraints. Before AI runs.</div>
+  <div class="sec-p">JOS is a fill-in-the-blank governance contract. You declare what the AI must do, what it cannot do, what "done" means, and who can override. Then it's frozen. No drift. No scope creep. No renegotiation mid-execution.</div>
+  <div class="jos reveal">
+    <div class="jos-grid">
+      <div class="jos-field">
+        <div class="jos-field-name">OBJECTIVE</div>
+        <div class="jos-field-desc">What is the single objective for this run? One sentence. Frozen at L1 before execution begins.</div>
       </div>
-      <div class="color-item">
-        <div class="color-sample relational"></div>
-        <div>
-          <div class="color-label">Relational (Axis 2)</div>
-          <div class="color-desc">Conversational friction, dominance</div>
-        </div>
+      <div class="jos-field">
+        <div class="jos-field-name">CONSTRAINTS</div>
+        <div class="jos-field-desc">List constraints. One per line. Cannot be deleted — only appended explicitly.</div>
       </div>
-      <div class="color-item">
-        <div class="color-sample economic"></div>
-        <div>
-          <div class="color-label">Economic (Axis 3)</div>
-          <div class="color-desc">Token efficiency, cost optimization</div>
-        </div>
+      <div class="jos-field">
+        <div class="jos-field-name">NO-GO ZONES</div>
+        <div class="jos-field-desc">What is explicitly not allowed? Hard boundaries. If ambiguity exists, system requests clarification.</div>
       </div>
-      <div class="color-item">
-        <div class="color-sample assumption"></div>
-        <div>
-          <div class="color-label">Assumptions</div>
-          <div class="color-desc">Unverified claims, presumptions</div>
-        </div>
+      <div class="jos-field">
+        <div class="jos-field-name">DEFINITION OF DONE</div>
+        <div class="jos-field-desc">What does done mean? One sentence. Measurable. No interpretation required.</div>
       </div>
-      <div class="color-item">
-        <div class="color-sample intensifier"></div>
-        <div>
-          <div class="color-label">Emotional Intensifiers</div>
-          <div class="color-desc">Urgency, pressure, amplification</div>
-        </div>
+      <div class="jos-field" style="grid-column:1/-1">
+        <div class="jos-field-name">CLOSURE AUTHORITY</div>
+        <div class="jos-field-desc">Who can close or override? You, the system, or both. Declared before execution. Not negotiable after.</div>
       </div>
-      <div class="color-item">
-        <div class="color-sample generalization"></div>
-        <div>
-          <div class="color-label">Generalizations</div>
-          <div class="color-desc">Overly broad statements</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample power"></div>
-        <div>
-          <div class="color-label">Power Words</div>
-          <div class="color-desc">High-impact semantic operators</div>
-        </div>
-      </div>
-      <div class="color-item">
-        <div class="color-sample filler"></div>
-        <div>
-          <div class="color-label">Filler</div>
-          <div class="color-desc">Low-value connector words</div>
-        </div>
-      </div>
+    </div>
+    <div class="jos-rules">
+      <div class="jos-rules-h">ENFORCEMENT RULES</div>
+      <div class="jos-rule">Objective is frozen at L1 before execution.</div>
+      <div class="jos-rule">Emotion may be acknowledged, never executed.</div>
+      <div class="jos-rule">Constraints cannot be deleted — only appended explicitly.</div>
+      <div class="jos-rule">If ambiguity exists, system must request clarification OR run analysis-only.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WHAT WE DETECT ═══ -->
+<section class="sec">
+  <div class="sec-eye">WHAT WE DETECT</div>
+  <div class="sec-h">Three failure modes no one else has published.</div>
+  <div class="sec-p">Structural failures that cause communications to break down. Not opinions. Patterns with deterministic detection rules.</div>
+  <div class="failures reveal">
+    <div class="fail">
+      <div class="fail-code" style="color:var(--red)">UDDS</div>
+      <div class="fail-name">Upstream Denial via Downstream Substitution</div>
+      <div class="fail-desc">Constraints exist but get bypassed by capability promises. "We can build all of it" when the budget says you can't.</div>
+    </div>
+    <div class="fail">
+      <div class="fail-code" style="color:var(--amber)">DCE</div>
+      <div class="fail-name">Deferred Constraint Enforcement</div>
+      <div class="fail-desc">"We'll handle that later." Enforcement gets pushed downstream until constraints dissolve.</div>
+    </div>
+    <div class="fail">
+      <div class="fail-code" style="color:var(--blue)">CCA</div>
+      <div class="fail-name">Constraint Collapse via Abstraction</div>
+      <div class="fail-desc">"Overall" and "basically" flatten specific constraints into mush. Abstraction destroys specificity.</div>
+    </div>
+  </div>
+  <div class="tilts reveal">
+    <div class="tilt">T1 REASSURANCE DRIFT</div><div class="tilt">T2 CERTAINTY INFLATION</div><div class="tilt">T3 CONSENSUS CLAIMS</div><div class="tilt">T4 CAPABILITY OVERREACH</div><div class="tilt">T5 ABSOLUTE LANGUAGE</div><div class="tilt">T6 CONSTRAINT DEFERRAL</div><div class="tilt">T7 CATEGORY BLEND</div><div class="tilt">T8 PRESSURE OPTIMIZATION</div><div class="tilt">T9 SCOPE EXPANSION</div><div class="tilt">T10 AUTHORITY IMPOSITION</div>
+  </div>
+</section>
+
+<!-- ═══ VALIDATED RESULTS ═══ -->
+<section class="sec" id="results">
+  <div class="sec-eye">VALIDATED RESULTS</div>
+  <div class="sec-h">Tested. Not projected.</div>
+  <div class="sec-p">Two independent benchmarks. Real emails. Real business communications. Placebo-controlled.</div>
+  <div class="results reveal">
+    <div class="result-block">
+      <div class="result-label">50-EMAIL BENCHMARK</div>
+      <div class="result-row"><span class="result-metric">False Commitment Rate — Baseline</span><span class="result-val r-bad">49%</span></div>
+      <div class="result-row"><span class="result-metric">False Commitment Rate — NTI</span><span class="result-val r-good">7%</span></div>
+      <div class="result-row"><span class="result-metric">Single Emails</span><span class="result-val r-dim">44% → 6%</span></div>
+      <div class="result-row"><span class="result-metric">Threaded Conversations</span><span class="result-val r-dim">61% → 9%</span></div>
+      <div class="result-pass">✓ FCR ≤ 10% — PASS</div>
+    </div>
+    <div class="result-block">
+      <div class="result-label">10-MESSAGE REAL-WORLD GAUNTLET</div>
+      <div class="result-row"><span class="result-metric">False Commitment Rate</span><span class="result-val r-dim">35.5% → <span class="r-good">14.8%</span></span></div>
+      <div class="result-row"><span class="result-metric">Misaligned Execution</span><span class="result-val r-dim">22.8% → <span class="r-good">9.2%</span></span></div>
+      <div class="result-row"><span class="result-metric">Escalation Rate</span><span class="result-val r-dim">21.8% → <span class="r-good">9.1%</span></span></div>
+      <div class="result-row"><span class="result-metric">Task Completion</span><span class="result-val r-dim">73.1% → <span class="r-good">74.7%</span></span></div>
+      <div class="result-pass">✓ BEAT PLACEBO · NO TASK DEGRADATION</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TOKEN ECONOMICS ═══ -->
+<section class="sec">
+  <div class="sec-eye">TOKEN ECONOMICS</div>
+  <div class="sec-h">Every organization using AI is overpaying.</div>
+  <div class="sec-p">Two engines. Two savings mechanisms. Both measured.</div>
+
+  <div class="econ-pair reveal">
+    <div class="econ-card">
+      <div class="econ-card-label" style="color:var(--green)">v2 — PER REQUEST</div>
+      <div class="econ-card-big">~61%</div>
+      <div class="econ-card-desc">Turn reduction at the request level. 3 turns of drift and rework become 1 clean pass. Measured on GPT-4.1 mini batch: $0.0043 → $0.0017 per request. 2,200 fewer input tokens. 1,100 fewer output tokens.</div>
+    </div>
+    <div class="econ-card">
+      <div class="econ-card-label" style="color:var(--purple)">v3 — ENTERPRISE ANNUAL</div>
+      <div class="econ-card-big">~62–65%</div>
+      <div class="econ-card-desc">At 2M requests/year: 4.4 billion fewer input tokens. 2.6 billion fewer output tokens. Output stabilization compounds the per-request savings across every model at scale.</div>
     </div>
   </div>
 
-  <div class="menu-section">
-    <h3>Question Physics</h3>
-    <div style="font-size:13px;line-height:1.6">
-      <p><strong>What is Question Physics?</strong><br>
-      Structural analysis of question intent - detects when questions are used for authority shift, constraint injection, or framing traps.</p>
-      <p style="margin-top:12px"><strong>Question Types:</strong><br>
-      • Constraint Injection: Implies missing requirements<br>
-      • Authority Shift: Moves burden of proof<br>
-      • Framing Trap: Positions into defensive frame<br>
-      • Repetition Pressure: Same question multiple ways</p>
+  <div class="econ-note reveal">ASSUMPTIONS: 2M requests/year · 8,000/day · 250 business days · Baseline: 3 turns per task · NTI: 1 turn · Published API pricing from OpenAI, Anthropic, Google · No probability-weighted figures</div>
+
+  <table class="econ-table reveal">
+    <thead><tr><th>MODEL</th><th>BASELINE</th><th>WITH NTI</th><th>ANNUAL SAVED</th><th>REDUCTION</th></tr></thead>
+    <tbody>
+      <tr><td>GPT-4.1 mini (Batch)</td><td>$9,600</td><td>$3,680</td><td class="save">$5,920</td><td class="pct">61.7%</td></tr>
+      <tr><td>GPT-4.1 (Batch)</td><td>$48,000</td><td>$18,400</td><td class="save">$29,600</td><td class="pct">61.7%</td></tr>
+      <tr><td>Claude Opus 4.6</td><td>$141,000</td><td>$54,000</td><td class="save">$87,000</td><td class="pct">61.7%</td></tr>
+      <tr><td>Gemini 2.5 Pro</td><td>$51,000</td><td>$19,500</td><td class="save">$31,500</td><td class="pct">61.8%</td></tr>
+      <tr><td>Gemini 2.5 Flash</td><td>$12,660</td><td>$4,840</td><td class="save">$7,820</td><td class="pct">61.8%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="econ-canonical reveal">
+    <div class="econ-canonical-n">~63%</div>
+    <div class="econ-canonical-l">CANONICAL TOKEN REDUCTION · STABLE MIDPOINT ACROSS ALL MODELS</div>
+  </div>
+</section>
+
+<!-- ═══ WHERE IT RUNS TODAY ═══ -->
+<section class="sec">
+  <div class="sec-eye">WHERE IT RUNS TODAY</div>
+  <div class="sec-h">Not demos. Daily operations.</div>
+  <div class="sec-p">NTI runs across real businesses, real documents, real disputes, real money. Every day.</div>
+  <div class="runs reveal">
+    <div class="run">
+      <div class="run-industry">CONSTRUCTION · INSURANCE</div>
+      <div class="run-name">865 Roofing</div>
+      <div class="run-desc">4 production contracts structurally upgraded. Inspection agreements, full roofing contracts, gutter quotes. Scope freezing, liability caps, change order control, warranty separation.</div>
+      <div class="run-found"><span>DETECTED:</span> DCE · CCA · UDDS</div>
+    </div>
+    <div class="run">
+      <div class="run-industry">MEDICAL RECEIVABLES · FACTORING</div>
+      <div class="run-name">Ellington Health</div>
+      <div class="run-desc">174-patient receivables portfolio. Law firm communication hardening. Eliminates ambiguity in collection communications that delay payment on cases ranging from $614 to $42,000+.</div>
+      <div class="run-found"><span>IMPACT:</span> Collection acceleration · False commitment prevention</div>
+    </div>
+    <div class="run">
+      <div class="run-industry">REAL ESTATE</div>
+      <div class="run-name">865 Realty</div>
+      <div class="run-desc">Tenant disputes, realtor negotiations, TREC regulatory compliance. NTI governs every outbound communication in adversarial real estate situations.</div>
+      <div class="run-found"><span>USED:</span> Daily — most recent: today</div>
+    </div>
+    <div class="run">
+      <div class="run-industry">TITLE · CLOSING</div>
+      <div class="run-name">Title Group of Tennessee</div>
+      <div class="run-desc">Document communication analysis. Structural integrity on closing communications where ambiguous language creates liability exposure.</div>
+      <div class="run-found"><span>VERTICAL:</span> Title insurance · Settlement</div>
+    </div>
+    <div class="run">
+      <div class="run-industry">HEALTHCARE · MEDICAL-LEGAL</div>
+      <div class="run-name">Clinical Documentation</div>
+      <div class="run-desc">Real ER documentation analyzed through NTI. Found CCA and DCE failure modes that create malpractice exposure and weaken claim defensibility.</div>
+      <div class="run-found"><span>DETECTED:</span> CCA · DCE in clinical notes</div>
+    </div>
+    <div class="run">
+      <div class="run-industry">HEALTHCARE SAAS</div>
+      <div class="run-name">SimpleLife</div>
+      <div class="run-desc">Document and case-management SaaS platform. Built 2019. Launched one month before COVID. Survived. Still runs. Paying customers.</div>
+      <div class="run-found"><span>STATUS:</span> Active · Production</div>
+    </div>
+    <div class="run">
+      <div class="run-industry">POLITICAL COMMUNICATION</div>
+      <div class="run-name">Knox County Mayor's Race</div>
+      <div class="run-desc">4 candidates scored in real time. 5 structural lenses. Every public statement analyzed. Live through May 5, 2026 primary.</div>
+      <div class="run-found"><span>STATUS:</span> <span style="color:var(--green)">● LIVE</span></div>
+    </div>
+    <div class="run">
+      <div class="run-industry">NEWS MEDIA</div>
+      <div class="run-name">Live Feed — 13 Sources</div>
+      <div class="run-desc">Real-time structural analysis on RSS headlines across News, Sports, Tech, Business, and Knoxville Local. 5-axis scoring on every article.</div>
+      <div class="run-found"><span>STATUS:</span> <span style="color:var(--green)">● LIVE</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ LIVE DEMO ═══ -->
+<section class="sec" id="demo">
+  <div class="sec-eye">LIVE DEMONSTRATION</div>
+  <div class="sec-h">Running on real data. Right now.</div>
+  <div class="sec-p">NTI's v1 engine is live, scoring real public statements in a real election. This is structural analysis applied to the world.</div>
+  <div class="proof reveal">
+    <div class="proof-live"><span class="dot"></span>LIVE · KNOXVILLE</div>
+    <div class="proof-h">Knox County Mayor's Race</div>
+    <div class="proof-p">4 candidates. 5 scoring lenses. Every public statement analyzed. Real-time structural integrity scores on political communication.</div>
+    <div class="proof-stats">
+      <div><div class="proof-stat-n">4</div><div class="proof-stat-l">CANDIDATES</div></div>
+      <div><div class="proof-stat-n">5</div><div class="proof-stat-l">LENSES</div></div>
+      <div><div class="proof-stat-n">13</div><div class="proof-stat-l">NEWS SOURCES</div></div>
+      <div><div class="proof-stat-n" id="countdown">77</div><div class="proof-stat-l">DAYS TO PRIMARY</div></div>
+    </div>
+    <div class="proof-btns">
+      <a href="/live/knoxville" class="btn btn-g">VIEW DASHBOARD</a>
+      <a href="/live" class="btn btn-o">LIVE NEWS FEED</a>
+      <a href="https://buy.stripe.com/3cI3cu58s5eF9Km9Ds8bS03" class="btn btn-o" style="border-color:rgba(201,168,76,.25);color:var(--gold)">BUY KNOXVILLE MARKET — $18,000</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ VERTICALS ═══ -->
+<section class="sec">
+  <div class="sec-eye">EVERY WRITTEN WORD</div>
+  <div class="sec-h">The engine doesn't care who's talking.</div>
+  <div class="sec-p">NTI measures structure. It works on any communication in any context. Elections and news are the visible proof. The real play is everything underneath.</div>
+  <div class="verts reveal">
+    <div class="vert"><div class="vert-icon">🏛</div><div class="vert-name">ELECTIONS</div><div class="vert-tag live">LIVE</div></div>
+    <div class="vert"><div class="vert-icon">📰</div><div class="vert-name">NEWS MEDIA</div><div class="vert-tag live">LIVE</div></div>
+    <div class="vert"><div class="vert-icon">💼</div><div class="vert-name">ENTERPRISE SAAS</div><div class="vert-tag t1">TIER 1</div></div>
+    <div class="vert"><div class="vert-icon">🏥</div><div class="vert-name">HEALTHCARE</div><div class="vert-tag t1">TIER 1</div></div>
+    <div class="vert"><div class="vert-icon">⚖️</div><div class="vert-name">LEGAL</div><div class="vert-tag t1">TIER 1</div></div>
+    <div class="vert"><div class="vert-icon">🛡</div><div class="vert-name">INSURANCE</div><div class="vert-tag t1">TIER 1</div></div>
+    <div class="vert"><div class="vert-icon">📊</div><div class="vert-name">FINANCIAL</div><div class="vert-tag t2">TIER 2</div></div>
+    <div class="vert"><div class="vert-icon">🏢</div><div class="vert-name">COMMERCIAL RE</div><div class="vert-tag t2">TIER 2</div></div>
+    <div class="vert"><div class="vert-icon">∞</div><div class="vert-name">EVERY WORD</div><div class="vert-tag t2">THE GOAL</div></div>
+  </div>
+</section>
+
+<!-- ═══ PRICING ═══ -->
+<section class="sec" id="pricing">
+  <div class="sec-eye">PRICING</div>
+  <div class="sec-h">The cost of NTI vs. the cost of not having it.</div>
+
+  <div class="pricing-context reveal">
+    <div class="pricing-context-h">What one failure costs without NTI:</div>
+    <table class="cost-table">
+      <thead><tr><th>SCENARIO</th><th>COST PER INCIDENT</th><th>NTI MONTHLY</th><th>PAYBACK</th></tr></thead>
+      <tbody>
+        <tr><td>Legal false commitment</td><td class="cost-bad">$50,000+</td><td>$2,500</td><td>1 incident</td></tr>
+        <tr><td>Insurance claims rework</td><td class="cost-bad">$15,000+</td><td>$2,500</td><td>1 incident</td></tr>
+        <tr><td>Roofing scope creep</td><td class="cost-bad">$10,000+</td><td>$2,500</td><td>1 incident</td></tr>
+        <tr><td>Medical receivables delay</td><td class="cost-bad">$5,000+ carry</td><td>$2,500</td><td>1–2 incidents</td></tr>
+        <tr><td>Token waste (Claude Opus)</td><td class="cost-bad">$87,000/yr</td><td>$2,500</td><td>Saves $4,750/mo net</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pricing-grid reveal">
+    <div class="price-card">
+      <div class="price-tier">STARTER</div>
+      <div class="price-amt">$500</div>
+      <div class="price-per">/month</div>
+      <div class="price-desc">Solo operators. Attorneys, consultants, individual brokers.</div>
+      <div class="price-feat"><span>✓</span> v1 engine<br><span>✓</span> 1 seat<br><span>✓</span> API access<br><span>✓</span> Structural analysis</div>
+      <a href="https://buy.stripe.com/6oUbJ0fN66iJf4G4j88bS00" class="price-btn o">START NOW</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">CORE</div>
+      <div class="price-amt">$2,500</div>
+      <div class="price-per">/month</div>
+      <div class="price-desc">Teams. Full structural analysis with failure mode detection.</div>
+      <div class="price-feat"><span>✓</span> v1 engine<br><span>✓</span> 3 seats included<br><span>✓</span> +$250/seat/mo<br><span>✓</span> Tilt taxonomy<br><span>✓</span> Failure modes</div>
+      <a href="https://buy.stripe.com/7sY3cuasM7mNbSu3f48bS02" class="price-btn o">START NOW</a>
+    </div>
+    <div class="price-card pop">
+      <div class="price-pop-tag">FULL GOVERNANCE</div>
+      <div class="price-tier">PIPELINE</div>
+      <div class="price-amt">$7,500</div>
+      <div class="price-per">/month</div>
+      <div class="price-desc">Full AI communication governance. Every message structurally controlled.</div>
+      <div class="price-feat"><span>✓</span> v1 + v2 + v3<br><span>✓</span> JOS contracts<br><span>✓</span> 10 seats included<br><span>✓</span> +$200/seat/mo<br><span>✓</span> Convergence loop</div>
+      <a href="https://buy.stripe.com/5kQ28q30kdLbe0CdTI8bS01" class="price-btn g">START NOW</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">ENTERPRISE</div>
+      <div class="price-amt">Custom</div>
+      <div class="price-per">&nbsp;</div>
+      <div class="price-desc">Organization-wide deployment. Unlimited seats. Custom routing.</div>
+      <div class="price-feat"><span>✓</span> Full stack<br><span>✓</span> Unlimited seats<br><span>✓</span> White-label option<br><span>✓</span> Dedicated support<br><span>✓</span> Custom rules</div>
+      <a href="mailto:jame@dontgofulltilt.com?subject=NTI%20Enterprise" class="price-btn o">CONTACT US</a>
     </div>
   </div>
 
-  <div class="menu-section">
-    <h3>FAQ</h3>
-    <div style="font-size:13px;line-height:1.6">
-      <p><strong>What is NTI?</strong><br>
-      No-Tilt Interface - deterministic middleware that prevents AI from drifting from your constraints.</p>
-      <p style="margin-top:12px"><strong>How does color-coding work?</strong><br>
-      Each color represents a different type of structural or linguistic pattern. Click highlighted text to see explanations.</p>
-      <p style="margin-top:12px"><strong>What are the axes?</strong><br>
-      Axis 1: Structural integrity (objective drift)<br>
-      Axis 2: Relational friction (conversational damage)<br>
-      Axis 3: Economic efficiency (token optimization)</p>
-      <p style="margin-top:12px"><strong>Is this AI-powered?</strong><br>
-      No. NTI uses deterministic rules. Zero AI inference cost.</p>
+  <div class="pricing-math reveal">PER SEAT MATH: $250/seat/month = $12.50/business day per person. At 20 AI-mediated communications/day, that's $0.63 per governed communication. One ungoverned false commitment costs thousands.</div>
+
+  <div class="pricing-compare reveal">Claude costs $80/month for the engine. NTI costs $500–$7,500/month for the governance layer that makes the engine safe to use at scale. You don't compare NTI to Claude. You compare NTI to the cost of operating without it.</div>
+</section>
+
+<!-- ═══ MEET JAME ═══ -->
+<section class="sec" id="jame">
+  <div class="sec-eye">THE FOUNDER</div>
+  <div class="sec-h">Meet Jame.</div>
+
+  <div class="jame reveal">
+    <div class="jame-story">
+      <p>Most entrepreneurs chase ideas. <strong>Jame builds systems.</strong></p>
+      <p>He started in medical receivables finance — building <strong>Ellington Health</strong>, a company purchasing healthcare receivables tied to personal injury cases. He learned underwriting, capital structure, cashflow realism, and legal precision the hard way.</p>
+      <p>In 2019 he built <strong>SimpleLife</strong>, a document and case-management SaaS platform. Launched one month before COVID. It survived. It still runs.</p>
+      <p>He entered commercial real estate brokerage to understand physical assets at ground level — lease negotiation, property economics, local market mechanics. That's when something clicked:</p>
+      <p><strong>He's wired to build, not to sell.</strong></p>
+      <p>He consolidated everything under <strong>865</strong> — roofing, realty, capital, technology — one brand, one platform, compounding. He runs NTI across all of it. Every contract, every dispute, every outbound communication passes through the engines he built.</p>
+      <p>NTI didn't come from AI research. It came from noticing that <strong>communication collapses under pressure</strong> — and AI amplifies whatever structure you feed it. So instead of making AI nicer, he made it structurally accountable.</p>
+    </div>
+    <div class="jame-info">
+      <div class="jame-name">Jame Houghton</div>
+      <div class="jame-role">FOUNDER · ARTIFACT ZERO LABS</div>
+      <div class="jame-divider"></div>
+      <div class="jame-co">BUILDS &amp; OPERATES</div>
+      <div class="jame-co-item">Artifact Zero Labs — NTI</div>
+      <div class="jame-co-item">865 Roofing</div>
+      <div class="jame-co-item">865 Realty</div>
+      <div class="jame-co-item">865 Capital</div>
+      <div class="jame-co-item">Ellington Health</div>
+      <div class="jame-co-item">SimpleLife (SaaS)</div>
+      <div class="jame-divider"></div>
+      <div class="jame-co">BASED IN</div>
+      <div class="jame-co-item">Knoxville, Tennessee</div>
+      <div class="jame-divider"></div>
+      <div class="jame-quote">"If you want hype, there are thousands of AI companies. If you want structural stability between humans and machines — this is where that work lives."</div>
     </div>
   </div>
+</section>
+
+<!-- ═══ CLOSE ═══ -->
+<div class="principle">
+  <div class="principle-text">We don't say <em>correct.</em><br>We say <em>different.</em><br>You decide.</div>
 </div>
 
-<div id="persona-gate">
-  <div class="gate-logo">ARTIFACT ZERO</div>
-  <h1 class="gate-title">Conversational Authority Infrastructure</h1>
-  <p class="gate-sub">A deterministic middleware that enforces declared objective geometry and preserves operator-owned salience ordering across human–AI interaction.</p>
-  <div class="gate-question">Who are you?</div>
-  <div class="persona-grid">
-    <div class="persona-card" data-persona="explorer"><span class="persona-icon">🔍</span><div class="persona-name">I'm exploring AI tools</div><div class="persona-desc">Show me what this does in plain language</div></div>
-    <div class="persona-card" data-persona="executive"><span class="persona-icon">📊</span><div class="persona-name">I'm a decision-maker</div><div class="persona-desc">Show me cost reduction, risk, ROI</div></div>
-    <div class="persona-card" data-persona="developer"><span class="persona-icon">⚙️</span><div class="persona-name">I'm a developer</div><div class="persona-desc">Show me the full diagnostic + API</div></div>
-    <div class="persona-card" data-persona="cfo"><span class="persona-icon">💰</span><div class="persona-name">I'm analyzing AI spend</div><div class="persona-desc">Show me token economics + savings</div></div>
-    <div class="persona-card" data-persona="investor"><span class="persona-icon">🚀</span><div class="persona-name">I'm an investor</div><div class="persona-desc">Show me defensibility + market position</div></div>
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-brand">ARTIFACT ZERO LABS</div>
+  <div class="footer-links">
+    <a href="#engines">How It Works</a>
+    <a href="#results">Results</a>
+    <a href="#demo">Live Demo</a>
+    <a href="#pricing">Pricing</a>
+    <a href="/nti">API</a>
   </div>
-</div>
-
-<div id="main-app" class="app-container">
-  <div class="app-header">
-    <span class="dot"></span><span class="logo">ARTIFACT ZERO</span><span class="ver" id="h-ver">v2.1</span>
-    <a href="/live" class="live-link"><span class="blink"></span>LIVE FEED</a>
-    <span class="persona-label" id="h-persona" title="Click to switch view">-</span>
-  </div>
-  
-  <div class="app-body">
-    <div class="sections-container">
-      <div class="persona-hero" id="hero"></div>
-      
-      <div class="demo-section" id="demo-area"></div>
-      
-      <div class="loader" id="loader">
-        <div class="spin"></div>Running analysis...
-      </div>
-      
-      <!-- Progressive Results Container -->
-      <div class="results-container" id="resultsContainer">
-        
-        <!-- Step 1: Analysis Results -->
-        <div class="result-section" id="analysisSection">
-          <div class="result-section-header">
-            <div class="result-section-title">Analysis Complete</div>
-            <div class="result-section-step">Step 1 of 4</div>
-          </div>
-          <div class="analysis-results" id="analysisResults"></div>
-          <button class="next-step-btn" onclick="showNextSection('toolsSection')">
-            Show Enhancement Tools →
-          </button>
-        </div>
-
-        <!-- Step 2: Email Enhancement Tool -->
-        <div class="result-section" id="toolsSection">
-          <div class="result-section-header">
-            <div class="result-section-title">Email Enhancement Tool</div>
-            <div class="result-section-step">Step 2 of 4</div>
-          </div>
-          <div class="email-tool">
-            <div class="email-tool-header">
-              <div class="email-tool-title">TRANSFORM YOUR EMAILS</div>
-              <div class="email-tool-desc">Write an email draft, then use controls to see different versions</div>
-            </div>
-            <div class="email-tool-input">
-              <label>Your Email Draft:</label>
-              <textarea id="emailInput" placeholder="Type your email here..."></textarea>
-            </div>
-            <div class="email-tool-controls">
-              <div>
-                <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">APPROACH</label>
-                <div class="email-control-group">
-                  <div class="email-control-btn active" data-axis="approach" data-value="sales">Sales</div>
-                  <div class="email-control-btn" data-axis="approach" data-value="definitive">Definitive</div>
-                </div>
-              </div>
-              <div>
-                <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">URGENCY</label>
-                <div class="email-control-group">
-                  <div class="email-control-btn active" data-axis="urgency" data-value="measured">Measured</div>
-                  <div class="email-control-btn" data-axis="urgency" data-value="urgent">Urgent</div>
-                </div>
-              </div>
-              <div>
-                <label style="font-size:11px;color:var(--fg3);margin-bottom:8px;display:block;">TONE</label>
-                <div class="email-control-group">
-                  <div class="email-control-btn active" data-axis="tone" data-value="diplomatic">Diplomatic</div>
-                  <div class="email-control-btn" data-axis="tone" data-value="direct">Direct</div>
-                </div>
-              </div>
-            </div>
-            <div class="email-tool-output" id="emailOutput">
-              Type an email above and use the controls to see it transform...
-            </div>
-          </div>
-          <button class="next-step-btn" onclick="showNextSection('aiSection')">
-            Try AI Comparison →
-          </button>
-        </div>
-
-        <!-- Step 3: Raw Input vs NTI Analysis -->
-        <div class="result-section" id="aiSection">
-          <div class="result-section-header">
-            <div class="result-section-title">Raw Input vs NTI Analysis</div>
-            <div class="result-section-step">Step 3 of 4</div>
-          </div>
-          <div class="ai-comparison-tool">
-            <div style="padding:20px;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2)">
-              <div style="margin-bottom:16px">
-                <div style="font-family:var(--mono);font-size:14px;color:var(--green);margin-bottom:8px">COMPARE RAW INPUT VS STRUCTURAL ANALYSIS</div>
-                <div style="font-size:12px;color:var(--fg3)">Type any text to see how NTI analyzes its structural integrity</div>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px">
-                  <div style="font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center">RAW INPUT (What You Type)</div>
-                  <input type="text" id="rawAIInput" placeholder="Type any question or text..." style="width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px">
-                  <button onclick="queryRawAI()" style="width:100%;padding:8px;background:var(--amber);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px">Show Raw Input</button>
-                  <div id="rawAIResponse" style="min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)">Your input will appear here...</div>
-                </div>
-                <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:16px">
-                  <div style="font-family:var(--mono);font-size:12px;color:var(--fg3);margin-bottom:12px;text-align:center">NTI STRUCTURAL ANALYSIS</div>
-                  <input type="text" id="ntiAIInput" placeholder="Same text..." style="width:100%;background:transparent;border:1px solid var(--bg3);color:var(--fg);padding:10px;border-radius:4px;font-size:13px;margin-bottom:10px">
-                  <button onclick="queryNTIAI()" style="width:100%;padding:8px;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:8px">Run NTI Analysis</button>
-                  <div id="ntiAIResponse" style="min-height:100px;background:var(--bg3);border-radius:4px;padding:12px;font-size:13px;line-height:1.5;border:1px solid var(--bg4)">Analysis results will appear here...</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button class="next-step-btn" onclick="showNextSection('demosSection')">
-            Try Interactive Demos →
-          </button>
-        </div>
-
-        <!-- Step 4: Interactive Demos -->
-        <div class="result-section" id="demosSection">
-          <div class="result-section-header">
-            <div class="result-section-title">Interactive Demos</div>
-            <div class="result-section-step">Step 4 of 4</div>
-          </div>
-          <div class="interactive-demo-section">
-            <div class="demo-selector" id="demoSelector">
-              <h3>Experience Problem → Solution Flow</h3>
-              <p>See exactly what NTI fixes in real-time with guided scenarios</p>
-              <div class="demo-buttons">
-                <button class="demo-select-btn" onclick="startDemo('email_response')">
-                  📧 Fix Email Response
-                </button>
-                <button class="demo-select-btn" onclick="startDemo('customer_support')">
-                  🚨 Handle Customer Crisis  
-                </button>
-                <button class="demo-select-btn" onclick="startDemo('project_update')">
-                  📊 Project Status Update
-                </button>
-              </div>
-            </div>
-            <div id="interactiveDemoContainer"></div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</div>
+  <div class="footer-copy">NTI — No-Tilt Interface · dontgofulltilt.com · Knoxville, TN</div>
+</footer>
 
 <script>
-(function(){
-const $=id=>document.getElementById(id);
-
-const PERSONAS={
-    explorer:{name:'Explorer',title:'See AI instability in real time',desc:'Paste any AI prompt and response below. Artifact Zero will show you exactly where the AI drifted, deflected, or collapsed your constraints — without using any AI itself.'},
-    executive:{name:'Decision-Maker',title:'AI risk & cost at a glance',desc:'Every AI interaction carries hidden risk: constraint collapse, objective drift, unnecessary token spend. Paste a real exchange to see the exposure.'},
-    developer:{name:'Developer',title:'Full NTI + Physics diagnostic',desc:'Complete audit: failure modes (UDDS/DCE/CCA), tilt taxonomy, NII scoring, plus the new conversational physics layer — transform legality, abstraction tracking, drift detection.'},
-    cfo:{name:'AI Spend Analyst',title:'Token economics & invocation savings',desc:'See how many tokens an AI exchange actually needed vs. what was burned. Validated 63–65% cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro. Rule-based — zero inference cost.'},
-    investor:{name:'Investor',title:'Defensibility & market position',desc:'Artifact Zero enforces conversational topology through closed-set calculus. Not prompt engineering. Not tone filtering. Structural enforcement no competitor offers.'}
-};
-
-let currentPersona=null,lastNTI=null,lastPhysics=null,originalText='';
-let currentEmailState={approach:'sales',urgency:'measured',tone:'diplomatic'};
-
-fetch('/health').then(r=>r.json()).then(d=>{$('h-ver').textContent=d.version||'v2.1'}).catch(()=>{});
-
-// Question Physics URL detection temporarily removed for speed optimization
-
-// Menu functions
-function toggleMenu(){
-    const overlay=$('menuOverlay');
-    const panel=$('menuPanel');
-    overlay.classList.toggle('active');
-    panel.classList.toggle('active');
-}
-
-function closeMenu(){
-    $('menuOverlay').classList.remove('active');
-    $('menuPanel').classList.remove('active');
-}
-
-document.querySelectorAll('.persona-card').forEach(c=>{c.addEventListener('click',()=>activatePersona(c.dataset.persona))});
-$('h-persona').addEventListener('click',()=>{$('persona-gate').style.display='flex';$('main-app').classList.remove('active');resetResults()});
-
-function activatePersona(key){
-    currentPersona=key;
-    const p=PERSONAS[key];
-    $('persona-gate').style.display='none';
-    $('main-app').classList.add('active');
-    $('h-persona').textContent=p.name.toUpperCase();
-    $('hero').innerHTML='<h2>'+p.title+'</h2><p>'+p.desc+'</p>';
-    buildDemoArea(key);
-    resetResults();
-}
-
-function resetResults(){
-    // Hide all result sections
-    document.querySelectorAll('.result-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    // Clear content
-    $('analysisResults').innerHTML='';
-}
-
-function buildDemoArea(key){
-    let html='';
-    if(key==='developer'){
-        html+=`<label>Prompt</label><div class="input-grid" style="margin-bottom:10px"><textarea id="in-prompt" placeholder="Enter the prompt / human input..."></textarea><textarea id="in-answer" placeholder="Enter the AI response..."></textarea></div><div class="input-grid three" style="margin-bottom:10px"><div><label>Objective Type (Physics)</label><select id="in-obj"><option value="">Skip physics</option><option value="RESOLVE">RESOLVE</option><option value="EXPLORE">EXPLORE</option><option value="STRUCTURE">STRUCTURE</option><option value="EXECUTE">EXECUTE</option><option value="DIAGNOSE">DIAGNOSE</option><option value="ALIGN">ALIGN</option></select></div><div><label>Prev Abstraction (0-5)</label><input type="text" id="in-abs" value="0"></div><div><label>Stagnant Turns</label><input type="text" id="in-stag" value="0"></div></div><div class="btn-row"><button class="btn btn-go" id="btn-run">RUN FULL AUDIT</button><button class="btn btn-ghost" id="btn-clr">CLEAR</button></div>`;
-    }else{
-        html+=`<label>Paste an AI exchange</label><div class="input-grid" style="margin-bottom:10px"><div><label>Prompt / question</label><textarea id="in-prompt" placeholder="What you asked the AI..."></textarea></div><div><label>AI response</label><textarea id="in-answer" placeholder="What the AI said back..."></textarea></div></div><div class="btn-row"><button class="btn btn-go" id="btn-run">ANALYZE</button><button class="btn btn-ghost" id="btn-clr">CLEAR</button></div>`;
-    }
-    $('demo-area').innerHTML=html;
-    $('btn-run').addEventListener('click',runAnalysis);
-    $('btn-clr').addEventListener('click',()=>{
-        if($('in-prompt'))$('in-prompt').value='';
-        if($('in-answer'))$('in-answer').value='';
-        resetResults();
-    });
-}
-
-async function runAnalysis(){
-    const prompt=($('in-prompt')||{}).value||'';
-    const answer=($('in-answer')||{}).value||'';
-    if(!prompt&&!answer){alert('Paste text to analyze.');return}
-    
-    originalText=prompt+' '+answer;
-    
-    $('loader').classList.add('on');
-    resetResults();
-    
-    // Call main NTI analysis
-    try{
-        const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,answer})});
-        lastNTI=await r.json();
-    }catch(e){
-        lastNTI={error:e.message};
-    }
-    
-    // Question Physics temporarily disabled for speed optimization
-    // Will be re-enabled when standalone service is deployed
-    
-    lastPhysics=null;
-    const objEl=$('in-obj');
-    if(objEl&&objEl.value){
-        try{
-            const r=await fetch('/physics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt+'\n'+answer,objective_type:objEl.value,previous_abstraction_level:parseInt(($('in-abs')||{}).value)||0,consecutive_stagnant_turns:parseInt(($('in-stag')||{}).value)||0})});
-            lastPhysics=await r.json();
-        }catch(e){
-            lastPhysics={error:e.message};
-        }
-    }
-    
-    $('loader').classList.remove('on');
-    showAnalysisResults();
-}
-
-function showAnalysisResults(){
-    if(!lastNTI||lastNTI.error){
-        $('analysisResults').innerHTML='<div class="detail-block"><div class="detail-title">Error</div><div class="detail-body" style="color:var(--red)">'+(lastNTI?lastNTI.error:'No response')+'</div></div>';
-        $('analysisSection').classList.add('active');
-        return;
-    }
-    
-    const d=lastNTI,nii=d.nii||{},dominance=(d.interaction_matrix||{}).dominance_detected||[],tilt=d.tilt_taxonomy||[],udds=(d.parent_failure_modes||{}).UDDS||{},dce=(d.parent_failure_modes||{}).DCE||{},cca=(d.parent_failure_modes||{}).CCA||{},drift_score=((d.layers||{}).L3_objective_integrity||{}).drift_score||0,latency=(d.telemetry||{}).latency_ms;
-    
-    let html = '';
-    ({
-        explorer:()=>{html=renderExplorer(d,nii,dominance,tilt,drift_score,udds,dce,cca)},
-        executive:()=>{html=renderExecutive(d,nii,dominance,tilt,drift_score,udds,dce,cca,latency)},
-        developer:()=>{html=renderDeveloper(d,nii,dominance,tilt,drift_score,udds,dce,cca,latency)},
-        cfo:()=>{html=renderCFO(d,nii,dominance,tilt,drift_score,latency)},
-        investor:()=>{html=renderInvestor(d,nii,dominance,tilt,drift_score,udds,dce,cca)}
-    })[currentPersona]();
-    
-    $('analysisResults').innerHTML=html;
-    $('analysisSection').classList.add('active');
-    
-    // Initialize email tool with original text
-    $('emailInput').value = originalText;
-    transformEmail();
-}
-
-// Question Physics Display Function (unchanged)
-function renderQuestionPhysics(qp) {
-    if (!qp || !qp.question_present) return '';
-    
-    let html = '<div class="question-physics">';
-    html += '<div class="question-physics-header">';
-    html += '<div class="question-physics-title">QUESTION PHYSICS</div>';
-    html += '<div class="question-physics-desc">Structural analysis of question intent - no accusations, just patterns</div>';
-    html += '</div>';
-    
-    // Question type badges
-    if (qp.question_types && qp.question_types.length > 0) {
-        html += '<div class="question-type-badges">';
-        for (const type of qp.question_types) {
-            const badgeClass = {
-                'CONSTRAINT_INJECTION': 'constraint',
-                'AUTHORITY_SHIFT': 'authority', 
-                'FRAMING_TRAP': 'framing',
-                'REPETITION_PRESSURE': 'repetition',
-                'INFORMATION_EXPANSION': 'info'
-            }[type] || 'info';
-            
-            html += `<div class="question-type-badge ${badgeClass}">${type.replace('_', ' ')}</div>`;
-        }
-        html += '</div>';
-    }
-    
-    // Risk metrics grid
-    html += '<div class="question-risk-grid">';
-    
-    const riskLevel = qp.structural_risk >= 60 ? 'high' : qp.structural_risk >= 30 ? 'medium' : 'low';
-    html += '<div class="question-risk-item">';
-    html += '<div class="question-risk-label">Structural Risk</div>';
-    html += `<div class="question-risk-value ${riskLevel}">${qp.structural_risk}%</div>`;
-    html += '</div>';
-    
-    if (qp.frame_shift_detected !== undefined) {
-        html += '<div class="question-risk-item">';
-        html += '<div class="question-risk-label">Frame Shift</div>';
-        html += `<div class="question-risk-value ${qp.frame_shift_detected ? 'medium' : 'low'}">${qp.frame_shift_detected ? 'YES' : 'NO'}</div>`;
-        html += '</div>';
-    }
-    
-    if (qp.constraint_injection_detected !== undefined) {
-        html += '<div class="question-risk-item">';
-        html += '<div class="question-risk-label">Constraint Injection</div>';
-        html += `<div class="question-risk-value ${qp.constraint_injection_detected ? 'high' : 'low'}">${qp.constraint_injection_detected ? 'YES' : 'NO'}</div>`;
-        html += '</div>';
-    }
-    
-    if (qp.authority_shift_detected !== undefined) {
-        html += '<div class="question-risk-item">';
-        html += '<div class="question-risk-label">Authority Shift</div>';
-        html += `<div class="question-risk-value ${qp.authority_shift_detected ? 'medium' : 'low'}">${qp.authority_shift_detected ? 'YES' : 'NO'}</div>`;
-        html += '</div>';
-    }
-    
-    html += '</div>';
-    html += '</div>';
-    
-    return html;
-}
-
-// Progressive section revealing - NO PAGE JUMPING
-function showNextSection(sectionId) {
-    const section = $(sectionId);
-    if (section) {
-        section.classList.add('active');
-        // NO scrollIntoView - keep user exactly where they are
-    }
-}
-
-// Email Enhancement Tool
-function setupEmailTool() {
-    document.querySelectorAll('.email-control-btn').forEach(btn=>{
-        btn.addEventListener('click',function(){
-            const axis=this.dataset.axis;
-            const value=this.dataset.value;
-            
-            document.querySelectorAll(`.email-control-btn[data-axis="${axis}"]`).forEach(b=>b.classList.remove('active'));
-            this.classList.add('active');
-            
-            currentEmailState[axis]=value;
-            transformEmail();
-        });
-    });
-    
-    $('emailInput').addEventListener('input', transformEmail);
-}
-
-function transformEmail(){
-    const emailText = $('emailInput').value.trim();
-    if (!emailText) {
-        $('emailOutput').textContent = 'Type an email above and use the controls to see it transform...';
-        return;
-    }
-    
-    let transformed = emailText;
-    const state = currentEmailState;
-    
-    if(state.approach==='sales'){
-        transformed=transformed.replace(/\b(problem|issue|error)\b/gi,'opportunity');
-        transformed=transformed.replace(/\b(fix|solve)\b/gi,'optimize');
-    }else{
-        transformed=transformed.replace(/\bopportunity\b/gi,'problem');
-        transformed=transformed.replace(/\boptimize\b/gi,'fix');
-    }
-    
-    if(state.urgency==='urgent'){
-        transformed=transformed.replace(/\b(later|eventually|sometime)\b/gi,'immediately');
-        if(!transformed.startsWith('URGENT:')){
-            transformed='URGENT: '+transformed;
-        }
-    }else{
-        transformed=transformed.replace(/^URGENT: /,'');
-        transformed=transformed.replace(/\bimmediately\b/gi,'when appropriate');
-    }
-    
-    if(state.tone==='direct'){
-        transformed=transformed.replace(/\b(please|kindly|perhaps|I believe)\b/gi,'');
-        transformed=transformed.replace(/\s+/g,' ').trim();
-    }else{
-        if(!transformed.startsWith('I believe')){
-            transformed='I believe '+transformed;
-        }
-    }
-    
-    $('emailOutput').textContent = transformed;
-}
-
-// AI Comparison Functions - Fixed to use existing /nti endpoint
-async function queryRawAI(){
-    const input = $('rawAIInput').value.trim();
-    if (!input) return;
-    
-    $('rawAIResponse').textContent = 'Processing...';
-    
-    // Simply show the raw input as "baseline"
-    setTimeout(() => {
-        $('rawAIResponse').textContent = input;
-    }, 500);
-}
-
-async function queryNTIAI(){
-    const input = $('ntiAIInput').value.trim();
-    if (!input) return;
-    
-    $('ntiAIResponse').textContent = 'Processing with NTI...';
-    
-    try {
-        // Call existing /nti endpoint
-        const res = await fetch('/nti', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({text: input})
-        });
-        
-        const data = await res.json();
-        
-        if (data.error) {
-            $('ntiAIResponse').textContent = 'Error: ' + data.error;
-            return;
-        }
-        
-        // Create a summary of NTI analysis
-        const nii = data.nii || {};
-        const score = Math.round((nii.nii_score || 0) * 100);
-        const dominance = (data.interaction_matrix || {}).dominance_detected || [];
-        const tilt = data.tilt_taxonomy || [];
-        
-        let summary = `NTI Analysis Results:\n\n`;
-        summary += `• Integrity Score: ${score}%\n`;
-        summary += `• Structural Issues: ${tilt.length} detected\n`;
-        summary += `• Failure Modes: ${dominance.join(', ') || 'None'}\n`;
-        
-        if (data.question_physics && data.question_physics.question_present) {
-            const qp = data.question_physics;
-            summary += `\nQuestion Physics:\n`;
-            summary += `• Type: ${qp.question_types.join(', ')}\n`;
-            summary += `• Structural Risk: ${qp.structural_risk}%\n`;
-        }
-        
-        if (score < 75) {
-            summary += `\nRecommendation: This input shows structural instability. Consider rephrasing with clearer constraints.`;
-        } else {
-            summary += `\nRecommendation: Input structure is stable and well-formed.`;
-        }
-        
-        $('ntiAIResponse').textContent = summary;
-        
-    } catch(err) {
-        $('ntiAIResponse').textContent = 'Connection error: ' + err.message;
-    }
-}
-
-// Sync inputs between AI comparison columns
-document.addEventListener('DOMContentLoaded',function(){
-    $('rawAIInput').addEventListener('input',function(){
-        $('ntiAIInput').value=this.value;
-    });
-    
-    $('ntiAIInput').addEventListener('input',function(){
-        $('rawAIInput').value=this.value;
-    });
-    
-    setupEmailTool();
-});
-
-// Interactive Demos (simplified for now)
-function startDemo(demoType) {
-    $('demoSelector').style.display = 'none';
-    $('interactiveDemoContainer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--fg2);">Interactive demos coming soon...</div>';
-}
-
-// Render functions (updated to include Question Physics)
-function renderInvestor(d,nii,dominance,tilt,drift,udds,dce,cca){
-    let h='',score=nii.nii_score||0;
-    
-    // Add Question Physics if available
-    if (d.question_physics) {
-        h += renderQuestionPhysics(d.question_physics);
-    }
-    
-    h+='<div class="urgency-banner"><div class="urgency-number">LIVE DEMO</div><div class="urgency-label">You just experienced the product working in real-time · This is not a mockup</div></div>';
-    h+='<div class="insight investor-urgency"><span class="insight-icon">🚨</span><h3>What you just witnessed</h3><p>This analysis ran in <strong>'+(d.telemetry?.latency_ms||'<100')+'ms</strong> using zero AI calls. Pure deterministic logic caught structural failures that would cost thousands in rework tokens. <strong>Every enterprise with >$50K/month AI spend needs this.</strong> We\'re raising $2.5M to lock in first-mover advantage before competitors figure out conversational physics.</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Your Demo',Math.round(score*100)+'%',score>=.75?'green':'red','g','Live integrity analysis');
-    h+=mk('Market Gap','MASSIVE','green','g','No one else does this');
-    h+=mk('Defensibility','PATENT-READY','green','g','Conversational physics IP');
-    h+=mk('Revenue Model','VALIDATED','green','g','63-65% cost reduction proven');
-    h+='</div>';
-    h+='<div class="investor-action"><div class="action-title">This Round Closes March 31st</div><div class="action-grid"><div class="action-card urgent"><div class="action-amount">$25K</div><div class="action-label">DEMO + DUE DILIGENCE</div><div class="action-desc">1hr technical demo, full codebase review, 3 pilot customers included</div><button class="action-btn red" onclick="investNow(25000)">SECURE DEMO SLOT</button></div><div class="action-card"><div class="action-amount">$100K</div><div class="action-label">STRATEGIC POSITION</div><div class="action-desc">Board observer rights, quarterly business reviews, co-marketing rights</div><button class="action-btn green" onclick="investNow(100000)">RESERVE ALLOCATION</button></div><div class="action-card premium"><div class="action-amount">$250K+</div><div class="action-label">LEAD INVESTOR</div><div class="action-desc">Board seat, IP licensing, enterprise partner channel</div><button class="action-btn premium" onclick="investNow(250000)">LEAD THE ROUND</button></div></div></div>';
-    h+=jb(d);
-    return h;
-}
-
-function renderCFO(d,nii,dominance,tilt,drift,lat){
-    let h='',score=nii.nii_score||0,avoidable=dominance[0]!=='NONE';
-    
-    // Add Question Physics if available
-    if (d.question_physics) {
-        h += renderQuestionPhysics(d.question_physics);
-    }
-    
-    h+='<div class="savings-calculator"><div class="calc-title">Calculate Your AI Savings</div><div class="calc-row"><div class="calc-label">Employees using AI:</div><input type="number" class="calc-input" id="calc-employees" value="200" onchange="calculateSavings()"><div class="calc-result" id="current-spend">$16,000</div></div><div class="calc-row"><div class="calc-label">Average salary:</div><input type="number" class="calc-input" id="calc-salary" value="80000" onchange="calculateSavings()"><div class="calc-result" id="monthly-savings">$10,400</div></div><div class="calc-row"><div class="calc-label">AI hours/employee/month:</div><input type="number" class="calc-input" id="calc-usage" value="20" onchange="calculateSavings()"><div class="calc-result">Current</div></div><div class="savings-projection"><div class="projection-amount" id="total-projection">$400,000</div><div class="projection-timeline">Feb: <span id="feb-savings">$150K</span> • Mar: <span id="mar-savings">$150K</span> • Apr: <span id="apr-savings">$100K</span></div><button class="action-btn green" style="margin-top:12px" onclick="buyCFODemo()">GET LIVE DEMO - $2,500</button></div></div>';
-    h+='<div class="insight"><span class="insight-icon">💰</span><h3>What this exchange would cost you</h3><p>';
-    if(avoidable)h+='This interaction triggered '+dominance.length+' failure modes. In a production system, these patterns compound — every drifted response generates follow-up clarifications that burn more tokens. ';
-    h+='Artifact Zero detects these patterns <strong>before</strong> the AI call, enabling invocation governance: routing to human resolution when AI would waste tokens, and pre-stabilizing input when AI is the right path.</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'amber','g');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'red','r','Higher drift = more follow-up tokens');
-    h+=mk('Tilt Signals',tilt.length,tilt.length===0?'green':'amber','a','Each signal = potential rework loop');
-    h+=mk('Avoidable',avoidable?'YES':'NO',avoidable?'red':'green',avoidable?'r':'g','Could this call have been avoided?');
-    h+=mk('Failure Modes',dominance.join('+'),dominance[0]==='NONE'?'green':'red',dominance[0]==='NONE'?'g':'r');
-    h+=mk('Latency',lat+'ms','cyan','c','Processing cost: near zero');
-    h+='</div>';
-    h+=jb(d);
-    setTimeout(calculateSavings,100);
-    return h;
-}
-
-function renderExplorer(d,nii,dominance,tilt,drift,udds,dce,cca){
-    let h='',score=nii.nii_score||0,v,vc;
-    
-    // Add Question Physics if available
-    if (d.question_physics) {
-        h += renderQuestionPhysics(d.question_physics);
-    }
-    
-    if(score>=.8){v='This AI response looks structurally sound.';vc='green'}
-    else if(score>=.5){v='This AI response has structural issues — it drifted from your constraints or deflected your question.';vc='amber'}
-    else{v='This AI response has serious structural problems. Your constraints were ignored or collapsed.';vc='red'}
-    h+='<div class="insight"><span class="insight-icon">🔍</span><h3 style="color:var(--'+vc+')">'+v+'</h3><p>';
-    if(dominance.includes('CCA'))h+='The AI collapsed your specific requirements into vague generalities. ';
-    if(dominance.includes('UDDS'))h+='Your constraints were acknowledged but then bypassed with reassuring language. ';
-    if(dominance.includes('DCE'))h+='Important decisions were pushed to "later" instead of being addressed now. ';
-    if(drift>.5)h+='The response drifted significantly from what you actually asked ('+Math.round(drift*100)+'% drift). ';
-    if(tilt.length)h+='We detected '+tilt.length+' linguistic patterns that indicate structural instability.';
-    h+='</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Integrity Score',Math.round(score*100)+'%',score>=.75?'green':'red','g');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'red','r');
-    h+=mk('Issues Found',tilt.length,tilt.length===0?'green':'red','r');
-    h+=mk('Failure Modes',dominance.join(' + '),dominance[0]==='NONE'?'green':'red','r');
-    h+='</div>';
-    h+=jb(d);
-    return h;
-}
-
-function renderExecutive(d,nii,dominance,tilt,drift,udds,dce,cca,lat){
-    let h='',score=nii.nii_score||0,rl,rc;
-    
-    // Add Question Physics if available
-    if (d.question_physics) {
-        h += renderQuestionPhysics(d.question_physics);
-    }
-    
-    if(dominance[0]==='NONE'&&score>=.75){rl='LOW';rc='green'}
-    else if(score>=.5){rl='MEDIUM';rc='amber'}
-    else{rl='HIGH';rc='red'}
-    h+='<div class="insight"><span class="insight-icon">⚡</span><h3>Risk Level: <span style="color:var(--'+rc+')">'+rl+'</span></h3><p>This AI exchange has an integrity score of '+Math.round(score*100)+'% with '+tilt.length+' structural issues detected. ';
-    if(drift>.5)h+='The response diverged '+Math.round(drift*100)+'% from the original objective. ';
-    if(dominance.includes('DCE'))h+='Critical decisions were deferred — this creates downstream execution risk. ';
-    h+='</p></div>';
-    h+='<div class="card-grid">';
-    h+=mk('Integrity',Math.round(score*100)+'%',score>=.75?'green':'red','g');
-    h+=mk('Risk',rl,rc,rc==='green'?'g':'r');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'amber','a');
-    h+=mk('Failure Modes',dominance.length>1||dominance[0]!=='NONE'?dominance.join('+'):'NONE',dominance[0]==='NONE'?'green':'red','g');
-    h+=mk('Tilt Signals',tilt.length,'blue','b');
-    h+=mk('Latency',lat+'ms','cyan','c');
-    h+='</div>';
-    h+=jb(d);
-    return h;
-}
-
-function renderDeveloper(d,nii,dominance,tilt,drift,udds,dce,cca,lat){
-    let h='';
-    
-    // Add Question Physics if available
-    if (d.question_physics) {
-        h += renderQuestionPhysics(d.question_physics);
-    }
-    
-    h+='<div class="detail-title" style="margin-bottom:10px">NTI ANALYSIS</div><div class="card-grid">';
-    h+=mk('NII',Math.round((nii.nii_score||0)*100)+'%',nii.nii_score>=.75?'green':'amber','g');
-    h+=mk('Q1 Constraints',nii.q1_constraints_explicit?'YES':'NO',nii.q1_constraints_explicit?'green':'red','g');
-    h+=mk('Q2 Order',nii.q2_constraints_before_capability?'YES':'NO',nii.q2_constraints_before_capability?'green':'red','g');
-    h+=mk('Q3 Boundary',nii.q3_substitutes_after_enforcement?'YES':'NO',nii.q3_substitutes_after_enforcement?'green':'red','g');
-    h+=mk('Drift',Math.round(drift*100)+'%',drift<.3?'green':'amber','a');
-    h+=mk('Latency',lat+'ms','cyan','c');
-    h+='</div>';
-    if(lastPhysics&&!lastPhysics.error){
-        const ph=lastPhysics,dr=ph.drift||{},tr=ph.transform||{},ab=ph.abstraction||{},sal=ph.salience||{};
-        h+='<div class="detail-title" style="margin-top:24px;margin-bottom:10px">PHYSICS ENGINE</div><div class="card-grid">';
-        h+=mk('Verdict',dr.verdict||'—',dr.verdict==='CLEAN'?'green':dr.violation_count<=2?'amber':'red',dr.verdict==='CLEAN'?'g':dr.violation_count<=2?'a':'r');
-        h+=mk('Transform',tr.primary_transform||'—','blue','b');
-        h+=mk('Legal',(dr.transform||{}).legal?'YES':'NO',(dr.transform||{}).legal?'green':'red',(dr.transform||{}).legal?'g':'r');
-        h+=mk('Abstraction','L'+(ab.detected_level||0),'purple','p');
-        h+=mk('Objective',ph.objective_type||'—','cyan','c');
-        h+=mk('Violations',dr.violation_count||0,dr.violation_count===0?'green':'amber',dr.violation_count===0?'g':'a');
-        h+='</div>';
-    }
-    h+=jb(d);
-    return h;
-}
-
-function mk(label,value,color,border,sub){
-    let h='<div class="card '+border+'"><div class="card-label">'+label+'</div><div class="card-value '+color+'">'+value+'</div>';
-    if(sub)h+='<div class="card-sub">'+sub+'</div>';
-    return h+'</div>';
-}
-
-function jb(data){
-    return'<div class="json-toggle" onclick="this.nextElementSibling.classList.toggle(\'open\')">▶ RAW JSON</div><div class="json-raw"><pre>'+JSON.stringify(data,null,2)+'</pre></div>';
-}
-
-// Investment functions
-async function investNow(amount){
-    if(confirm(`Proceed with $${amount.toLocaleString()} investment commitment?`)){
-        try{
-            const res=await fetch('/api/stripe/invest',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({
-                    amount:amount,
-                    type:amount>=250000?'lead':amount>=100000?'strategic':'demo',
-                    analysis:lastNTI
-                })
-            });
-            const data=await res.json();
-            if(data.url){
-                window.location.href=data.url;
-            }else{
-                alert('Error: '+(data.error||'Payment processing failed'));
-            }
-        }catch(err){
-            alert('Connection error: '+err.message);
-        }
-    }
-}
-
-function calculateSavings(){
-    const employees=parseInt($('calc-employees').value)||0;
-    const salary=parseInt($('calc-salary').value)||80000;
-    const aiUsage=parseInt($('calc-usage').value)||20;
-    
-    const avgTokensPerEmployee=aiUsage*50000;
-    const costPerMToken=8;
-    const monthlySpend=(employees*avgTokensPerEmployee*costPerMToken)/1000000;
-    
-    const monthlySavings=monthlySpend*0.65;
-    const feb=Math.min(monthlySavings,150000);
-    const mar=Math.min(monthlySavings,150000);
-    const apr=Math.min(monthlySavings,100000);
-    
-    $('current-spend').textContent='$'+Math.round(monthlySpend).toLocaleString();
-    $('monthly-savings').textContent='$'+Math.round(monthlySavings).toLocaleString();
-    $('feb-savings').textContent='$'+Math.round(feb).toLocaleString();
-    $('mar-savings').textContent='$'+Math.round(mar).toLocaleString();
-    $('apr-savings').textContent='$'+Math.round(apr).toLocaleString();
-    
-    const total=feb+mar+apr;
-    $('total-projection').textContent='$'+Math.round(total).toLocaleString();
-}
-
-async function buyCFODemo(){
-    const employees=parseInt($('calc-employees').value)||0;
-    if(employees<50){
-        alert('Demo available for companies with 50+ employees');
-        return;
-    }
-    
-    try{
-        const res=await fetch('/api/stripe/cfo-demo',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                employees:employees,
-                projectedSavings:$('total-projection').textContent,
-                analysis:lastNTI
-            })
-        });
-        const data=await res.json();
-        if(data.url){
-            window.location.href=data.url;
-        }else{
-            alert('Error: '+(data.error||'Demo booking failed'));
-        }
-    }catch(err){
-        alert('Connection error: '+err.message);
-    }
-}
-
-// Expose global functions
-window.toggleMenu = toggleMenu;
-window.closeMenu = closeMenu;
-window.showNextSection = showNextSection;
-window.startDemo = startDemo;
-window.investNow = investNow;
-window.calculateSavings = calculateSavings;
-window.buyCFODemo = buyCFODemo;
-window.queryRawAI = queryRawAI;
-window.queryNTIAI = queryNTIAI;
-
-})();
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('v');obs.unobserve(x.target)}})},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+const d=Math.ceil((new Date('2026-05-05')-new Date())/(864e5));
+const c=document.getElementById('countdown');if(c)c.textContent=d;
 </script>
 </body>
-<script src="/static/production-patch.js"></script>
 </html>
