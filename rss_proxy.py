@@ -219,6 +219,45 @@ def knoxville_dashboard():
         return f"Error loading dashboard: {e}", 500
 
 
+@rss_bp.route('/live/license/knoxville')
+def knoxville_license():
+    """Serve the Knoxville Market License page."""
+    try:
+        from flask import render_template
+        return render_template('license-knoxville.html')
+    except Exception as e:
+        return f"Error loading license page: {e}", 500
+
+
+@rss_bp.route('/api/license-inquiry', methods=['POST'])
+def license_inquiry():
+    """Handle license inquiry form submissions."""
+    try:
+        data = request.get_json(force=True)
+        name = data.get('name', 'Unknown')
+        org = data.get('org', 'Unknown')
+        email = data.get('email', 'Unknown')
+        tier = data.get('tier', 'Unknown')
+        phone = data.get('phone', '')
+        title = data.get('title', '')
+        notes = data.get('notes', '')
+
+        # Log the inquiry
+        import datetime
+        timestamp = datetime.datetime.utcnow().isoformat()
+        print(f"[LICENSE INQUIRY] {timestamp}")
+        print(f"  Name: {name} | Title: {title}")
+        print(f"  Org: {org}")
+        print(f"  Email: {email} | Phone: {phone}")
+        print(f"  Tier: {tier}")
+        print(f"  Notes: {notes}")
+        print(f"  ---")
+
+        return jsonify({"status": "received", "message": "Inquiry logged successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @rss_bp.route('/api/rss-proxy/article', methods=['POST'])
 def rss_article_proxy():
     """Fetch full article text from a URL. Returns extracted text content."""
