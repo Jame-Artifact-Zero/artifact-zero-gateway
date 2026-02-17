@@ -11,3 +11,6 @@ from .ctc import classify_transform, audit_transform
 from .als import detect_abstraction_level, check_abstraction_guard
 from .salience import detect_salience_transforms
 from .odd import detect_drift, compute_state_delta
+
+# Interrogative Analysis Engine (v1.0)
+from .interrogative_engine import compute_interrogative_field

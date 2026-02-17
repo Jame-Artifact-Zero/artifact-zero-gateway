@@ -9,6 +9,7 @@ from core_engine.routing_engine import route
 from core_engine.trace import start_trace, end_trace
 
 from core_engine.edge_engine import compute_relational_field
+from core_engine.interrogative_engine import compute_interrogative_field
 from core_engine.economic_layer import compute_economic_layer
 from core_engine.banding import band_cost
 from core_engine.invocation_governance import evaluate_invocation
@@ -19,8 +20,9 @@ def process_request(text: str) -> dict:
     """
     Unified processing pipeline:
 
-    Human → V2 → AI → V3 → Human
+    Human -> V2 -> AI -> V3 -> Human
     + Relational Field
+    + Interrogative Field
     + Economic Layer
     + Banding
     + Invocation Governance
@@ -56,6 +58,12 @@ def process_request(text: str) -> dict:
     relational_field = compute_relational_field(text)
 
     # =========================
+    # Interrogative Field (Question Physics)
+    # =========================
+
+    interrogative_field = compute_interrogative_field(text)
+
+    # =========================
     # Economic Layer
     # =========================
 
@@ -85,6 +93,7 @@ def process_request(text: str) -> dict:
     response = {
         "structural_field": structural_field,
         "relational_field": relational_field,
+        "interrogative_field": interrogative_field,
         "economic": economic,
         "invocation_governance": invocation,
     }
