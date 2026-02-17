@@ -24,6 +24,21 @@ except ImportError:
 
 rss_bp = Blueprint('rss_proxy', __name__)
 
+# ── CACHE ──
+_cache: Dict[str, Dict[str, Any]] = {}
+CACHE_TTL = 90  # seconds
+
+def _get_cached(url: str) -> Optional[Dict[str, Any]]:
+    """Return cached result if still fresh."""
+    entry = _cache.get(url)
+    if entry and (datetime.utcnow() - entry['ts']).total_seconds() < CACHE_TTL:
+        return entry['data']
+    return None
+
+def _set_cached(url: str, data: Dict[str, Any]) -> None:
+    """Store result in cache."""
+    _cache[url] = {'data': data, 'ts': datetime.utcnow()}
+
 # ── ALLOWED FEEDS (whitelist for security) ──
 ALLOWED_DOMAINS = [
     'feeds.bbci.co.uk',
@@ -74,19 +89,37 @@ def fetch_rss(url: str, max_items: int = 15) -> Dict[str, Any]:
     if not is_allowed_url(url):
         return {"error": "Domain not in allowed list", "items": []}
 
+    # Check cache first
+    cached = _get_cached(url)
+    if cached:
+        return cached
+
     try:
         req = urllib.request.Request(url, headers={
             'User-Agent': 'NTI-LiveFeed/1.0 (Artifact Zero Labs; structural analysis research)',
             'Accept': 'application/rss+xml, application/xml, text/xml, */*',
         })
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:
             raw = response.read().decode('utf-8', errors='replace')
     except urllib.error.URLError as e:
+        # Return stale cache if available, otherwise error
+        stale = _cache.get(url)
+        if stale:
+            return stale['data']
         return {"error": f"Fetch failed: {str(e)}", "items": []}
     except Exception as e:
+        stale = _cache.get(url)
+        if stale:
+            return stale['data']
         return {"error": f"Unexpected error: {str(e)}", "items": []}
 
-    return parse_rss_xml(raw, max_items)
+    result = parse_rss_xml(raw, max_items)
+
+    # Cache successful results
+    if not result.get("error"):
+        _set_cached(url, result)
+
+    return result
 
 
 def strip_html(text: str) -> str:
@@ -171,9 +204,10 @@ def rss_proxy():
 
     result = fetch_rss(url, max_items)
 
-    if result.get("error"):
+    if result.get("error") and not result.get("items"):
         return jsonify(result), 502
 
+    # If we have items (even with an error), return 200
     return jsonify(result)
 
 
