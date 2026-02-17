@@ -26,15 +26,15 @@ rss_bp = Blueprint('rss_proxy', __name__)
 
 # ── ALLOWED FEEDS (whitelist for security) ──
 ALLOWED_DOMAINS = [
-    'feeds.reuters.com',
-    'feeds.apnews.com',
     'feeds.bbci.co.uk',
-    'rss.cnn.com',
+    'feeds.npr.org',
+    'feeds.nbcnews.com',
     'rss.nytimes.com',
     'feeds.foxnews.com',
-    'feeds.nbcnews.com',
     'feeds.washingtonpost.com',
     'news.google.com',
+    'thehill.com',
+    'www.vox.com',
 ]
 
 
@@ -57,9 +57,9 @@ def fetch_rss(url: str, max_items: int = 15) -> Dict[str, Any]:
     try:
         req = urllib.request.Request(url, headers={
             'User-Agent': 'NTI-LiveFeed/1.0 (Artifact Zero Labs; structural analysis research)',
-            'Accept': 'application/rss+xml, application/xml, text/xml',
+            'Accept': 'application/rss+xml, application/xml, text/xml, */*',
         })
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=15) as response:
             raw = response.read().decode('utf-8', errors='replace')
     except urllib.error.URLError as e:
         return {"error": f"Fetch failed: {str(e)}", "items": []}
@@ -75,7 +75,6 @@ def strip_html(text: str) -> str:
         return ""
     clean = re.sub(r'<[^>]+>', '', text)
     clean = re.sub(r'\s+', ' ', clean).strip()
-    # Decode common HTML entities
     clean = clean.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
     clean = clean.replace('&quot;', '"').replace('&#39;', "'").replace('&apos;', "'")
     return clean
@@ -89,10 +88,6 @@ def parse_rss_xml(raw_xml: str, max_items: int = 15) -> Dict[str, Any]:
         root = ET.fromstring(raw_xml)
     except ET.ParseError:
         return {"error": "Failed to parse RSS XML", "items": []}
-
-    # Handle both RSS 2.0 and Atom formats
-    # RSS 2.0: /rss/channel/item
-    # Atom: /feed/entry
 
     # Try RSS 2.0
     channel = root.find('.//channel')
@@ -119,7 +114,6 @@ def parse_rss_xml(raw_xml: str, max_items: int = 15) -> Dict[str, Any]:
     ns = {'atom': 'http://www.w3.org/2005/Atom'}
     entries = root.findall('atom:entry', ns) or root.findall('entry')
     if not entries:
-        # Try without namespace
         entries = root.findall('.//entry')
 
     for entry in entries[:max_items]:
@@ -168,9 +162,9 @@ def rss_sources():
     """Return list of available RSS sources."""
     return jsonify({
         "sources": [
-            {"id": "reuters", "name": "Reuters", "rss": "https://feeds.reuters.com/reuters/topNews"},
-            {"id": "ap", "name": "AP News", "rss": "https://feeds.apnews.com/rss/apf-topnews"},
             {"id": "bbc", "name": "BBC World", "rss": "https://feeds.bbci.co.uk/news/world/rss.xml"},
+            {"id": "npr", "name": "NPR News", "rss": "https://feeds.npr.org/1001/rss.xml"},
+            {"id": "nbc", "name": "NBC News", "rss": "https://feeds.nbcnews.com/nbcnews/public/news"},
         ]
     })
 

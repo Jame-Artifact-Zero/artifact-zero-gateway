@@ -1,0 +1,86 @@
+# STANDALONE QUESTION PHYSICS DEPLOYMENT
+# ZERO CHANGES TO APP.PY REQUIRED!
+#
+# This solution runs Question Physics as a completely separate service
+# Frontend calls both services independently
+
+# FILES TO ADD:
+# 1. question_physics.py (analysis engine)
+# 2. question_physics_server.py (standalone Flask service)  
+# 3. index_standalone_qp.html (frontend that calls both services)
+
+# FILE LOCATIONS:
+# /your-repo-root/
+#   ├── question_physics.py (NEW)
+#   ├── question_physics_server.py (NEW)
+#   ├── index.html (REPLACE with index_standalone_qp.html)
+#   ├── app.py (UNCHANGED - DO NOT TOUCH)
+#   └── ... (everything else unchanged)
+
+# DEPLOYMENT STEPS:
+
+# 1. Add the new files to your repo
+# cp question_physics.py /your-repo-root/
+# cp question_physics_server.py /your-repo-root/
+# cp index_standalone_qp.html /your-repo-root/index.html
+
+# 2. Install flask-cors dependency (add to requirements.txt):
+# echo "flask-cors" >> requirements.txt
+
+# 3. Deploy to your repo
+# git add question_physics.py question_physics_server.py index.html requirements.txt
+# git commit -m "Add standalone Question Physics service"
+# git push
+
+# 4. Start the Question Physics service (separate process)
+# python question_physics_server.py
+# (Runs on port 5001)
+
+# HOW IT WORKS:
+# - Main app.py continues running unchanged on your current port
+# - question_physics_server.py runs on port 5001  
+# - Frontend calls /nti for main analysis
+# - Frontend calls localhost:5001/analyze for Question Physics
+# - Results are merged in the browser
+
+# PRODUCTION DEPLOYMENT:
+# You'll need to deploy question_physics_server.py as a separate service
+# Options:
+# 1. Same server, different port (need to configure port 5001)
+# 2. Separate Render service for Question Physics
+# 3. Run both services in same container (Docker)
+
+# FOR RENDER DEPLOYMENT:
+# Create a second Render service for Question Physics:
+# 1. Create new Render service
+# 2. Point to same repo
+# 3. Set start command: python question_physics_server.py
+# 4. Set environment variable: QUESTION_PHYSICS_PORT=5001
+
+# TESTING:
+# 1. Test main NTI service:
+# curl https://yourdomain.com/nti -X POST -H "Content-Type: application/json" -d '{"text":"test"}'
+
+# 2. Test Question Physics service:  
+# curl https://yourdomain.com:5001/analyze -X POST -H "Content-Type: application/json" -d '{"text":"so what does this do for numbers?"}'
+
+# 3. Test health:
+# curl https://yourdomain.com:5001/health
+
+# FRONTEND BEHAVIOR:
+# - Calls main /nti for core analysis
+# - Calls :5001/analyze for Question Physics  
+# - If Question Physics service unavailable, continues without it
+# - Graceful fallback - no breaking if Question Physics fails
+
+# ROLLBACK:
+# Just revert index.html to previous version
+# Remove question_physics files
+# No risk to main app.py
+
+# ZERO RISK APPROACH:
+# ✅ Main app.py completely untouched
+# ✅ Separate service = isolated failure
+# ✅ Frontend gracefully handles service unavailable
+# ✅ Easy rollback
+# ✅ No breaking changes to existing functionality
