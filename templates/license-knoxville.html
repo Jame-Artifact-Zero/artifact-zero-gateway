@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NTI Market Position — Knoxville DMA</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05080e;--surface:#0a0f1a;--surface2:#0f1522;--surface3:#151d2e;
+  --text:#eaeef5;--dim:#b0b8cc;--muted:#6d7a94;
+  --gold:#c9a84c;--gold-dim:#a08838;--gold-glow:rgba(201,168,76,.12);
+  --green:#00e89c;--red:#ef4444;--cyan:#22d3ee;
+  --border:#1a2238;--border2:#253050;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar-brand{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--green);letter-spacing:2.5px;text-decoration:none}
+.topbar-nav{display:flex;gap:20px}
+.topbar-nav a{font-size:11px;color:var(--muted);font-weight:600;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .2s}
+.topbar-nav a:hover{color:var(--text)}
+
+.hero{text-align:center;padding:80px 32px 40px;position:relative;max-width:860px;margin:0 auto}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:1px;height:48px;background:linear-gradient(var(--border),transparent)}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:4px;font-weight:700;margin-bottom:24px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,5.5vw,56px);font-weight:600;color:var(--text);line-height:1.15;margin-bottom:20px}
+.hero h1 em{font-style:italic;color:var(--gold)}
+.hero-body{font-size:17px;color:var(--dim);line-height:1.7;max-width:640px;margin:0 auto}
+
+.status-bar{max-width:860px;margin:40px auto 0;padding:0 32px}
+.status-inner{display:flex;justify-content:center;gap:48px;padding:20px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.status-item{text-align:center}
+.status-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:1px}
+.status-value.open{color:var(--green)}
+.status-value.gold{color:var(--gold)}
+.status-value.cyan{color:var(--cyan)}
+.status-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+
+.divider{max-width:860px;margin:56px auto 0;padding:0 32px}
+.divider-inner{display:flex;align-items:center;gap:16px}
+.divider-inner::before,.divider-inner::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:3px;font-weight:700;white-space:nowrap}
+
+.prose{max-width:660px;margin:40px auto 0;padding:0 32px}
+.prose h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--text);margin-bottom:16px}
+.prose p{font-size:15px;color:var(--dim);line-height:1.75;margin-bottom:16px}
+.prose strong{color:var(--text);font-weight:600}
+.prose .highlight{color:var(--gold);font-weight:600}
+
+.territory{max-width:860px;margin:48px auto 0;padding:0 32px}
+.territory-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.territory-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;transition:border-color .3s}
+.territory-card:hover{border-color:var(--border2)}
+.territory-card-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:2px;font-weight:700;margin-bottom:8px}
+.territory-card-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+.territory-card-body{font-size:13px;color:var(--dim);line-height:1.6}
+
+.usecases{max-width:860px;margin:48px auto 0;padding:0 32px}
+.usecase-list{display:grid;gap:12px}
+.usecase{display:flex;gap:16px;align-items:flex-start;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.usecase-when{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:1.5px;font-weight:700;white-space:nowrap;padding-top:2px;min-width:80px}
+.usecase-what{font-size:14px;color:var(--dim);line-height:1.5}
+.usecase-what strong{color:var(--text)}
+
+.scarcity{max-width:860px;margin:56px auto 0;padding:0 32px}
+.scarcity-inner{border:1px solid var(--gold-dim);border-radius:10px;padding:32px;background:linear-gradient(135deg,rgba(201,168,76,.04),transparent);text-align:center}
+.scarcity-headline{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--text);margin-bottom:12px}
+.scarcity-body{font-size:14px;color:var(--dim);line-height:1.6;max-width:520px;margin:0 auto}
+
+.preview{max-width:860px;margin:56px auto 0;padding:0 32px;text-align:center}
+.preview-link{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 28px;border:1px solid var(--border);border-radius:8px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+  color:var(--green);text-decoration:none;transition:all .3s;letter-spacing:1px;
+}
+.preview-link:hover{border-color:var(--green);background:rgba(0,232,156,.06);text-decoration:none}
+.preview-link .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.cta-section{max-width:600px;margin:56px auto 0;padding:0 32px}
+.cta-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:36px;text-align:center}
+.cta-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--text);margin-bottom:6px}
+.cta-sub{font-size:14px;color:var(--dim);margin-bottom:28px}
+.cta-form{display:flex;flex-direction:column;gap:12px}
+.cta-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cta-input{
+  padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;transition:border-color .2s;width:100%;
+}
+.cta-input:focus{outline:none;border-color:var(--gold)}
+.cta-input::placeholder{color:var(--muted)}
+textarea.cta-input{resize:vertical;min-height:72px}
+.cta-submit{
+  padding:14px;background:var(--gold);color:var(--bg);border:none;border-radius:8px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:2px;
+  cursor:pointer;transition:all .3s;
+}
+.cta-submit:hover{background:#dbb854;transform:translateY(-1px)}
+.cta-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+.footer{text-align:center;padding:48px 32px 32px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+.footer a{color:var(--gold);text-decoration:none}
+
+@media(max-width:768px){
+  .hero{padding:48px 20px 24px}
+  .territory-grid{grid-template-columns:1fr}
+  .status-inner{flex-direction:column;gap:16px}
+  .cta-row{grid-template-columns:1fr}
+  .usecase{flex-direction:column;gap:6px}
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.territory-card,.usecase{animation:fadeUp .5s ease both}
+.territory-card:nth-child(1){animation-delay:.1s}
+.territory-card:nth-child(2){animation-delay:.15s}
+.territory-card:nth-child(3){animation-delay:.2s}
+.territory-card:nth-child(4){animation-delay:.25s}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-brand">ARTIFACT ZERO LABS</a>
+  <div class="topbar-nav">
+    <a href="/">Engine</a>
+    <a href="/live">Live Feed</a>
+    <a href="/live/knoxville">Knoxville</a>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-eyebrow">MARKET TERRITORY</div>
+  <h1>Knoxville is <em>open.</em></h1>
+  <div class="hero-body">NTI scores every written and spoken word for structural integrity — no AI, no opinion, just signal. The Knoxville DMA is the first market territory available. It won't be the last. And it won't be open long.</div>
+</div>
+
+<div class="status-bar">
+  <div class="status-inner">
+    <div class="status-item">
+      <div class="status-value open">● OPEN</div>
+      <div class="status-label">Territory Status</div>
+    </div>
+    <div class="status-item">
+      <div class="status-value gold">KNOXVILLE</div>
+      <div class="status-label">DMA Market</div>
+    </div>
+    <div class="status-item">
+      <div class="status-value cyan">FIRST MARKET</div>
+      <div class="status-label">Position</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"><div class="divider-inner"><span class="divider-tag">WHAT THIS IS</span></div></div>
+
+<div class="prose">
+  <p>NTI is a structural analysis engine. It reads language — any language, from anyone — and measures it. Not for truth. Not for opinion. For <strong>structure</strong>: how clear it is, how honest the framing is, how much is substance versus noise.</p>
+  <p>Right now it's scoring <span class="highlight">4 candidates in the Knox County Mayor's race</span> across 5 structural lenses, live, pulling from 13 news sources. Every public statement analyzed in real time.</p>
+  <p>But elections are just the beginning. Every press conference. Every earnings call. Every legal filing. Every school board meeting. Every piece of public communication in a market — scored for structural integrity. That's what NTI does.</p>
+  <p><strong>A market territory means you hold that position.</strong> Not for one election. For the market. The first person to hold Knoxville holds Knoxville.</p>
+</div>
+
+<div class="divider"><div class="divider-inner"><span class="divider-tag">WHAT THE TERRITORY COVERS</span></div></div>
+
+<div class="territory">
+  <div class="territory-grid">
+    <div class="territory-card">
+      <div class="territory-card-label">TODAY</div>
+      <div class="territory-card-title">Election Analysis</div>
+      <div class="territory-card-body">Real-time scoring of all candidates in the Knox County Mayor's race. 5 structural lenses. Live debate integration. Statement-by-statement breakdowns. Through the May 5 primary and beyond.</div>
+    </div>
+    <div class="territory-card">
+      <div class="territory-card-label">NEAR TERM</div>
+      <div class="territory-card-title">Local Government</div>
+      <div class="territory-card-body">County commission meetings. School board sessions. City council. Every public proceeding in the Knoxville DMA analyzed for structural integrity, tilt, and communication clarity.</div>
+    </div>
+    <div class="territory-card">
+      <div class="territory-card-label">EXPANDING</div>
+      <div class="territory-card-title">Corporate &amp; Legal</div>
+      <div class="territory-card-body">Earnings calls. Press releases. Legal proceedings. Insurance communications. Any organization in the DMA producing public-facing language — scored and tracked.</div>
+    </div>
+    <div class="territory-card">
+      <div class="territory-card-label">THE PLATFORM</div>
+      <div class="territory-card-title">Every Written Word</div>
+      <div class="territory-card-body">The engine doesn't care who's talking. It measures structure. Territory holders get exclusive deployment rights for NTI analysis across all communication verticals in their market.</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"><div class="divider-inner"><span class="divider-tag">HOW IT'S USED</span></div></div>
+
+<div class="usecases">
+  <div class="usecase-list">
+    <div class="usecase">
+      <div class="usecase-when">BROADCAST</div>
+      <div class="usecase-what"><strong>On-air integration during live debates.</strong> Real-time structural scoring as candidates speak. Lower-third graphics. "Official Analysis Partner" branding.</div>
+    </div>
+    <div class="usecase">
+      <div class="usecase-when">DIGITAL</div>
+      <div class="usecase-what"><strong>Embedded dashboard on your web properties.</strong> Readers engage with candidate scores, toggle lenses, explore individual statements. Your brand, your audience.</div>
+    </div>
+    <div class="usecase">
+      <div class="usecase-when">EDITORIAL</div>
+      <div class="usecase-what"><strong>Pre-publication structural analysis.</strong> Run a candidate's prepared remarks through NTI before the press conference. Go on air with structural context no one else has.</div>
+    </div>
+    <div class="usecase">
+      <div class="usecase-when">AGENCY</div>
+      <div class="usecase-what"><strong>Sublicense to outlets in the market.</strong> Territory holders can distribute access to broadcast, digital, and print partners within the DMA. Build your own network.</div>
+    </div>
+    <div class="usecase">
+      <div class="usecase-when">ENTERPRISE</div>
+      <div class="usecase-what"><strong>Internal communications analysis.</strong> Score press releases before publishing. Analyze competitor messaging. Audit your own structural clarity across all outbound channels.</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"><div class="divider-inner"><span class="divider-tag">THE POSITION</span></div></div>
+
+<div class="scarcity">
+  <div class="scarcity-inner">
+    <div class="scarcity-headline">One holder per market. Knoxville is first.</div>
+    <div class="scarcity-body">NTI market territories are exclusive. One holder per DMA. The Knoxville territory is the inaugural position — the first market in a network that will expand to every contested geography in the country. Early holders lock in position and pricing before the market sets the rate.</div>
+  </div>
+</div>
+
+<div class="preview">
+  <a href="/live/knoxville" class="preview-link">
+    <span class="dot"></span>SEE THE LIVE DASHBOARD — KNOXVILLE MAYOR'S RACE
+  </a>
+</div>
+
+<div class="divider"><div class="divider-inner"><span class="divider-tag">TAKE THE POSITION</span></div></div>
+
+<div class="cta-section" id="contactSection">
+  <div class="cta-card">
+    <div class="cta-title">Claim Knoxville</div>
+    <div class="cta-sub">Territory inquiries are responded to within 4 hours. Pricing discussed on first call.</div>
+    <form class="cta-form" id="contactForm" onsubmit="handleSubmit(event)">
+      <div class="cta-row">
+        <input class="cta-input" type="text" name="name" placeholder="Your name" required>
+        <input class="cta-input" type="text" name="title" placeholder="Title / Role">
+      </div>
+      <input class="cta-input" type="text" name="org" placeholder="Organization" required>
+      <div class="cta-row">
+        <input class="cta-input" type="email" name="email" placeholder="Email" required>
+        <input class="cta-input" type="tel" name="phone" placeholder="Phone">
+      </div>
+      <textarea class="cta-input" name="notes" placeholder="Tell us what you're thinking. Broadcast? Digital? Agency? We'll structure it around your needs."></textarea>
+      <button class="cta-submit" type="submit">SUBMIT INQUIRY</button>
+    </form>
+    <div class="cta-note">Pricing is structured per conversation — not published. Territory terms, sublicensing rights, and integration scope are tailored to the holder. No commitment required to inquire.</div>
+  </div>
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · NTI Market Territories<br>
+  <a href="/">dontgofulltilt.com</a> · <a href="/live/knoxville">Live Dashboard</a> · <a href="/live">Global Feed</a>
+</div>
+
+<script>
+function handleSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = new FormData(form);
+  const payload = Object.fromEntries(data.entries());
+  const btn = form.querySelector('.cta-submit');
+  btn.textContent = 'SUBMITTING...';
+  btn.disabled = true;
+
+  fetch('/api/license-inquiry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(res => {
+    if (res.ok) {
+      btn.textContent = 'RECEIVED — WE\'LL BE IN TOUCH';
+      btn.style.background = 'var(--green)';
+      form.querySelectorAll('input,textarea').forEach(el => el.disabled = true);
+    } else {
+      btn.textContent = 'ERROR — TRY AGAIN';
+      btn.style.background = 'var(--red)';
+      btn.disabled = false;
+    }
+  }).catch(() => {
+    btn.textContent = 'ERROR — TRY AGAIN';
+    btn.style.background = 'var(--red)';
+    btn.disabled = false;
+  });
+}
+</script>
+</body>
+</html>
