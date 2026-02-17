@@ -35,6 +35,18 @@ ALLOWED_DOMAINS = [
     'news.google.com',
     'thehill.com',
     'www.vox.com',
+    'www.espn.com',
+    'www.cbssports.com',
+    'feeds.skynews.com',
+    'rss.art19.com',
+    'feeds.feedburner.com',
+    'feeds.arstechnica.com',
+    'techcrunch.com',
+    'search.cnbc.com',
+    'www.cnbc.com',
+    'rss.medicalnewstoday.com',
+    'feeds.feedburner.com',
+    'www.statnews.com',
 ]
 
 
@@ -165,6 +177,12 @@ def rss_sources():
             {"id": "bbc", "name": "BBC World", "rss": "https://feeds.bbci.co.uk/news/world/rss.xml"},
             {"id": "npr", "name": "NPR News", "rss": "https://feeds.npr.org/1001/rss.xml"},
             {"id": "nbc", "name": "NBC News", "rss": "https://feeds.nbcnews.com/nbcnews/public/news"},
+            {"id": "espn", "name": "ESPN", "rss": "https://www.espn.com/espn/rss/news"},
+            {"id": "cbs", "name": "CBS Sports", "rss": "https://www.cbssports.com/rss/headlines"},
+            {"id": "bbcsport", "name": "BBC Sport", "rss": "https://feeds.bbci.co.uk/sport/rss.xml"},
+            {"id": "ars", "name": "Ars Technica", "rss": "https://feeds.arstechnica.com/arstechnica/technology-lab"},
+            {"id": "tc", "name": "TechCrunch", "rss": "https://techcrunch.com/feed"},
+            {"id": "cnbc", "name": "CNBC", "rss": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"},
         ]
     })
 
@@ -175,5 +193,87 @@ def live_feed_page():
     try:
         from flask import render_template
         return render_template('live-feed.html')
+
+
+@rss_bp.route('/api/rss-proxy/article', methods=['POST'])
+def rss_article_proxy():
+    """Fetch full article text from a URL. Returns extracted text content."""
+    if not HAS_URLLIB:
+        return jsonify({"error": "urllib not available"}), 500
+
+    data = request.get_json(silent=True) or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    try:
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; NTI-LiveFeed/1.0)',
+            'Accept': 'text/html,application/xhtml+xml'
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = resp.read()
+            # Try utf-8 first, fall back to latin-1
+            try:
+                html_text = raw.decode('utf-8')
+            except UnicodeDecodeError:
+                html_text = raw.decode('latin-1', errors='replace')
+
+        # Simple text extraction: strip HTML tags, get body content
+        content = _extract_article_text(html_text)
+        return jsonify({"content": content, "url": url})
+    except Exception as e:
+        return jsonify({"error": str(e), "content": ""}), 200
+
+
+def _extract_article_text(html: str) -> str:
+    """Extract readable text from HTML. Simple regex-based approach."""
+    import re
+
+    # Try to find article/main content area
+    article_match = re.search(
+        r'<article[^>]*>(.*?)</article>',
+        html, re.DOTALL | re.IGNORECASE
+    )
+    if article_match:
+        html = article_match.group(1)
+    else:
+        # Try main tag
+        main_match = re.search(
+            r'<main[^>]*>(.*?)</main>',
+            html, re.DOTALL | re.IGNORECASE
+        )
+        if main_match:
+            html = main_match.group(1)
+
+    # Remove script, style, nav, header, footer, aside tags
+    for tag in ['script', 'style', 'nav', 'header', 'footer', 'aside', 'figure', 'figcaption']:
+        html = re.sub(rf'<{tag}[^>]*>.*?</{tag}>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    # Convert <p>, <br>, <div>, <h1-6> to newlines
+    html = re.sub(r'<br\s*/?>', '\n', html, flags=re.IGNORECASE)
+    html = re.sub(r'</p>', '\n\n', html, flags=re.IGNORECASE)
+    html = re.sub(r'</div>', '\n', html, flags=re.IGNORECASE)
+    html = re.sub(r'</h[1-6]>', '\n\n', html, flags=re.IGNORECASE)
+
+    # Strip all remaining HTML tags
+    text = re.sub(r'<[^>]+>', '', html)
+
+    # Decode common HTML entities
+    text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    text = text.replace('&quot;', '"').replace('&#39;', "'").replace('&nbsp;', ' ')
+    text = re.sub(r'&#\d+;', '', text)
+    text = re.sub(r'&\w+;', '', text)
+
+    # Clean up whitespace
+    lines = [line.strip() for line in text.split('\n')]
+    lines = [l for l in lines if len(l) > 30]  # Filter out short junk lines
+    text = '\n\n'.join(lines)
+
+    # Limit to ~5000 chars
+    if len(text) > 5000:
+        text = text[:5000] + '...'
+
+    return text.strip()
     except Exception:
         return "Live Feed page not found. Ensure live-feed.html is in templates/", 404
