@@ -40,6 +40,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100
 .app-header .ver{font-family:var(--mono);font-size:.65rem;color:var(--fg4);padding:2px 6px;border:1px solid var(--bg3);border-radius:3px}
 .app-header .persona-label{margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--fg3);padding:4px 10px;border:1px solid var(--bg4);border-radius:var(--r);cursor:pointer;transition:all .2s}
 .app-header .persona-label:hover{border-color:var(--fg3);color:var(--fg2)}
+.app-header .live-link{font-family:var(--mono);font-size:.65rem;color:var(--green);padding:4px 10px;border:1px solid rgba(0,232,156,.25);border-radius:var(--r);text-decoration:none;display:flex;align-items:center;gap:5px;transition:all .2s}
+.app-header .live-link:hover{border-color:var(--green);background:rgba(0,232,156,.08)}
+.app-header .live-link .blink{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 
 /* Menu System */
 .menu-toggle{position:fixed;top:20px;right:20px;z-index:1000;background:var(--bg2);border:1px solid var(--bg3);border-radius:8px;padding:8px;cursor:pointer;transition:all .2s}
@@ -287,6 +290,14 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
     <button class="menu-close" onclick="closeMenu()">&times;</button>
   </div>
   
+  <div class="menu-section" style="background:linear-gradient(135deg,rgba(0,232,156,.06),transparent);border-bottom:1px solid rgba(0,232,156,.15)">
+    <a href="/live" style="display:flex;align-items:center;gap:10px;text-decoration:none;padding:8px 0">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite"></span>
+      <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);letter-spacing:1px">NTI LIVE FEED</span>
+      <span style="font-size:11px;color:var(--fg3);margin-left:auto">Real-time news analysis →</span>
+    </a>
+  </div>
+
   <div class="menu-section">
     <h3>Color System</h3>
     <div class="color-legend">
@@ -396,6 +407,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 <div id="main-app" class="app-container">
   <div class="app-header">
     <span class="dot"></span><span class="logo">ARTIFACT ZERO</span><span class="ver" id="h-ver">v2.1</span>
+    <a href="/live" class="live-link"><span class="blink"></span>LIVE FEED</a>
     <span class="persona-label" id="h-persona" title="Click to switch view">-</span>
   </div>
   
