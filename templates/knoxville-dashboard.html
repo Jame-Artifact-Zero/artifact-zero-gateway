@@ -135,9 +135,24 @@ a:hover{text-decoration:underline}
 .method-item-weight{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px}
 
 /* Disclaimer */
-.disclaimer-bar{max-width:1200px;margin:0 auto 32px;padding:0 24px}
+.disclaimer-bar{max-width:1200px;margin:0 auto 16px;padding:0 24px}
 .disclaimer-bar-inner{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 20px;text-align:center;font-size:12px;color:var(--muted)}
 .disclaimer-bar-inner strong{color:var(--amber)}
+
+/* Lens Selector */
+.lens-bar{max-width:1200px;margin:0 auto 24px;padding:0 24px}
+.lens-bar-inner{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px}
+.lens-bar-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;text-align:center}
+.lens-tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.lens-tab{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  padding:8px 16px;border-radius:6px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface2);color:var(--muted);
+  transition:all .2s;text-align:center;
+}
+.lens-tab:hover{border-color:var(--border2);color:var(--text)}
+.lens-tab.active{background:var(--green);color:#000;border-color:var(--green)}
+.lens-tab .lens-tab-desc{font-size:9px;font-weight:400;opacity:.7;display:block;margin-top:2px}
 
 /* Footer */
 .footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:var(--surface)}
@@ -179,7 +194,30 @@ a:hover{text-decoration:underline}
 
 <div class="disclaimer-bar">
   <div class="disclaimer-bar-inner">
-    <strong>⚡ Nonpartisan Analysis</strong> — NTI does not evaluate policy positions. It measures structural integrity of language: attribution, emotional charge, assertion density, and clarity. We don't say correct. We say different. You decide.
+    <strong>⚡ Nonpartisan Analysis</strong> — NTI does not evaluate policy positions. It measures structural integrity of language. We don't say correct. We say different. You decide.
+  </div>
+</div>
+
+<div class="lens-bar">
+  <div class="lens-bar-inner">
+    <div class="lens-bar-label">CHOOSE YOUR LENS — WHAT MATTERS TO YOU?</div>
+    <div class="lens-tabs" id="lensTabs">
+      <div class="lens-tab active" onclick="switchLens('composite')">
+        COMPOSITE<span class="lens-tab-desc">Balanced view</span>
+      </div>
+      <div class="lens-tab" onclick="switchLens('clarity')">
+        CLARITY<span class="lens-tab-desc">Clear &amp; accessible</span>
+      </div>
+      <div class="lens-tab" onclick="switchLens('accountability')">
+        ACCOUNTABILITY<span class="lens-tab-desc">Honest claims</span>
+      </div>
+      <div class="lens-tab" onclick="switchLens('substance')">
+        SUBSTANCE<span class="lens-tab-desc">Real policy</span>
+      </div>
+      <div class="lens-tab" onclick="switchLens('authenticity')">
+        AUTHENTICITY<span class="lens-tab-desc">Genuine voice</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -208,37 +246,37 @@ a:hover{text-decoration:underline}
 <div class="methodology">
   <div class="method-card">
     <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
-    <p style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:16px">The HCS is a composite score (0–100) that measures how structurally clear and honest a statement is. It combines six weighted signals from the NTI engine and client-side analysis. Higher is better. The score changes with every new statement analyzed.</p>
+    <p style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:16px">The HCS works like a credit score: every candidate starts at <strong style="color:var(--green)">85</strong> and gets deductions for structural problems and bonuses for clarity. Your worst statement counts 1.5× in the average, because you're only as strong as your weakest moment. Scores update live as new statements are analyzed.</p>
     <div class="method-grid">
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--cyan)">READABILITY</div>
-        <div class="method-item-desc">Flesch-Kincaid grade level. Lower grade = more accessible = higher score.</div>
-        <div class="method-item-weight">Weight: 15%</div>
+        <div class="method-item-name" style="color:var(--red)">VAGUENESS</div>
+        <div class="method-item-desc">Platitude words (values, opportunity, incredible, families, freedom). More fluff = lower score.</div>
+        <div class="method-item-weight">Penalty: -3 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--green)">EMOTIONAL CHARGE</div>
-        <div class="method-item-desc">Density of charged language. Lower emotional charge = higher score.</div>
-        <div class="method-item-weight">Weight: 20%</div>
+        <div class="method-item-name" style="color:var(--green)">SPECIFICITY</div>
+        <div class="method-item-desc">Concrete policy words (budget, tax, build, invest, plan, vote). Substance raises your score.</div>
+        <div class="method-item-weight">Bonus: +4 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--amber)">ASSERTION DENSITY</div>
-        <div class="method-item-desc">Ratio of attributed vs unattributed claims. More attribution = higher score.</div>
-        <div class="method-item-weight">Weight: 20%</div>
+        <div class="method-item-name" style="color:var(--amber)">PROMISE BALANCE</div>
+        <div class="method-item-desc">Unbounded promises ("I will never") get penalized. Hedged aspirations ("I want to") get rewarded.</div>
+        <div class="method-item-weight">-4 unbounded / +3 hedged</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--purple)">TILT PENALTY</div>
-        <div class="method-item-desc">Deduction for structural tilt patterns (T1–T10): certainty inflation, absolute language, consensus claims, etc.</div>
-        <div class="method-item-weight">Penalty: -8 per tag</div>
+        <div class="method-item-name" style="color:var(--pink)">EMOTIONAL CHARGE</div>
+        <div class="method-item-desc">Density of emotionally loaded language. Lower charge = clearer structural integrity.</div>
+        <div class="method-item-weight">Penalty: -0.2 per %</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--pink)">FAILURE MODES</div>
-        <div class="method-item-desc">Critical deductions for CCA, UDDS, or DCE detection. These indicate structural breakdown.</div>
-        <div class="method-item-weight">Penalty: -15 per mode</div>
+        <div class="method-item-name" style="color:var(--purple)">TILT PATTERNS</div>
+        <div class="method-item-desc">Structural manipulation: certainty inflation, absolute language, manufactured consensus, pressure tactics.</div>
+        <div class="method-item-weight">Penalty: -7 per tag</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--blue)">INFO DENSITY</div>
-        <div class="method-item-desc">Ratio of factual elements (numbers, dates, names, data) to total words. More facts = higher score.</div>
-        <div class="method-item-weight">Weight: 10%</div>
+        <div class="method-item-name" style="color:var(--blue)">DATA DENSITY</div>
+        <div class="method-item-desc">Numbers, names, dates, percentages, dollar amounts. Facts in the text = credibility bonus.</div>
+        <div class="method-item-weight">Bonus: +3 per fact</div>
       </div>
     </div>
   </div>
@@ -315,8 +353,12 @@ const CANDIDATES = [
   }
 ];
 
+
+
 // ══════════════════════════════════════
-// CLIENT-SIDE ANALYSIS (same as live-feed)
+// CLIENT-SIDE ANALYSIS — HCS v3 (Credit Score Model)
+// Start at 85. Deductions for structural problems.
+// Bonuses for specificity, data, bounded language.
 // ══════════════════════════════════════
 function countSyllables(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, '');
@@ -353,40 +395,48 @@ function analyzeEmotionalCharge(text) {
   return { score: Math.min(100, Math.round(rawScore * 8)) };
 }
 
-const ATTRIBUTION_MARKERS = [
-  'according to','said','told','reported by','citing','sources say','officials say',
-  'spokesperson','statement from','confirmed by','data shows','studies show','research indicates',
-  'analysts say','experts say','the department said','officials said','police said'
-];
+// Vagueness vs Specificity
+const VAGUE_WORDS = ['values','opportunity','community','leadership','service','vision','future','better',
+  'great','special','incredible','amazing','wonderful','fantastic','beautiful','important',
+  'committed','dedicated','passionate','believe','proud','honored','privilege','thrilled',
+  'crossroads','families','freedom','celebrate','thrive','preserve','continue','extraordinary'];
+const SPECIFIC_WORDS = ['percent','million','billion','budget','tax','fund','program','plan','policy',
+  'reduce','increase','build','hire','cut','invest','allocate','deadline','quarter',
+  'department','ordinance','resolution','vote','oppose','support','veto','approve','audit','review'];
 
-function analyzeAssertionDensity(text) {
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 2);
-  const sentCount = Math.max(sentences.length, 1);
-  let attributed = 0;
-  sentences.forEach(sent => {
-    const sl = sent.toLowerCase();
-    if (ATTRIBUTION_MARKERS.some(m => sl.includes(m))) attributed++;
-  });
-  return { score: Math.round(((sentCount - attributed) / sentCount) * 100), attributed, total: sentCount };
+function analyzeSpecificity(text) {
+  const lower = text.toLowerCase();
+  let vague = 0, specific = 0;
+  VAGUE_WORDS.forEach(w => { if (lower.includes(w)) vague++; });
+  SPECIFIC_WORDS.forEach(w => { if (lower.includes(w)) specific++; });
+  return { vague, specific };
 }
 
+// Promise balance
+const PROMISE_WORDS = ['will','promise','guarantee','ensure','commit','pledge','vow','swear','i will','we will','going to'];
+const HEDGE_WORDS = ['want to','hope to','aim to','work toward','strive','try to','aspire','i want','we want','goal is','plan to'];
+
+function analyzePromiseBalance(text) {
+  const lower = text.toLowerCase();
+  let promises = 0, hedges = 0;
+  PROMISE_WORDS.forEach(w => { if (lower.includes(w)) promises++; });
+  HEDGE_WORDS.forEach(w => { if (lower.includes(w)) hedges++; });
+  return { promises, hedges };
+}
+
+// Info density
 function analyzeInfoDensity(text) {
   const words = text.split(/\s+/).filter(w => w.length > 0);
-  const total = Math.max(words.length, 1);
   const numbers = (text.match(/\b\d[\d,.]*\b/g) || []).length;
-  const dates = (text.match(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4}|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi) || []).length;
   const names = (text.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
-  const percents = (text.match(/\d+\s*%/g) || []).length;
-  const money = (text.match(/[\$£€]\s*[\d,.]+|\d+\s*(?:billion|million|trillion|thousand)/gi) || []).length;
-  const factualElements = numbers + dates + names + percents + money;
-  return { score: Math.min(100, Math.round((factualElements / total) * 250)) };
+  return { facts: numbers + names, wordCount: words.length };
 }
 
-// Tilt detection (simplified client-side)
-const ABSOLUTE_WORDS = ['never','always','every','all','none','no one','everyone','everything','nothing','certainly','definitely','absolutely','guaranteed','promise','impossible','undoubtedly'];
-const CERTAINTY_WORDS = ['will definitely','guarantee','promise','ensure','without a doubt','no question','certainly will','I assure','we assure'];
-const CONSENSUS_WORDS = ['everyone knows','everyone agrees','people are saying','many people','most people','the people','we all know','nobody disagrees','clearly','obviously'];
-const PRESSURE_WORDS = ['act now','don\'t miss','limited time','before it\'s too late','running out','already joined','momentum','can\'t afford','must act','time is running'];
+// Tilt detection
+const ABSOLUTE_WORDS = ['never','always','every','all','none','no one','everyone','everything','nothing','certainly','definitely','absolutely','guaranteed','promise','impossible'];
+const CERTAINTY_WORDS = ['will definitely','guarantee','promise','ensure','without a doubt','no question'];
+const CONSENSUS_WORDS = ['everyone knows','everyone agrees','people are saying','many people','most people','already joined'];
+const PRESSURE_WORDS = ['act now','already joined','momentum','must act','time is running','so much time','still so much'];
 
 function detectTilt(text) {
   const lower = text.toLowerCase();
@@ -395,69 +445,155 @@ function detectTilt(text) {
   if (ABSOLUTE_WORDS.filter(w => lower.includes(w)).length >= 2) tags.push('T5');
   if (CONSENSUS_WORDS.some(w => lower.includes(w))) tags.push('T3');
   if (PRESSURE_WORDS.some(w => lower.includes(w))) tags.push('T8');
-  // Superlative check
-  if (/\b(best|worst|greatest|most|least|biggest|smallest|strongest|weakest)\b/i.test(text) && !ATTRIBUTION_MARKERS.some(m => lower.includes(m))) {
-    tags.push('T6');
-  }
+  if (/\b(best|worst|greatest|most incredible|most important)\b/i.test(text)) tags.push('T6');
   return tags;
 }
 
 // ══════════════════════════════════════
-// HUMAN CLARITY SCORE (HCS)
+// HCS v3 — CREDIT SCORE MODEL
 // ══════════════════════════════════════
 function computeHCS(text) {
   const read = analyzeReadability(text);
   const emo = analyzeEmotionalCharge(text);
-  const assert = analyzeAssertionDensity(text);
+  const spec = analyzeSpecificity(text);
+  const prom = analyzePromiseBalance(text);
   const info = analyzeInfoDensity(text);
   const tilt = detectTilt(text);
 
-  // Readability component (15%): grade 6 = 100, grade 18 = 0
-  const readScore = Math.max(0, Math.min(100, (18 - read.grade) / 12 * 100));
+  // Start at 85
+  let score = 85;
 
-  // Emotional charge component (20%): lower = better
-  const emoScore = Math.max(0, 100 - emo.score);
+  // ── DEDUCTIONS ──
+  score -= Math.min(25, spec.vague * 3);           // Vagueness: -3 each, cap 25
+  score -= emo.score * 0.2;                          // Emotional loading
+  score -= tilt.length * 7;                          // Tilt: -7 per tag
+  score -= Math.max(0, prom.promises - prom.hedges) * 4;  // Unbounded promises
+  if (read.grade > 12) score -= (read.grade - 12) * 2;    // Complex language
 
-  // Assertion component (20%): lower unattributed ratio = better
-  const assertScore = Math.max(0, 100 - assert.score);
+  // ── BONUSES ──
+  score += Math.min(15, spec.specific * 4);          // Specificity: +4 each, cap 15
+  score += Math.min(12, info.facts * 3);             // Data: +3 per fact, cap 12
+  score += Math.min(8, prom.hedges * 3);             // Honest framing
+  if (info.wordCount <= 15) score += 3;              // Brevity
 
-  // Info density component (10%): higher = better
-  const infoScore = Math.min(100, info.score * 1.5);
-
-  // Base composite
-  let hcs = (readScore * 0.15) + (emoScore * 0.20) + (assertScore * 0.20) + (infoScore * 0.10);
-
-  // Normalize to roughly 0-65 range, then add baseline
-  hcs = 35 + (hcs * 0.65 / 65 * 65);
-
-  // Tilt penalties
-  hcs -= tilt.length * 8;
-
-  // Clamp
-  hcs = Math.max(5, Math.min(98, Math.round(hcs)));
+  score = Math.max(8, Math.min(97, Math.round(score)));
 
   return {
-    score: hcs,
-    components: { readScore, emoScore, assertScore, infoScore },
+    score,
     tiltCount: tilt.length,
     tiltTags: tilt,
-    raw: { readability: read.grade, emotional: emo.score, assertion: assert.score, infoDensity: info.score }
+    raw: {
+      readability: read.grade,
+      emotional: emo.score,
+      vague: spec.vague,
+      specific: spec.specific,
+      promises: prom.promises,
+      hedges: prom.hedges,
+      facts: info.facts,
+      wordCount: info.wordCount
+    }
   };
 }
 
 function computeCandidateHCS(candidate) {
-  if (!candidate.statements.length) return { avg: 50, scores: [], components: {} };
+  if (!candidate.statements.length) return { avg: 50, scores: [], best: 50, worst: 50 };
   const scores = candidate.statements.map(s => computeHCS(s));
-  const avg = Math.round(scores.reduce((a, b) => a + b.score, 0) / scores.length);
+  const rawScores = scores.map(s => s.score);
+
+  // Floor-weighted average: worst statement counts 1.5x
+  const worst = Math.min(...rawScores);
+  const best = Math.max(...rawScores);
+  const weightedSum = rawScores.reduce((a, b) => a + b, 0) + worst * 0.5;
+  const weightedAvg = weightedSum / (rawScores.length + 0.5);
+
+  // Consistency penalty (high volatility = slight deduction)
+  const mean = rawScores.reduce((a, b) => a + b, 0) / rawScores.length;
+  const std = Math.sqrt(rawScores.reduce((a, b) => a + (b - mean) ** 2, 0) / rawScores.length);
+  const finalAvg = Math.max(10, Math.min(97, Math.round(weightedAvg - std * 0.15)));
+
   const totalTilt = scores.reduce((a, b) => a + b.tiltCount, 0);
-
-  // Average components
-  const avgRead = Math.round(scores.reduce((a, b) => a + b.raw.readability, 0) / scores.length * 10) / 10;
   const avgEmo = Math.round(scores.reduce((a, b) => a + b.raw.emotional, 0) / scores.length);
-  const avgAssert = Math.round(scores.reduce((a, b) => a + b.raw.assertion, 0) / scores.length);
-  const avgInfo = Math.round(scores.reduce((a, b) => a + b.raw.infoDensity, 0) / scores.length);
+  const avgVague = Math.round(scores.reduce((a, b) => a + b.raw.vague, 0) / scores.length * 10) / 10;
+  const totalSpecific = scores.reduce((a, b) => a + b.raw.specific, 0);
 
-  return { avg, scores, totalTilt, avgRead, avgEmo, avgAssert, avgInfo };
+  return { avg: finalAvg, scores, totalTilt, avgEmo, avgVague, totalSpecific, best, worst, volatility: Math.round(std) };
+}
+
+// ══════════════════════════════════════
+// SCORING LENSES
+// ══════════════════════════════════════
+let activeLens = 'composite';
+
+function scoreLens(raw, lens) {
+  const d = raw;
+  let s;
+  switch(lens) {
+    case 'clarity':
+      s = 85;
+      if (d.readability > 10) s -= (d.readability - 10) * 4;
+      if (d.readability <= 6) s += 5;
+      s -= d.emotional * 0.15;
+      if (d.wordCount <= 15) s += 5;
+      if (d.wordCount > 30) s -= 3;
+      break;
+    case 'accountability':
+      s = 85;
+      s -= d.tiltCount * 10;
+      s -= Math.max(0, d.promises - d.hedges) * 6;
+      s += Math.min(10, d.hedges * 4);
+      s -= d.vague * 2;
+      break;
+    case 'substance':
+      s = 60;
+      s += Math.min(25, d.specific * 6);
+      s += Math.min(15, d.facts * 4);
+      s -= Math.min(30, d.vague * 4);
+      s -= d.emotional * 0.1;
+      break;
+    case 'authenticity':
+      s = 85;
+      s -= d.emotional * 0.25;
+      s -= d.tiltCount * 8;
+      s -= Math.min(20, d.vague * 3);
+      s += Math.min(10, d.hedges * 3);
+      s += Math.min(8, d.facts * 2);
+      if (d.wordCount <= 20) s += 3;
+      break;
+    default:
+      return null;
+  }
+  return Math.max(10, Math.min(97, Math.round(s)));
+}
+
+function computeCandidateScore(candidate) {
+  if (activeLens === 'composite') return computeCandidateHCS(candidate);
+
+  const stmts = candidate.statements.map(s => computeHCS(s));
+  const lensScores = stmts.map(s => {
+    const raw = { ...s.raw, tiltCount: s.tiltCount };
+    return scoreLens(raw, activeLens);
+  });
+
+  const worst = Math.min(...lensScores);
+  const best = Math.max(...lensScores);
+  const wsum = lensScores.reduce((a,b) => a+b, 0) + worst * 0.5;
+  const wavg = wsum / (lensScores.length + 0.5);
+  const mean = lensScores.reduce((a,b) => a+b, 0) / lensScores.length;
+  const std = Math.sqrt(lensScores.reduce((a,b) => a + (b-mean)**2, 0) / lensScores.length);
+  const finalAvg = Math.max(10, Math.min(97, Math.round(wavg - std * 0.15)));
+  const totalTilt = stmts.reduce((a,b) => a + b.tiltCount, 0);
+
+  return { avg: finalAvg, scores: stmts, totalTilt, best, worst, volatility: Math.round(std), avgEmo: 0, avgVague: 0, totalSpecific: 0 };
+}
+
+function switchLens(lens) {
+  activeLens = lens;
+  document.querySelectorAll('.lens-tab').forEach(t => t.classList.remove('active'));
+  const tabs = document.querySelectorAll('.lens-tab');
+  const lensNames = ['composite','clarity','accountability','substance','authenticity'];
+  const idx = lensNames.indexOf(lens);
+  if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
+  renderDashboard();
 }
 
 // ══════════════════════════════════════
@@ -480,7 +616,7 @@ function getScoreLabel(score) {
 }
 
 function renderCandidateCard(candidate) {
-  const hcs = computeCandidateHCS(candidate);
+  const hcs = computeCandidateScore(candidate);
   const color = getScoreColor(hcs.avg);
   const circumference = 2 * Math.PI * 34;
   const offset = circumference - (hcs.avg / 100) * circumference;
@@ -513,20 +649,20 @@ function renderCandidateCard(candidate) {
               stroke-dashoffset="${offset}"/>
           </svg>
           <div class="score-ring-text" style="color:${color}">${hcs.avg}</div>
-          <div class="score-ring-label">HCS</div>
+          <div class="score-ring-label">${activeLens.toUpperCase()}</div>
         </div>
         <div class="score-detail">
           <div class="score-detail-row">
-            <span class="label">Readability</span>
-            <span class="val" style="color:${barColor(hcs.avgRead, true)}">Grade ${hcs.avgRead}</span>
+            <span class="label">Best</span>
+            <span class="val" style="color:var(--green)">${hcs.best}</span>
           </div>
           <div class="score-detail-row">
-            <span class="label">Emotion</span>
-            <span class="val" style="color:${barColor(hcs.avgEmo, true)}">${hcs.avgEmo}%</span>
+            <span class="label">Worst</span>
+            <span class="val" style="color:${hcs.worst >= 70 ? 'var(--green)' : hcs.worst >= 50 ? 'var(--amber)' : 'var(--red)'}">${hcs.worst}</span>
           </div>
           <div class="score-detail-row">
-            <span class="label">Unattributed</span>
-            <span class="val" style="color:${barColor(hcs.avgAssert, true)}">${hcs.avgAssert}%</span>
+            <span class="label">Volatility</span>
+            <span class="val" style="color:${hcs.volatility <= 8 ? 'var(--green)' : hcs.volatility <= 15 ? 'var(--amber)' : 'var(--red)'}">${hcs.volatility}</span>
           </div>
           <div class="score-detail-row">
             <span class="label">Tilt Flags</span>
@@ -564,8 +700,8 @@ function renderDashboard() {
   const dems = CANDIDATES.filter(c => c.party === 'democrat');
 
   // Sort by HCS score descending
-  reps.sort((a, b) => computeCandidateHCS(b).avg - computeCandidateHCS(a).avg);
-  dems.sort((a, b) => computeCandidateHCS(b).avg - computeCandidateHCS(a).avg);
+  reps.sort((a, b) => computeCandidateScore(b).avg - computeCandidateScore(a).avg);
+  dems.sort((a, b) => computeCandidateScore(b).avg - computeCandidateScore(a).avg);
 
   repDiv.innerHTML = reps.map(c => renderCandidateCard(c)).join('');
   demDiv.innerHTML = dems.map(c => renderCandidateCard(c)).join('');
@@ -591,7 +727,7 @@ function showStatements(candidateId) {
         <div class="feed-item-title" style="cursor:default">"${s.text}"</div>
         <div class="feed-item-tags">
           <span class="feed-tag hcs">HCS ${s.hcs.score}</span>
-          <span class="feed-tag" style="background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)">Grade ${s.hcs.raw.readability}</span>
+          <span class="feed-tag" style="background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)">Vague:${s.hcs.raw.vague} Spec:${s.hcs.raw.specific}</span>
           <span class="feed-tag" style="background:rgba(236,72,153,.1);color:var(--pink);border:1px solid rgba(236,72,153,.2)">Emo ${s.hcs.raw.emotional}%</span>
           ${s.hcs.tiltTags.length ? s.hcs.tiltTags.map(t => `<span class="feed-tag tilt">${t}</span>`).join('') : '<span class="feed-tag" style="background:rgba(0,232,156,.1);color:var(--green);border:1px solid rgba(0,232,156,.2)">Clean</span>'}
         </div>
