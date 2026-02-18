@@ -10,8 +10,20 @@ from typing import Any, Dict, List, Optional
 from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "artifact-zero-change-in-prod")
+
 from rss_proxy import rss_bp
 app.register_blueprint(rss_bp)
+
+# --- YOUR OS INTEGRATION ---
+try:
+    from your_os import your_os
+    app.register_blueprint(your_os)
+    YOUR_OS_AVAILABLE = True
+except ImportError as e:
+    YOUR_OS_AVAILABLE = False
+    print(f"[WARN] Your OS module not loaded: {e}")
+# --- END YOUR OS INTEGRATION ---
 
 # ============================================================
 # CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
@@ -576,7 +588,19 @@ def home():
     try:
         return render_template("index.html")
     except Exception:
-        return "NTI Canonical Runtime is live."
+        try:
+            return render_template("nti-final (2).html")
+        except Exception:
+            return "NTI Canonical Runtime is live."
+
+
+@app.route("/your-os/builder")
+def your_os_builder():
+    """Protocol builder page (simpler landing version)."""
+    try:
+        return render_template("your-os.html")
+    except Exception:
+        return "Your OS Builder — coming soon."
 
 
 @app.route("/health")
@@ -603,6 +627,7 @@ def canonical_status():
             "physics_als": PHYSICS_AVAILABLE,
             "physics_salience": PHYSICS_AVAILABLE,
             "physics_odd": PHYSICS_AVAILABLE,
+            "your_os": YOUR_OS_AVAILABLE,
         }
     })
 

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your OS — AI Control Room</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06080d;
+  --surface: #0c0f16;
+  --surface2: #12161f;
+  --surface3: #1a1f2c;
+  --border: #1e2436;
+  --border-bright: #2d3548;
+  --text: #e2e4ea;
+  --text-dim: #6b7280;
+  --text-muted: #4b5263;
+  --green: #00e89c;
+  --green-dim: rgba(0,232,156,.12);
+  --blue: #60a5fa;
+  --blue-dim: rgba(96,165,250,.12);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,.12);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251,191,36,.12);
+  --red: #f87171;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Outfit', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased; height:100vh; overflow:hidden; }
+body::before { content:''; position:fixed; inset:0; background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; }
+
+/* LAYOUT */
+.app { display:grid; grid-template-columns:260px 1fr; grid-template-rows:48px 1fr; height:100vh; }
+.topbar { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--border); background:var(--surface); z-index:100; }
+.sidebar { grid-row:2; border-right:1px solid var(--border); background:var(--surface); overflow-y:auto; display:flex; flex-direction:column; }
+.main { grid-row:2; display:flex; flex-direction:column; overflow:hidden; }
+
+/* TOPBAR */
+.topbar .logo { font-family:var(--mono); font-weight:800; font-size:12px; letter-spacing:3px; color:var(--green); }
+.topbar .logo span { color:var(--text-dim); font-weight:500; }
+.topbar-center { display:flex; align-items:center; gap:8px; }
+.topbar-center .os-badge { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-dim); border:1px solid rgba(251,191,36,.2); padding:2px 8px; border-radius:3px; }
+.topbar-right { display:flex; align-items:center; gap:12px; }
+.tier-badge { font-family:var(--mono); font-size:10px; color:var(--green); background:var(--green-dim); border:1px solid rgba(0,232,156,.2); padding:2px 8px; border-radius:3px; }
+.btn-sm { font-family:var(--mono); font-size:10px; padding:4px 10px; border:1px solid var(--border-bright); background:transparent; color:var(--text-dim); border-radius:3px; cursor:pointer; transition:all .15s; letter-spacing:1px; }
+.btn-sm:hover { border-color:var(--green); color:var(--green); }
+
+/* SIDEBAR */
+.sidebar-section { padding:12px; border-bottom:1px solid var(--border); }
+.sidebar-section-title { font-family:var(--mono); font-size:9px; letter-spacing:2px; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; }
+.sidebar-item { padding:8px 10px; border-radius:4px; cursor:pointer; font-size:13px; color:var(--text-dim); transition:all .12s; display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+.sidebar-item:hover { background:var(--surface2); color:var(--text); }
+.sidebar-item.active { background:var(--green-dim); color:var(--green); }
+.sidebar-item .t-num { font-family:var(--mono); font-size:10px; color:var(--text-muted); min-width:32px; }
+.sidebar-item .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.dot-active { background:var(--green); }
+.dot-closed { background:var(--text-muted); }
+.new-chat-btn { margin:12px; padding:10px; border:1px dashed var(--border-bright); border-radius:4px; text-align:center; font-family:var(--mono); font-size:11px; color:var(--text-dim); cursor:pointer; letter-spacing:1px; transition:all .15s; }
+.new-chat-btn:hover { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+
+/* SEARCH */
+.search-box { margin:12px; position:relative; }
+.search-box input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:8px 10px 8px 30px; font-family:var(--sans); font-size:12px; color:var(--text); outline:none; }
+.search-box input:focus { border-color:var(--green); }
+.search-box::before { content:'⌕'; position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
+
+/* MAIN CHAT AREA */
+.chat-header { padding:12px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface); }
+.chat-header .conv-title { font-size:14px; font-weight:600; }
+.chat-header .conv-meta { font-family:var(--mono); font-size:10px; color:var(--text-muted); }
+
+.model-tabs { display:flex; gap:0; padding:0 20px; background:var(--surface); border-bottom:1px solid var(--border); }
+.model-tab { font-family:var(--mono); font-size:11px; padding:10px 16px; cursor:pointer; color:var(--text-dim); border-bottom:2px solid transparent; transition:all .15s; letter-spacing:1px; }
+.model-tab:hover { color:var(--text); }
+.model-tab.active { border-bottom-color:var(--green); color:var(--green); }
+.model-tab.tab-compare { border-bottom-color:var(--amber); color:var(--amber); }
+.model-tab .score { font-size:9px; margin-left:6px; opacity:.6; }
+
+.messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+
+/* MESSAGE BUBBLES */
+.msg { max-width:85%; animation:fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg-user { align-self:flex-end; }
+.msg-user .msg-bubble { background:var(--surface3); border:1px solid var(--border-bright); border-radius:12px 12px 4px 12px; padding:12px 16px; }
+.msg-ai { align-self:flex-start; }
+.msg-ai .msg-bubble { background:var(--surface2); border:1px solid var(--border); border-radius:12px 12px 12px 4px; padding:12px 16px; }
+.msg-bubble p { font-size:14px; line-height:1.6; }
+.msg-meta { font-family:var(--mono); font-size:9px; color:var(--text-muted); margin-top:4px; padding:0 4px; display:flex; gap:8px; }
+.msg-provider { display:inline-flex; align-items:center; gap:4px; }
+.msg-provider .prov-dot { width:5px; height:5px; border-radius:50%; }
+.prov-openai { background:var(--green); }
+.prov-anthropic { background:var(--amber); }
+.prov-google { background:var(--blue); }
+
+/* COMPARE VIEW */
+.compare-grid { flex:1; overflow-y:auto; padding:20px; }
+.compare-prompt { padding:16px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; margin-bottom:16px; }
+.compare-prompt .label { font-family:var(--mono); font-size:9px; color:var(--text-muted); letter-spacing:2px; margin-bottom:4px; }
+.compare-prompt p { font-size:14px; }
+.compare-responses { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.compare-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:16px; display:flex; flex-direction:column; transition:all .2s; cursor:pointer; position:relative; }
+.compare-card:hover { border-color:var(--border-bright); transform:translateY(-2px); }
+.compare-card.chosen { border-color:var(--green); box-shadow:0 0 20px rgba(0,232,156,.08); }
+.compare-card .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.compare-card .provider-name { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:1px; }
+.compare-card .nti-score { font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:3px; }
+.score-high { color:var(--green); background:var(--green-dim); }
+.score-mid { color:var(--amber); background:var(--amber-dim); }
+.score-low { color:var(--red); background:rgba(248,113,113,.12); }
+.compare-card .card-body { font-size:13px; line-height:1.6; flex:1; color:var(--text-dim); }
+.compare-card .card-footer { margin-top:12px; padding-top:8px; border-top:1px solid var(--border); font-family:var(--mono); font-size:9px; color:var(--text-muted); display:flex; justify-content:space-between; }
+.choose-btn { position:absolute; bottom:12px; right:12px; font-family:var(--mono); font-size:9px; padding:4px 8px; background:var(--green-dim); border:1px solid rgba(0,232,156,.3); color:var(--green); border-radius:3px; cursor:pointer; opacity:0; transition:opacity .15s; letter-spacing:1px; }
+.compare-card:hover .choose-btn { opacity:1; }
+
+/* INPUT BAR */
+.input-bar { padding:16px 20px; border-top:1px solid var(--border); background:var(--surface); }
+.input-row { display:flex; gap:8px; align-items:flex-end; }
+.input-row textarea { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:var(--sans); font-size:14px; color:var(--text); resize:none; outline:none; min-height:44px; max-height:120px; line-height:1.4; }
+.input-row textarea:focus { border-color:var(--green); }
+.input-row textarea::placeholder { color:var(--text-muted); }
+.send-btn { width:44px; height:44px; border-radius:8px; background:var(--green); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0; }
+.send-btn:hover { background:#00ffaa; transform:scale(1.05); }
+.send-btn svg { width:18px; height:18px; fill:var(--bg); }
+.input-modes { display:flex; gap:6px; margin-top:8px; }
+.mode-btn { font-family:var(--mono); font-size:9px; padding:3px 8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); border-radius:3px; cursor:pointer; letter-spacing:1px; transition:all .12s; }
+.mode-btn:hover { border-color:var(--text-dim); color:var(--text-dim); }
+.mode-btn.active { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+
+/* PROTOCOL PANEL */
+.protocol-panel { display:none; padding:20px; overflow-y:auto; flex:1; }
+.protocol-panel.visible { display:block; }
+.proto-field { margin-bottom:16px; }
+.proto-field label { font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; }
+.proto-field textarea, .proto-field input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:10px 12px; font-family:var(--sans); font-size:13px; color:var(--text); outline:none; resize:vertical; }
+.proto-field textarea:focus, .proto-field input:focus { border-color:var(--green); }
+.proto-field textarea { min-height:60px; }
+.proto-save { font-family:var(--mono); font-size:11px; padding:8px 16px; background:var(--green); color:var(--bg); border:none; border-radius:4px; cursor:pointer; letter-spacing:1px; font-weight:700; }
+
+/* TASK REGISTRY */
+.task-panel { display:none; padding:20px; overflow-y:auto; flex:1; }
+.task-panel.visible { display:block; }
+.task-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:4px; margin-bottom:6px; transition:all .12s; cursor:pointer; }
+.task-item:hover { border-color:var(--border-bright); background:var(--surface2); }
+.task-item .t-id { font-family:var(--mono); font-size:11px; color:var(--green); min-width:40px; font-weight:700; }
+.task-item .t-title { font-size:13px; flex:1; }
+.task-item .t-time { font-family:var(--mono); font-size:9px; color:var(--text-muted); }
+.task-item .t-status { font-family:var(--mono); font-size:9px; padding:2px 6px; border-radius:3px; }
+.status-open { color:var(--green); background:var(--green-dim); }
+.status-closed { color:var(--text-muted); background:var(--surface3); }
+
+/* SETTINGS PANEL */
+.settings-panel { display:none; padding:20px; overflow-y:auto; flex:1; }
+.settings-panel.visible { display:block; }
+.key-field { margin-bottom:16px; }
+.key-field .provider-label { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.key-field .prov-name { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:1px; }
+.key-field input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:10px 12px; font-family:var(--mono); font-size:12px; color:var(--text); outline:none; }
+.key-field input:focus { border-color:var(--green); }
+.key-status { font-family:var(--mono); font-size:9px; margin-top:4px; }
+.key-connected { color:var(--green); }
+.key-missing { color:var(--text-muted); }
+
+/* RESPONSIVE */
+@media(max-width:768px) {
+  .app { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  .compare-responses { grid-template-columns:1fr; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--border-bright); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">YOUR OS <span>/ CONTROL ROOM</span></div>
+  <div class="topbar-center">
+    <div class="os-badge" id="topOsName">JOS</div>
+  </div>
+  <div class="topbar-right">
+    <div class="tier-badge">MULTI-MODEL</div>
+    <button class="btn-sm" onclick="showPanel('settings')">KEYS</button>
+    <button class="btn-sm" onclick="showPanel('protocol')">PROTOCOL</button>
+    <button class="btn-sm" onclick="showPanel('tasks')">TASKS</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="search-box">
+    <input type="text" placeholder="Search conversations..." id="searchInput" oninput="searchConversations()">
+  </div>
+  <div class="new-chat-btn" onclick="newConversation()">+ NEW CONVERSATION</div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Active</div>
+    <div id="activeConvs">
+      <div class="sidebar-item active" onclick="loadConversation(0)">
+        <span class="dot dot-active"></span>
+        <span class="t-num">T-1</span>
+        <span>Welcome</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Closed</div>
+    <div id="closedConvs"></div>
+  </div>
+
+  <div style="flex:1"></div>
+  <div style="padding:12px;border-top:1px solid var(--border);">
+    <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;">ARTIFACT ZERO LABS</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">dontgofulltilt.com</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainArea">
+
+  <!-- CHAT VIEW (default) -->
+  <div id="chatView" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="chat-header">
+      <div>
+        <div class="conv-title" id="convTitle">Welcome</div>
+        <div class="conv-meta" id="convMeta">T-1 · Started just now</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-sm" onclick="copyConversation()">COPY</button>
+        <button class="btn-sm" onclick="txtMode()">TXT</button>
+        <button class="btn-sm" onclick="closeConversation()">CLOSE</button>
+      </div>
+    </div>
+
+    <div class="model-tabs">
+      <div class="model-tab active" onclick="setView('single','openai')" id="tab-openai">
+        <span class="prov-dot prov-openai" style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
+        CHATGPT<span class="score" id="score-openai"></span>
+      </div>
+      <div class="model-tab" onclick="setView('single','anthropic')" id="tab-anthropic">
+        <span class="prov-dot prov-anthropic" style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
+        CLAUDE<span class="score" id="score-anthropic"></span>
+      </div>
+      <div class="model-tab" onclick="setView('single','google')" id="tab-google">
+        <span class="prov-dot prov-google" style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
+        GEMINI<span class="score" id="score-google"></span>
+      </div>
+      <div class="model-tab" onclick="setView('compare')" id="tab-compare" style="margin-left:auto;">
+        ◫ COMPARE ALL
+      </div>
+    </div>
+
+    <!-- Single model messages -->
+    <div class="messages" id="messagesView">
+      <div class="msg msg-ai">
+        <div class="msg-bubble">
+          <p>Your OS is active. Your protocol is enforced on every message. Type anything — it goes through your rules before any model sees it.</p>
+        </div>
+        <div class="msg-meta">system · just now</div>
+      </div>
+    </div>
+
+    <!-- Compare view -->
+    <div class="compare-grid" id="compareView" style="display:none;">
+    </div>
+
+    <!-- Input -->
+    <div class="input-bar">
+      <div class="input-row">
+        <textarea id="chatInput" placeholder="Type a message..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-modes">
+        <button class="mode-btn active" id="mode-all" onclick="setMode('all')">ALL MODELS</button>
+        <button class="mode-btn" id="mode-openai" onclick="setMode('openai')">CHATGPT</button>
+        <button class="mode-btn" id="mode-anthropic" onclick="setMode('anthropic')">CLAUDE</button>
+        <button class="mode-btn" id="mode-google" onclick="setMode('google')">GEMINI</button>
+        <button class="mode-btn" id="mode-txt" onclick="toggleTxt()" style="margin-left:auto;">TXT MODE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROTOCOL PANEL -->
+  <div class="protocol-panel" id="protocolPanel">
+    <h2 style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px;">YOUR PROTOCOL</h2>
+    <div class="proto-field">
+      <label>System Name</label>
+      <input type="text" id="protoName" value="JOS" oninput="document.getElementById('topOsName').textContent=this.value">
+    </div>
+    <div class="proto-field">
+      <label>Objective</label>
+      <textarea id="protoObj" placeholder="What is the single purpose of this operating system?">Execute my instructions exactly as stated. No reinterpretation. No filler. No unsolicited commentary.</textarea>
+    </div>
+    <div class="proto-field">
+      <label>Constraints</label>
+      <textarea id="protoConstraints" placeholder="One per line" rows="4">No emojis
+No preamble or filler
+Full copy-paste code only
+Make decisions, don't ask A/B/C questions</textarea>
+    </div>
+    <div class="proto-field">
+      <label>No-Go Zones</label>
+      <textarea id="protoNoGo" placeholder="One per line" rows="3">Never say 'Great question!'
+Never apologize unless wrong
+Never add disclaimers I didn't ask for</textarea>
+    </div>
+    <div class="proto-field">
+      <label>Definition of Done</label>
+      <textarea id="protoDone" placeholder="How does the AI know it's finished?">Task is complete when the deliverable is produced. No follow-up questions unless required for execution.</textarea>
+    </div>
+    <div class="proto-field">
+      <label>Closure Authority</label>
+      <select id="protoClosure" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none;">
+        <option value="human">Human decides when done</option>
+        <option value="system">System closes on definition of done</option>
+        <option value="both">Either can close</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="proto-save" onclick="saveProtocol()">SAVE PROTOCOL</button>
+      <button class="btn-sm" onclick="showPanel('chat')" style="padding:8px 16px;">← BACK TO CHAT</button>
+    </div>
+  </div>
+
+  <!-- TASK REGISTRY -->
+  <div class="task-panel" id="taskPanel">
+    <h2 style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px;">TASK REGISTRY</h2>
+    <div id="taskList">
+      <div class="task-item">
+        <span class="t-id">T-1</span>
+        <span class="t-title">Welcome conversation</span>
+        <span class="t-time">just now</span>
+        <span class="t-status status-open">OPEN</span>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn-sm" onclick="showPanel('chat')" style="padding:8px 16px;">← BACK TO CHAT</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="settings-panel" id="settingsPanel">
+    <h2 style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px;">API KEYS</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Your keys are encrypted and stored locally. We never see them.</p>
+
+    <div class="key-field">
+      <div class="provider-label">
+        <span class="prov-dot prov-openai" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+        <span class="prov-name">OPENAI</span>
+      </div>
+      <input type="password" id="key-openai" placeholder="sk-..." oninput="checkKey('openai')">
+      <div class="key-status key-missing" id="status-openai">Not connected</div>
+    </div>
+
+    <div class="key-field">
+      <div class="provider-label">
+        <span class="prov-dot prov-anthropic" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+        <span class="prov-name">ANTHROPIC</span>
+      </div>
+      <input type="password" id="key-anthropic" placeholder="sk-ant-..." oninput="checkKey('anthropic')">
+      <div class="key-status key-missing" id="status-anthropic">Not connected</div>
+    </div>
+
+    <div class="key-field">
+      <div class="provider-label">
+        <span class="prov-dot prov-google" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+        <span class="prov-name">GOOGLE (GEMINI)</span>
+      </div>
+      <input type="password" id="key-google" placeholder="AIza..." oninput="checkKey('google')">
+      <div class="key-status key-missing" id="status-google">Not connected</div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:8px;">
+      <button class="proto-save" onclick="saveKeys()">SAVE KEYS</button>
+      <button class="btn-sm" onclick="showPanel('chat')" style="padding:8px 16px;">← BACK TO CHAT</button>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+// ==========================================
+// STATE
+// ==========================================
+let state = {
+  conversations: [{
+    id: 0, title: 'Welcome', taskNum: 'T-1', status: 'active',
+    keywords: 'welcome setup', created: new Date().toISOString(),
+    messages: []
+  }],
+  currentConv: 0,
+  currentView: 'single', // single | compare
+  currentProvider: 'openai',
+  sendMode: 'all', // all | openai | anthropic | google
+  txtMode: false,
+  taskCounter: 1,
+  protocol: null,
+  keys: {}
+};
+
+// ==========================================
+// PANELS
+// ==========================================
+function showPanel(panel) {
+  document.getElementById('chatView').style.display = panel === 'chat' ? 'flex' : 'none';
+  document.getElementById('protocolPanel').className = 'protocol-panel' + (panel === 'protocol' ? ' visible' : '');
+  document.getElementById('taskPanel').className = 'task-panel' + (panel === 'tasks' ? ' visible' : '');
+  document.getElementById('settingsPanel').className = 'settings-panel' + (panel === 'settings' ? ' visible' : '');
+}
+
+// ==========================================
+// VIEW SWITCHING
+// ==========================================
+function setView(view, provider) {
+  state.currentView = view;
+  if (provider) state.currentProvider = provider;
+
+  document.querySelectorAll('.model-tab').forEach(t => t.classList.remove('active','tab-compare'));
+  if (view === 'compare') {
+    document.getElementById('tab-compare').classList.add('active','tab-compare');
+    document.getElementById('messagesView').style.display = 'none';
+    document.getElementById('compareView').style.display = 'block';
+    renderCompare();
+  } else {
+    document.getElementById('tab-' + provider).classList.add('active');
+    document.getElementById('messagesView').style.display = 'flex';
+    document.getElementById('compareView').style.display = 'none';
+    renderMessages();
+  }
+}
+
+// ==========================================
+// SEND MODES
+// ==========================================
+function setMode(mode) {
+  state.sendMode = mode;
+  document.querySelectorAll('.input-modes .mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-' + mode).classList.add('active');
+}
+
+function toggleTxt() {
+  state.txtMode = !state.txtMode;
+  document.getElementById('mode-txt').classList.toggle('active', state.txtMode);
+}
+
+// ==========================================
+// SEND MESSAGE
+// ==========================================
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const conv = state.conversations[state.currentConv];
+  const msgGroup = {
+    id: Date.now(),
+    role: 'user',
+    content: text,
+    timestamp: new Date().toISOString(),
+    responses: {} // keyed by provider
+  };
+
+  conv.messages.push(msgGroup);
+  input.value = '';
+  autoResize(input);
+
+  // Auto-title from first message
+  if (conv.messages.length === 1) {
+    conv.title = text.substring(0, 50) + (text.length > 50 ? '...' : '');
+    conv.keywords = extractKeywords(text);
+    document.getElementById('convTitle').textContent = conv.title;
+    renderSidebar();
+  }
+
+  renderMessages();
+
+  // Determine which providers to send to
+  const providers = state.sendMode === 'all'
+    ? ['openai', 'anthropic', 'google']
+    : [state.sendMode];
+
+  // Send to each provider
+  for (const provider of providers) {
+    simulateResponse(msgGroup, provider, text);
+  }
+
+  // Switch to compare if sending to all
+  if (state.sendMode === 'all' && providers.length > 1) {
+    setTimeout(() => setView('compare'), 300);
+  }
+}
+
+function simulateResponse(msgGroup, provider, userText) {
+  // In production: this hits your Flask backend which proxies to the real API
+  // For demo: simulate responses
+  const protocol = buildProtocolPrompt();
+  const providerNames = { openai: 'ChatGPT', anthropic: 'Claude', google: 'Gemini' };
+
+  setTimeout(() => {
+    const ntiScore = (0.6 + Math.random() * 0.35).toFixed(2);
+    const constraintsTotal = 4;
+    const constraintsMet = Math.floor(2 + Math.random() * 3);
+
+    msgGroup.responses[provider] = {
+      content: `[${providerNames[provider]} response to "${userText.substring(0,40)}..." with ${document.getElementById('topOsName').textContent} protocol enforced]\n\nThis is a simulated response. In production, this hits the ${providerNames[provider]} API with your protocol prepended as the system message.\n\nNTI Score: ${ntiScore} | Constraints: ${constraintsMet}/${constraintsTotal}`,
+      ntiScore: parseFloat(ntiScore),
+      constraintsMet,
+      constraintsTotal,
+      tokens: Math.floor(100 + Math.random() * 300),
+      latency: Math.floor(200 + Math.random() * 1500),
+      timestamp: new Date().toISOString()
+    };
+
+    // Update score badges
+    const scoreEl = document.getElementById('score-' + provider);
+    if (scoreEl) scoreEl.textContent = ntiScore;
+
+    if (state.currentView === 'compare') renderCompare();
+    else if (state.currentProvider === provider) renderMessages();
+  }, 500 + Math.random() * 1500);
+}
+
+// ==========================================
+// RENDER
+// ==========================================
+function renderMessages() {
+  const conv = state.conversations[state.currentConv];
+  const container = document.getElementById('messagesView');
+  let html = '';
+
+  for (const msg of conv.messages) {
+    // User message
+    html += `<div class="msg msg-user"><div class="msg-bubble"><p>${escHtml(msg.content)}</p></div><div class="msg-meta">${timeAgo(msg.timestamp)}</div></div>`;
+
+    // AI response for current provider
+    const resp = msg.responses[state.currentProvider];
+    if (resp) {
+      const scoreClass = resp.ntiScore >= 0.8 ? 'score-high' : resp.ntiScore >= 0.6 ? 'score-mid' : 'score-low';
+      html += `<div class="msg msg-ai"><div class="msg-bubble"><p>${escHtml(resp.content)}</p></div><div class="msg-meta"><span class="msg-provider"><span class="prov-dot prov-${state.currentProvider}"></span>${state.currentProvider}</span><span class="nti-score ${scoreClass}">NTI ${resp.ntiScore}</span><span>${resp.constraintsMet}/${resp.constraintsTotal} constraints</span><span>${resp.latency}ms</span></div></div>`;
+    }
+  }
+
+  container.innerHTML = html || '<div class="msg msg-ai"><div class="msg-bubble"><p>Your OS is active. Type anything.</p></div></div>';
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderCompare() {
+  const conv = state.conversations[state.currentConv];
+  const container = document.getElementById('compareView');
+  let html = '';
+
+  for (const msg of conv.messages) {
+    html += `<div class="compare-prompt"><div class="label">YOU</div><p>${escHtml(msg.content)}</p></div>`;
+    html += '<div class="compare-responses">';
+
+    for (const provider of ['openai', 'anthropic', 'google']) {
+      const resp = msg.responses[provider];
+      const provNames = { openai:'ChatGPT', anthropic:'Claude', google:'Gemini' };
+      const colors = { openai:'var(--green)', anthropic:'var(--amber)', google:'var(--blue)' };
+
+      if (resp) {
+        const scoreClass = resp.ntiScore >= 0.8 ? 'score-high' : resp.ntiScore >= 0.6 ? 'score-mid' : 'score-low';
+        const chosen = resp.chosen ? ' chosen' : '';
+        html += `<div class="compare-card${chosen}" onclick="chooseResponse('${msg.id}','${provider}')">
+          <div class="card-header">
+            <span class="provider-name" style="color:${colors[provider]}">${provNames[provider]}</span>
+            <span class="nti-score ${scoreClass}">NTI ${resp.ntiScore}</span>
+          </div>
+          <div class="card-body">${escHtml(resp.content).substring(0, 300)}${resp.content.length > 300 ? '...' : ''}</div>
+          <div class="card-footer">
+            <span>${resp.constraintsMet}/${resp.constraintsTotal} constraints</span>
+            <span>${resp.latency}ms · ${resp.tokens} tok</span>
+          </div>
+          <div class="choose-btn">CONTINUE WITH THIS →</div>
+        </div>`;
+      } else {
+        html += `<div class="compare-card" style="opacity:.4;"><div class="card-header"><span class="provider-name" style="color:${colors[provider]}">${provNames[provider]}</span></div><div class="card-body" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);">Loading...</div></div>`;
+      }
+    }
+    html += '</div>';
+  }
+
+  container.innerHTML = html || '<p style="color:var(--text-dim);text-align:center;padding:40px;">Send a message in ALL MODELS mode to compare responses.</p>';
+}
+
+function chooseResponse(msgId, provider) {
+  const conv = state.conversations[state.currentConv];
+  for (const msg of conv.messages) {
+    if (msg.id == msgId) {
+      Object.keys(msg.responses).forEach(p => msg.responses[p].chosen = (p === provider));
+    }
+  }
+  state.currentProvider = provider;
+  setView('single', provider);
+}
+
+function renderSidebar() {
+  const active = state.conversations.filter(c => c.status === 'active');
+  const closed = state.conversations.filter(c => c.status === 'closed');
+
+  document.getElementById('activeConvs').innerHTML = active.map((c, i) =>
+    `<div class="sidebar-item${state.currentConv === state.conversations.indexOf(c) ? ' active' : ''}" onclick="loadConversation(${state.conversations.indexOf(c)})">
+      <span class="dot dot-active"></span>
+      <span class="t-num">${c.taskNum}</span>
+      <span>${c.title}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('closedConvs').innerHTML = closed.map((c, i) =>
+    `<div class="sidebar-item" onclick="loadConversation(${state.conversations.indexOf(c)})">
+      <span class="dot dot-closed"></span>
+      <span class="t-num">${c.taskNum}</span>
+      <span>${c.title}</span>
+    </div>`
+  ).join('');
+}
+
+// ==========================================
+// CONVERSATIONS
+// ==========================================
+function newConversation() {
+  state.taskCounter++;
+  const conv = {
+    id: Date.now(),
+    title: 'New conversation',
+    taskNum: 'T-' + state.taskCounter,
+    status: 'active',
+    keywords: '',
+    created: new Date().toISOString(),
+    messages: []
+  };
+  state.conversations.push(conv);
+  state.currentConv = state.conversations.length - 1;
+  document.getElementById('convTitle').textContent = conv.title;
+  document.getElementById('convMeta').textContent = conv.taskNum + ' · Started just now';
+  renderSidebar();
+  renderMessages();
+  showPanel('chat');
+}
+
+function loadConversation(idx) {
+  state.currentConv = idx;
+  const conv = state.conversations[idx];
+  document.getElementById('convTitle').textContent = conv.title;
+  document.getElementById('convMeta').textContent = conv.taskNum + ' · ' + timeAgo(conv.created);
+  renderSidebar();
+  renderMessages();
+  showPanel('chat');
+}
+
+function closeConversation() {
+  state.conversations[state.currentConv].status = 'closed';
+  renderSidebar();
+}
+
+// ==========================================
+// SEARCH
+// ==========================================
+function searchConversations() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (!q) { renderSidebar(); return; }
+
+  const results = state.conversations.filter(c =>
+    c.title.toLowerCase().includes(q) ||
+    c.taskNum.toLowerCase().includes(q) ||
+    (c.keywords && c.keywords.toLowerCase().includes(q)) ||
+    c.messages.some(m => m.content.toLowerCase().includes(q))
+  );
+
+  document.getElementById('activeConvs').innerHTML = results.map((c) =>
+    `<div class="sidebar-item" onclick="loadConversation(${state.conversations.indexOf(c)})">
+      <span class="dot ${c.status === 'active' ? 'dot-active' : 'dot-closed'}"></span>
+      <span class="t-num">${c.taskNum}</span>
+      <span>${c.title}</span>
+    </div>`
+  ).join('') || '<div style="padding:8px 10px;font-size:12px;color:var(--text-muted);">No results</div>';
+}
+
+// ==========================================
+// PROTOCOL
+// ==========================================
+function buildProtocolPrompt() {
+  const name = document.getElementById('protoName').value || '_OS';
+  const obj = document.getElementById('protoObj').value;
+  const con = document.getElementById('protoConstraints').value;
+  const nogo = document.getElementById('protoNoGo').value;
+  const done = document.getElementById('protoDone').value;
+  const closure = document.getElementById('protoClosure').value;
+
+  let p = `## ${name} — Operating System\n## Enforcement: Binding. No bypasses.\n\n`;
+  p += `OBJECTIVE:\n${obj}\n\n`;
+  p += `CONSTRAINTS:\n${con.split('\n').filter(l=>l.trim()).map(l=>'— '+l.trim()).join('\n')}\n\n`;
+  p += `NO-GO ZONES:\n${nogo.split('\n').filter(l=>l.trim()).map(l=>'✗ '+l.trim()).join('\n')}\n\n`;
+  p += `DEFINITION OF DONE:\n${done}\n\n`;
+  p += `CLOSURE AUTHORITY:\n${closure}\n\n`;
+  p += `## BINDING CONTRACT\n1. Objective is frozen before execution begins.\n2. Emotion may be acknowledged, never executed.\n3. Constraints cannot be deleted; only appended explicitly.\n4. If ambiguity exists, request clarification OR run analysis-only mode.\n`;
+  return p;
+}
+
+function saveProtocol() {
+  state.protocol = buildProtocolPrompt();
+  document.getElementById('topOsName').textContent = document.getElementById('protoName').value || '_OS';
+  showPanel('chat');
+}
+
+// ==========================================
+// KEYS
+// ==========================================
+function checkKey(provider) {
+  const val = document.getElementById('key-' + provider).value;
+  const status = document.getElementById('status-' + provider);
+  if (val.length > 10) {
+    status.textContent = 'Key entered';
+    status.className = 'key-status key-connected';
+  } else {
+    status.textContent = 'Not connected';
+    status.className = 'key-status key-missing';
+  }
+}
+
+function saveKeys() {
+  ['openai','anthropic','google'].forEach(p => {
+    const val = document.getElementById('key-' + p).value;
+    if (val) state.keys[p] = val;
+  });
+  showPanel('chat');
+}
+
+// ==========================================
+// UTILITIES
+// ==========================================
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function timeAgo(iso) {
+  if (!iso) return 'just now';
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d/60) + 'm ago';
+  if (d < 86400) return Math.floor(d/3600) + 'h ago';
+  return Math.floor(d/86400) + 'd ago';
+}
+
+function extractKeywords(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w => w.length > 3).slice(0, 10).join(' ');
+}
+
+function copyConversation() {
+  const conv = state.conversations[state.currentConv];
+  let text = conv.messages.map(m => {
+    let s = 'USER: ' + m.content + '\n';
+    Object.entries(m.responses).forEach(([p, r]) => {
+      s += p.toUpperCase() + ': ' + r.content + '\n';
+    });
+    return s;
+  }).join('\n');
+  navigator.clipboard.writeText(text);
+}
+
+function txtMode() {
+  const conv = state.conversations[state.currentConv];
+  const last = conv.messages[conv.messages.length - 1];
+  if (last && last.responses[state.currentProvider]) {
+    const plain = last.responses[state.currentProvider].content.replace(/[*_#`]/g, '');
+    navigator.clipboard.writeText(plain);
+  }
+}
+
+// Init
+renderSidebar();
+</script>
+
+</body>
+</html>
