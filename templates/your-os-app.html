@@ -190,7 +190,7 @@ body::before { content:''; position:fixed; inset:0; background:url("data:image/s
     <div class="os-badge" id="topOsName">JOS</div>
   </div>
   <div class="topbar-right">
-    <div class="tier-badge">MULTI-MODEL</div>
+    <div class="tier-badge">GOVERNANCE ENGINE</div>
     <button class="btn-sm" onclick="showPanel('settings')">KEYS</button>
     <button class="btn-sm" onclick="showPanel('protocol')">PROTOCOL</button>
     <button class="btn-sm" onclick="showPanel('tasks')">TASKS</button>
@@ -398,6 +398,13 @@ Never add disclaimers I didn't ask for</textarea>
 // ==========================================
 // STATE
 // ==========================================
+const urlParams = new URLSearchParams(window.location.search);
+let osConfig = {};
+try { osConfig = JSON.parse(urlParams.get('os') || '{}'); } catch(e) {}
+const userPath = urlParams.get('path') || 'new'; // 'new' or 'existing'
+const userApiKey = urlParams.get('key') || '';
+const userProvider = urlParams.get('provider') || 'openai';
+
 let state = {
   conversations: [{
     id: 0, title: 'Welcome', taskNum: 'T-1', status: 'active',
@@ -405,14 +412,22 @@ let state = {
     messages: []
   }],
   currentConv: 0,
-  currentView: 'single', // single | compare
-  currentProvider: 'openai',
-  sendMode: 'all', // all | openai | anthropic | google
+  currentView: 'single',
+  currentProvider: userPath === 'existing' ? userProvider : 'openai',
+  sendMode: userPath === 'existing' ? userProvider : 'openai',
   txtMode: false,
   taskCounter: 1,
-  protocol: null,
-  keys: {}
+  protocol: osConfig,
+  keys: {},
+  trialCount: 0,
+  trialLimit: 5,
+  history: [] // for context in API calls
 };
+
+// Load user key if provided
+if (userApiKey && userProvider) {
+  state.keys[userProvider] = userApiKey;
+}
 
 // ==========================================
 // PANELS
@@ -473,7 +488,7 @@ async function sendMessage() {
     role: 'user',
     content: text,
     timestamp: new Date().toISOString(),
-    responses: {} // keyed by provider
+    responses: {}
   };
 
   conv.messages.push(msgGroup);
@@ -490,50 +505,126 @@ async function sendMessage() {
 
   renderMessages();
 
-  // Determine which providers to send to
+  // Determine providers
   const providers = state.sendMode === 'all'
     ? ['openai', 'anthropic', 'google']
     : [state.sendMode];
 
   // Send to each provider
   for (const provider of providers) {
-    simulateResponse(msgGroup, provider, text);
+    callProvider(msgGroup, provider, text);
   }
 
-  // Switch to compare if sending to all
   if (state.sendMode === 'all' && providers.length > 1) {
     setTimeout(() => setView('compare'), 300);
   }
 }
 
-function simulateResponse(msgGroup, provider, userText) {
-  // In production: this hits your Flask backend which proxies to the real API
-  // For demo: simulate responses
-  const protocol = buildProtocolPrompt();
+async function callProvider(msgGroup, provider, userText) {
   const providerNames = { openai: 'ChatGPT', anthropic: 'Claude', google: 'Gemini' };
 
-  setTimeout(() => {
-    const ntiScore = (0.6 + Math.random() * 0.35).toFixed(2);
-    const constraintsTotal = 4;
-    const constraintsMet = Math.floor(2 + Math.random() * 3);
+  // Show loading state
+  msgGroup.responses[provider] = {
+    content: '⏳ Thinking...',
+    ntiScore: 0, constraintsMet: 0, constraintsTotal: 0,
+    tokens: 0, latency: 0, loading: true,
+    timestamp: new Date().toISOString()
+  };
+  if (state.currentView === 'compare') renderCompare();
+  else if (state.currentProvider === provider) renderMessages();
 
-    msgGroup.responses[provider] = {
-      content: `[${providerNames[provider]} response to "${userText.substring(0,40)}..." with ${document.getElementById('topOsName').textContent} protocol enforced]\n\nThis is a simulated response. In production, this hits the ${providerNames[provider]} API with your protocol prepended as the system message.\n\nNTI Score: ${ntiScore} | Constraints: ${constraintsMet}/${constraintsTotal}`,
-      ntiScore: parseFloat(ntiScore),
-      constraintsMet,
-      constraintsTotal,
-      tokens: Math.floor(100 + Math.random() * 300),
-      latency: Math.floor(200 + Math.random() * 1500),
-      timestamp: new Date().toISOString()
+  try {
+    const body = {
+      message: userText,
+      protocol: state.protocol,
+      provider: provider,
+      history: state.history.slice(-10)
     };
 
-    // Update score badges
-    const scoreEl = document.getElementById('score-' + provider);
-    if (scoreEl) scoreEl.textContent = ntiScore;
+    // If user has their own key, pass it
+    if (state.keys[provider]) {
+      body.api_key = state.keys[provider];
+    }
 
-    if (state.currentView === 'compare') renderCompare();
-    else if (state.currentProvider === provider) renderMessages();
-  }, 500 + Math.random() * 1500);
+    const resp = await fetch('/api/os/trial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await resp.json();
+
+    if (data.error === 'trial_exhausted') {
+      msgGroup.responses[provider] = {
+        content: data.message + '\n\nTo continue, add your API key in Settings.',
+        ntiScore: 0, constraintsMet: 0, constraintsTotal: 0,
+        tokens: 0, latency: 0, loading: false, trialDone: true,
+        timestamp: new Date().toISOString()
+      };
+      updateTrialCounter(data.trial_count, data.trial_limit);
+    } else if (data.error) {
+      msgGroup.responses[provider] = {
+        content: `Error from ${providerNames[provider]}: ${data.message || data.error}`,
+        ntiScore: 0, constraintsMet: 0, constraintsTotal: 0,
+        tokens: 0, latency: 0, loading: false,
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      msgGroup.responses[provider] = {
+        content: data.content,
+        ntiScore: data.nti_score || 0,
+        constraintsMet: data.constraints_followed || 0,
+        constraintsTotal: data.constraints_total || 0,
+        tokens: (data.tokens_in || 0) + (data.tokens_out || 0),
+        latency: data.latency_ms || 0,
+        loading: false,
+        timestamp: new Date().toISOString()
+      };
+
+      // Add to history for context
+      state.history.push({ role: 'user', content: userText });
+      state.history.push({ role: 'assistant', content: data.content });
+
+      // Update trial counter
+      if (data.is_trial) {
+        updateTrialCounter(data.trial_count, data.trial_limit);
+      }
+    }
+
+    // Update score badge
+    const scoreEl = document.getElementById('score-' + provider);
+    if (scoreEl) scoreEl.textContent = (msgGroup.responses[provider].ntiScore || 0).toFixed(2);
+
+  } catch (err) {
+    msgGroup.responses[provider] = {
+      content: `Connection error: ${err.message}. Check your network.`,
+      ntiScore: 0, constraintsMet: 0, constraintsTotal: 0,
+      tokens: 0, latency: 0, loading: false,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  if (state.currentView === 'compare') renderCompare();
+  else if (state.currentProvider === provider) renderMessages();
+}
+
+function updateTrialCounter(count, limit) {
+  state.trialCount = count;
+  state.trialLimit = limit;
+  let el = document.getElementById('trialCounter');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'trialCounter';
+    el.style.cssText = 'font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:1px;text-align:center;padding:6px;background:rgba(251,191,36,.06);border-bottom:1px solid rgba(251,191,36,.1)';
+    document.querySelector('.topbar').after(el);
+  }
+  const remaining = limit - count;
+  if (remaining > 0) {
+    el.textContent = `FREE TRIAL: ${remaining} message${remaining !== 1 ? 's' : ''} remaining — connect your API key for unlimited`;
+  } else {
+    el.textContent = 'FREE TRIAL COMPLETE — connect your API key to continue';
+    el.style.color = 'var(--red)';
+  }
 }
 
 // ==========================================
@@ -794,6 +885,32 @@ function txtMode() {
 
 // Init
 renderSidebar();
+
+// Load protocol from URL if present
+if (osConfig.os_name) {
+  document.getElementById('topOsName').textContent = osConfig.os_name;
+  document.getElementById('protoName').value = osConfig.os_name;
+  if (osConfig.objective) document.getElementById('protoObj').value = osConfig.objective;
+  if (osConfig.constraints) document.getElementById('protoConstraints').value = osConfig.constraints;
+  if (osConfig.no_go_zones) document.getElementById('protoNoGo').value = osConfig.no_go_zones;
+  if (osConfig.definition_of_done) document.getElementById('protoDone').value = osConfig.definition_of_done;
+}
+
+// Set default send mode based on path
+if (userPath === 'new') {
+  setMode('openai');
+  // Update welcome message for trial users
+  document.getElementById('messagesView').innerHTML = `
+    <div class="msg msg-ai"><div class="msg-bubble">
+      <p>${osConfig.os_name || 'Your OS'} is active. Your protocol is enforced on every message.<br><br>You have 5 free messages. Type anything — it goes through your rules before the AI sees it.</p>
+    </div><div class="msg-meta">system · just now</div></div>`;
+} else if (userPath === 'existing') {
+  setMode(userProvider);
+  document.getElementById('messagesView').innerHTML = `
+    <div class="msg msg-ai"><div class="msg-bubble">
+      <p>${osConfig.os_name || 'Your OS'} is active. Your protocol is enforced on every message. Connected to ${userProvider}. Type anything.</p>
+    </div><div class="msg-meta">system · just now</div></div>`;
+}
 </script>
 
 </body>

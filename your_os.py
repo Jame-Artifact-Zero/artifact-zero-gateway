@@ -28,9 +28,16 @@ your_os = Blueprint('your_os', __name__)
 # ============================================================
 # CONFIG
 # ============================================================
-YOUR_OS_VERSION = "your-os-v1.0"
+YOUR_OS_VERSION = "your-os-v1.1"
 YOUR_OS_DB = os.getenv("YOUR_OS_DB", "/tmp/your_os.db")
 ENCRYPTION_KEY = os.getenv("YOUR_OS_ENC_KEY", "artifact-zero-default-key-change-in-prod")
+
+# --- FREE TRIAL CONFIG ---
+# House key for "New to AI" users — 5 free messages, your dime
+HOUSE_PROVIDER = "openai"  # which model free users get
+HOUSE_API_KEY = os.getenv("OPENAI_API_KEY", "")  # your key from Render env vars
+FREE_TRIAL_LIMIT = 5  # messages per session
+DB_WRITE_WARN_MS = 200  # log warning if db write exceeds this
 
 # ============================================================
 # DATABASE
@@ -40,6 +47,15 @@ def os_db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
+
+
+def db_commit_timed(conn):
+    """Commit with latency monitoring. Logs warning if slow."""
+    t0 = time.time()
+    db_commit_timed(conn)
+    ms = int((time.time() - t0) * 1000)
+    if ms > DB_WRITE_WARN_MS:
+        print(f"[WARN] your_os db commit took {ms}ms — consider Postgres migration")
 
 
 def os_db_init():
@@ -124,7 +140,36 @@ def os_db_init():
         FOREIGN KEY (user_id) REFERENCES os_users(id)
     )""")
 
-    conn.commit()
+    # Trial tracking — every visitor interaction
+    c.execute("""CREATE TABLE IF NOT EXISTS os_trial_sessions (
+        id TEXT PRIMARY KEY,
+        ip TEXT,
+        user_agent TEXT,
+        user_name TEXT,
+        os_name TEXT,
+        path TEXT,
+        provider TEXT,
+        message_count INTEGER DEFAULT 0,
+        has_own_key INTEGER DEFAULT 0,
+        protocol_json TEXT,
+        first_seen TEXT NOT NULL,
+        last_seen TEXT NOT NULL
+    )""")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS os_trial_messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT,
+        role TEXT NOT NULL,
+        provider TEXT,
+        content TEXT,
+        nti_score REAL,
+        is_trial INTEGER DEFAULT 1,
+        latency_ms INTEGER,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES os_trial_sessions(id)
+    )""")
+
+    db_commit_timed(conn)
     conn.close()
 
 
@@ -441,14 +486,172 @@ def quick_nti_score(text: str, protocol: dict) -> dict:
 
 
 # ============================================================
-# ROUTES: AUTH
+# ROUTES: PAGES
 # ============================================================
 @your_os.route('/your-os')
 def your_os_home():
+    """Landing page — two-door entry, protocol builder."""
+    try:
+        return render_template('your-os.html')
+    except Exception:
+        return "Your OS — coming soon."
+
+
+@your_os.route('/your-os/app')
+def your_os_app():
+    """The control room app."""
     try:
         return render_template('your-os-app.html')
     except Exception:
-        return "Your OS — coming soon."
+        return "Your OS App — coming soon."
+
+
+# ============================================================
+# ROUTES: FREE TRIAL CHAT (no auth required)
+# ============================================================
+@your_os.route('/api/os/trial', methods=['POST'])
+def os_trial_chat():
+    """
+    Free trial endpoint — uses house API key.
+    No login required. Session-based rate limiting.
+    5 messages max per session.
+    """
+    data = request.get_json() or {}
+    message = data.get('message', '').strip()
+    protocol = data.get('protocol', {})
+    provider = data.get('provider', HOUSE_PROVIDER)
+
+    if not message:
+        return jsonify({'error': 'Message required'}), 400
+
+    # Session-based trial counter
+    trial_count = session.get('your_os_trial_count', 0)
+    if trial_count >= FREE_TRIAL_LIMIT:
+        return jsonify({
+            'error': 'trial_exhausted',
+            'message': f'Free trial complete ({FREE_TRIAL_LIMIT} messages). Connect your own API key to continue.',
+            'trial_count': trial_count,
+            'trial_limit': FREE_TRIAL_LIMIT
+        }), 429
+
+    # Determine which key to use
+    user_key = data.get('api_key', '').strip()
+
+    if user_key:
+        # User provided their own key — no trial decrement
+        api_key = user_key
+        is_trial = False
+    else:
+        # Use house key
+        if not HOUSE_API_KEY:
+            return jsonify({
+                'error': 'no_house_key',
+                'message': 'Trial not available. Connect your own API key.'
+            }), 503
+        api_key = HOUSE_API_KEY
+        provider = HOUSE_PROVIDER
+        is_trial = True
+
+    # Build system prompt from protocol
+    system_prompt = build_system_prompt(protocol)
+
+    # Build messages (include conversation history if provided)
+    history = data.get('history', [])
+    messages_for_api = []
+    for h in history[-10:]:  # last 10 messages max for context
+        messages_for_api.append({'role': h.get('role', 'user'), 'content': h.get('content', '')})
+    messages_for_api.append({'role': 'user', 'content': message})
+
+    # Call the provider
+    caller = PROVIDER_CALLERS.get(provider)
+    if caller and HAS_REQUESTS:
+        result = caller(api_key, system_prompt, messages_for_api)
+    else:
+        return jsonify({
+            'error': 'network_unavailable',
+            'message': 'API calls not available on this server.'
+        }), 503
+
+    if result.get('error'):
+        return jsonify({
+            'error': 'api_error',
+            'message': result['error'],
+            'provider': provider
+        }), 502
+
+    # NTI score the response
+    nti = quick_nti_score(result.get('content', ''), protocol)
+
+    # Increment trial count
+    if is_trial:
+        session['your_os_trial_count'] = trial_count + 1
+
+    # --- TRACK THIS INTERACTION ---
+    try:
+        conn = os_db()
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        ua = request.headers.get('User-Agent', '')[:200]
+        sess_id = session.get('your_os_session_id')
+        now = utc_now()
+
+        if not sess_id:
+            sess_id = str(uuid.uuid4())
+            session['your_os_session_id'] = sess_id
+            # New session
+            conn.execute("""
+                INSERT OR IGNORE INTO os_trial_sessions
+                (id, ip, user_agent, user_name, os_name, path, provider, message_count, has_own_key, protocol_json, first_seen, last_seen)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (sess_id, ip, ua,
+                  protocol.get('user_name', ''),
+                  protocol.get('os_name', ''),
+                  data.get('path', 'unknown'),
+                  provider, 0,
+                  1 if user_key else 0,
+                  json.dumps(protocol),
+                  now, now))
+
+        # Update session
+        conn.execute("""
+            UPDATE os_trial_sessions
+            SET message_count = message_count + 1, last_seen = ?, provider = ?, has_own_key = ?
+            WHERE id = ?
+        """, (now, provider, 1 if user_key else 0, sess_id))
+
+        # Log the message
+        conn.execute("""
+            INSERT INTO os_trial_messages (id, session_id, role, provider, content, nti_score, is_trial, latency_ms, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, (str(uuid.uuid4()), sess_id, 'user', None, message, None, 1 if is_trial else 0, 0, now))
+
+        # Log the response
+        conn.execute("""
+            INSERT INTO os_trial_messages (id, session_id, role, provider, content, nti_score, is_trial, latency_ms, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, (str(uuid.uuid4()), sess_id, 'assistant', provider,
+              result.get('content', '')[:500],  # truncate for storage
+              nti['score'], 1 if is_trial else 0,
+              result.get('latency_ms', 0), now))
+
+        db_commit_timed(conn)
+        conn.close()
+    except Exception as e:
+        print(f"[WARN] trial tracking error: {e}")
+
+    return jsonify({
+        'ok': True,
+        'provider': provider,
+        'is_trial': is_trial,
+        'trial_count': session.get('your_os_trial_count', 0),
+        'trial_limit': FREE_TRIAL_LIMIT,
+        'content': result.get('content', ''),
+        'nti_score': nti['score'],
+        'constraints_followed': nti['followed'],
+        'constraints_total': nti['total'],
+        'tokens_in': result.get('tokens_in', 0),
+        'tokens_out': result.get('tokens_out', 0),
+        'latency_ms': result.get('latency_ms', 0)
+    })
 
 
 @your_os.route('/api/os/signup', methods=['POST'])
@@ -477,7 +680,7 @@ def os_signup():
             "INSERT INTO os_protocols (id, user_id, os_name, objective, constraints, no_go_zones, definition_of_done, closure_authority, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (str(uuid.uuid4()), user_id, os_name, '', '', '', '', 'human', utc_now(), utc_now())
         )
-        conn.commit()
+        db_commit_timed(conn)
     except sqlite3.IntegrityError:
         conn.close()
         return jsonify({'error': 'Email already registered'}), 409
@@ -561,7 +764,7 @@ def os_save_protocol(user_id):
 
     # Update user's OS name
     conn.execute("UPDATE os_users SET os_name = ? WHERE id = ?", (data.get('os_name', '_OS'), user_id))
-    conn.commit()
+    db_commit_timed(conn)
     conn.close()
     return jsonify({'ok': True, 'version': (existing['version'] or 0) + 1 if existing else 1})
 
@@ -594,7 +797,7 @@ def os_save_keys(user_id):
                     (str(uuid.uuid4()), user_id, provider, encrypted, now)
                 )
 
-    conn.commit()
+    db_commit_timed(conn)
     conn.close()
     return jsonify({'ok': True})
 
@@ -703,7 +906,7 @@ def os_chat(user_id):
     # Add current message
     messages_for_api.append({'role': 'user', 'content': message})
 
-    conn.commit()
+    db_commit_timed(conn)
 
     # Fan out to providers
     responses = {}
@@ -771,7 +974,7 @@ def os_chat(user_id):
 
     # Update conversation
     conn.execute("UPDATE os_conversations SET updated_at = ? WHERE id = ?", (utc_now(), conv_id))
-    conn.commit()
+    db_commit_timed(conn)
     conn.close()
 
     return jsonify({
@@ -796,7 +999,7 @@ def os_choose_response(user_id):
     conn = os_db()
     conn.execute("UPDATE os_messages SET chosen = 0 WHERE group_id = ? AND role = 'assistant'", (group_id,))
     conn.execute("UPDATE os_messages SET chosen = 1 WHERE group_id = ? AND provider = ?", (group_id, provider))
-    conn.commit()
+    db_commit_timed(conn)
     conn.close()
 
     return jsonify({'ok': True})
@@ -894,9 +1097,122 @@ def os_close_task(user_id, task_id):
     conn = os_db()
     conn.execute("UPDATE os_tasks SET status = 'closed', closed_at = ? WHERE id = ? AND user_id = ?",
                  (utc_now(), task_id, user_id))
-    conn.commit()
+    db_commit_timed(conn)
     conn.close()
     return jsonify({'ok': True})
+
+
+# ============================================================
+# ADMIN DASHBOARD (token-protected)
+# ============================================================
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+
+
+@your_os.route('/your-os/admin')
+def os_admin_page():
+    """Admin dashboard — requires ADMIN_TOKEN as query param."""
+    token = request.args.get('token', '')
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return "Unauthorized", 401
+
+    conn = os_db()
+
+    # Summary stats
+    total_sessions = conn.execute("SELECT COUNT(*) as cnt FROM os_trial_sessions").fetchone()['cnt']
+    total_messages = conn.execute("SELECT COUNT(*) as cnt FROM os_trial_messages").fetchone()['cnt']
+    unique_ips = conn.execute("SELECT COUNT(DISTINCT ip) as cnt FROM os_trial_sessions").fetchone()['cnt']
+    own_key_users = conn.execute("SELECT COUNT(*) as cnt FROM os_trial_sessions WHERE has_own_key = 1").fetchone()['cnt']
+    registered_users = conn.execute("SELECT COUNT(*) as cnt FROM os_users").fetchone()['cnt']
+
+    # Recent sessions
+    sessions = conn.execute("""
+        SELECT s.*, 
+               (SELECT COUNT(*) FROM os_trial_messages WHERE session_id = s.id AND role = 'user') as msg_count
+        FROM os_trial_sessions s
+        ORDER BY s.last_seen DESC
+        LIMIT 50
+    """).fetchall()
+
+    # Recent messages (last 100)
+    messages = conn.execute("""
+        SELECT m.*, s.user_name, s.os_name, s.ip
+        FROM os_trial_messages m
+        LEFT JOIN os_trial_sessions s ON m.session_id = s.id
+        ORDER BY m.created_at DESC
+        LIMIT 100
+    """).fetchall()
+
+    conn.close()
+
+    # Build HTML
+    sessions_html = ''
+    for s in sessions:
+        sessions_html += f"""<tr>
+            <td>{s['user_name'] or '—'}</td>
+            <td>{s['os_name'] or '—'}</td>
+            <td>{s['provider'] or '—'}</td>
+            <td>{s['message_count']}</td>
+            <td>{'✓' if s['has_own_key'] else '—'}</td>
+            <td>{s['ip'] or '—'}</td>
+            <td>{s['first_seen'][:19] if s['first_seen'] else '—'}</td>
+            <td>{s['last_seen'][:19] if s['last_seen'] else '—'}</td>
+        </tr>"""
+
+    messages_html = ''
+    for m in messages:
+        content_preview = (m['content'] or '')[:120].replace('<', '&lt;')
+        messages_html += f"""<tr>
+            <td>{m['user_name'] or '—'}</td>
+            <td>{m['role']}</td>
+            <td>{m['provider'] or '—'}</td>
+            <td title="{(m['content'] or '').replace('"', '&quot;')[:500]}">{content_preview}{'...' if len(m['content'] or '') > 120 else ''}</td>
+            <td>{m['nti_score'] if m['nti_score'] else '—'}</td>
+            <td>{'trial' if m['is_trial'] else 'own key'}</td>
+            <td>{m['created_at'][:19] if m['created_at'] else '—'}</td>
+        </tr>"""
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your OS — Admin</title>
+<style>
+body{{background:#080a10;color:#e4e7f0;font-family:'Courier New',monospace;padding:20px;font-size:13px}}
+h1{{color:#00e89c;font-size:18px;letter-spacing:3px;margin-bottom:8px}}
+h2{{color:#60a5fa;font-size:14px;margin:24px 0 8px;letter-spacing:2px}}
+.stats{{display:flex;gap:20px;flex-wrap:wrap;margin:16px 0}}
+.stat{{background:#0c0f18;border:1px solid #1e2538;border-radius:8px;padding:16px 20px;min-width:120px}}
+.stat-num{{font-size:28px;font-weight:700;color:#00e89c}}
+.stat-label{{font-size:10px;color:#5a6378;letter-spacing:1px;margin-top:4px;text-transform:uppercase}}
+table{{width:100%;border-collapse:collapse;margin:8px 0}}
+th{{text-align:left;padding:8px 10px;border-bottom:2px solid #1e2538;font-size:10px;color:#5a6378;letter-spacing:1px;text-transform:uppercase}}
+td{{padding:6px 10px;border-bottom:1px solid #12161f;font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+tr:hover td{{background:#0c0f18}}
+.refresh{{color:#00e89c;text-decoration:none;font-size:11px;letter-spacing:1px}}
+</style></head><body>
+<h1>YOUR OS — ADMIN DASHBOARD</h1>
+<a class="refresh" href="?token={token}">↻ REFRESH</a>
+
+<div class="stats">
+<div class="stat"><div class="stat-num">{total_sessions}</div><div class="stat-label">Total Sessions</div></div>
+<div class="stat"><div class="stat-num">{unique_ips}</div><div class="stat-label">Unique Visitors</div></div>
+<div class="stat"><div class="stat-num">{total_messages}</div><div class="stat-label">Total Messages</div></div>
+<div class="stat"><div class="stat-num">{own_key_users}</div><div class="stat-label">Brought Own Key</div></div>
+<div class="stat"><div class="stat-num">{registered_users}</div><div class="stat-label">Registered Users</div></div>
+</div>
+
+<h2>SESSIONS (last 50)</h2>
+<table>
+<tr><th>Name</th><th>OS Name</th><th>Provider</th><th>Messages</th><th>Own Key</th><th>IP</th><th>First Seen</th><th>Last Seen</th></tr>
+{sessions_html}
+</table>
+
+<h2>MESSAGES (last 100)</h2>
+<table>
+<tr><th>User</th><th>Role</th><th>Provider</th><th>Content</th><th>NTI</th><th>Type</th><th>Time</th></tr>
+{messages_html}
+</table>
+
+<div style="margin-top:40px;color:#5a6378;font-size:10px;letter-spacing:1px">ARTIFACT ZERO LABS · YOUR OS ADMIN · {utc_now()[:19]}</div>
+</body></html>"""
 
 
 # ============================================================

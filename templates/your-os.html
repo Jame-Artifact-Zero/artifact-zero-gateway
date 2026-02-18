@@ -3,463 +3,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Your Operating System — by Artifact Zero Labs</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Your OS — Artifact Zero Labs</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Literata:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #08090c;
-  --surface: #0f1117;
-  --surface2: #161922;
-  --surface3: #1c2030;
-  --border: #252a38;
-  --border-bright: #3a4160;
-  --text: #e4e6ed;
-  --text-dim: #8890a4;
-  --accent: #6ee7b7;
-  --accent-dark: #065f46;
-  --accent-glow: rgba(110, 231, 183, 0.15);
-  --amber: #fbbf24;
-  --red: #f87171;
-  --blue: #60a5fa;
+  --bg:#060810;--surface:#0c0f18;--surface2:#121620;--surface3:#1a1f2e;
+  --border:#1e2538;--border-b:#2e3650;
+  --text:#e4e7f0;--dim:#8892a8;--muted:#5a6378;
+  --green:#00e89c;--green-g:rgba(0,232,156,.10);
+  --amber:#fbbf24;--red:#f87171;--blue:#60a5fa;
+  --mono:'JetBrains Mono',monospace;--serif:'Literata',serif;--sans:'DM Sans',sans-serif;
 }
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
 
-* { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;background:rgba(6,8,16,.94);backdrop-filter:blur(12px)}
+.topbar-logo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);letter-spacing:3px;text-decoration:none}
+.topbar-logo span{color:var(--muted);font-weight:400}
+.topbar-nav{display:flex;gap:20px}
+.topbar-nav a{font-family:var(--mono);font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .2s}
+.topbar-nav a:hover{color:var(--text)}
+.topbar-live{display:flex;align-items:center;gap:6px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* --- NOISE OVERLAY --- */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-}
+/* Hero */
+.hero{max-width:680px;margin:0 auto;padding:100px 32px 60px;text-align:center}
+.hero-badge{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--green);border:1px solid rgba(0,232,156,.25);padding:5px 14px;border-radius:20px;margin-bottom:32px;text-transform:uppercase}
+.hero h1{font-family:var(--serif);font-size:clamp(32px,5.5vw,52px);font-weight:700;line-height:1.15;margin-bottom:24px;color:var(--text)}
+.hero h1 em{font-style:italic;color:var(--green)}
+.hero-body{font-size:17px;color:var(--dim);line-height:1.7;max-width:540px;margin:0 auto 16px}
+.hero-note{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:24px}
 
-/* --- TOPBAR --- */
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(8,9,12,0.92);
-  backdrop-filter: blur(12px);
-}
-.topbar .logo {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800; font-size: 13px;
-  letter-spacing: 3px; color: var(--accent);
-  text-transform: uppercase;
-}
-.topbar .logo span { color: var(--text-dim); font-weight: 500; }
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-.topbar .price-tag {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; color: var(--amber);
-  background: rgba(251,191,36,0.08);
-  border: 1px solid rgba(251,191,36,0.2);
-  padding: 4px 10px; border-radius: 4px;
-}
-.live-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent); display: inline-block;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* Two Doors */
+.doors{max-width:720px;margin:0 auto;padding:0 32px 80px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.door{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:36px 28px;text-align:center;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.door:hover{border-color:var(--green);transform:translateY(-3px);box-shadow:0 8px 40px rgba(0,232,156,.06)}
+.door::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);transform:scaleX(0);transition:transform .3s;transform-origin:left}
+.door:hover::before{transform:scaleX(1)}
+.door-icon{font-size:32px;margin-bottom:16px;display:block}
+.door h3{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:1px;margin-bottom:10px}
+.door p{font-size:14px;color:var(--dim);line-height:1.5}
+.door-cta{display:inline-block;margin-top:20px;font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1px;text-transform:uppercase;padding:8px 16px;border:1px solid rgba(0,232,156,.3);border-radius:6px;transition:all .2s}
+.door:hover .door-cta{background:var(--green);color:var(--bg)}
 
-/* --- HERO --- */
-.hero {
-  max-width: 720px; margin: 0 auto;
-  padding: 80px 24px 40px;
-  text-align: center;
-}
-.hero h1 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: clamp(28px, 5vw, 48px);
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, var(--accent), var(--blue));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.hero .sub {
-  font-size: 18px; color: var(--text-dim);
-  line-height: 1.6; max-width: 560px; margin: 0 auto 32px;
-}
-.hero .tagline {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px; color: var(--amber);
-  letter-spacing: 1px; margin-bottom: 40px;
-}
+/* Protocol Builder (same page, revealed after door choice) */
+.builder{max-width:640px;margin:0 auto;padding:0 32px 80px;display:none}
+.builder.visible{display:block}
+.builder-header{text-align:center;margin-bottom:40px}
+.builder-header h2{font-family:var(--serif);font-size:28px;font-weight:700;margin-bottom:8px}
+.builder-header p{font-size:15px;color:var(--dim)}
 
-/* --- STEPS --- */
-.steps {
-  max-width: 640px; margin: 0 auto;
-  padding: 0 24px 60px;
-}
-.step {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 24px;
-  position: relative;
-  transition: border-color 0.3s;
-}
-.step.active { border-color: var(--accent); }
-.step.completed { border-color: var(--accent-dark); opacity: 0.7; }
-.step-number {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; font-weight: 700;
-  color: var(--accent); letter-spacing: 2px;
-  margin-bottom: 12px; text-transform: uppercase;
-}
-.step h2 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 18px; font-weight: 700;
-  margin-bottom: 8px;
-}
-.step p {
-  font-size: 14px; color: var(--text-dim);
-  line-height: 1.5; margin-bottom: 20px;
-}
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;margin-bottom:20px;display:none}
+.step-card.active{display:block}
+.step-num{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase}
+.step-card h3{font-size:18px;font-weight:600;margin-bottom:6px}
+.step-card .step-desc{font-size:14px;color:var(--dim);margin-bottom:20px}
 
-/* --- FORM ELEMENTS --- */
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; font-weight: 600;
-  color: var(--text-dim); text-transform: uppercase;
-  letter-spacing: 1px; margin-bottom: 6px;
-}
-.form-group input, .form-group textarea, .form-group select {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 12px 14px;
-  border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.form-group input:focus, .form-group textarea:focus {
-  border-color: var(--accent);
-}
-.form-group textarea {
-  min-height: 80px; resize: vertical;
-  line-height: 1.5;
-}
-.form-group .hint {
-  font-size: 12px; color: var(--text-dim);
-  margin-top: 4px; font-style: italic;
-}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:var(--sans);font-size:14px;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--green)}
+.form-group textarea{min-height:80px;resize:vertical;line-height:1.5}
+.form-group .hint{font-size:12px;color:var(--muted);margin-top:4px}
 
-/* --- NAME PREVIEW --- */
-.name-preview {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 16px;
-  text-align: center;
-}
-.name-preview .os-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 28px; font-weight: 800;
-  color: var(--accent);
-  letter-spacing: 4px;
-}
-.name-preview .os-full {
-  font-size: 13px; color: var(--text-dim);
-  margin-top: 6px;
-}
+.name-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:20px;margin-top:16px;text-align:center}
+.name-preview .os-name{font-family:var(--mono);font-size:32px;font-weight:800;color:var(--green);letter-spacing:4px}
+.name-preview .os-full{font-size:13px;color:var(--dim);margin-top:4px}
 
-/* --- PROTOCOL PREVIEW --- */
-.protocol-preview {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--text-dim);
-  max-height: 400px;
-  overflow-y: auto;
-}
-.protocol-preview .field-label {
-  color: var(--accent); font-weight: 700;
-}
-.protocol-preview .rule {
-  color: var(--amber);
-}
+.btn{font-family:var(--mono);font-size:13px;font-weight:700;padding:14px 28px;border-radius:8px;border:none;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+.btn-primary{background:var(--green);color:var(--bg)}
+.btn-primary:hover{background:#00ffaa;transform:translateY(-1px);box-shadow:0 4px 20px var(--green-g)}
+.btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--dim);color:var(--text)}
+.btn-block{width:100%;text-align:center}
 
-/* --- BUTTONS --- */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px; font-weight: 700;
-  padding: 14px 28px;
-  border-radius: 8px;
-  border: none; cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg);
-}
-.btn-primary:hover {
-  background: #5ee0a8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px var(--accent-glow);
-}
-.btn-primary:disabled {
-  background: var(--surface3);
-  color: var(--text-dim);
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-.btn-secondary {
-  background: transparent;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-}
-.btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
-.btn-block { width: 100%; justify-content: center; }
+/* Protocol Preview */
+.proto-preview{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:20px;margin:20px 0;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--dim);max-height:360px;overflow-y:auto;white-space:pre-wrap}
+.proto-preview .hl{color:var(--green);font-weight:700}
+.proto-preview .rule{color:var(--amber)}
 
-/* --- WHAT YOU GET --- */
-.features {
-  max-width: 640px; margin: 0 auto;
-  padding: 0 24px 60px;
-}
-.features h2 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px; font-weight: 700;
-  color: var(--accent); letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 24px;
-}
-.feature-item {
-  display: flex; gap: 16px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
-}
-.feature-item:last-child { border-bottom: none; }
-.feature-icon {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px; font-weight: 700;
-  color: var(--accent);
-  min-width: 32px;
-}
-.feature-text h3 {
-  font-size: 15px; font-weight: 600;
-  margin-bottom: 4px;
-}
-.feature-text p {
-  font-size: 13px; color: var(--text-dim);
-  line-height: 1.5;
-}
+/* Enterprise Note */
+.enterprise-note{max-width:640px;margin:0 auto;padding:0 32px 80px;text-align:center}
+.enterprise-note .divider{width:40px;height:1px;background:var(--border);margin:0 auto 24px}
+.enterprise-note p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+.enterprise-note a{color:var(--green);text-decoration:none;font-family:var(--mono);font-size:12px;letter-spacing:1px}
+.enterprise-note a:hover{text-decoration:underline}
 
-/* --- FOOTER --- */
-.footer {
-  text-align: center;
-  padding: 40px 24px;
-  border-top: 1px solid var(--border);
-  font-size: 13px; color: var(--text-dim);
-}
-.footer a { color: var(--accent); text-decoration: none; }
+/* Footer */
+.footer{text-align:center;padding:40px 32px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.footer a{color:var(--green);text-decoration:none}
 
-/* --- HIDDEN --- */
-.hidden { display: none !important; }
+/* Trial counter */
+.trial-counter{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:1px;text-align:center;padding:8px;background:rgba(251,191,36,.06);border-bottom:1px solid rgba(251,191,36,.1);display:none}
+.trial-counter.visible{display:block}
 
-/* --- RESPONSIVE --- */
-@media (max-width: 600px) {
-  .step { padding: 24px 20px; }
-  .hero { padding: 60px 20px 30px; }
+@media(max-width:640px){
+  .doors{grid-template-columns:1fr}
+  .hero{padding:60px 20px 40px}
+  .builder,.enterprise-note{padding-left:20px;padding-right:20px}
+  .step-card{padding:24px 20px}
 }
 </style>
 </head>
 <body>
 
-<!-- TOPBAR -->
 <div class="topbar">
-  <div class="logo">ARTIFACT ZERO <span>/ YOUR OS</span></div>
-  <div class="topbar-right">
-    <div class="price-tag">$9/mo</div>
-    <span class="live-dot"></span>
+  <a href="/" class="topbar-logo">ARTIFACT ZERO <span>/ YOUR OS</span></a>
+  <div class="topbar-nav">
+    <a href="/">HOME</a>
+    <a href="/live">LIVE FEED</a>
+    <div class="topbar-live"><span class="live-dot"></span></div>
   </div>
 </div>
 
 <!-- HERO -->
-<div class="hero">
-  <h1>Build Your Own<br>Operating System</h1>
-  <p class="sub">Stop letting AI decide how to talk to you. Define your rules. Name your system. Inject it into ChatGPT. Every conversation starts on your terms.</p>
-  <div class="tagline">YOUR NAME. YOUR RULES. YOUR AI.</div>
+<div class="hero" id="heroSection">
+  <div class="hero-badge">Governance Demo Environment</div>
+  <h1>Build your own<br><em>operating system</em></h1>
+  <p class="hero-body">Define five rules. Name your system. See what happens when AI is structurally governed instead of free-associating.</p>
+  <p class="hero-body" style="font-size:14px;">This is a working demonstration of the NTI governance engine. The interface is a bridge. The engine is real.</p>
+  <div class="hero-note">No account required. No credit card. Just build it.</div>
 </div>
 
-<!-- STEP 1: NAME YOUR OS -->
-<div class="steps">
-  <div class="step active" id="step1">
-    <div class="step-number">Step 01</div>
-    <h2>Name Your System</h2>
-    <p>JOS was built by Jame. Yours gets your name. First letter of your name + OS. Or whatever you want.</p>
-    
+<!-- TWO DOORS -->
+<div class="doors" id="doorsSection">
+  <div class="door" onclick="choosePath('new')">
+    <span class="door-icon">◇</span>
+    <h3>New to AI</h3>
+    <p>Never used ChatGPT or Claude before. Build your system, try it free — 5 messages on us.</p>
+    <div class="door-cta">Start here →</div>
+  </div>
+  <div class="door" onclick="choosePath('existing')">
+    <span class="door-icon">◆</span>
+    <h3>I already use AI</h3>
+    <p>You have an OpenAI, Anthropic, or Google account. Connect your key, unlimited from the start.</p>
+    <div class="door-cta">Connect & build →</div>
+  </div>
+</div>
+
+<!-- PROTOCOL BUILDER -->
+<div class="builder" id="builderSection">
+  <div class="builder-header">
+    <h2>Five fields. Your rules.</h2>
+    <p>These become a binding protocol enforced on every message.</p>
+  </div>
+
+  <!-- Step 1: Name -->
+  <div class="step-card active" id="bStep1">
+    <div class="step-num">Step 01 — Name</div>
+    <h3>Name Your System</h3>
+    <p class="step-desc">JOS was built by Jame. Yours gets your name.</p>
     <div class="form-group">
       <label>Your First Name</label>
       <input type="text" id="userName" placeholder="e.g. Sarah" oninput="updateOSName()">
     </div>
     <div class="form-group">
-      <label>System Name (auto-generated, editable)</label>
+      <label>System Name</label>
       <input type="text" id="osName" placeholder="SOS" oninput="updatePreview()">
     </div>
-    
     <div class="name-preview">
-      <div class="os-name" id="osNameDisplay">_OS</div>
-      <div class="os-full" id="osFullName">Your Operating System</div>
+      <div class="os-name" id="osDisplay">_OS</div>
+      <div class="os-full" id="osFullDisplay">Your Operating System</div>
     </div>
-    
     <br>
-    <button class="btn btn-primary btn-block" onclick="goStep(2)">NEXT: DEFINE YOUR RULES →</button>
+    <button class="btn btn-primary btn-block" onclick="builderStep(2)">Next: Define your rules →</button>
   </div>
 
-  <!-- STEP 2: DEFINE YOUR PROTOCOL -->
-  <div class="step hidden" id="step2">
-    <div class="step-number">Step 02</div>
-    <h2>Define Your Protocol</h2>
-    <p>Five fields. These become binding rules your AI must follow. No interpretation. No softening. No drift.</p>
-    
+  <!-- Step 2: Protocol -->
+  <div class="step-card" id="bStep2">
+    <div class="step-num">Step 02 — Protocol</div>
+    <h3>Define Your Rules</h3>
+    <p class="step-desc">Five fields. These become law.</p>
     <div class="form-group">
       <label>Objective</label>
-      <textarea id="josObjective" placeholder="What is the single purpose of this operating system? e.g. 'Execute my instructions exactly as stated. No reinterpretation. No filler.'"></textarea>
-      <div class="hint">One sentence. This gets frozen before every conversation.</div>
+      <textarea id="josObj" placeholder="What is the single purpose? e.g. 'Execute my instructions exactly. No reinterpretation. No filler.'"></textarea>
+      <div class="hint">One sentence. Frozen before every conversation.</div>
     </div>
-    
     <div class="form-group">
       <label>Constraints</label>
-      <textarea id="josConstraints" placeholder="One per line. e.g.&#10;No emojis&#10;No preamble or filler&#10;Copy-paste code only&#10;Make decisions, don't ask A/B/C"></textarea>
-      <div class="hint">Rules the AI cannot break. One per line.</div>
+      <textarea id="josCon" placeholder="One per line. e.g.&#10;No emojis&#10;No preamble&#10;Full code only"></textarea>
+      <div class="hint">Rules the AI cannot break.</div>
     </div>
-    
     <div class="form-group">
       <label>No-Go Zones</label>
-      <textarea id="josNoGo" placeholder="What is explicitly banned? e.g.&#10;Never say 'Great question!'&#10;Never apologize unless wrong&#10;Never add disclaimers I didn't ask for"></textarea>
-      <div class="hint">Things the AI must never do. One per line.</div>
+      <textarea id="josNoGo" placeholder="What is banned? e.g.&#10;Never say 'Great question!'&#10;Never add disclaimers I didn't ask for"></textarea>
+      <div class="hint">Things the AI must never do.</div>
     </div>
-    
     <div class="form-group">
       <label>Definition of Done</label>
-      <textarea id="josDone" placeholder="How does the AI know it's finished? e.g. 'Task is complete when the deliverable is produced. No follow-up questions unless required.'"></textarea>
-      <div class="hint">One sentence. The stopping condition.</div>
+      <textarea id="josDone" placeholder="How does the AI know it's finished?"></textarea>
+      <div class="hint">The stopping condition.</div>
     </div>
-    
     <div class="form-group">
       <label>Closure Authority</label>
       <select id="josClosure">
-        <option value="you">You (the human decides when it's done)</option>
-        <option value="system">System (AI closes when definition of done is met)</option>
-        <option value="both">Both (either can close)</option>
+        <option value="you">You — the human decides when done</option>
+        <option value="system">System — closes when definition met</option>
+        <option value="both">Both — either can close</option>
       </select>
     </div>
-    
     <br>
-    <div style="display:flex;gap:12px;">
-      <button class="btn btn-secondary" onclick="goStep(1)">← BACK</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="goStep(3)">NEXT: PREVIEW YOUR SYSTEM →</button>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-ghost" onclick="builderStep(1)">← Back</button>
+      <button class="btn btn-primary" style="flex:1" onclick="builderStep(3)">Next: Preview →</button>
     </div>
   </div>
 
-  <!-- STEP 3: PREVIEW + DEPLOY -->
-  <div class="step hidden" id="step3">
-    <div class="step-number">Step 03</div>
-    <h2>Your System Prompt</h2>
-    <p>This is what gets injected into every ChatGPT conversation. Review it, then deploy.</p>
-    
-    <div class="protocol-preview" id="protocolPreview"></div>
-    
+  <!-- Step 3: Preview + Launch -->
+  <div class="step-card" id="bStep3">
+    <div class="step-num">Step 03 — Review</div>
+    <h3>Your System Prompt</h3>
+    <p class="step-desc">This gets injected before every message. Review it, then try it live.</p>
+    <div class="proto-preview" id="protoPreview"></div>
     <br>
-    <div style="display:flex;gap:12px;">
-      <button class="btn btn-secondary" onclick="goStep(2)">← EDIT</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="copyProtocol()">COPY SYSTEM PROMPT</button>
+    <div id="keySection" style="display:none;margin-bottom:20px;">
+      <div class="form-group">
+        <label>Your API Key</label>
+        <input type="password" id="userApiKey" placeholder="sk-... or sk-ant-...">
+        <div class="hint">OpenAI, Anthropic, or Google key. Encrypted in transit. Never stored permanently.</div>
+      </div>
+      <div class="form-group">
+        <label>Provider</label>
+        <select id="userProvider">
+          <option value="openai">OpenAI (ChatGPT)</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="google">Google (Gemini)</option>
+        </select>
+      </div>
     </div>
-    <br>
-    <button class="btn btn-primary btn-block" onclick="deploy()" style="background:var(--amber);color:var(--bg);">DEPLOY TO OPENAI — $9/MO →</button>
-    <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:12px;">API integration. Your protocol auto-injects into every new ChatGPT conversation. Cancel anytime.</p>
-  </div>
-</div>
-
-<!-- WHAT YOU GET -->
-<div class="features">
-  <h2>What You Get</h2>
-  
-  <div class="feature-item">
-    <div class="feature-icon">01</div>
-    <div class="feature-text">
-      <h3>Your Named Operating System</h3>
-      <p>Not JOS. Not someone else's rules. Your first name, your protocol, your identity. SOS, TOS, KOS — whatever you build.</p>
-    </div>
-  </div>
-  
-  <div class="feature-item">
-    <div class="feature-icon">02</div>
-    <div class="feature-text">
-      <h3>Binding Protocol</h3>
-      <p>Five fields that become law. Objective frozen before execution. Constraints can't be deleted. No-go zones enforced. Your AI stops freelancing.</p>
-    </div>
-  </div>
-  
-  <div class="feature-item">
-    <div class="feature-icon">03</div>
-    <div class="feature-text">
-      <h3>Auto-Inject via API</h3>
-      <p>Connect your OpenAI API key. Your protocol loads as system prompt on every conversation. No copy-pasting. It just works.</p>
-    </div>
-  </div>
-  
-  <div class="feature-item">
-    <div class="feature-icon">04</div>
-    <div class="feature-text">
-      <h3>4 Enforcement Rules</h3>
-      <p>Objective is frozen at L1. Emotion acknowledged, never executed. Constraints append-only. Ambiguity triggers clarification, not guessing.</p>
-    </div>
-  </div>
-  
-  <div class="feature-item">
-    <div class="feature-icon">05</div>
-    <div class="feature-text">
-      <h3>Edit Anytime</h3>
-      <p>Your protocol evolves with you. Change constraints, update no-go zones, refine your objective. Redeploy in seconds.</p>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-ghost" onclick="builderStep(2)">← Edit</button>
+      <button class="btn btn-primary" style="flex:1" onclick="launchOS()" id="launchBtn">Launch your OS →</button>
     </div>
   </div>
 </div>
 
-<!-- FOOTER -->
+<!-- Enterprise Note -->
+<div class="enterprise-note" id="enterpriseNote">
+  <div class="divider"></div>
+  <p>This is a working demonstration of the NTI governance engine.</p>
+  <p>The structural analysis is real. The protocol enforcement is real. The scoring is real.</p>
+  <p style="margin-top:16px;color:var(--dim);">When your team is ready for enterprise deployment, we're here.</p>
+  <a href="mailto:jame@dontgofulltilt.com" style="display:inline-block;margin-top:16px;">CONTACT ARTIFACT ZERO LABS →</a>
+</div>
+
 <div class="footer">
-  <p>Built by <a href="https://dontgofulltilt.com" target="_blank">Artifact Zero Labs</a> — Knoxville, TN</p>
-  <p style="margin-top:8px;">JOS was built by Jame Houghton. Now build yours.</p>
+  <p>Built by <a href="/">Artifact Zero Labs</a> — Knoxville, TN</p>
+  <p style="margin-top:4px">Rule-based structural analysis. Zero LLM dependency in the engine.</p>
 </div>
 
 <script>
+let userPath = null; // 'new' or 'existing'
+let osProtocol = null;
+
+function choosePath(path) {
+  userPath = path;
+  document.getElementById('heroSection').style.display = 'none';
+  document.getElementById('doorsSection').style.display = 'none';
+  document.getElementById('enterpriseNote').style.display = 'none';
+  document.getElementById('builderSection').classList.add('visible');
+
+  // Show key section for existing users at step 3
+  if (path === 'existing') {
+    document.getElementById('keySection').style.display = 'block';
+  }
+
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
 function updateOSName() {
   const name = document.getElementById('userName').value.trim();
   if (name.length > 0) {
-    const osName = name.charAt(0).toUpperCase() + 'OS';
-    document.getElementById('osName').value = osName;
+    document.getElementById('osName').value = name.charAt(0).toUpperCase() + 'OS';
     updatePreview();
   }
 }
@@ -467,129 +285,109 @@ function updateOSName() {
 function updatePreview() {
   const osName = document.getElementById('osName').value.trim() || '_OS';
   const userName = document.getElementById('userName').value.trim() || 'You';
-  document.getElementById('osNameDisplay').textContent = osName;
-  document.getElementById('osFullName').textContent = userName + "'s Operating System";
+  document.getElementById('osDisplay').textContent = osName;
+  document.getElementById('osFullDisplay').textContent = userName + "'s Operating System";
 }
 
-function goStep(n) {
-  document.querySelectorAll('.step').forEach(s => {
-    s.classList.add('hidden');
-    s.classList.remove('active');
-  });
-  const step = document.getElementById('step' + n);
-  step.classList.remove('hidden');
+function builderStep(n) {
+  document.querySelectorAll('.step-card').forEach(s => {s.classList.remove('active');s.style.display='none'});
+  const step = document.getElementById('bStep' + n);
+  step.style.display = 'block';
   step.classList.add('active');
-  step.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  step.scrollIntoView({behavior:'smooth',block:'start'});
 
-  if (n === 3) buildPreview();
+  if (n === 3) buildProtoPreview();
 }
 
-function buildPreview() {
+function buildProtoPreview() {
   const osName = document.getElementById('osName').value.trim() || '_OS';
   const userName = document.getElementById('userName').value.trim() || 'User';
-  const obj = document.getElementById('josObjective').value.trim();
-  const constraints = document.getElementById('josConstraints').value.trim();
-  const noGo = document.getElementById('josNoGo').value.trim();
-  const done = document.getElementById('josDone').value.trim();
-  const closure = document.getElementById('josClosure').value;
-
-  const closureMap = {
-    'you': userName + ' (the human) decides when the task is complete.',
-    'system': 'The system closes when the definition of done is met.',
-    'both': 'Either ' + userName + ' or the system can declare closure.'
-  };
-
-  let prompt = '';
-  prompt += `<span class="rule">## ${osName} — ${userName}'s Operating System</span>\n`;
-  prompt += `<span class="rule">## Enforcement: Binding. No bypasses.</span>\n\n`;
-
-  prompt += `<span class="field-label">OBJECTIVE:</span>\n${obj || '[not set]'}\n\n`;
-
-  prompt += `<span class="field-label">CONSTRAINTS:</span>\n`;
-  if (constraints) {
-    constraints.split('\n').filter(l => l.trim()).forEach(l => {
-      prompt += `— ${l.trim()}\n`;
-    });
-  } else {
-    prompt += '[not set]\n';
-  }
-  prompt += '\n';
-
-  prompt += `<span class="field-label">NO-GO ZONES:</span>\n`;
-  if (noGo) {
-    noGo.split('\n').filter(l => l.trim()).forEach(l => {
-      prompt += `✗ ${l.trim()}\n`;
-    });
-  } else {
-    prompt += '[not set]\n';
-  }
-  prompt += '\n';
-
-  prompt += `<span class="field-label">DEFINITION OF DONE:</span>\n${done || '[not set]'}\n\n`;
-
-  prompt += `<span class="field-label">CLOSURE AUTHORITY:</span>\n${closureMap[closure]}\n\n`;
-
-  prompt += `<span class="rule">## BINDING CONTRACT (enforced every conversation)</span>\n`;
-  prompt += `<span class="rule">1.</span> Objective is frozen before execution begins.\n`;
-  prompt += `<span class="rule">2.</span> Emotion may be acknowledged, never executed.\n`;
-  prompt += `<span class="rule">3.</span> Constraints cannot be deleted; only appended explicitly.\n`;
-  prompt += `<span class="rule">4.</span> If ambiguity exists, request clarification OR run analysis-only mode.\n`;
-
-  document.getElementById('protocolPreview').innerHTML = prompt;
-}
-
-function getPlainPrompt() {
-  const osName = document.getElementById('osName').value.trim() || '_OS';
-  const userName = document.getElementById('userName').value.trim() || 'User';
-  const obj = document.getElementById('josObjective').value.trim();
-  const constraints = document.getElementById('josConstraints').value.trim();
+  const obj = document.getElementById('josObj').value.trim();
+  const con = document.getElementById('josCon').value.trim();
   const noGo = document.getElementById('josNoGo').value.trim();
   const done = document.getElementById('josDone').value.trim();
   const closure = document.getElementById('josClosure').value;
   const closureMap = {
-    'you': userName + ' (the human) decides when the task is complete.',
-    'system': 'The system closes when the definition of done is met.',
-    'both': 'Either ' + userName + ' or the system can declare closure.'
+    'you': userName + ' (the human) decides when done.',
+    'system': 'System closes when definition of done is met.',
+    'both': 'Either ' + userName + ' or the system can close.'
   };
 
-  let p = `## ${osName} — ${userName}'s Operating System\n`;
-  p += `## Enforcement: Binding. No bypasses.\n\n`;
-  p += `OBJECTIVE:\n${obj || '[not set]'}\n\n`;
-  p += `CONSTRAINTS:\n`;
-  if (constraints) constraints.split('\n').filter(l=>l.trim()).forEach(l => { p += `— ${l.trim()}\n`; });
-  p += `\nNO-GO ZONES:\n`;
-  if (noGo) noGo.split('\n').filter(l=>l.trim()).forEach(l => { p += `✗ ${l.trim()}\n`; });
-  p += `\nDEFINITION OF DONE:\n${done || '[not set]'}\n\n`;
-  p += `CLOSURE AUTHORITY:\n${closureMap[closure]}\n\n`;
-  p += `## BINDING CONTRACT (enforced every conversation)\n`;
-  p += `1. Objective is frozen before execution begins.\n`;
-  p += `2. Emotion may be acknowledged, never executed.\n`;
-  p += `3. Constraints cannot be deleted; only appended explicitly.\n`;
-  p += `4. If ambiguity exists, request clarification OR run analysis-only mode.\n`;
-  return p;
+  let html = '';
+  html += `<span class="rule">## ${osName} — ${userName}'s Operating System</span>\n`;
+  html += `<span class="rule">## Enforcement: Binding. No bypasses.</span>\n\n`;
+  html += `<span class="hl">OBJECTIVE:</span>\n${obj || '[not set]'}\n\n`;
+  html += `<span class="hl">CONSTRAINTS:</span>\n`;
+  if (con) con.split('\n').filter(l=>l.trim()).forEach(l => { html += `— ${l.trim()}\n`; });
+  else html += '[not set]\n';
+  html += `\n<span class="hl">NO-GO ZONES:</span>\n`;
+  if (noGo) noGo.split('\n').filter(l=>l.trim()).forEach(l => { html += `✗ ${l.trim()}\n`; });
+  else html += '[not set]\n';
+  html += `\n<span class="hl">DEFINITION OF DONE:</span>\n${done || '[not set]'}\n\n`;
+  html += `<span class="hl">CLOSURE AUTHORITY:</span>\n${closureMap[closure]}\n\n`;
+  html += `<span class="rule">## BINDING CONTRACT</span>\n`;
+  html += `1. Objective is frozen before execution begins.\n`;
+  html += `2. Emotion may be acknowledged, never executed.\n`;
+  html += `3. Constraints cannot be deleted; only appended.\n`;
+  html += `4. If ambiguity exists, request clarification.\n`;
+
+  document.getElementById('protoPreview').innerHTML = html;
+
+  // Store protocol for passing to chat
+  osProtocol = {
+    os_name: osName,
+    user_name: userName,
+    objective: obj,
+    constraints: con,
+    no_go_zones: noGo,
+    definition_of_done: done,
+    closure_authority: closure
+  };
 }
 
-function copyProtocol() {
-  const text = getPlainPrompt();
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = event.target;
-    btn.textContent = '✓ COPIED';
-    btn.style.background = 'var(--accent)';
-    btn.style.color = 'var(--bg)';
-    setTimeout(() => {
-      btn.textContent = 'COPY SYSTEM PROMPT';
-      btn.style.background = '';
-      btn.style.color = '';
-    }, 2000);
-  });
+function getPlainProtocol() {
+  if (!osProtocol) return '';
+  const p = osProtocol;
+  const closureMap = {
+    'you': p.user_name + ' decides when done.',
+    'system': 'System closes when definition met.',
+    'both': 'Either can close.'
+  };
+  let text = `## ${p.os_name} — ${p.user_name}'s Operating System\n`;
+  text += `## Enforcement: Binding. No bypasses.\n\n`;
+  text += `OBJECTIVE:\n${p.objective || '[not set]'}\n\n`;
+  text += `CONSTRAINTS:\n`;
+  if (p.constraints) p.constraints.split('\n').filter(l=>l.trim()).forEach(l => { text += `— ${l.trim()}\n`; });
+  text += `\nNO-GO ZONES:\n`;
+  if (p.no_go_zones) p.no_go_zones.split('\n').filter(l=>l.trim()).forEach(l => { text += `✗ ${l.trim()}\n`; });
+  text += `\nDEFINITION OF DONE:\n${p.definition_of_done || '[not set]'}\n\n`;
+  text += `CLOSURE AUTHORITY:\n${closureMap[p.closure_authority] || 'Human'}\n\n`;
+  text += `## BINDING CONTRACT\n1. Objective frozen before execution.\n2. Emotion acknowledged, never executed.\n3. Constraints append-only.\n4. Ambiguity triggers clarification.\n`;
+  return text;
 }
 
-function deploy() {
-  // In production this hits Stripe checkout
-  // For now, link to Stripe or show API key form
-  alert('Stripe checkout integration goes here.\n\n$9/mo — connects your OpenAI API key and auto-injects your ' + (document.getElementById('osName').value.trim() || '_OS') + ' protocol into every conversation.');
+function launchOS() {
+  if (!osProtocol) { builderStep(1); return; }
+
+  // Build URL params to pass to the chat app
+  const params = new URLSearchParams();
+  params.set('os', JSON.stringify(osProtocol));
+  params.set('path', userPath);
+
+  if (userPath === 'existing') {
+    const key = document.getElementById('userApiKey').value.trim();
+    const provider = document.getElementById('userProvider').value;
+    if (!key) {
+      alert('Connect your API key to continue.');
+      return;
+    }
+    params.set('key', key);
+    params.set('provider', provider);
+  }
+
+  // Redirect to the control room with protocol loaded
+  window.location.href = '/your-os/app?' + params.toString();
 }
 </script>
-
 </body>
 </html>

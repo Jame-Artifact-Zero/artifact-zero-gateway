@@ -596,7 +596,7 @@ def home():
 
 @app.route("/your-os/builder")
 def your_os_builder():
-    """Protocol builder page (simpler landing version)."""
+    """Protocol builder page (redirect to main your-os landing)."""
     try:
         return render_template("your-os.html")
     except Exception:
@@ -606,6 +606,11 @@ def your_os_builder():
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return app.send_static_file("favicon.png")
 
 
 @app.route("/canonical/status")
