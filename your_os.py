@@ -52,7 +52,7 @@ def os_db():
 def db_commit_timed(conn):
     """Commit with latency monitoring. Logs warning if slow."""
     t0 = time.time()
-    db_commit_timed(conn)
+    conn.commit()
     ms = int((time.time() - t0) * 1000)
     if ms > DB_WRITE_WARN_MS:
         print(f"[WARN] your_os db commit took {ms}ms — consider Postgres migration")
