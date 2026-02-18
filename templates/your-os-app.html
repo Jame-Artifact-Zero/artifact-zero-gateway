@@ -905,10 +905,10 @@ if (userPath === 'new') {
       <p>${osConfig.os_name || 'Your OS'} is active. Your protocol is enforced on every message.<br><br>You have 5 free messages. Type anything — it goes through your rules before the AI sees it.</p>
     </div><div class="msg-meta">system · just now</div></div>`;
 } else if (userPath === 'existing') {
-  setMode(userProvider);
+  setMode('openai');
   document.getElementById('messagesView').innerHTML = `
     <div class="msg msg-ai"><div class="msg-bubble">
-      <p>${osConfig.os_name || 'Your OS'} is active. Your protocol is enforced on every message. Connected to ${userProvider}. Type anything.</p>
+      <p>${osConfig.os_name || 'Your OS'} is active. Your protocol is enforced on every message.<br><br>You have 5 free messages. Type anything — see the difference structure makes.</p>
     </div><div class="msg-meta">system · just now</div></div>`;
 }
 </script>

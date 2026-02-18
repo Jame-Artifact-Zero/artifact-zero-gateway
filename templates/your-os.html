@@ -139,8 +139,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font
   <div class="door" onclick="choosePath('existing')">
     <span class="door-icon">◆</span>
     <h3>I already use AI</h3>
-    <p>You have an OpenAI, Anthropic, or Google account. Connect your key, unlimited from the start.</p>
-    <div class="door-cta">Connect & build →</div>
+    <p>You've used ChatGPT, Claude, or Gemini. See what changes when your AI has rules. 5 messages, free.</p>
+    <div class="door-cta">Build your OS →</div>
   </div>
 </div>
 
@@ -266,10 +266,8 @@ function choosePath(path) {
   document.getElementById('enterpriseNote').style.display = 'none';
   document.getElementById('builderSection').classList.add('visible');
 
-  // Show key section for existing users at step 3
-  if (path === 'existing') {
-    document.getElementById('keySection').style.display = 'block';
-  }
+  // Both paths start with free trial — no key needed yet
+  document.getElementById('keySection').style.display = 'none';
 
   window.scrollTo({top:0, behavior:'smooth'});
 }
@@ -369,23 +367,11 @@ function getPlainProtocol() {
 function launchOS() {
   if (!osProtocol) { builderStep(1); return; }
 
-  // Build URL params to pass to the chat app
+  // Both paths go straight to app — free trial, no key needed
   const params = new URLSearchParams();
   params.set('os', JSON.stringify(osProtocol));
   params.set('path', userPath);
 
-  if (userPath === 'existing') {
-    const key = document.getElementById('userApiKey').value.trim();
-    const provider = document.getElementById('userProvider').value;
-    if (!key) {
-      alert('Connect your API key to continue.');
-      return;
-    }
-    params.set('key', key);
-    params.set('provider', provider);
-  }
-
-  // Redirect to the control room with protocol loaded
   window.location.href = '/your-os/app?' + params.toString();
 }
 </script>
