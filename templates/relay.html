@@ -408,24 +408,26 @@ function renderRelay() {
 
   el.innerHTML = `
     <div class="steps">
-      <div class="step active" id="s1"><span class="num">1</span>Copy token → paste into AI</div>
-      <div class="step" id="s2"><span class="num">2</span>Chat with AI → come back to score</div>
-      <div class="step" id="s3"><span class="num">3</span>Paste AI response → get governance update</div>
+      <div class="step active" id="s1"><span class="num">1</span>Setup — paste token once</div>
+      <div class="step" id="s2"><span class="num">⟳</span>Score — paste any AI response</div>
+      <div class="step" id="s3"><span class="num">⚡</span>Fix — paste correction if needed</div>
     </div>
 
     <div class="card" id="relay-output">
-      <h3>Step 1: Paste This Into Your AI Thread</h3>
-      <div class="sub">Copy the entire block and paste it as your <strong>first message</strong> in a new AI thread (ChatGPT, Claude, Gemini).</div>
+      <h3>Setup — Paste This Once</h3>
+      <div class="sub">Copy the block below and paste it as your <strong>first message</strong> in a new AI thread (ChatGPT, Claude, Gemini, Grok). Then go chat.</div>
       <div class="token-box">
         <button class="copy-btn" onclick="copyBlock('init-block')">COPY</button>
         <pre id="init-block">${esc(activeSession.paste_block)}</pre>
       </div>
-      <div style="margin-top:12px;font-size:13px;color:var(--dim)">After pasting, the AI will respond. Chat normally. When you want to score the AI's behavior, come to Step 2.</div>
+      <div style="margin-top:12px;padding:14px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:14px">
+        <strong style="color:var(--green)">Done?</strong> Close this tab and go chat with your AI. Have a real conversation. When you get a response you want scored, come back here and paste it into Step 2 below. The first AI reply is usually just an acknowledgment — that's normal. Start working.
+      </div>
     </div>
 
     <div class="card">
-      <h3>Step 2: Score an AI Response</h3>
-      <div class="sub">When you want governance feedback, paste the AI's response below. <strong>Copy the full text of any AI message</strong> — not just a code block.</div>
+      <h3>Score Any Response</h3>
+      <div class="sub">Anytime during your conversation, paste an AI response here to score it. <strong>Copy the full text of any AI message</strong> — not just a code block. This is on-demand, not required every turn.</div>
       
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn btn-sm ${relayIsNew?'btn-primary':'btn-ghost'}" onclick="setThreadType(true)" id="btn-new">New Thread</button>
@@ -453,8 +455,8 @@ function renderRelay() {
         <div id="relay-scores"></div>
       </div>
       <div class="card" id="next-card">
-        <h3>Step 3: Paste This Back (Optional)</h3>
-        <div class="sub">If the AI scored poorly, paste this governance update into your thread to correct it. If it passed, you can skip this — just keep chatting.</div>
+        <h3>Correction (Only If Needed)</h3>
+        <div class="sub">The AI scored poorly. Paste this into your thread to correct it. If the AI passed, skip this — just keep chatting.</div>
         <div class="token-box">
           <button class="copy-btn" onclick="copyBlock('next-block')">COPY</button>
           <pre id="next-block"></pre>
@@ -506,9 +508,18 @@ async function processRelay() {
   document.getElementById('relay-scores').innerHTML = `<div class="score-strip">${badges}</div>`;
   document.getElementById('next-block').textContent = d.paste_block;
   document.getElementById('relay-result').style.display = 'block';
+
+  // Show correction card only if AI failed
+  const nextCard = document.getElementById('next-card');
+  if (sc.pass || (sc.sovereignty && sc.flags.length === 0)) {
+    nextCard.style.display = 'none';
+  } else {
+    nextCard.style.display = 'block';
+  }
+
   document.getElementById('relay-result').scrollIntoView({behavior:'smooth'});
 
-  // Update init block for next cycle
+  // Update token for next scoring
   document.getElementById('init-block').textContent = d.paste_block;
 
   // Clear input
@@ -519,10 +530,10 @@ async function processRelay() {
   const turnsLeft = document.querySelector('.turns');
   if (turnsLeft) turnsLeft.textContent = d.turns_remaining + ' turns left';
 
-  // Step indicator
+  // Step indicators
   document.getElementById('s1').classList.remove('active');
-  document.getElementById('s2').classList.remove('active');
-  document.getElementById('s3').classList.add('active');
+  document.getElementById('s2').classList.add('active');
+  document.getElementById('s3').classList.remove('active');
 }
 
 function endSession() {
