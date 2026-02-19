@@ -100,6 +100,7 @@ body{min-height:100vh}
 
 .or-divider{text-align:center;color:var(--dim);font-size:11px;margin:12px 0;text-transform:uppercase;letter-spacing:2px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
 <div class="top">
@@ -132,7 +133,7 @@ body{min-height:100vh}
     <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📄</div>
       <div class="hint">Drop a thread file here or click to upload</div>
-      <div class="hint" style="font-size:11px;margin-top:4px">.txt, .md, .json — or paste below</div>
+      <div class="hint" style="font-size:11px;margin-top:4px">.txt, .md, .json, .docx — or paste below</div>
       <div class="filename" id="fileName"></div>
       <input type="file" id="fileInput" accept=".txt,.md,.json,.docx">
     </div>
@@ -170,12 +171,29 @@ fi.addEventListener('change', () => { if (fi.files.length) handleFile(fi.files[0
 
 function handleFile(file) {
   document.getElementById('fileName').textContent = file.name;
-  const reader = new FileReader();
-  reader.onload = e => {
-    uploadedText = e.target.result;
-    document.getElementById('tPaste').value = uploadedText;
-  };
-  reader.readAsText(file);
+  if (file.name.endsWith('.docx')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (typeof mammoth !== 'undefined') {
+        mammoth.extractRawText({arrayBuffer: e.target.result}).then(r => {
+          uploadedText = r.value;
+          document.getElementById('tPaste').value = uploadedText;
+        }).catch(() => {
+          alert('Could not parse .docx file. Try pasting the text directly.');
+        });
+      } else {
+        alert('DOCX parser loading. Try again in a moment, or paste text directly.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      uploadedText = e.target.result;
+      document.getElementById('tPaste').value = uploadedText;
+    };
+    reader.readAsText(file);
+  }
 }
 
 // ── MARKER DICTIONARIES (mirrors governance_stack_v3_prod.py) ──

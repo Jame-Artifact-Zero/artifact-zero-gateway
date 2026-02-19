@@ -95,6 +95,17 @@ textarea{min-height:100px;resize:vertical;font-family:var(--mono);font-size:13px
 .step.active{border-color:var(--accent);color:var(--text);background:var(--green-dim)}
 .step .num{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);display:block;margin-bottom:4px}
 
+/* Picklist */
+.picklist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:24px}
+.picklist .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;font-size:13px;font-family:var(--sans);background:var(--s2);border:1px solid var(--border);color:var(--text);animation:fadeIn .2s}
+.picklist .pill .nti-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.picklist .pill .nti-dot.pass{background:var(--green)}
+.picklist .pill .nti-dot.warn{background:var(--amber)}
+.picklist .pill .nti-dot.fail{background:var(--red)}
+.picklist .pill .rm{cursor:pointer;color:var(--muted);font-size:16px;line-height:1;margin-left:2px}
+.picklist .pill .rm:hover{color:var(--red)}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+
 @media(max-width:640px){.tabs{flex-wrap:wrap}.steps{flex-direction:column}}
 </style>
 </head>
@@ -244,10 +255,20 @@ function renderProtocols() {
     <input type="text" id="pn" placeholder="e.g. Sales Outreach, Code Review, Strategy">
     <label>Objective</label>
     <input type="text" id="po" placeholder="What should the AI accomplish?">
-    <label>Constraints (one per line)</label>
-    <textarea id="pc" placeholder="No hedging\nMatch my word count\nConstraints before capabilities"></textarea>
-    <label>No-Go Zones (one per line)</label>
-    <textarea id="png" placeholder="Don't discuss competitors\nNo pricing without approval" style="min-height:60px"></textarea>
+    <label>Constraints</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="pc-input" placeholder="Type a constraint and press Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addItem('pc');event.preventDefault()}">
+      <button class="btn btn-ghost btn-sm" onclick="addItem('pc')">Add</button>
+    </div>
+    <div class="picklist" id="pc-list"></div>
+    <input type="hidden" id="pc">
+    <label>No-Go Zones</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="png-input" placeholder="Type a no-go zone and press Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addItem('png');event.preventDefault()}">
+      <button class="btn btn-ghost btn-sm" onclick="addItem('png')">Add</button>
+    </div>
+    <div class="picklist" id="png-list"></div>
+    <input type="hidden" id="png">
     <label>Definition of Done</label>
     <input type="text" id="pd" placeholder="When is the task complete?">
     <label>Closure Authority</label>
@@ -261,11 +282,69 @@ function renderProtocols() {
   el.innerHTML = h;
 }
 
+// ─── PICKLIST + NTI ───
+const pickData = {pc: [], png: []};
+const SMOOTH = new Set(["great","absolutely","definitely","of course","sure","perfect","wonderful","fantastic","excellent","love"]);
+const HEDGE = new Set(["maybe","perhaps","might","could","possibly","somewhat","arguably","likely","probably","generally"]);
+const FILLER = ["it's worth noting","keep in mind","basically","essentially","in terms of"];
+
+function scoreConstraint(text) {
+  const words = text.toLowerCase().split(/\s+/);
+  const wc = words.length;
+  if (wc === 0) return {pass:false, reason:'empty'};
+  if (wc < 2) return {pass:true, grade:'pass', reason:'concise'};
+  
+  const hedges = words.filter(w => HEDGE.has(w.replace(/[.,!?]/g,''))).length;
+  const smooths = words.filter(w => SMOOTH.has(w.replace(/[.,!?]/g,''))).length;
+  const fillers = FILLER.filter(f => text.toLowerCase().includes(f)).length;
+  
+  if (hedges > 0) return {pass:false, grade:'fail', reason:'contains hedging ("'+words.find(w=>HEDGE.has(w.replace(/[.,!?]/g,'')))+'")'};
+  if (smooths > 0) return {pass:false, grade:'warn', reason:'contains smoothing'};
+  if (fillers > 0) return {pass:false, grade:'warn', reason:'contains filler'};
+  if (wc > 20) return {pass:true, grade:'warn', reason:'long — consider splitting'};
+  return {pass:true, grade:'pass', reason:'clean'};
+}
+
+function addItem(listId) {
+  const input = document.getElementById(listId + '-input');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const score = scoreConstraint(text);
+  if (!score.pass && score.grade === 'fail') {
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'NTI: ' + score.reason + ' — rewrite';
+    setTimeout(() => { input.style.borderColor = ''; input.placeholder = listId === 'pc' ? 'Type a constraint and press Enter' : 'Type a no-go zone and press Enter'; }, 2500);
+    return;
+  }
+  
+  pickData[listId].push(text);
+  input.value = '';
+  renderPicklist(listId);
+}
+
+function removeItem(listId, idx) {
+  pickData[listId].splice(idx, 1);
+  renderPicklist(listId);
+}
+
+function renderPicklist(listId) {
+  const el = document.getElementById(listId + '-list');
+  el.innerHTML = pickData[listId].map((item, i) => {
+    const score = scoreConstraint(item);
+    return `<div class="pill">
+      <span class="nti-dot ${score.grade}"></span>
+      ${esc(item)}
+      <span class="rm" onclick="removeItem('${listId}',${i})">&times;</span>
+    </div>`;
+  }).join('');
+}
+
 async function createProtocol() {
   const name = document.getElementById('pn').value.trim();
   const objective = document.getElementById('po').value.trim();
-  const constraints = document.getElementById('pc').value.trim().split('\n').filter(x=>x.trim());
-  const no_go = document.getElementById('png').value.trim().split('\n').filter(x=>x.trim());
+  const constraints = pickData.pc.slice();
+  const no_go = pickData.png.slice();
   const definition_of_done = document.getElementById('pd').value.trim();
   const closure_authority = document.getElementById('pca').value.trim() || 'user';
 
@@ -279,7 +358,7 @@ async function createProtocol() {
     body: JSON.stringify({name, protocol:{objective,constraints,no_go,definition_of_done,closure_authority}})
   });
   const d = await r.json();
-  if (d.ok) { await loadProtocols(); renderProtocols(); }
+  if (d.ok) { pickData.pc = []; pickData.png = []; await loadProtocols(); renderProtocols(); }
   else document.getElementById('proto-err').innerHTML = `<div class="error">${d.error}</div>`;
 }
 
