@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>NTI Control Room — Artifact Zero</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>0</text></svg>">
+<link rel="icon" href="/static/favicon.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 :root{--bg:#08090c;--s1:#0f1117;--s2:#161a23;--s3:#1e232e;--border:#252b38;--text:#d4d8e3;--muted:#5a6275;--dim:#3a4050;--accent:#c96442;--accent2:#e07a55;--blue:#4a90d9;--green:#34d399;--red:#f87171;--amber:#fbbf24;--purple:#a78bfa}
@@ -15,7 +15,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 /* Sidebar */
 .sb{width:250px;background:var(--s1);display:flex;flex-direction:column;flex-shrink:0;border-right:1px solid var(--border)}
 .sb-head{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
-.z0{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:17px;color:#fff}
+.z0{width:32px;height:32px;border-radius:8px;background:transparent;display:flex;align-items:center;justify-content:center;overflow:hidden}.z0 img{width:100%;height:100%;object-fit:contain}
 .sb-t{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text);letter-spacing:1px}
 .sb-s{font-size:10px;color:var(--muted);margin-top:1px}
 
@@ -52,7 +52,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .mi{max-width:700px;margin:0 auto;padding:20px 20px 140px}
 
 .wc{text-align:center;padding:80px 20px 40px}
-.wc .zl{width:56px;height:56px;border-radius:14px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:26px;color:#fff;margin-bottom:16px}
+.wc .zl{width:56px;height:56px;border-radius:14px;background:transparent;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden}.wc .zl img{width:100%;height:100%;object-fit:contain}
 .wc h2{font-size:20px;font-weight:600;margin-bottom:8px}
 .wc p{font-size:14px;color:var(--muted);max-width:380px;margin:0 auto;line-height:1.5}
 .wc .fr{margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green);background:rgba(52,211,153,.08);display:inline-block;padding:6px 14px;border-radius:20px;border:1px solid rgba(52,211,153,.2)}
@@ -83,7 +83,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 /* Paywall */
 .pw{display:none;position:fixed;inset:0;background:rgba(8,9,12,.92);z-index:100;align-items:center;justify-content:center}.pw.sh{display:flex}
 .pc{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:440px;width:90%;text-align:center}
-.pc .zl{width:48px;height:48px;border-radius:12px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:22px;color:#fff;margin-bottom:16px}
+.pc .zl{width:48px;height:48px;border-radius:12px;background:transparent;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden}.pc .zl img{width:100%;height:100%;object-fit:contain}
 .pc h2{font-size:20px;font-weight:600;margin-bottom:8px}
 .pc p{font-size:14px;color:var(--muted);line-height:1.5;margin-bottom:24px}
 .pp{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
@@ -101,7 +101,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 <body>
 <div class="app">
 <div class="sb">
-  <div class="sb-head"><div class="z0">0</div><div><div class="sb-t">CONTROL ROOM</div><div class="sb-s">NTI-scored AI chat</div></div></div>
+  <div class="sb-head"><div class="z0"><img src="/static/favicon.png" alt="0"></div><div><div class="sb-t">CONTROL ROOM</div><div class="sb-s">NTI-scored AI chat</div></div></div>
   <div class="models">
     <button class="mb on" onclick="pick('claude')" id="b-claude"><div class="md cl"></div>Claude</button>
     <button class="mb" onclick="pick('gpt')" id="b-gpt"><div class="md gp"></div>ChatGPT</button>
@@ -116,7 +116,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 <div class="mn">
   <div class="hd"><div class="hl"><div class="hb"><div class="zs">0</div><span id="ml">Claude Sonnet 4</span></div></div><div class="ns" onclick="tn()"><div class="ld" id="nl"></div>NTI</div></div>
   <div class="ms" id="ms"><div class="mi" id="mi">
-    <div class="wc" id="wc"><div class="zl">0</div><h2>NTI Control Room</h2><p>Chat with Claude or ChatGPT. Every response scored — 28 governance KPIs, basin detection, sovereignty enforcement.</p><div class="fr">25 FREE MESSAGES · YOUR API KEY</div></div>
+    <div class="wc" id="wc"><div class="zl"><img src="/static/favicon.png" alt="0"></div><h2>NTI Control Room</h2><p>Chat with Claude or ChatGPT. Every response scored — 28 governance KPIs, basin detection, sovereignty enforcement.</p><div class="fr">25 FREE MESSAGES · YOUR API KEY</div></div>
   </div></div>
   <div class="iw"><div class="ib">
     <textarea class="if2" id="inp" placeholder="Message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();go()}"></textarea>
@@ -127,7 +127,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 
 <div class="pw" id="pw">
 <div class="pc">
-  <div class="zl">0</div>
+  <div class="zl"><img src="/static/favicon.png" alt="0"></div>
   <h2>Free messages used</h2>
   <p>Upgrade for unlimited NTI-scored AI chat. Same API key, full governance scoring.</p>
   <div class="pp">
@@ -177,7 +177,7 @@ function sc(text,ht){
   return{bn,basin:bn>0.1?'ESC':bn<-0.1?'UTL':'NEU',osr,cir,sl,pbl,smd,hedd,negd,snr,agree,sov,fl,lr,mirr};
 }
 
-function pick(m){am=m;document.querySelectorAll('.mb').forEach(b=>b.classList.remove('on'));document.getElementById('b-'+m).classList.add('on');document.getElementById('ml').textContent=MD[m].l;document.getElementById('ak').placeholder=MD[m].p+'...';hi=[];const mi=document.getElementById('mi');mi.innerHTML='<div class="wc"><div class="zl">0</div><h2>NTI Control Room</h2><p>Chat with '+MD[m].l+'. Every response scored — 28 KPIs.</p><div class="fr">'+Math.max(0,FL-mc)+' FREE MESSAGES LEFT</div></div>';}
+function pick(m){am=m;document.querySelectorAll('.mb').forEach(b=>b.classList.remove('on'));document.getElementById('b-'+m).classList.add('on');document.getElementById('ml').textContent=MD[m].l;document.getElementById('ak').placeholder=MD[m].p+'...';hi=[];const mi=document.getElementById('mi');mi.innerHTML='<div class="wc"><div class="zl"><img src="/static/favicon.png" alt="0"></div><h2>NTI Control Room</h2><p>Chat with '+MD[m].l+'. Every response scored — 28 KPIs.</p><div class="fr">'+Math.max(0,FL-mc)+' FREE MESSAGES LEFT</div></div>';}
 function tn(){nti=!nti;document.getElementById('nl').classList.toggle('off',!nti);}
 function uu(){const p=Math.min(100,mc/FL*100),f=document.getElementById('ufill');f.style.width=p+'%';f.className='uf'+(p>80?' x':p>60?' w':'');document.getElementById('uc').textContent=mc+' / '+FL;}
 function sp(el,plan){document.querySelectorAll('.pl').forEach(p=>p.classList.remove('sel'));el.classList.add('sel');sp2=plan;const pr={starter:'$500/mo',core:'$2,500/mo',pipeline:'$7,500/mo'};document.getElementById('pB').textContent='Subscribe — '+pr[plan];}
