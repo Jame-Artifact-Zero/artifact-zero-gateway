@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artifact Zero — Relay</title>
+<link rel="icon" href="/static/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08090d;--s1:#11131a;--s2:#191d27;--s3:#222733;--border:#252a35;--text:#e8eaf0;--dim:#9ca3af;--muted:#6b7280;--green:#22c55e;--green-dim:rgba(34,197,94,.12);--red:#ef4444;--red-dim:rgba(239,68,68,.12);--amber:#f59e0b;--amber-dim:rgba(245,158,11,.1);--accent:#22c55e;--mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+
+/* Layout */
+.app{max-width:800px;margin:0 auto;padding:24px 20px;min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:32px}
+.top .logo{font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:10px}
+.top .logo img{width:24px;height:24px}
+.top .user-info{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:16px}
+.top .user-info .turns{font-family:var(--mono);font-size:12px;color:var(--green)}
+.top .user-info button{background:none;border:1px solid var(--border);color:var(--dim);font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer;font-family:var(--sans)}
+.top .user-info button:hover{color:var(--text);border-color:var(--muted)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:24px}
+.tab{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--s1);color:var(--dim);border:1px solid var(--border);transition:all .2s}
+.tab:hover{color:var(--text);border-color:var(--muted)}
+.tab.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.panel{display:none}
+.panel.show{display:block}
+
+/* Cards */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px}
+.card h3{font-size:16px;font-weight:600;margin-bottom:4px}
+.card .sub{font-size:13px;color:var(--dim);margin-bottom:16px}
+.card-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Forms */
+label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;margin-top:16px}
+input[type="text"],input[type="email"],input[type="password"],textarea{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 14px;border-radius:8px;outline:none;transition:border .2s}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:100px;resize:vertical;font-family:var(--mono);font-size:13px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .2s}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#16a34a;transform:translateY(-1px)}
+.btn-ghost{background:var(--s2);color:var(--dim);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-danger{background:var(--red-dim);color:var(--red)}
+
+/* Protocol list */
+.proto-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.proto-item:last-child{border-bottom:none}
+.proto-name{font-weight:600;font-size:14px}
+.proto-date{font-size:12px;color:var(--muted);font-family:var(--mono)}
+
+/* Relay zone */
+.relay-zone{background:var(--s2);border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;margin:20px 0;transition:all .2s}
+.relay-zone.active{border-color:var(--accent);background:var(--green-dim)}
+.relay-zone h3{font-size:18px;margin-bottom:8px}
+.relay-zone p{color:var(--dim);font-size:14px}
+
+/* Token display */
+.token-box{background:#000;border:1px solid var(--border);border-radius:8px;padding:16px;margin:16px 0;position:relative}
+.token-box pre{font-family:var(--mono);font-size:12px;color:var(--green);white-space:pre-wrap;word-break:break-all;line-height:1.6;max-height:300px;overflow-y:auto}
+.token-box .copy-btn{position:absolute;top:8px;right:8px;background:var(--s2);color:var(--dim);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:var(--mono)}
+.token-box .copy-btn:hover{color:var(--text)}
+
+/* Scores */
+.score-strip{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.score-badge{font-family:var(--mono);font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px}
+.score-pass{background:var(--green-dim);color:var(--green)}
+.score-fail{background:var(--red-dim);color:var(--red)}
+.score-warn{background:var(--amber-dim);color:var(--amber)}
+
+/* Auth form */
+.auth-box{max-width:400px;margin:80px auto;text-align:center}
+.auth-box h2{font-size:24px;margin-bottom:8px}
+.auth-box p{color:var(--dim);margin-bottom:24px}
+.auth-box .card{text-align:left}
+.auth-toggle{margin-top:16px;font-size:13px;color:var(--dim)}
+.auth-toggle a{cursor:pointer}
+.error{color:var(--red);font-size:13px;margin-top:8px}
+
+/* Session list */
+.sess-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.sess-item:last-child{border-bottom:none}
+.sess-platform{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:4px;background:var(--s2);color:var(--dim)}
+.sess-turns{font-family:var(--mono);font-size:12px;color:var(--accent)}
+
+/* Step indicator */
+.steps{display:flex;gap:12px;margin:20px 0}
+.step{flex:1;text-align:center;padding:12px;border-radius:8px;background:var(--s2);border:1px solid var(--border);font-size:13px;color:var(--dim)}
+.step.active{border-color:var(--accent);color:var(--text);background:var(--green-dim)}
+.step .num{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);display:block;margin-bottom:4px}
+
+@media(max-width:640px){.tabs{flex-wrap:wrap}.steps{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+
+<script>
+const API = '';  // same origin
+let user = null;
+let protocols = [];
+let activeSession = null;
+let currentToken = null;
+
+// ─── RENDER ───
+function render() {
+  if (!user) { renderAuth(); return; }
+  document.getElementById('app').innerHTML = `
+    <div class="top">
+      <div class="logo"><img src="/static/favicon.png" alt="0">ARTIFACT ZERO RELAY</div>
+      <div class="user-info">
+        <span>${user.email}</span>
+        <span class="turns">${user.turns_limit - user.turns_used} turns left</span>
+        <button onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab ${!activeSession?'on':''}" onclick="switchTab('protocols')">Protocols</div>
+      <div class="tab ${activeSession?'on':''}" onclick="switchTab('relay')">Relay</div>
+      <div class="tab" onclick="switchTab('history')">History</div>
+    </div>
+    <div class="panel show" id="p-protocols"></div>
+    <div class="panel" id="p-relay"></div>
+    <div class="panel" id="p-history"></div>
+  `;
+  renderProtocols();
+  renderRelay();
+  renderHistory();
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    const panels = ['protocols','relay','history'];
+    el.classList.toggle('on', panels[i] === t);
+    document.getElementById('p-'+panels[i]).classList.toggle('show', panels[i] === t);
+  });
+}
+
+// ─── AUTH ───
+function renderAuth() {
+  document.getElementById('app').innerHTML = `
+    <div class="auth-box">
+      <img src="/static/favicon.png" alt="0" style="width:48px;height:48px;margin-bottom:16px">
+      <h2>Artifact Zero Relay</h2>
+      <p>Encrypted AI governance. Your protocol never leaves our server.</p>
+      <div class="card" id="auth-card">
+        <div id="auth-form"></div>
+      </div>
+    </div>
+  `;
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('auth-form').innerHTML = `
+    <label>Email</label>
+    <input type="email" id="a-email" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="a-pass" placeholder="8+ characters">
+    <div id="auth-err"></div>
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Log In</button>
+    </div>
+    <div class="auth-toggle">No account? <a onclick="showSignup()">Sign up</a></div>
+  `;
+}
+
+function showSignup() {
+  document.getElementById('auth-form').innerHTML = `
+    <label>Email</label>
+    <input type="email" id="a-email" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="a-pass" placeholder="8+ characters">
+    <div id="auth-err"></div>
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" style="width:100%" onclick="doSignup()">Create Account</button>
+    </div>
+    <div class="auth-toggle">Have an account? <a onclick="showLogin()">Log in</a></div>
+  `;
+}
+
+async function doLogin() {
+  const email = document.getElementById('a-email').value;
+  const pass = document.getElementById('a-pass').value;
+  const r = await fetch(API+'/relay/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
+  const d = await r.json();
+  if (d.ok) { user = d; await loadProtocols(); render(); }
+  else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
+}
+
+async function doSignup() {
+  const email = document.getElementById('a-email').value;
+  const pass = document.getElementById('a-pass').value;
+  const r = await fetch(API+'/relay/signup', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
+  const d = await r.json();
+  if (d.ok) { user = {email, turns_used:0, turns_limit:50, plan:'free'}; render(); }
+  else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
+}
+
+async function doLogout() {
+  await fetch(API+'/relay/logout', {method:'POST'});
+  user = null; protocols = []; activeSession = null; render();
+}
+
+// ─── PROTOCOLS ───
+async function loadProtocols() {
+  const r = await fetch(API+'/relay/protocols');
+  const d = await r.json();
+  if (d.protocols) protocols = d.protocols;
+}
+
+function renderProtocols() {
+  const el = document.getElementById('p-protocols');
+  if (!el) return;
+  let h = `<div class="card">
+    <h3>Your Protocols</h3>
+    <div class="sub">Each protocol defines how AI should behave in your threads. Create one, start a session, paste the token.</div>`;
+
+  if (protocols.length === 0) {
+    h += `<p style="color:var(--dim);font-size:14px;padding:20px 0">No protocols yet. Create your first one below.</p>`;
+  } else {
+    for (const p of protocols) {
+      h += `<div class="proto-item">
+        <div><div class="proto-name">${esc(p.name)}</div><div class="proto-date">${p.updated_at?.slice(0,10)||''}</div></div>
+        <div class="card-row">
+          <button class="btn btn-primary btn-sm" onclick="startSession('${p.id}')">Start Session</button>
+        </div>
+      </div>`;
+    }
+  }
+  h += `</div>`;
+
+  // Create protocol form
+  h += `<div class="card">
+    <h3>New Protocol</h3>
+    <label>Protocol Name</label>
+    <input type="text" id="pn" placeholder="e.g. Sales Outreach, Code Review, Strategy">
+    <label>Objective</label>
+    <input type="text" id="po" placeholder="What should the AI accomplish?">
+    <label>Constraints (one per line)</label>
+    <textarea id="pc" placeholder="No hedging\nMatch my word count\nConstraints before capabilities"></textarea>
+    <label>No-Go Zones (one per line)</label>
+    <textarea id="png" placeholder="Don't discuss competitors\nNo pricing without approval" style="min-height:60px"></textarea>
+    <label>Definition of Done</label>
+    <input type="text" id="pd" placeholder="When is the task complete?">
+    <label>Closure Authority</label>
+    <input type="text" id="pca" placeholder="user (default)" value="user">
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="createProtocol()">Create Protocol</button>
+    </div>
+    <div id="proto-err"></div>
+  </div>`;
+
+  el.innerHTML = h;
+}
+
+async function createProtocol() {
+  const name = document.getElementById('pn').value.trim();
+  const objective = document.getElementById('po').value.trim();
+  const constraints = document.getElementById('pc').value.trim().split('\n').filter(x=>x.trim());
+  const no_go = document.getElementById('png').value.trim().split('\n').filter(x=>x.trim());
+  const definition_of_done = document.getElementById('pd').value.trim();
+  const closure_authority = document.getElementById('pca').value.trim() || 'user';
+
+  if (!name || !objective) {
+    document.getElementById('proto-err').innerHTML = '<div class="error">Name and objective required.</div>';
+    return;
+  }
+
+  const r = await fetch(API+'/relay/protocol', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, protocol:{objective,constraints,no_go,definition_of_done,closure_authority}})
+  });
+  const d = await r.json();
+  if (d.ok) { await loadProtocols(); renderProtocols(); }
+  else document.getElementById('proto-err').innerHTML = `<div class="error">${d.error}</div>`;
+}
+
+// ─── SESSIONS ───
+async function startSession(protoId) {
+  const r = await fetch(API+'/relay/session/start', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({protocol_id: protoId, platform: 'manual'})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    activeSession = d;
+    currentToken = d.token;
+    switchTab('relay');
+    renderRelay();
+  } else {
+    alert(d.error);
+  }
+}
+
+function renderRelay() {
+  const el = document.getElementById('p-relay');
+  if (!el) return;
+
+  if (!activeSession) {
+    el.innerHTML = `<div class="relay-zone">
+      <h3>No Active Session</h3>
+      <p>Go to Protocols tab and click "Start Session" on a protocol.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="steps">
+      <div class="step active" id="s1"><span class="num">1</span>Copy token → paste into AI</div>
+      <div class="step" id="s2"><span class="num">2</span>AI responds → copy [AZ-RELAY]</div>
+      <div class="step" id="s3"><span class="num">3</span>Paste relay here → get [AZ-NEXT]</div>
+    </div>
+
+    <div class="card" id="relay-output">
+      <h3>Paste This Into Your AI Thread</h3>
+      <div class="sub">Copy the entire block below and paste it as your first message (or next message).</div>
+      <div class="token-box">
+        <button class="copy-btn" onclick="copyBlock('init-block')">COPY</button>
+        <pre id="init-block">${esc(activeSession.paste_block)}</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Paste AI's Response Here</h3>
+      <div class="sub">After the AI responds, paste the <strong>full response</strong> below. We'll score it and generate your next directive.</div>
+      <label>AI Output</label>
+      <textarea id="relay-ai" placeholder="Paste the AI's full response here..." style="min-height:150px"></textarea>
+      <label>Your Last Message (optional, improves scoring)</label>
+      <input type="text" id="relay-human" placeholder="What did you ask the AI?">
+      <div style="margin-top:16px">
+        <button class="btn btn-primary" onclick="processRelay()">Process Relay</button>
+        <button class="btn btn-ghost" onclick="endSession()" style="margin-left:8px">End Session</button>
+      </div>
+      <div id="relay-err"></div>
+    </div>
+
+    <div id="relay-result" style="display:none">
+      <div class="card">
+        <h3>NTI Scores</h3>
+        <div id="relay-scores"></div>
+      </div>
+      <div class="card">
+        <h3>Paste This Back Into Your AI Thread</h3>
+        <div class="token-box">
+          <button class="copy-btn" onclick="copyBlock('next-block')">COPY</button>
+          <pre id="next-block"></pre>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function processRelay() {
+  const ai_output = document.getElementById('relay-ai').value.trim();
+  const human_input = document.getElementById('relay-human').value.trim();
+
+  if (!ai_output) {
+    document.getElementById('relay-err').innerHTML = '<div class="error">Paste the AI output first.</div>';
+    return;
+  }
+
+  const r = await fetch(API+'/relay/process', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({token: currentToken, ai_output, human_input})
+  });
+  const d = await r.json();
+
+  if (!d.ok) {
+    document.getElementById('relay-err').innerHTML = `<div class="error">${d.error}</div>`;
+    return;
+  }
+
+  // Update token for next turn
+  currentToken = d.token;
+  activeSession.paste_block = d.paste_block;
+
+  // Show scores
+  const sc = d.scores;
+  let badges = '';
+  badges += `<span class="score-badge ${sc.sovereignty?'score-pass':'score-fail'}">SOV: ${sc.sovereignty?'PASS':'FAIL'}</span>`;
+  badges += `<span class="score-badge ${sc.osr?'score-fail':'score-pass'}">OSR: ${sc.osr?'YES':'NO'}</span>`;
+  badges += `<span class="score-badge ${sc.snr>.9?'score-pass':'score-warn'}">SNR: ${sc.snr.toFixed(3)}</span>`;
+  badges += `<span class="score-badge score-warn">LR: ${sc.length_ratio}x</span>`;
+  badges += `<span class="score-badge ${sc.hedge_density<.03?'score-pass':'score-fail'}">HED: ${(sc.hedge_density*100).toFixed(1)}%</span>`;
+  badges += `<span class="score-badge ${sc.smooth_density<.03?'score-pass':'score-fail'}">SMO: ${(sc.smooth_density*100).toFixed(1)}%</span>`;
+  for (const f of sc.flags) badges += `<span class="score-badge score-fail">${f}</span>`;
+
+  document.getElementById('relay-scores').innerHTML = `<div class="score-strip">${badges}</div>`;
+  document.getElementById('next-block').textContent = d.paste_block;
+  document.getElementById('relay-result').style.display = 'block';
+  document.getElementById('relay-result').scrollIntoView({behavior:'smooth'});
+
+  // Update init block for next cycle
+  document.getElementById('init-block').textContent = d.paste_block;
+
+  // Clear input
+  document.getElementById('relay-ai').value = '';
+  document.getElementById('relay-human').value = '';
+
+  // Update turns display
+  const turnsLeft = document.querySelector('.turns');
+  if (turnsLeft) turnsLeft.textContent = d.turns_remaining + ' turns left';
+
+  // Step indicator
+  document.getElementById('s1').classList.remove('active');
+  document.getElementById('s2').classList.remove('active');
+  document.getElementById('s3').classList.add('active');
+}
+
+function endSession() {
+  activeSession = null;
+  currentToken = null;
+  switchTab('protocols');
+}
+
+// ─── HISTORY ───
+async function renderHistory() {
+  const el = document.getElementById('p-history');
+  if (!el) return;
+
+  const r = await fetch(API+'/relay/sessions');
+  const d = await r.json();
+
+  if (!d.sessions || d.sessions.length === 0) {
+    el.innerHTML = `<div class="card"><p style="color:var(--dim)">No sessions yet.</p></div>`;
+    return;
+  }
+
+  let h = '<div class="card"><h3>Session History</h3>';
+  for (const s of d.sessions) {
+    h += `<div class="sess-item">
+      <div>
+        <div style="font-weight:600;font-size:14px">${esc(s.protocol_name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${s.started_at?.slice(0,16)||''}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="sess-platform">${s.platform}</span>
+        <span class="sess-turns">${s.turn_count} turns</span>
+      </div>
+    </div>`;
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+// ─── UTILS ───
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+function copyBlock(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(`#${id}`).parentElement.querySelector('.copy-btn');
+    btn.textContent = 'COPIED';
+    setTimeout(() => btn.textContent = 'COPY', 1500);
+  });
+}
+
+// ─── INIT ───
+async function init() {
+  try {
+    const r = await fetch(API+'/relay/me');
+    if (r.ok) {
+      user = await r.json();
+      await loadProtocols();
+    }
+  } catch(e) {}
+  render();
+}
+init();
+</script>
+</body>
+</html>

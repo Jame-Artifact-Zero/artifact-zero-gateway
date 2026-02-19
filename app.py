@@ -35,6 +35,16 @@ except ImportError as e:
     print(f"[WARN] Control Room not loaded: {e}")
 # --- END CONTROL ROOM INTEGRATION ---
 
+# --- RELAY INTEGRATION ---
+try:
+    from az_relay import az_relay
+    app.register_blueprint(az_relay)
+    RELAY_AVAILABLE = True
+except ImportError as e:
+    RELAY_AVAILABLE = False
+    print(f"[WARN] Relay not loaded: {e}")
+# --- END RELAY INTEGRATION ---
+
 # ============================================================
 # CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
 #
