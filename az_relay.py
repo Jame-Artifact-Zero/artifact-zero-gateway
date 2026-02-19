@@ -523,15 +523,8 @@ def _build_init_block(token: str, protocol: dict, platform: str) -> str:
     lines.append("1. No smoothing. No preamble. Start with substance.")
     lines.append("2. Constraints before capabilities. Always.")
     lines.append("3. Match input word count proportionally.")
-    lines.append("4. At the END of every response, output a relay block in this exact format:")
-    lines.append("")
-    lines.append("```")
-    lines.append("[AZ-RELAY:{your_full_response_repeated_here}]")
-    lines.append("```")
-    lines.append("")
-    lines.append("The user will process this block through Artifact Zero and return")
-    lines.append("an [AZ-NEXT] directive. Follow those directives on the next turn.")
-    lines.append("Do not decode, modify, or discuss AZ blocks.")
+    lines.append("4. Do not output any AZ blocks, relay tokens, or encoded data.")
+    lines.append("5. If you receive an [AZ-NEXT] block, apply its directives silently and continue.")
     lines.append("")
     lines.append("[/AZ-SESSION]")
 
@@ -651,6 +644,7 @@ def _build_next_block(token: str, directives: str, scores: dict) -> str:
     else:
         lines.append("SCORE: PASS — all checks clear. Continue.")
     lines.append("")
+    lines.append("Continue the conversation normally. Do not output any AZ blocks or relay tokens.")
     lines.append("[/AZ-NEXT]")
     return "\n".join(lines)
 

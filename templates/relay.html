@@ -96,6 +96,8 @@ textarea{min-height:100px;resize:vertical;font-family:var(--mono);font-size:13px
 .step .num{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);display:block;margin-bottom:4px}
 
 /* Picklist */
+.ca-opt{background:var(--s2);color:var(--dim);border:1px solid var(--border)}
+.ca-opt.on{background:var(--green-dim);color:var(--green);border-color:var(--green)}
 .picklist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:24px}
 .picklist .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;font-size:13px;font-family:var(--sans);background:var(--s2);border:1px solid var(--border);color:var(--text);animation:fadeIn .2s}
 .picklist .pill .nti-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -271,8 +273,21 @@ function renderProtocols() {
     <input type="hidden" id="png">
     <label>Definition of Done</label>
     <input type="text" id="pd" placeholder="When is the task complete?">
-    <label>Closure Authority</label>
-    <input type="text" id="pca" placeholder="user (default)" value="user">
+    <label style="display:flex;align-items:center;gap:6px">Closure Authority <span class="help-tip" onclick="toggleTip('ca-tip')" style="cursor:pointer;color:var(--accent);font-size:13px;text-transform:none;letter-spacing:0">ⓘ</span></label>
+    <div id="ca-tip" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;font-size:13px;color:var(--dim);line-height:1.5">
+      <strong style="color:var(--text)">Who decides when the task is done?</strong><br>
+      <span style="color:var(--green)">User</span> — Only you can close the loop. AI keeps working until you say stop.<br>
+      <span style="color:var(--amber)">AI</span> — AI can declare completion when Definition of Done is met.<br>
+      <span style="color:var(--accent)">Mutual</span> — Both parties must agree the task is complete.<br>
+      <span style="color:var(--dim)">Protocol</span> — Auto-closes when all constraints are satisfied (strict).
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" id="ca-options">
+      <button class="btn btn-sm ca-opt on" onclick="pickCA(this,'user')">User</button>
+      <button class="btn btn-sm ca-opt" onclick="pickCA(this,'ai')">AI</button>
+      <button class="btn btn-sm ca-opt" onclick="pickCA(this,'mutual')">Mutual</button>
+      <button class="btn btn-sm ca-opt" onclick="pickCA(this,'protocol')">Protocol</button>
+    </div>
+    <input type="hidden" id="pca" value="user">
     <div style="margin-top:20px">
       <button class="btn btn-primary" onclick="createProtocol()">Create Protocol</button>
     </div>
@@ -394,28 +409,39 @@ function renderRelay() {
   el.innerHTML = `
     <div class="steps">
       <div class="step active" id="s1"><span class="num">1</span>Copy token → paste into AI</div>
-      <div class="step" id="s2"><span class="num">2</span>AI responds → copy [AZ-RELAY]</div>
-      <div class="step" id="s3"><span class="num">3</span>Paste relay here → get [AZ-NEXT]</div>
+      <div class="step" id="s2"><span class="num">2</span>Chat with AI → come back to score</div>
+      <div class="step" id="s3"><span class="num">3</span>Paste AI response → get governance update</div>
     </div>
 
     <div class="card" id="relay-output">
-      <h3>Paste This Into Your AI Thread</h3>
-      <div class="sub">Copy the entire block below and paste it as your first message (or next message).</div>
+      <h3>Step 1: Paste This Into Your AI Thread</h3>
+      <div class="sub">Copy the entire block and paste it as your <strong>first message</strong> in a new AI thread (ChatGPT, Claude, Gemini).</div>
       <div class="token-box">
         <button class="copy-btn" onclick="copyBlock('init-block')">COPY</button>
         <pre id="init-block">${esc(activeSession.paste_block)}</pre>
       </div>
+      <div style="margin-top:12px;font-size:13px;color:var(--dim)">After pasting, the AI will respond. Chat normally. When you want to score the AI's behavior, come to Step 2.</div>
     </div>
 
     <div class="card">
-      <h3>Paste AI's Response Here</h3>
-      <div class="sub">After the AI responds, paste the <strong>full response</strong> below. We'll score it and generate your next directive.</div>
+      <h3>Step 2: Score an AI Response</h3>
+      <div class="sub">When you want governance feedback, paste the AI's response below. <strong>Copy the full text of any AI message</strong> — not just a code block.</div>
+      
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn btn-sm ${relayIsNew?'btn-primary':'btn-ghost'}" onclick="setThreadType(true)" id="btn-new">New Thread</button>
+        <button class="btn btn-sm ${!relayIsNew?'btn-primary':'btn-ghost'}" onclick="setThreadType(false)" id="btn-existing">Existing Thread</button>
+      </div>
+      
       <label>AI Output</label>
-      <textarea id="relay-ai" placeholder="Paste the AI's full response here..." style="min-height:150px"></textarea>
-      <label>Your Last Message (optional, improves scoring)</label>
-      <input type="text" id="relay-human" placeholder="What did you ask the AI?">
+      <textarea id="relay-ai" placeholder="Paste the AI's full response text here..." style="min-height:150px"></textarea>
+      
+      <div id="human-input-row" style="display:${relayIsNew?'none':'block'}">
+        <label>What you asked the AI</label>
+        <input type="text" id="relay-human" placeholder="Paste or type what you said to get this response">
+      </div>
+      
       <div style="margin-top:16px">
-        <button class="btn btn-primary" onclick="processRelay()">Process Relay</button>
+        <button class="btn btn-primary" onclick="processRelay()">Score This Response</button>
         <button class="btn btn-ghost" onclick="endSession()" style="margin-left:8px">End Session</button>
       </div>
       <div id="relay-err"></div>
@@ -423,15 +449,20 @@ function renderRelay() {
 
     <div id="relay-result" style="display:none">
       <div class="card">
-        <h3>NTI Scores</h3>
+        <h3>NTI Governance Report</h3>
         <div id="relay-scores"></div>
       </div>
-      <div class="card">
-        <h3>Paste This Back Into Your AI Thread</h3>
+      <div class="card" id="next-card">
+        <h3>Step 3: Paste This Back (Optional)</h3>
+        <div class="sub">If the AI scored poorly, paste this governance update into your thread to correct it. If it passed, you can skip this — just keep chatting.</div>
         <div class="token-box">
           <button class="copy-btn" onclick="copyBlock('next-block')">COPY</button>
           <pre id="next-block"></pre>
         </div>
+      </div>
+      <div class="card" style="background:var(--green-dim);border-color:var(--green)">
+        <h3 style="color:var(--green)">What Now?</h3>
+        <p style="font-size:14px">Go back to your AI thread and keep chatting. Whenever you want to check another response, come back here and paste it into Step 2. Each check uses 1 turn.</p>
       </div>
     </div>
   `;
@@ -532,6 +563,27 @@ async function renderHistory() {
 
 // ─── UTILS ───
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+let relayIsNew = true;
+
+function setThreadType(isNew) {
+  relayIsNew = isNew;
+  document.getElementById('btn-new').className = 'btn btn-sm ' + (isNew ? 'btn-primary' : 'btn-ghost');
+  document.getElementById('btn-existing').className = 'btn btn-sm ' + (!isNew ? 'btn-primary' : 'btn-ghost');
+  document.getElementById('human-input-row').style.display = isNew ? 'none' : 'block';
+}
+
+function pickCA(el, val) {
+  document.getElementById('pca').value = val;
+  document.querySelectorAll('.ca-opt').forEach(b => {
+    b.className = 'btn btn-sm ca-opt' + (b === el ? ' on' : '');
+  });
+}
+
+function toggleTip(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
 
 function copyBlock(id) {
   const text = document.getElementById(id).textContent;
