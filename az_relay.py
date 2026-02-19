@@ -40,10 +40,25 @@ az_relay = Blueprint("az_relay", __name__)
 
 # ─── CONFIG ───
 RELAY_SECRET = os.getenv("AZ_RELAY_SECRET", "az-relay-change-in-prod-" + secrets.token_hex(8))
-DB_PATH = os.getenv("AZ_RELAY_DB", "az_relay.db")
-FREE_TURNS = 50  # free relay turns per account
+
+# Persistent storage: try /var/data (Render disk), fall back to local
+_db_default = "az_relay.db"
+_db_persistent = "/var/data/az_relay.db"
+if "AZ_RELAY_DB" in os.environ:
+    DB_PATH = os.environ["AZ_RELAY_DB"]
+elif os.path.isdir("/var/data"):
+    DB_PATH = _db_persistent
+else:
+    try:
+        os.makedirs("/var/data", exist_ok=True)
+        DB_PATH = _db_persistent
+    except (OSError, PermissionError):
+        DB_PATH = _db_default
+print(f"[RELAY] DB path: {DB_PATH}")
+
+FREE_TURNS = 50
 MAX_PROTOCOL_LEN = 4000
-TOKEN_TTL = 3600 * 24  # 24hr session token validity
+TOKEN_TTL = 3600 * 24
 
 
 # ─── DATABASE ───
