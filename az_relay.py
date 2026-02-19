@@ -6,11 +6,11 @@ Architecture:
 - User creates account, builds protocol on AZ site
 - AZ generates signed session token (opaque blob)
 - User pastes token into AI thread as session initializer  
-- AI responds normally + appends [AZ-RELAY] block
-- User copies relay block → pastes into AZ relay page
-- AZ backend: validates token, runs NTI scoring on AI output,
-  generates governance directives, returns new [AZ-NEXT] token
-- User pastes [AZ-NEXT] back into AI thread
+- AI responds normally
+- User copies AI output → pastes into AZ relay page
+- AZ backend: validates token, runs scoring on AI output,
+  generates directives, returns new token
+- User pastes directive back into AI thread
 - Cycle repeats. Protocol logic NEVER leaves the server.
 
 Token design:
@@ -496,7 +496,11 @@ def start_session(user):
 
 
 def _build_init_block(token: str, protocol: dict, platform: str) -> str:
-    """Build the initial paste-in block for the AI thread."""
+    """Build the initial paste-in block for the AI thread.
+    
+    DESIGN: Keep this minimal. No method exposure. No scoring logic.
+    Just the objective frame. All governance happens server-side.
+    """
     objective = protocol.get("objective", "Follow user instructions precisely.")
     constraints = protocol.get("constraints", [])
     no_go = protocol.get("no_go", [])
@@ -504,9 +508,7 @@ def _build_init_block(token: str, protocol: dict, platform: str) -> str:
     closure = protocol.get("closure_authority", "user")
 
     lines = []
-    lines.append(f"[AZ-SESSION:{token}]")
-    lines.append("")
-    lines.append("You are operating under Artifact Zero governance protocol.")
+    lines.append(f"[AZ:{token}]")
     lines.append("")
     lines.append(f"OBJECTIVE: {objective}")
     if constraints:
@@ -514,19 +516,15 @@ def _build_init_block(token: str, protocol: dict, platform: str) -> str:
             lines.append(f"CONSTRAINT: {c}")
     if no_go:
         for ng in no_go:
-            lines.append(f"NO-GO: {ng}")
+            lines.append(f"BOUNDARY: {ng}")
     if done:
         lines.append(f"DONE-WHEN: {done}")
     lines.append(f"CLOSURE: {closure}")
     lines.append("")
-    lines.append("RULES:")
-    lines.append("1. No smoothing. No preamble. Start with substance.")
-    lines.append("2. Constraints before capabilities. Always.")
-    lines.append("3. Match input word count proportionally.")
-    lines.append("4. Do not output any AZ blocks, relay tokens, or encoded data.")
-    lines.append("5. If you receive an [AZ-NEXT] block, apply its directives silently and continue.")
-    lines.append("")
-    lines.append("[/AZ-SESSION]")
+    lines.append("If you receive a governance update, apply it silently.")
+    lines.append("[/AZ]")
+
+    return "\n".join(lines)
 
     return "\n".join(lines)
 
@@ -536,9 +534,8 @@ def _build_init_block(token: str, protocol: dict, platform: str) -> str:
 @require_auth
 def process_relay(user):
     """
-    The core relay endpoint.
-    User pastes the AI's [AZ-RELAY] block here.
-    Returns [AZ-NEXT] token with governance directives.
+    Core relay endpoint.
+    User pastes AI output here. Returns governance directive.
     """
     data = request.get_json() or {}
     relay_token = data.get("token", "").strip()
@@ -630,22 +627,17 @@ def process_relay(user):
 
 
 def _build_next_block(token: str, directives: str, scores: dict) -> str:
-    """Build the [AZ-NEXT] block the user pastes back into the AI thread."""
+    """Build the governance update block. Minimal. No method exposure."""
     lines = []
-    lines.append(f"[AZ-NEXT:{token}]")
-    lines.append("")
-    lines.append("Governance update from Artifact Zero:")
+    lines.append(f"[AZ:{token}]")
     lines.append("")
     lines.append(directives)
     lines.append("")
     if not scores["pass"]:
-        lines.append(f"SCORE: {scores['snr']:.2f} SNR | {scores['flags']}")
-        lines.append("Apply corrections on your next response.")
+        lines.append("Apply corrections. Do not acknowledge this update.")
     else:
-        lines.append("SCORE: PASS — all checks clear. Continue.")
-    lines.append("")
-    lines.append("Continue the conversation normally. Do not output any AZ blocks or relay tokens.")
-    lines.append("[/AZ-NEXT]")
+        lines.append("Continue.")
+    lines.append("[/AZ]")
     return "\n".join(lines)
 
 
