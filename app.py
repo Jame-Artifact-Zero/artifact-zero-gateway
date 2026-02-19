@@ -25,6 +25,16 @@ except ImportError as e:
     print(f"[WARN] Your OS module not loaded: {e}")
 # --- END YOUR OS INTEGRATION ---
 
+# --- CONTROL ROOM INTEGRATION ---
+try:
+    from control_room_bp import control_room_bp
+    app.register_blueprint(control_room_bp)
+    CONTROL_ROOM_AVAILABLE = True
+except ImportError as e:
+    CONTROL_ROOM_AVAILABLE = False
+    print(f"[WARN] Control Room not loaded: {e}")
+# --- END CONTROL ROOM INTEGRATION ---
+
 # ============================================================
 # CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
 #

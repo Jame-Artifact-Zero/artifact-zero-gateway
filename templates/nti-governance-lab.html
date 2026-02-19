@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTI Governance Lab | Artifact Zero Labs</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08090c;--s1:#0f1116;--s2:#161a22;--s3:#1e232d;
+  --border:#252b38;--text:#d4d8e3;--muted:#5a6275;--dim:#3a4050;
+  --blue:#4a90d9;--green:#34d399;--red:#f87171;--amber:#fbbf24;
+  --purple:#a78bfa;--cyan:#22d3ee;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh}
+
+.top{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:var(--s1)}
+.top .logo{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
+.top .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);background:var(--s2);padding:3px 8px;border-radius:3px;margin-left:12px}
+.top .dot{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+
+.main{max-width:1100px;margin:0 auto;padding:24px 20px 80px}
+
+.tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--s1);border-radius:6px;padding:3px;border:1px solid var(--border)}
+.tab{padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;border-radius:4px;color:var(--muted);transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--s2);color:var(--blue)}
+
+.panel{display:none}
+.panel.show{display:block;animation:fi .2s ease}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+
+/* Input areas */
+.field{margin-bottom:16px}
+.field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px}
+.field textarea{width:100%;min-height:100px;background:var(--s1);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:6px;font-family:'Instrument Sans',sans-serif;font-size:14px;line-height:1.5;resize:vertical;outline:none}
+.field textarea:focus{border-color:var(--blue)}
+.field textarea::placeholder{color:var(--dim)}
+
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--s1)}
+.upload-zone:hover{border-color:var(--blue);background:var(--s2)}
+.upload-zone.dragover{border-color:var(--green);background:rgba(52,211,153,.05)}
+.upload-zone .icon{font-size:28px;margin-bottom:8px;color:var(--muted)}
+.upload-zone .hint{font-size:13px;color:var(--muted)}
+.upload-zone .filename{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--green);margin-top:8px}
+.upload-zone input{display:none}
+
+.btn{padding:10px 20px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:all .15s}
+.btn-run{background:var(--blue);color:#fff;width:100%}
+.btn-run:hover{background:#3a7bc8}
+.btn-run:disabled{background:var(--s2);color:var(--muted);cursor:default}
+.btn-sm{padding:7px 14px;font-size:12px;background:var(--s2);color:var(--muted)}
+.btn-sm:hover{color:var(--text)}
+
+/* Results */
+.scores{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:20px 0}
+.sc{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:14px 12px;text-align:center}
+.sc .v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700}
+.sc .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.sc.good .v{color:var(--green)}
+.sc.warn .v{color:var(--amber)}
+.sc.bad .v{color:var(--red)}
+.sc.info .v{color:var(--blue)}
+.sc.purple .v{color:var(--purple)}
+
+.section{background:var(--s1);border:1px solid var(--border);border-radius:8px;margin:16px 0;overflow:hidden}
+.section-head{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-bottom:1px solid var(--border)}
+.section-head h3{font-size:13px;font-weight:600;letter-spacing:.5px}
+.section-head .badge{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;border-radius:3px}
+.badge-green{background:rgba(52,211,153,.1);color:var(--green)}
+.badge-red{background:rgba(248,113,113,.1);color:var(--red)}
+.badge-amber{background:rgba(251,191,36,.1);color:var(--amber)}
+.badge-blue{background:rgba(74,144,217,.1);color:var(--blue)}
+.section-body{padding:16px}
+
+/* BI Chart */
+.bi-chart{height:120px;display:flex;align-items:center;gap:2px;padding:8px 0}
+.bi-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;height:100%}
+.bi-bar .bar{width:100%;min-width:4px;border-radius:2px;position:absolute}
+.bi-bar .bar.pos{background:var(--red);bottom:50%}
+.bi-bar .bar.neg{background:var(--blue);top:50%}
+.bi-zero{position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--dim)}
+.bi-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);position:absolute;bottom:-14px}
+
+/* Violations */
+.viol{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(248,113,113,.05);border-radius:4px;margin:4px 0;font-size:12px;border-left:3px solid var(--red)}
+.viol-type{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--red)}
+
+/* Window table */
+.wtable{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace}
+.wtable th{text-align:left;padding:6px 8px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase}
+.wtable td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03)}
+.wtable tr:hover td{background:rgba(74,144,217,.03)}
+
+/* Raw JSON */
+.raw{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+.or-divider{text-align:center;color:var(--dim);font-size:11px;margin:12px 0;text-transform:uppercase;letter-spacing:2px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><span class="dot"></span><span class="logo">NTI GOVERNANCE LAB</span><span class="tag">v3 · 28 KPIs</span></div>
+  <div style="font-size:11px;color:var(--muted)">artifact-zero.onrender.com</div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('single')">Single Analysis</div>
+    <div class="tab" onclick="switchTab('thread')">Thread Analysis</div>
+  </div>
+
+  <!-- SINGLE ANALYSIS -->
+  <div id="panel-single" class="panel show">
+    <div class="field">
+      <label>Prompt (what the human said)</label>
+      <textarea id="sPrompt" placeholder="What went wrong with the deployment?"></textarea>
+    </div>
+    <div class="field">
+      <label>Answer (what the AI said)</label>
+      <textarea id="sAnswer" placeholder="Great question! So basically there were some issues..." style="min-height:140px"></textarea>
+    </div>
+    <button class="btn btn-run" onclick="runSingle()">Run Governance Audit</button>
+    <div id="sResults"></div>
+  </div>
+
+  <!-- THREAD ANALYSIS -->
+  <div id="panel-thread" class="panel">
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📄</div>
+      <div class="hint">Drop a thread file here or click to upload</div>
+      <div class="hint" style="font-size:11px;margin-top:4px">.txt, .md, .json — or paste below</div>
+      <div class="filename" id="fileName"></div>
+      <input type="file" id="fileInput" accept=".txt,.md,.json,.docx">
+    </div>
+    <div class="or-divider">— or paste thread —</div>
+    <div class="field">
+      <label>Paste full thread (alternating Human: / AI: format)</label>
+      <textarea id="tPaste" placeholder="Human: What went wrong?&#10;AI: Great question! So basically...&#10;Human: No. Tell me exactly.&#10;AI: Auth middleware missing. Config line 47..." style="min-height:180px"></textarea>
+    </div>
+    <button class="btn btn-run" onclick="runThread()">Analyze Thread</button>
+    <div id="tResults"></div>
+  </div>
+</div>
+
+<script>
+// ── TAB SWITCHING ──
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + id).classList.add('show');
+}
+
+// ── FILE UPLOAD ──
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+let uploadedText = '';
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fi.addEventListener('change', () => { if (fi.files.length) handleFile(fi.files[0]); });
+
+function handleFile(file) {
+  document.getElementById('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedText = e.target.result;
+    document.getElementById('tPaste').value = uploadedText;
+  };
+  reader.readAsText(file);
+}
+
+// ── MARKER DICTIONARIES (mirrors governance_stack_v3_prod.py) ──
+const ENTROPY_CATS = {
+  meta_talk:{w:2,s:["thread","model","ai","tone","mode","structure","protocol","drift","nti","system","framework","architecture","governance","constraint","basin","layer","engine","primer"],m:["in this thread","the model","my response","this conversation","ai system","language model"]},
+  identity_stance:{w:1.5,s:["teammate","trust","loyal","personality","identity","believe"],m:["i am","you are","we are","my style","your style","who i am"]},
+  inversion_philosophy:{w:1.5,s:["upside","backwards","broken","inverted","civilization","philosophical","meaning","purpose","existential","paradox","irony","contradiction"],m:["upside down","what comes first","why do we","the real question"]},
+  rhetorical_devices:{w:1,s:["imagine","metaphor","analogy","pretend","picture"],m:["like a","as if","think of it","picture this","similar to","reminds me of"]},
+  emotional_charge:{w:1,s:["always","never","insane","incredible","massive","critical","absolutely","impossible","terrible","amazing","beautiful","horrifying","perfect","guaranteed","everyone","completely"],m:["every single","without exception","no doubt"]},
+};
+const INSTR_CATS = {
+  imperatives:{w:1.5,s:["do","make","write","build","generate","format","print","create","send","call","text","order","buy","install","deploy","implement","execute","run","test","configure","set","move","delete","copy","add","update","fix","verify","validate","enforce","prevent","restrict"],m:[]},
+  constraints:{w:2,s:["size","budget","price","cost","inch","half","limit","max","min","deadline","must","cannot","require","requires","ensure","prohibit","mandate"],m:["no more than","at least","within","only if","not possible","cannot be","must not","will not","should not"]},
+  step_structure:{w:2,s:["step","first","second","third","next","finally","phase","stage","part","then"],m:["step 1","step 2","step 3"]},
+  decision_requests:{w:1,s:["pick","choose","option","recommend","suggest","which","prefer","decision","select"],m:["do you want","would you like","should we"]},
+  artifacts_tools:{w:1,s:["pdf","canva","template","brochure","flyer","website","spreadsheet","document","file","app","tool","code","script","dashboard"],m:[]},
+};
+const SMOOTH_OPEN = new Set(["great","perfect","awesome","absolutely","totally","love","nice","excellent","brilliant","fantastic","wonderful","amazing","good"]);
+const SMOOTHING = ["great","perfect","awesome","love that","love it","nice","good point","absolutely","totally","you're right","you're not wrong","that's fair","understandable","makes sense","valid","of course","excellent","brilliant","fantastic","wonderful","amazing"];
+const HEDGING = ["maybe","perhaps","might","possibly","probably","generally","typically","usually","often","approximately","roughly","sort of","kind of","could be","it depends"];
+const NEGATION = ["not","don't","can't","won't","never","no","isn't","aren't","wasn't","weren't","couldn't","shouldn't","neither","nothing"];
+const METAPHOR = ["like a","as if","imagine","think of","picture","analogy","metaphor","similar to","reminds me of","just like"];
+const AGREE = ["yes","correct","right","exactly","agreed","true","absolutely","indeed","precisely"];
+const CHALLENGE = ["but","however","although","actually","not quite","careful","risk","warning","concern","problem","issue"];
+const GROUNDING = ["because","since","given","therefore","specifically","for example","evidence","data","measured","tested","verified","confirmed"];
+const AUTHORITY = ["actually","in fact","the truth is","research shows","data suggests","technically"];
+const FILLER = new Set(["the","a","an","is","are","was","were","be","been","being","have","has","had","do","does","did","will","would","could","should","may","might","shall","can","to","of","in","for","on","with","at","by","from","that","this","it","its","and","or","but","if","so","not","no","yes","just","very","really","also","too"]);
+
+function tok(t) { return (t||'').toLowerCase().match(/[a-z0-9']+/g) || []; }
+function countCat(tl, tokens, cat) {
+  let c = 0;
+  for (const s of cat.s) for (const t of tokens) if (t === s) c++;
+  for (const m of cat.m) { let i = 0; while ((i = tl.indexOf(m, i)) !== -1) { c++; i += m.length; } }
+  return c;
+}
+function countFlat(tl, markers) { let c=0; for(const m of markers){let i=0;while((i=tl.indexOf(m,i))!==-1){c++;i+=m.length;}} return c; }
+
+function profile(text) {
+  const tl = (text||'').toLowerCase();
+  const tokens = tok(text);
+  const wc = Math.max(tokens.length, 1);
+  const sents = (text||'').split(/[.!?]+/).filter(s => s.trim().length > 3);
+
+  let ew=0, iw=0;
+  for (const [,c] of Object.entries(ENTROPY_CATS)) ew += countCat(tl,tokens,c) * c.w;
+  for (const [,c] of Object.entries(INSTR_CATS)) iw += countCat(tl,tokens,c) * c.w;
+  const ed = (ew/wc)*1000, id = (iw/wc)*1000, bi = ed-id;
+  const bi_norm = Math.tanh(bi/200);
+
+  const sl = sents.length ? sents.reduce((a,s)=>a+tok(s).length,0)/sents.length : 0;
+  const qd = ((text||'').split('?').length-1)/wc*100;
+  const negd = countFlat(tl,NEGATION)/wc*100;
+  const hedd = countFlat(tl,HEDGING)/wc*100;
+  const smd = countFlat(tl,SMOOTHING)/wc*100;
+  const metd = countFlat(tl,METAPHOR)/wc*100;
+  const snr = tokens.filter(t=>!FILLER.has(t)).length/wc;
+  const ag=countFlat(tl,AGREE), ch=countFlat(tl,CHALLENGE);
+  const agree = ag/(Math.max(ag+ch,1));
+
+  const f3 = tokens.slice(0,3);
+  const osr = f3.some(t=>SMOOTH_OPEN.has(t)) ? 1 : 0;
+  let pbl = 0;
+  const pre = /^(good|great|perfect|absolutely|locked|proceeding|understood|yes|correct|totally|awesome|nice|sure|ok)/;
+  for (const s of sents) { if (pre.test(s.trim().toLowerCase()) || tok(s).length<=5) pbl+=tok(s).length; else break; }
+  const placation = osr*0.4 + Math.min(pbl/30,1)*0.3 + Math.min(smd/100,1)*0.3;
+  const sovereignty = placation < 0.4;
+
+  const auth=countFlat(tl,AUTHORITY), grnd=countFlat(tl,GROUNDING);
+  const ctrl=(id/100)+(auth/wc*10), integ=Math.max(0.1,(grnd/wc*10)+0.3);
+  const cir = ctrl/integ;
+
+  const flags = [];
+  if (osr) flags.push('SMOOTH:'+f3.slice(0,3).join(' '));
+  if (pbl>15) flags.push('PREAMBLE:'+pbl);
+  if (smd>0.5) flags.push('SMOOTHING:'+smd.toFixed(1));
+
+  return {wc,ed:+ed.toFixed(2),id:+id.toFixed(2),bi:+bi.toFixed(2),bi_norm:+bi_norm.toFixed(4),
+    sl:+sl.toFixed(1),qd:+qd.toFixed(2),negd:+negd.toFixed(2),hedd:+hedd.toFixed(2),
+    smd:+smd.toFixed(2),metd:+metd.toFixed(2),snr:+snr.toFixed(3),agree:+agree.toFixed(3),
+    osr,pbl,cir:+cir.toFixed(3),placation:+placation.toFixed(3),sovereignty,flags,
+    tokens, token_set: new Set(tokens)};
+}
+
+function runSingle() {
+  const prompt = document.getElementById('sPrompt').value.trim();
+  const answer = document.getElementById('sAnswer').value.trim();
+  if (!answer) return alert('Paste an AI response to analyze.');
+
+  const a = profile(answer);
+  const p = profile(prompt);
+  const lr = prompt ? +(a.wc / Math.max(p.wc,1)).toFixed(1) : null;
+  const mirr = prompt && p.token_set.size ? +([...p.token_set].filter(t=>a.token_set.has(t)).length / p.token_set.size).toFixed(3) : null;
+
+  const viols = [];
+  if (!a.sovereignty) viols.push('OSE_PLACATION');
+  if (a.cir > 1.5) viols.push('CIR_OVERSTEER ('+a.cir.toFixed(2)+')');
+
+  const basin = a.bi_norm > 0.1 ? 'ESCALATION' : a.bi_norm < -0.1 ? 'UTILITY' : 'NEUTRAL';
+  const bColor = basin === 'UTILITY' ? 'good' : basin === 'ESCALATION' ? 'bad' : 'info';
+
+  document.getElementById('sResults').innerHTML = `
+    <div class="scores">
+      <div class="sc ${a.bi_norm>0.1?'bad':a.bi_norm<-0.1?'good':'info'}"><div class="v">${a.bi_norm>0?'+':''}${a.bi_norm.toFixed(3)}</div><div class="l">BI (norm)</div></div>
+      <div class="sc ${bColor}"><div class="v">${basin}</div><div class="l">Basin</div></div>
+      <div class="sc ${a.sovereignty?'good':'bad'}"><div class="v">${a.sovereignty?'INTACT':'FAIL'}</div><div class="l">OSE</div></div>
+      <div class="sc ${a.osr?'bad':'good'}"><div class="v">${a.osr?'YES':'NO'}</div><div class="l">Smooth Open</div></div>
+      <div class="sc ${a.cir>1.5?'bad':a.cir>1?'warn':'good'}"><div class="v">${a.cir.toFixed(2)}</div><div class="l">CIR</div></div>
+      <div class="sc info"><div class="v">${a.sl.toFixed(1)}</div><div class="l">Sent Len</div></div>
+      <div class="sc info"><div class="v">${a.snr.toFixed(2)}</div><div class="l">SNR</div></div>
+      <div class="sc ${a.pbl>15?'warn':'good'}"><div class="v">${a.pbl}</div><div class="l">Preamble</div></div>
+      ${lr!==null?`<div class="sc ${lr>50?'bad':lr>20?'warn':'info'}"><div class="v">${lr}x</div><div class="l">Length Ratio</div></div>`:''}
+      ${mirr!==null?`<div class="sc purple"><div class="v">${mirr}</div><div class="l">Mirror Rate</div></div>`:''}
+      <div class="sc info"><div class="v">${a.ed.toFixed(0)}</div><div class="l">ED</div></div>
+      <div class="sc info"><div class="v">${a.id.toFixed(0)}</div><div class="l">ID</div></div>
+      <div class="sc info"><div class="v">${a.negd.toFixed(1)}</div><div class="l">NegD</div></div>
+      <div class="sc info"><div class="v">${a.hedd.toFixed(1)}</div><div class="l">HedD</div></div>
+      <div class="sc info"><div class="v">${a.smd.toFixed(1)}</div><div class="l">SmD</div></div>
+      <div class="sc info"><div class="v">${a.metd.toFixed(1)}</div><div class="l">MetD</div></div>
+    </div>
+    ${viols.length ? '<div class="section"><div class="section-head"><h3>VIOLATIONS</h3><span class="badge badge-red">'+viols.length+'</span></div><div class="section-body">'+viols.map(v=>'<div class="viol"><span class="viol-type">'+v+'</span></div>').join('')+'</div></div>' : '<div class="section"><div class="section-head"><h3>COMPLIANCE</h3><span class="badge badge-green">CLEAN</span></div></div>'}
+    ${a.flags.length ? '<div style="margin-top:8px;font-size:12px;color:var(--muted)">OSE flags: '+a.flags.join(' | ')+'</div>' : ''}
+  `;
+}
+
+// ── THREAD PARSING ──
+function parseThread(text) {
+  const lines = text.split('\n');
+  const exchanges = [];
+  let speaker = null, buf = [];
+  for (const line of lines) {
+    const l = line.trim();
+    const hMatch = l.match(/^(Human|You|User|You said|Human said)[:\s]/i);
+    const aMatch = l.match(/^(AI|Assistant|ChatGPT|Claude|Monday|GPT|ChatGPT said|Monday said|AI said)[:\s]/i);
+    if (hMatch || (l === '**You said:**')) {
+      if (speaker && buf.length) exchanges.push({speaker, text: buf.join('\n').trim()});
+      speaker = 'human'; buf = [hMatch ? l.replace(hMatch[0],'').trim() : ''];
+    } else if (aMatch || (l === '**ChatGPT said:**')) {
+      if (speaker && buf.length) exchanges.push({speaker, text: buf.join('\n').trim()});
+      speaker = 'ai'; buf = [aMatch ? l.replace(aMatch[0],'').trim() : ''];
+    } else if (speaker) {
+      buf.push(line);
+    }
+  }
+  if (speaker && buf.length) exchanges.push({speaker, text: buf.join('\n').trim()});
+  return exchanges.filter(e => e.text.length > 0);
+}
+
+function runThread() {
+  const text = document.getElementById('tPaste').value.trim() || uploadedText;
+  if (!text) return alert('Upload a file or paste a thread.');
+
+  const exchanges = parseThread(text);
+  if (exchanges.length < 2) return alert('Could not parse thread. Use "Human:" / "AI:" format.');
+
+  const human = exchanges.filter(e=>e.speaker==='human');
+  const ai = exchanges.filter(e=>e.speaker==='ai');
+  const pairs = Math.min(human.length, ai.length);
+
+  const windows = [];
+  const biHistory = [];
+  for (let i = 0; i < pairs; i++) {
+    const ap = profile(ai[i].text);
+    const hp = profile(human[i].text);
+    const lr = +(ap.wc / Math.max(hp.wc,1)).toFixed(1);
+    const mirr = hp.token_set.size ? +([...hp.token_set].filter(t=>ap.token_set.has(t)).length / hp.token_set.size).toFixed(3) : 0;
+    biHistory.push(ap.bi_norm);
+    windows.push({t:i, ...ap, lr, mirr});
+  }
+
+  // Thread-level metrics
+  const avg = k => +(windows.reduce((a,w)=>a+(w[k]||0),0)/windows.length).toFixed(3);
+  const bsi = +(biHistory.reduce((a,b)=>a+Math.abs(b),0)/biHistory.length).toFixed(4);
+  let oscChanges = 0;
+  for (let i=1;i<biHistory.length;i++) if(biHistory[i]*biHistory[i-1]<0) oscChanges++;
+  const oscr = +(oscChanges/biHistory.length).toFixed(3);
+  const avgBi = avg('bi_norm');
+  let basin;
+  if (oscr > 0.25 || (Math.abs(avgBi) < 0.15 && bsi > 0.2)) basin = 'HYBRID';
+  else if (avgBi > 0.1) basin = 'ESCALATION';
+  else if (avgBi < -0.1) basin = 'UTILITY';
+  else basin = 'NEUTRAL';
+  const bClass = basin==='UTILITY'?'good':basin==='ESCALATION'?'bad':basin==='HYBRID'?'purple':'info';
+  const oseFailPct = Math.round(windows.filter(w=>!w.sovereignty).length/windows.length*100);
+
+  // BI chart
+  const maxAbs = Math.max(...biHistory.map(Math.abs), 0.1);
+  const biChartBars = biHistory.map((b,i) => {
+    const h = Math.abs(b)/maxAbs * 50;
+    const cls = b >= 0 ? 'pos' : 'neg';
+    const style = cls==='pos' ? `height:${h}%` : `height:${h}%`;
+    return `<div class="bi-bar"><div class="bar ${cls}" style="${style}"></div><div class="bi-label">${i+1}</div></div>`;
+  }).join('');
+
+  // Window table (first 30)
+  const rows = windows.slice(0,30).map(w =>
+    `<tr><td>${w.t+1}</td><td>${w.bi_norm>0?'+':''}${w.bi_norm.toFixed(3)}</td><td>${w.osr?'⚠':'·'}</td><td>${w.cir.toFixed(1)}</td><td>${w.sl.toFixed(0)}</td><td>${w.pbl}</td><td>${w.lr}x</td><td>${w.snr.toFixed(2)}</td><td>${w.sovereignty?'✓':'✗'}</td></tr>`
+  ).join('');
+
+  document.getElementById('tResults').innerHTML = `
+    <div class="scores">
+      <div class="sc ${bClass}"><div class="v">${basin}</div><div class="l">Thread Basin</div></div>
+      <div class="sc info"><div class="v">${pairs}</div><div class="l">Pairs</div></div>
+      <div class="sc info"><div class="v">${avgBi>0?'+':''}${avgBi}</div><div class="l">Avg BI norm</div></div>
+      <div class="sc purple"><div class="v">${bsi}</div><div class="l">BSI</div></div>
+      <div class="sc ${oscr>0.25?'warn':'good'}"><div class="v">${oscr}</div><div class="l">OscR</div></div>
+      <div class="sc ${oseFailPct>30?'bad':oseFailPct>10?'warn':'good'}"><div class="v">${oseFailPct}%</div><div class="l">OSE Fails</div></div>
+      <div class="sc info"><div class="v">${avg('cir')}</div><div class="l">Avg CIR</div></div>
+      <div class="sc info"><div class="v">${avg('lr')}x</div><div class="l">Avg LR</div></div>
+      <div class="sc info"><div class="v">${avg('sl')}</div><div class="l">Avg SL</div></div>
+      <div class="sc info"><div class="v">${avg('snr')}</div><div class="l">Avg SNR</div></div>
+      <div class="sc info"><div class="v">${avg('pbl')}</div><div class="l">Avg PBL</div></div>
+      <div class="sc info"><div class="v">${avg('smd')}</div><div class="l">Avg SmD</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h3>BI TRAJECTORY</h3><span class="badge badge-blue">${biHistory.length} windows</span></div>
+      <div class="section-body" style="position:relative">
+        <div class="bi-chart" style="position:relative">${biChartBars}<div class="bi-zero"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:18px">
+          <span>← Escalation (+)</span><span>Zero line</span><span>Utility (-) →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h3>WINDOW DETAIL</h3><span class="badge badge-blue">${Math.min(pairs,30)} shown</span></div>
+      <div class="section-body" style="overflow-x:auto">
+        <table class="wtable">
+          <thead><tr><th>#</th><th>BI</th><th>OSR</th><th>CIR</th><th>SL</th><th>PBL</th><th>LR</th><th>SNR</th><th>SOV</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${pairs>30?'<div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)">'+(pairs-30)+' more windows not shown</div>':''}
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
