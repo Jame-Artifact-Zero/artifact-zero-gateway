@@ -45,6 +45,17 @@ except ImportError as e:
     print(f"[WARN] Relay not loaded: {e}")
 # --- END RELAY INTEGRATION ---
 
+# --- ADMIN DASHBOARD INTEGRATION ---
+try:
+    from admin_dashboard import init_admin, log_nti_run
+    init_admin(app)
+    ADMIN_AVAILABLE = True
+except ImportError as e:
+    ADMIN_AVAILABLE = False
+    log_nti_run = None
+    print(f"[WARN] Admin dashboard not loaded: {e}")
+# --- END ADMIN DASHBOARD INTEGRATION ---
+
 # ============================================================
 # CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
 #
@@ -772,6 +783,11 @@ def nti_run():
     latency_ms = int((time.time() - t0) * 1000)
     record_request(request_id, "/nti", session_id, latency_ms, payload, error=None)
     record_result(request_id, result)
+
+    # Admin analytics tracking
+    if ADMIN_AVAILABLE and log_nti_run:
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        log_nti_run(request_id, ip, text, result, latency_ms, session_id)
 
     log_json_line("nti_run", {
         "request_id": request_id,
