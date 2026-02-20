@@ -348,6 +348,13 @@ def signup():
     conn.close()
 
     session["az_user_id"] = user_id
+    # Admin analytics
+    try:
+        from admin_dashboard import log_relay_event
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        log_relay_event("signup", ip=ip, username=email, detail=f"user_id={user_id}")
+    except Exception:
+        pass
     return jsonify({"ok": True, "user_id": user_id})
 
 
@@ -368,6 +375,13 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
 
     session["az_user_id"] = user["id"]
+    # Admin analytics
+    try:
+        from admin_dashboard import log_relay_event
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        log_relay_event("login", ip=ip, username=email)
+    except Exception:
+        pass
     return jsonify({"ok": True, "user_id": user["id"], "plan": user["plan"], "turns_used": user["turns_used"], "turns_limit": user["turns_limit"]})
 
 
@@ -622,6 +636,17 @@ def process_relay(user):
     )
     conn.commit()
     conn.close()
+
+    # Admin analytics
+    try:
+        from admin_dashboard import log_relay_event
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        sov = "PASS" if scores.get("pass") else "FAIL"
+        snr = scores.get("snr", 0)
+        log_relay_event("score", ip=ip, username=user.get("email", ""),
+                        detail=f"sovereignty={sov} snr={snr:.3f} turn={next_turn}")
+    except Exception:
+        pass
 
     # ── BUILD NEXT TOKEN ──
     next_token = make_token(session_id, next_turn)
