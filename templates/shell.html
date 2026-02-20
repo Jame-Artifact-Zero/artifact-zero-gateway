@@ -80,6 +80,53 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
   background:var(--bg);
 }
 
+/* Frozen bottom bar */
+.bottombar{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 16px;height:40px;min-height:40px;
+  background:var(--s1);border-top:1px solid var(--border);
+  z-index:100;
+}
+.search-wrap{
+  flex:1;position:relative;
+}
+.search-input{
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  color:var(--text);padding:6px 12px 6px 28px;border-radius:5px;
+  font-family:var(--mono);font-size:11px;outline:none;
+}
+.search-input:focus{border-color:var(--green)}
+.search-input::placeholder{color:var(--muted)}
+.search-icon{
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  font-size:12px;color:var(--muted);pointer-events:none;
+}
+.search-results{
+  display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;
+  background:var(--s1);border:1px solid var(--border);border-radius:6px;
+  max-height:300px;overflow-y:auto;z-index:200;
+}
+.search-results.show{display:block}
+.sr-item{
+  padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;
+  font-size:12px;display:flex;justify-content:space-between;align-items:center;
+}
+.sr-item:hover{background:var(--s2)}
+.sr-item:last-child{border-bottom:none}
+.sr-type{
+  font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.sr-type.protocol{background:rgba(34,197,94,.12);color:var(--green)}
+.sr-type.session{background:rgba(74,144,217,.12);color:var(--blue)}
+.sr-type.audit{background:rgba(167,139,250,.12);color:var(--purple)}
+.sr-type.event{background:rgba(245,158,11,.12);color:var(--amber)}
+.sr-empty{padding:12px;text-align:center;color:var(--dim);font-size:12px}
+.bottom-status{
+  font-family:var(--mono);font-size:9px;color:var(--muted);
+  white-space:nowrap;
+}
+
 /* Auth overlay */
 .auth-overlay{
   display:none;position:fixed;inset:0;z-index:200;
@@ -149,6 +196,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
   <!-- ── CONTENT (this changes) ── -->
   <div class="content" id="content">
     <iframe id="frame" src="/relay"></iframe>
+  </div>
+
+  <!-- ── FROZEN BOTTOM BAR ── -->
+  <div class="bottombar">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="searchInput" type="text" placeholder="Search protocols, sessions, audits..." autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="bottom-status" id="bottomStatus">ready</div>
   </div>
 </div>
 
@@ -326,6 +383,111 @@ window.addEventListener('popstate', (e) => {
 // ── INIT ──
 checkAuth();
 initFromURL();
+
+// ── SEARCH ──
+let searchTimeout = null;
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { searchResults.classList.remove('show'); return; }
+  searchTimeout = setTimeout(() => doSearch(q), 300);
+});
+
+searchInput.addEventListener('focus', () => {
+  if (searchInput.value.trim().length >= 2) searchResults.classList.add('show');
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-wrap')) searchResults.classList.remove('show');
+});
+
+async function doSearch(q) {
+  document.getElementById('bottomStatus').textContent = 'searching...';
+  try {
+    const r = await fetch('/api/search', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({q})});
+    const d = await r.json();
+    if (d.results && d.results.length > 0) {
+      searchResults.innerHTML = d.results.map(r => `
+        <div class="sr-item" onclick="openResult('${r.type}','${r.id}')">
+          <div>
+            <div style="font-weight:500">${esc(r.title)}</div>
+            <div style="font-size:10px;color:#5a6275;margin-top:2px">${r.date ? r.date.slice(0,16) : ''}</div>
+          </div>
+          <span class="sr-type ${r.type}">${r.type}</span>
+        </div>
+      `).join('');
+    } else {
+      searchResults.innerHTML = '<div class="sr-empty">No results for "' + esc(q) + '"</div>';
+    }
+    searchResults.classList.add('show');
+    document.getElementById('bottomStatus').textContent = d.count + ' results';
+  } catch(e) {
+    document.getElementById('bottomStatus').textContent = 'search error';
+  }
+}
+
+function openResult(type, id) {
+  searchResults.classList.remove('show');
+  searchInput.value = '';
+  if (type === 'protocol' || type === 'session') go('relay');
+  else if (type === 'audit') go('lab');
+  else go('relay');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+// ── ANALYTICS (SL Activity pattern) ──
+const AZ_SESSION = 'az_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+let clickCount = 0;
+let lastNav = Date.now();
+
+function trackEvent(name, data) {
+  try {
+    fetch('/events', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({event: name, data: {...data, session: AZ_SESSION, section: currentSection, ts: Date.now()}})
+    });
+  } catch(e) {}
+}
+
+// Track nav changes
+const _origGo = go;
+go = function(section) {
+  trackEvent('nav_change', {from: currentSection, to: section});
+  lastNav = Date.now();
+  _origGo(section);
+};
+
+// Track clicks
+document.addEventListener('click', (e) => {
+  clickCount++;
+  const el = e.target;
+  if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.closest('button') || el.closest('a')) {
+    trackEvent('click', {
+      tag: el.tagName,
+      id: el.id || '',
+      text: (el.textContent || '').slice(0,40),
+      class: (el.className || '').slice(0,60)
+    });
+  }
+});
+
+// Track search
+searchInput.addEventListener('blur', () => {
+  if (searchInput.value.trim()) {
+    trackEvent('search', {query: searchInput.value.trim()});
+  }
+});
+
+// Track session heartbeat
+setInterval(() => {
+  trackEvent('heartbeat', {clicks: clickCount, section: currentSection, elapsed: Date.now() - lastNav});
+}, 60000);
+
+// Track page load
+trackEvent('shell_load', {url: window.location.href, referrer: document.referrer});
 </script>
 </body>
 </html>

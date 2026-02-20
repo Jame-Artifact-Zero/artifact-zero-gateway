@@ -932,6 +932,72 @@ def physics_run():
 
 
 # ==========================
+# SEARCH (unified cross-product search)
+# ==========================
+@app.route("/api/search", methods=["POST"])
+def unified_search():
+    """Search across protocols, sessions, audits, events."""
+    payload = request.get_json() or {}
+    q = (payload.get("q") or "").strip()
+    if not q or len(q) < 2:
+        return jsonify({"results": [], "query": q})
+
+    results = []
+    like = f"%{q}%"
+
+    # Search relay protocols
+    try:
+        from az_relay import db as relay_db
+        conn = relay_db()
+        rows = conn.execute(
+            "SELECT id, name, created_at, 'protocol' as type FROM az_protocols WHERE name LIKE ? OR protocol_json LIKE ? LIMIT 10",
+            (like, like)
+        ).fetchall()
+        for r in rows:
+            results.append({"type": "protocol", "id": r["id"], "title": r["name"], "date": r["created_at"]})
+
+        # Search relay sessions
+        rows = conn.execute(
+            "SELECT s.id, p.name, s.started_at, s.turn_count FROM az_sessions s JOIN az_protocols p ON s.protocol_id=p.id WHERE p.name LIKE ? LIMIT 10",
+            (like,)
+        ).fetchall()
+        for r in rows:
+            results.append({"type": "session", "id": r["id"], "title": f"{r['name']} ({r['turn_count']} turns)", "date": r["started_at"]})
+        conn.close()
+    except Exception:
+        pass
+
+    # Search NTI audit logs
+    try:
+        from admin_dashboard import get_analytics_db
+        aconn = get_analytics_db()
+        rows = aconn.execute(
+            "SELECT id, timestamp, input_preview, nii_score FROM nti_runs WHERE input_preview LIKE ? ORDER BY timestamp DESC LIMIT 10",
+            (like,)
+        ).fetchall()
+        for r in rows:
+            results.append({"type": "audit", "id": str(r["id"]), "title": r["input_preview"][:80], "date": r["timestamp"], "score": r["nii_score"]})
+        aconn.close()
+    except Exception:
+        pass
+
+    # Search events
+    try:
+        conn2 = db_connect()
+        rows = conn2.execute(
+            "SELECT id, created_at, event_name, event_json FROM events WHERE event_name LIKE ? OR event_json LIKE ? ORDER BY created_at DESC LIMIT 10",
+            (like, like)
+        ).fetchall()
+        for r in rows:
+            results.append({"type": "event", "id": r["id"], "title": r["event_name"], "date": r["created_at"]})
+        conn2.close()
+    except Exception:
+        pass
+
+    return jsonify({"results": results, "query": q, "count": len(results)})
+
+
+# ==========================
 # CHAT PROXY (Control Room free tier)
 # ==========================
 @app.route("/api/chat", methods=["POST"])
