@@ -133,13 +133,12 @@ function render() {
         <a href="/chat" style="color:var(--dim)">CONTROL ROOM</a>
         <a href="/lab" style="color:var(--dim)">LAB</a>
         <a href="/live" style="color:var(--dim)">LIVE</a>
-        <a href="/your-os" style="color:var(--dim)">YOUR OS</a>
       </div>
     </div>
     <div class="top">
       <div class="logo"><img src="/static/favicon.png" alt="0">RELAY</div>
       <div class="user-info">
-        <span>${user.email}</span>
+        <span>${user.username || user.email}</span>
         <span class="turns">${user.turns_limit - user.turns_used} turns left</span>
         <button onclick="doLogout()">Logout</button>
       </div>
@@ -197,6 +196,8 @@ function showLogin() {
 
 function showSignup() {
   document.getElementById('auth-form').innerHTML = `
+    <label>Username</label>
+    <input type="text" id="a-user" placeholder="How others see you">
     <label>Email</label>
     <input type="email" id="a-email" placeholder="you@example.com">
     <label>Password</label>
@@ -214,16 +215,18 @@ async function doLogin() {
   const pass = document.getElementById('a-pass').value;
   const r = await fetch(API+'/relay/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
   const d = await r.json();
-  if (d.ok) { d.email = email; user = d; await loadProtocols(); render(); }
+  if (d.ok) { user = d; await loadProtocols(); render(); }
   else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
 }
 
 async function doSignup() {
+  const username = document.getElementById('a-user').value.trim();
   const email = document.getElementById('a-email').value;
   const pass = document.getElementById('a-pass').value;
-  const r = await fetch(API+'/relay/signup', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
+  if (!username) { document.getElementById('auth-err').innerHTML = '<div class="error">Username required</div>'; return; }
+  const r = await fetch(API+'/relay/signup', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass,username})});
   const d = await r.json();
-  if (d.ok) { user = {email, turns_used:0, turns_limit:50, plan:'free'}; render(); }
+  if (d.ok) { user = {email, username, turns_used:0, turns_limit:50, plan:'free'}; render(); }
   else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
 }
 

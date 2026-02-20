@@ -75,6 +75,7 @@ def init_relay_db():
         CREATE TABLE IF NOT EXISTS az_users (
             id TEXT PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
+            username TEXT DEFAULT '',
             password_hash TEXT NOT NULL,
             salt TEXT NOT NULL,
             created_at TEXT NOT NULL,
@@ -121,6 +122,15 @@ def init_relay_db():
 
 
 init_relay_db()
+
+# Migrate: add username column if missing
+try:
+    _mc = db()
+    _mc.execute("ALTER TABLE az_users ADD COLUMN username TEXT DEFAULT ''")
+    _mc.commit()
+    _mc.close()
+except Exception:
+    pass
 
 
 # ─── CRYPTO ───
@@ -324,11 +334,14 @@ def signup():
     data = request.get_json() or {}
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
+    username = (data.get("username") or "").strip()
 
     if not email or "@" not in email:
         return jsonify({"error": "Valid email required"}), 400
     if len(password) < 8:
         return jsonify({"error": "Password must be 8+ characters"}), 400
+    if not username:
+        username = email.split("@")[0]
 
     salt = secrets.token_hex(16)
     pw_hash = _hash_pw(password, salt)
@@ -338,8 +351,8 @@ def signup():
     conn = db()
     try:
         conn.execute(
-            "INSERT INTO az_users (id, email, password_hash, salt, created_at, turns_limit) VALUES (?,?,?,?,?,?)",
-            (user_id, email, pw_hash, salt, now, FREE_TURNS)
+            "INSERT INTO az_users (id, email, username, password_hash, salt, created_at, turns_limit) VALUES (?,?,?,?,?,?,?)",
+            (user_id, email, username, pw_hash, salt, now, FREE_TURNS)
         )
         conn.commit()
     except sqlite3.IntegrityError:
@@ -348,14 +361,13 @@ def signup():
     conn.close()
 
     session["az_user_id"] = user_id
-    # Admin analytics
     try:
         from admin_dashboard import log_relay_event
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        log_relay_event("signup", ip=ip, username=email, detail=f"user_id={user_id}")
+        log_relay_event("signup", ip=ip, username=username, detail=f"user_id={user_id}")
     except Exception:
         pass
-    return jsonify({"ok": True, "user_id": user_id})
+    return jsonify({"ok": True, "user_id": user_id, "username": username})
 
 
 @az_relay.route("/relay/login", methods=["POST"])
@@ -375,14 +387,13 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
 
     session["az_user_id"] = user["id"]
-    # Admin analytics
     try:
         from admin_dashboard import log_relay_event
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         log_relay_event("login", ip=ip, username=email)
     except Exception:
         pass
-    return jsonify({"ok": True, "user_id": user["id"], "plan": user["plan"], "turns_used": user["turns_used"], "turns_limit": user["turns_limit"]})
+    return jsonify({"ok": True, "user_id": user["id"], "email": user["email"], "username": user.get("username") or user["email"].split("@")[0], "plan": user["plan"], "turns_used": user["turns_used"], "turns_limit": user["turns_limit"]})
 
 
 @az_relay.route("/relay/logout", methods=["POST"])
@@ -397,6 +408,7 @@ def me(user):
     return jsonify({
         "user_id": user["id"],
         "email": user["email"],
+        "username": user.get("username") or user["email"].split("@")[0],
         "plan": user["plan"],
         "turns_used": user["turns_used"],
         "turns_limit": user["turns_limit"],

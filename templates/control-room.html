@@ -10,7 +10,7 @@
 :root{--bg:#08090c;--s1:#0f1117;--s2:#161a23;--s3:#1e232e;--border:#252b38;--text:#d4d8e3;--muted:#5a6275;--dim:#3a4050;--accent:#c96442;--accent2:#e07a55;--blue:#4a90d9;--green:#34d399;--red:#f87171;--amber:#fbbf24;--purple:#a78bfa}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-.app{display:flex;height:100vh}
+.app{display:flex;height:calc(100vh - 37px)}
 
 /* Sidebar */
 .sb{width:250px;background:var(--s1);display:flex;flex-direction:column;flex-shrink:0;border-right:1px solid var(--border)}
@@ -69,7 +69,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .nc .v2.g{color:var(--green)}.nc .v2.r{color:var(--red)}.nc .v2.w{color:var(--amber)}.nc .v2.b{color:var(--blue)}.nc .v2.m{color:var(--muted)}.nc .v2.p{color:var(--purple)}
 .nf{width:100%;font-size:9px;color:var(--red);margin-top:2px}
 
-.iw{position:fixed;bottom:0;right:0;left:250px;padding:12px 20px 16px;background:linear-gradient(transparent,var(--bg) 25%)}
+.iw{position:fixed;bottom:0;right:0;left:250px;padding:12px 20px 16px;background:linear-gradient(transparent,var(--bg) 25%);z-index:10}
 .ib{max-width:700px;margin:0 auto;position:relative}
 .if2{width:100%;min-height:48px;max-height:180px;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:13px 50px 13px 18px;font-size:14px;line-height:1.5;color:var(--text);outline:none;resize:none;font-family:'DM Sans',sans-serif}
 .if2:focus{border-color:var(--accent)}.if2::placeholder{color:var(--dim)}
@@ -99,6 +99,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 </style>
 </head>
 <body>
+<!-- NAV BAR -->
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #252b38;background:#0f1117;font-family:'IBM Plex Mono',monospace;font-size:11px">
+  <a href="/" style="color:#34d399;font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
+  <div style="display:flex;gap:16px;align-items:center">
+    <a href="/relay" style="color:#5a6275;text-decoration:none">RELAY</a>
+    <a href="/chat" style="color:#34d399;font-weight:600;text-decoration:none">CONTROL ROOM</a>
+    <a href="/lab" style="color:#5a6275;text-decoration:none">LAB</a>
+    <a href="/live" style="color:#5a6275;text-decoration:none">LIVE</a>
+  </div>
+</div>
 <div class="app">
 <div class="sb">
   <div class="sb-head"><div class="z0"><img src="/static/favicon.png" alt="0"></div><div><div class="sb-t">CONTROL ROOM</div><div class="sb-s">NTI-scored AI chat</div></div></div>
@@ -114,7 +124,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   </div>
 </div>
 <div class="mn">
-  <div class="hd"><div class="hl"><div class="hb"><div class="zs">0</div><span id="ml">Claude Sonnet 4</span></div></div><div class="ns" onclick="tn()"><div class="ld" id="nl"></div>NTI</div></div>
+  <div class="hd"><div class="hl"><div class="hb"><div class="zs">0</div><span id="ml">Claude Sonnet 4</span></div></div><div style="display:flex;align-items:center;gap:8px"><div class="ns" onclick="tn()"><div class="ld" id="nl"></div>NTI</div><span onclick="alert('NTI Scoring: When ON, every AI response is scored across 28 governance KPIs — bias detection, sovereignty enforcement, hedge density, and more. Toggle OFF to chat without scoring.')" style="font-size:11px;color:#5a6275;cursor:pointer;font-family:'IBM Plex Mono',monospace;border:1px solid #252b38;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center">?</span></div></div>
   <div class="ms" id="ms"><div class="mi" id="mi">
     <div class="wc" id="wc"><div class="zl"><img src="/static/favicon.png" alt="0"></div><h2>NTI Control Room</h2><p>Chat with Claude or ChatGPT. Every response scored — 28 governance KPIs, basin detection, sovereignty enforcement.</p><div class="fr">25 FREE MESSAGES · NO API KEY REQUIRED</div></div>
   </div></div>
