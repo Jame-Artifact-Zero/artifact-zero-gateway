@@ -625,6 +625,15 @@ def home():
             return "NTI Canonical Runtime is live."
 
 
+@app.route("/start")
+def start_page():
+    """Navigation hub — routes users by use case to relay signup."""
+    try:
+        return render_template("start.html")
+    except Exception:
+        return "Navigation hub — coming soon."
+
+
 @app.route("/your-os/builder")
 def your_os_builder():
     """Protocol builder page (redirect to main your-os landing)."""
@@ -641,7 +650,10 @@ def health():
 
 @app.route("/favicon.ico")
 def favicon():
-    return app.send_static_file("favicon.png")
+    try:
+        return app.send_static_file("favicon.svg")
+    except Exception:
+        return app.send_static_file("favicon.png")
 
 
 @app.route("/canonical/status")

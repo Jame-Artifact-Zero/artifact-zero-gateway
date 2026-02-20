@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artifact Zero — Find Your Solution</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #08080b;
+  --bg2: #0f0f14;
+  --bg3: #16161d;
+  --bg4: #1e1e28;
+  --border: #252530;
+  --text: #eaeaf0;
+  --text2: #8888a0;
+  --accent: #f5a623;
+  --accent2: #ff6b35;
+  --green: #34d399;
+  --blue: #60a5fa;
+  --purple: #a78bfa;
+  --red: #f87171;
+  --glow: rgba(245,166,35,0.08);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.grain {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container { max-width: 960px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+/* === HERO === */
+.hero {
+  text-align: center;
+  padding: 60px 0 40px;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--glow);
+  border: 1px solid rgba(245,166,35,0.15);
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 400;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.hero h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.hero .sub {
+  font-size: 17px;
+  color: var(--text2);
+  max-width: 560px;
+  margin: 0 auto 32px;
+}
+
+/* === THREE DOORS === */
+.doors-section {
+  padding: 0 0 48px;
+}
+
+.doors-label {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 20px;
+}
+
+.doors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 700px) {
+  .doors { grid-template-columns: 1fr; }
+}
+
+.door {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.door::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.door:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(245,166,35,0.08);
+}
+
+.door:hover::before { opacity: 1; }
+
+.door-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.door h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.door p {
+  font-size: 14px;
+  color: var(--text2);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.door-examples {
+  font-size: 12px;
+  color: var(--text2);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.door-cta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 16px;
+  letter-spacing: 0.5px;
+}
+
+/* === PATHWAY PANELS === */
+.pathway {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.pathway.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pathway-header {
+  text-align: center;
+  padding: 32px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.pathway-header h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+
+.pathway-header .pathway-desc {
+  color: var(--text2);
+  font-size: 15px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: color 0.2s;
+}
+
+.back-btn:hover { color: var(--accent); }
+
+/* === SOLUTION CARDS === */
+.solution-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.solution-card:hover {
+  border-color: rgba(245,166,35,0.3);
+  background: var(--bg3);
+}
+
+.sc-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.sc-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  background: var(--bg4);
+}
+
+.sc-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.sc-desc {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+.sc-proof {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--green);
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(52,211,153,0.06);
+  border-radius: 6px;
+  border: 1px solid rgba(52,211,153,0.1);
+}
+
+.sc-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.sc-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(245,166,35,0.3);
+}
+
+.sc-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  opacity: 0.6;
+  margin-top: 6px;
+  display: block;
+}
+
+/* === RELAY CTA === */
+.relay-cta-block {
+  background: linear-gradient(135deg, rgba(245,166,35,0.06), rgba(255,107,53,0.06));
+  border: 1px solid rgba(245,166,35,0.2);
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  margin: 40px 0;
+}
+
+.relay-cta-block h3 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+
+.relay-cta-block p {
+  color: var(--text2);
+  font-size: 15px;
+  max-width: 460px;
+  margin: 0 auto 24px;
+}
+
+.relay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 10px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.relay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(245,166,35,0.35);
+}
+
+/* === SHOWCASE GRID === */
+.showcase-section {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+}
+
+.showcase-section h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.showcase-sub {
+  text-align: center;
+  color: var(--text2);
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.showcase-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.showcase-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.si-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+.si-name {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.si-desc {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.si-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  margin-top: 10px;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.si-live { background: rgba(52,211,153,0.1); color: var(--green); }
+.si-pending { background: rgba(248,113,113,0.1); color: var(--red); }
+
+.footer {
+  text-align: center;
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">Artifact Zero Labs</div>
+    <h1>Stop re-explaining yourself<br>to a <em>computer.</em></h1>
+    <div class="sub">NTI makes every word accountable — whether you're writing to humans, talking to AI, or both. Start free. Build your rules in 60 seconds.</div>
+  </div>
+
+  <!-- THREE DOORS -->
+  <div class="doors-section" id="doorsSection">
+    <div class="doors-label">How do you communicate?</div>
+    <div class="doors">
+
+      <div class="door" onclick="showPathway('human')">
+        <span class="door-icon">✍️</span>
+        <h3>I write to people</h3>
+        <p>Emails, Slack, client messages, case notes, medical records — your words go to other humans and they need to be structurally clear.</p>
+        <div class="door-examples">Attorneys, healthcare providers, sales teams, real estate</div>
+        <div class="door-cta">Show me solutions →</div>
+      </div>
+
+      <div class="door" onclick="showPathway('ai')">
+        <span class="door-icon">🤖</span>
+        <h3>I work with AI</h3>
+        <p>You use ChatGPT, Claude, or Gemini daily. The AI drifts, forgets your rules, wastes tokens, and loses your objective.</p>
+        <div class="door-examples">Developers, founders, power users, content creators</div>
+        <div class="door-cta">Show me solutions →</div>
+      </div>
+
+      <div class="door" onclick="showPathway('both')">
+        <span class="door-icon">⚡</span>
+        <h3>Both — I need it all</h3>
+        <p>You use AI to draft human communications. The full pipeline: human thought → AI processing → human delivery. Every step needs governance.</p>
+        <div class="door-examples">Enterprises, law firms, healthcare systems, agencies</div>
+        <div class="door-cta">Show me everything →</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================= -->
+  <!-- PATHWAY: HUMAN-TO-HUMAN -->
+  <!-- ======================================= -->
+  <div class="pathway" id="pathway-human">
+    <div class="back-btn" onclick="showDoors()">← Back to all paths</div>
+    <div class="pathway-header">
+      <h2>Solutions for human communication</h2>
+      <div class="pathway-desc">Your words carry consequences. NTI measures their structural integrity before they leave your hands.</div>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(96,165,250,0.12);">📧</div>
+        <div>
+          <div class="sc-title">Email & Message Analysis</div>
+          <div class="sc-desc">Paste any email, Slack message, or written communication. Get instant structural scoring across 7 layers (L0-L7), failure mode detection (false commitments, hidden constraints, deferred obligations), and a clear integrity score. See exactly where your message creates ambiguity or exposure.</div>
+        </div>
+      </div>
+      <div class="sc-proof">Validated: False commitment rate dropped from 49% → 7% across 50-email benchmark</div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/" target="_blank">Try it now — paste any message →</a>
+      <span class="sc-link">dontgofulltilt.com</span>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(248,113,113,0.12);">🏥</div>
+        <div>
+          <div class="sc-title">Medical Document Analysis</div>
+          <div class="sc-desc">NTI analyzes clinical documentation for structural failures that create legal exposure, weaken insurance justification, and reduce clinical defensibility. Real case: an ER discharge summary scored 0.625 (CCA-CONFIRMED), while a neurology consult scored 0.975. Same patient. Different structural integrity. Three different professionals would each pay to know about the gap.</div>
+        </div>
+      </div>
+      <div class="sc-proof">Real finding: Post-hospital synthesis scored 0.335 — TRIADIC SELF-SEALING (all 3 failure modes confirmed)</div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/" target="_blank">See the medical analysis demo →</a>
+      <span class="sc-link">Medical demo — deployment in progress</span>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(52,211,153,0.12);">⚖️</div>
+        <div>
+          <div class="sc-title">Legal Communication Governance</div>
+          <div class="sc-desc">Law firms send thousands of case status emails, lien negotiation messages, and settlement communications. Analysis of 269 outbound messages across 10 threads revealed 98% lacked clear objectives and deadlines, creating $47K-$95K in annual recoverable staff efficiency across 500 cases. NTI detects structural gaps professional tone analysis misses.</div>
+        </div>
+      </div>
+      <div class="sc-proof">Custom legal detectors catch gaps standard V2/V3 engines pass at 0.91+ (professional tone masks structural failure)</div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/" target="_blank">Analyze your communications →</a>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(167,139,250,0.12);">📰</div>
+        <div>
+          <div class="sc-title">Live News Structural Analysis</div>
+          <div class="sc-desc">Watch NTI analyze headlines in real-time across 13 RSS sources. See readability scores, emotional charge detection, assertion density, and source attribution quality — updated continuously. Shows the difference between journalism and manipulation, structurally.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/live" target="_blank">Watch the live feed →</a>
+      <span class="sc-link">dontgofulltilt.com/live</span>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(245,166,35,0.12);">🗳️</div>
+        <div>
+          <div class="sc-title">Political Accountability Dashboard</div>
+          <div class="sc-desc">Knox County Mayor's Race — 4 candidates scored on Clarity, Accountability, Substance, and Authenticity. 16 statements analyzed through NTI. See which candidates say something and which ones say nothing with a lot of words.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/live/knoxville" target="_blank">See the Knoxville dashboard →</a>
+      <span class="sc-link">dontgofulltilt.com/live/knoxville</span>
+    </div>
+
+    <!-- RELAY CTA -->
+    <div class="relay-cta-block">
+      <h3>Ready to govern your communications?</h3>
+      <p>Build your own rules. Every message gets scored before it leaves your hands. Free to start — 60 seconds to build your protocol.</p>
+      <a class="relay-btn" href="https://dontgofulltilt.com/your-os" target="_blank">Build Your Protocol Free →</a>
+    </div>
+  </div>
+
+  <!-- ======================================= -->
+  <!-- PATHWAY: HUMAN-TO-AI -->
+  <!-- ======================================= -->
+  <div class="pathway" id="pathway-ai">
+    <div class="back-btn" onclick="showDoors()">← Back to all paths</div>
+    <div class="pathway-header">
+      <h2>Solutions for AI governance</h2>
+      <div class="pathway-desc">Your AI forgets your rules every conversation. NTI makes them permanent.</div>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(245,166,35,0.12);">🖥️</div>
+        <div>
+          <div class="sc-title">Your OS — AI Control Room</div>
+          <div class="sc-desc">Name your operating system. Define 5 binding rules. Every AI response gets structurally scored. Works across ChatGPT, Claude, and Gemini simultaneously. Your protocol is enforced on every message — the AI can't drift, can't add filler, can't forget what you told it. Try 5 messages free, no API key needed.</div>
+        </div>
+      </div>
+      <div class="sc-proof">63-65% token cost reduction validated across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro</div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/your-os" target="_blank">Build your OS — 60 seconds →</a>
+      <span class="sc-link">dontgofulltilt.com/your-os</span>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(96,165,250,0.12);">🔍</div>
+        <div>
+          <div class="sc-title">Structural AI Output Analysis</div>
+          <div class="sc-desc">Paste any AI prompt and response. See exactly where the AI drifted from your objective, introduced false commitments, collapsed your constraints, or padded with filler. Detects 10 tilt categories, 3 parent failure modes, and scores structural integrity from 0.0 to 1.0. Rule-based — no AI analyzing AI.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/" target="_blank">Analyze an AI response →</a>
+      <span class="sc-link">dontgofulltilt.com (choose Developer or Explorer persona)</span>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(167,139,250,0.12);">📋</div>
+        <div>
+          <div class="sc-title">JOS Binding Contracts</div>
+          <div class="sc-desc">Before you talk to AI, fill in 5 fields: Objective, Constraints, No-Go Zones, Definition of Done, Closure Authority. The contract freezes before execution. The AI can't reinterpret, soften, or expand scope. It's a task binding, not a prompt.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/jos/template" target="_blank">See the JOS template →</a>
+      <span class="sc-link">dontgofulltilt.com/jos/template</span>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(52,211,153,0.12);">💰</div>
+        <div>
+          <div class="sc-title">Token Economics Calculator</div>
+          <div class="sc-desc">See how much your AI spend is actually waste. The CFO persona on the homepage shows real token economics — what an exchange needed vs. what was burned. At enterprise scale (2M requests/year), the savings range from $5.9M to $92M annually depending on model pricing.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/" target="_blank">Calculate your savings →</a>
+      <span class="sc-link">dontgofulltilt.com (choose CFO persona)</span>
+    </div>
+
+    <!-- RELAY CTA -->
+    <div class="relay-cta-block">
+      <h3>Stop re-explaining yourself to AI.</h3>
+      <p>Build your operating system. Define your rules once. Enforced on every conversation, every model, every time. Free to start.</p>
+      <a class="relay-btn" href="https://dontgofulltilt.com/your-os" target="_blank">Build Your OS Free →</a>
+    </div>
+  </div>
+
+  <!-- ======================================= -->
+  <!-- PATHWAY: BOTH -->
+  <!-- ======================================= -->
+  <div class="pathway" id="pathway-both">
+    <div class="back-btn" onclick="showDoors()">← Back to all paths</div>
+    <div class="pathway-header">
+      <h2>The full pipeline — human to AI to human</h2>
+      <div class="pathway-desc">You use AI to draft, analyze, or process communications that reach other humans. Every step needs structural governance.</div>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(245,166,35,0.12);">🏗️</div>
+        <div>
+          <div class="sc-title">NTI Full Pipeline — v2 → AI → v3</div>
+          <div class="sc-desc">The complete convergence loop. v2 audits your input before AI processes it (hedge detection, missing objectives, conflicting directives). AI generates a response. v3 stabilizes the output (strips filler, anchors to objective, enforces token ceiling). Iterates up to 3 passes until score hits 0.80. The full stack for enterprise communications.</div>
+        </div>
+      </div>
+      <div class="sc-proof">Pipeline pricing: $7,500/mo for 10 seats with v1+v2+v3+JOS</div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/" target="_blank">See the full architecture →</a>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(96,165,250,0.12);">🖥️</div>
+        <div>
+          <div class="sc-title">Your OS + Communication Scoring</div>
+          <div class="sc-desc">Build your protocol, use AI with governance enforced, then run the AI's output through NTI before sending it to a human. Double-gated: your rules on the AI, structural scoring on the output. Nothing leaves without passing both checks.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/your-os" target="_blank">Start building →</a>
+    </div>
+
+    <div class="solution-card">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:rgba(167,139,250,0.12);">🏢</div>
+        <div>
+          <div class="sc-title">Territory Licensing</div>
+          <div class="sc-desc">Own the NTI deployment rights for your market. One license per DMA. The live feed, political dashboard, and structural analysis tools — branded and deployed for your territory. Currently available: Knoxville, TN.</div>
+        </div>
+      </div>
+      <a class="sc-cta" href="https://dontgofulltilt.com/live/license/knoxville" target="_blank">Explore territory licensing →</a>
+      <span class="sc-link">dontgofulltilt.com/live/license/knoxville</span>
+    </div>
+
+    <!-- RELAY CTA -->
+    <div class="relay-cta-block">
+      <h3>Enterprise-grade governance. Start free.</h3>
+      <p>Build your protocol in 60 seconds. Test it on real AI. Then talk to us about the full pipeline for your organization.</p>
+      <a class="relay-btn" href="https://dontgofulltilt.com/your-os" target="_blank">Build Your Protocol →</a>
+    </div>
+  </div>
+
+  <!-- ======================================= -->
+  <!-- EVERYTHING ON THE SITE — SHOWCASE -->
+  <!-- ======================================= -->
+  <div class="showcase-section">
+    <h2>Everything on the site</h2>
+    <div class="showcase-sub">Every page, tool, and demo — click to visit</div>
+
+    <div class="showcase-grid">
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/','_blank')">
+        <div class="si-label">Page</div>
+        <div class="si-name">Homepage</div>
+        <div class="si-desc">Persona gate, demos, architecture, pricing, Stripe checkout</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/live','_blank')">
+        <div class="si-label">Dashboard</div>
+        <div class="si-name">Live News Feed</div>
+        <div class="si-desc">13 RSS sources, 7-axis structural scoring, 24/7</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/live/knoxville','_blank')">
+        <div class="si-label">Dashboard</div>
+        <div class="si-name">Knoxville Mayor Race</div>
+        <div class="si-desc">4 candidates, HCS v3, 5 lenses, 16 statements</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/your-os','_blank')">
+        <div class="si-label">App</div>
+        <div class="si-name">Your OS Control Room</div>
+        <div class="si-desc">Multi-model AI with protocol enforcement</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/your-os/builder','_blank')">
+        <div class="si-label">Landing</div>
+        <div class="si-name">Build Your OS</div>
+        <div class="si-desc">Protocol builder onboarding funnel</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/live/license/knoxville','_blank')">
+        <div class="si-label">Sales</div>
+        <div class="si-name">Territory Licensing</div>
+        <div class="si-desc">Market ownership model, inquiry form</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item">
+        <div class="si-label">Demo</div>
+        <div class="si-name">Medical Document Analysis</div>
+        <div class="si-desc">ER visit scored through NTI, role-based tabs</div>
+        <span class="si-status si-pending">Needs deploy</span>
+      </div>
+      <div class="showcase-item">
+        <div class="si-label">Tool</div>
+        <div class="si-name">Lab Dashboard</div>
+        <div class="si-desc">Internal testing: Question Physics, NTI core, uploads</div>
+        <span class="si-status si-pending">Needs deploy</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/health','_blank')">
+        <div class="si-label">System</div>
+        <div class="si-name">Health Check</div>
+        <div class="si-desc">Server status endpoint</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+      <div class="showcase-item" onclick="window.open('https://dontgofulltilt.com/canonical/status','_blank')">
+        <div class="si-label">System</div>
+        <div class="si-name">Module Status</div>
+        <div class="si-desc">All loaded modules with true/false status</div>
+        <span class="si-status si-live">Live</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Artifact Zero Labs · Knoxville, TN · <a href="https://dontgofulltilt.com">dontgofulltilt.com</a> · Built by Jame Houghton
+  </div>
+
+</div>
+
+<script>
+function showPathway(id) {
+  document.getElementById('doorsSection').style.display = 'none';
+  document.querySelectorAll('.pathway').forEach(p => p.classList.remove('active'));
+  document.getElementById('pathway-' + id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showDoors() {
+  document.querySelectorAll('.pathway').forEach(p => p.classList.remove('active'));
+  document.getElementById('doorsSection').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>
