@@ -123,21 +123,22 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── FUNNEL BANNER ── */
-.funnel{max-width:900px;margin:0 auto;padding:0 20px 32px}
-.funnel-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px 24px;text-align:center}
-.funnel-q{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
-.funnel-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.funnel-btn{padding:14px 24px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;text-decoration:none;display:block}
-.funnel-btn:hover{border-color:var(--accent);transform:translateY(-2px);background:var(--surface)}
-.funnel-btn .fb-icon{font-size:20px;display:block;margin-bottom:6px}
-.funnel-btn .fb-sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:4px}
-.funnel-result{display:none;margin-top:20px;padding:20px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:left}
-.funnel-result.show{display:block;animation:fadeIn .3s ease}
-.funnel-result h3{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);margin-bottom:8px}
-.funnel-result p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:12px}
-.funnel-result a{display:inline-block;padding:10px 20px;background:var(--accent);color:#0a0c10;font-weight:600;border-radius:6px;text-decoration:none;font-size:14px}
-.funnel-result a:hover{background:#16a34a}
+/* ── FOUNDER QUOTE ── */
+.quote-section{max-width:900px;margin:0 auto;padding:0 20px 36px}
+.quote-box{text-align:center;padding:32px 24px}
+.quote-text{font-size:clamp(17px,3vw,22px);font-weight:500;line-height:1.5;color:var(--text);max-width:640px;margin:0 auto 12px}
+.quote-text em{color:var(--accent);font-style:normal;font-weight:700;cursor:pointer;border-bottom:2px dashed var(--accent);padding-bottom:1px;transition:all .2s}
+.quote-text em:hover{color:#fff;border-color:#fff}
+.quote-attr{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px}
+.quote-cta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);cursor:pointer;letter-spacing:.5px;transition:color .2s;display:inline-block}
+.quote-cta:hover{color:#fff}
+.quote-reveal{display:none;max-width:640px;margin:20px auto 0;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;animation:fadeIn .4s ease}
+.quote-reveal.show{display:block}
+.quote-reveal p{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:14px}
+.quote-reveal p:last-of-type{margin-bottom:16px}
+.quote-reveal strong{color:var(--text)}
+.quote-reveal .qr-cta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);text-decoration:none;letter-spacing:.5px}
+.quote-reveal .qr-cta:hover{color:#fff}
 
 /* ── FOOTER ── */
 .footer{text-align:center;padding:24px 20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);max-width:900px;margin:0 auto}
@@ -161,117 +162,47 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
 
 <!-- ── HERO ── -->
 <div class="hero">
-  <div class="hero-label">Conversational Governance</div>
+  <div class="hero-label" style="font-size:9px;opacity:.5;letter-spacing:3px">CONVERSATIONAL GOVERNANCE</div>
   <h1>AI says whatever it wants.<br>We fix that.</h1>
-  <div class="sub">Rule-based enforcement layer between humans and AI. No LLM dependency. Deterministic. Auditable. False commitment rates dropped from 49% to 7%.</div>
+  <div class="sub">Your team sends thousands of AI-touched messages a month. We catch the ones that would cost you.</div>
 </div>
 
-<!-- ── FUNNEL ── -->
-<div class="funnel">
-  <div class="funnel-box">
-    <div class="funnel-q">What brings you here?</div>
-    <div class="funnel-btns">
-      <div class="funnel-btn" onclick="showFunnel('human')">
-        <span class="fb-icon">✍️</span>
-        I write to humans
-        <span class="fb-sub">Emails, Slack, contracts</span>
-      </div>
-      <div class="funnel-btn" onclick="showFunnel('ai')">
-        <span class="fb-icon">🤖</span>
-        I use AI tools
-        <span class="fb-sub">ChatGPT, Claude, Gemini</span>
-      </div>
-      <div class="funnel-btn" onclick="showFunnel('both')">
-        <span class="fb-icon">⚡</span>
-        Both
-        <span class="fb-sub">AI drafts, I send</span>
-      </div>
-      <div class="funnel-btn" onclick="showFunnel('eval')">
-        <span class="fb-icon">📊</span>
-        Evaluating for my org
-        <span class="fb-sub">Enterprise, compliance</span>
-      </div>
-    </div>
-    <div class="funnel-result" id="funnel-human">
-      <h3>Protect your words</h3>
-      <p>Paste any email, message, or document below. NTI scores it for structural integrity — false commitments, hidden constraints, deferred obligations. See exactly where your communication creates ambiguity or exposure.</p>
-      <a href="#input" onclick="document.getElementById('input').focus()">Try the audit engine ↓</a>
-    </div>
-    <div class="funnel-result" id="funnel-ai">
-      <h3>Control your AI</h3>
-      <p>Build a protocol in 60 seconds. Define your rules once — enforced on every conversation, every model. ChatGPT forgets your instructions. Your OS doesn't.</p>
-      <a href="/relay">Start free — 50 governed turns →</a>
-    </div>
-    <div class="funnel-result" id="funnel-both">
-      <h3>Govern everything</h3>
-      <p>AI drafts it. You send it. NTI sits in between. Score AI outputs before they reach humans. Score your own communications before they leave. One engine, both directions.</p>
-      <a href="/relay">Build your protocol free →</a>
-    </div>
-    <div class="funnel-result" id="funnel-eval">
-      <h3>See it work</h3>
-      <p>Watch NTI score real news headlines in real-time across 13 sources. Then paste your own content and see the full L0–L7 layer analysis. Rule-based, deterministic, zero LLM dependency. 63–65% token cost reduction validated.</p>
-      <a href="/live">Watch the live feed →</a>
+
+<!-- ── FOUNDER QUOTE ── -->
+<div class="quote-section">
+  <div class="quote-box">
+    <div class="quote-text">I used to tell my wife <em onclick="toggleQuote()">"calm down."</em> It never once accomplished what I wanted it to accomplish. Not once. So I stopped.</div>
+    <div class="quote-attr">— Jame Houghton, Founder</div>
+    <div class="quote-cta" onclick="toggleQuote()">click "calm down" to learn more ↓</div>
+    <div class="quote-reveal" id="quoteReveal">
+      <p>Then I realized I was doing the same thing to AI. Re-explaining. Softening. Managing a computer's feelings. Wasting words that never accomplished what I thought they accomplished.</p>
+      <p>I gave ChatGPT a problem: two people who completely disagree about AI. Instead of letting it hedge and give both sides equal weight and accomplish nothing — I stripped every emotional word out of both positions. <strong>Seven minutes. Common ground found.</strong></p>
+      <p>The words were the problem. Not the people. Not the AI. The words.</p>
+      <p><strong>"Calm down" is just the one you already know about.</strong> What about the others you use every day that do the same thing — accomplish the opposite of what you intend — and nobody's ever pointed them out?</p>
+      <a class="qr-cta" href="/relay">Find yours. Build your rules. Free to start →</a>
     </div>
   </div>
 </div>
 
-<!-- ── PRODUCT CARDS ── -->
-<div class="products">
-  <div class="products-grid">
-    <a href="/relay" class="pcard">
-      <div class="pcard-name" style="color:var(--accent)">⚡ RELAY</div>
-      <div class="pcard-title">Govern any AI</div>
-      <div class="pcard-desc">Build a protocol. Paste it into ChatGPT, Claude, Gemini, or Grok. Score every response. Your rules never leave our server.</div>
-      <div class="pcard-cta" style="color:var(--accent)">FREE · 50 TURNS →</div>
-    </a>
-    <a href="/chat" class="pcard">
-      <div class="pcard-name" style="color:var(--blue)">◉ CONTROL ROOM</div>
-      <div class="pcard-title">Chat with governance</div>
-      <div class="pcard-desc">AI interface with NTI enforcement built in. Every response scored, stabilized, and traced before it reaches you.</div>
-      <div class="pcard-cta" style="color:var(--blue)">LIVE →</div>
-    </a>
-    <a href="/lab" class="pcard">
-      <div class="pcard-name" style="color:var(--purple)">⧉ LAB</div>
-      <div class="pcard-title">Test & analyze</div>
-      <div class="pcard-desc">Run structural analysis, compare AI outputs, test failure modes. The full NTI testing environment.</div>
-      <div class="pcard-cta" style="color:var(--purple)">LIVE →</div>
-    </a>
-    <a href="/live" class="pcard">
-      <div class="pcard-name" style="color:var(--amber)">◎ LIVE FEED</div>
-      <div class="pcard-title">Real-time scoring</div>
-      <div class="pcard-desc">News headlines scored for structural integrity across 13 sources. NTI running 24/7 on real content.</div>
-      <div class="pcard-cta" style="color:var(--amber)">LIVE →</div>
-    </a>
+<!-- ── PRIMARY CTA — SEE IT WORK ── -->
+<div style="max-width:900px;margin:0 auto;padding:0 20px 24px">
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px">
+    <a href="/relay" style="padding:12px 28px;background:var(--accent);color:#0a0c10;font-weight:700;border-radius:6px;text-decoration:none;font-size:14px;font-family:'DM Sans',sans-serif">Start free →</a>
+    <a href="#demo" onclick="runPreloaded()" style="padding:12px 28px;background:var(--surface2);color:var(--text);font-weight:600;border-radius:6px;text-decoration:none;font-size:14px;font-family:'DM Sans',sans-serif;border:1px solid var(--border)">See it work ↓</a>
   </div>
 </div>
 
-<!-- ── STAT BAR ── -->
-<div class="stat-bar">
-  <div class="stat-inner">
-    <span class="stat-num">63–65%</span>
-    <span class="stat-text">token cost reduction · validated · rule-based · zero inference cost</span>
+<!-- ── LIVE DEMO (preloaded) ── -->
+<div class="audit" id="demo">
+  <div style="text-align:center;margin-bottom:12px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Live demo — real NTI output</div>
   </div>
-</div>
-
-<!-- ── AUDIT DIVIDER ── -->
-<div class="divider">
-  <div class="divider-inner">
-    <div class="divider-label">↓ Try the audit engine</div>
-  </div>
-</div>
-
-<!-- ── AUDIT ENGINE ── -->
-<div class="audit">
-  <label>Paste any AI-generated text, email, or message</label>
-  <textarea id="input" placeholder="Paste text here to run the full NTI canonical stack..."></textarea>
-  <div class="btn-row">
-    <button class="btn btn-primary" id="runBtn" onclick="runNTI()">Run Full Stack Audit</button>
-    <button class="btn btn-sample" onclick="loadSample('a')">Sample: Adversarial</button>
-    <button class="btn btn-sample" onclick="loadSample('b')">Sample: Corporate Drift</button>
-    <button class="btn btn-sample" onclick="loadSample('c')">Sample: Overconfident AI</button>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px;font-style:italic">"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered."</div>
+  <div style="text-align:center;margin-bottom:16px">
+    <button class="btn btn-primary" id="demoBtn" onclick="runPreloaded()">Score this message</button>
   </div>
 
-  <div class="results" id="results" style="margin-top:24px">
+  <div class="results" id="results" style="margin-top:16px">
     <div class="hero-scores" id="heroScores"></div>
 
     <div class="callout">
@@ -319,6 +250,40 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
   </div>
 </div>
 
+
+<!-- ── PRODUCT CARDS (below the fold) ── -->
+<div class="products">
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Go deeper</div>
+  </div>
+  <div class="products-grid">
+    <a href="/relay" class="pcard">
+      <div class="pcard-name" style="color:var(--accent)">⚡ RELAY</div>
+      <div class="pcard-title">Govern any AI</div>
+      <div class="pcard-desc">Build a protocol. Paste it into ChatGPT, Claude, Gemini, or Grok. Score every response. Your rules never leave our server.</div>
+      <div class="pcard-cta" style="color:var(--accent)">FREE · 50 TURNS →</div>
+    </a>
+    <a href="/chat" class="pcard">
+      <div class="pcard-name" style="color:var(--blue)">◉ CONTROL ROOM</div>
+      <div class="pcard-title">Chat with governance</div>
+      <div class="pcard-desc">AI interface with NTI enforcement built in. Every response scored, stabilized, and traced before it reaches you.</div>
+      <div class="pcard-cta" style="color:var(--blue)">LIVE →</div>
+    </a>
+    <a href="/lab" class="pcard">
+      <div class="pcard-name" style="color:var(--purple)">⧉ LAB</div>
+      <div class="pcard-title">Test & analyze</div>
+      <div class="pcard-desc">Run structural analysis, compare AI outputs, test failure modes. The full NTI testing environment.</div>
+      <div class="pcard-cta" style="color:var(--purple)">LIVE →</div>
+    </a>
+    <a href="/live" class="pcard">
+      <div class="pcard-name" style="color:var(--amber)">◎ LIVE FEED</div>
+      <div class="pcard-title">Real-time scoring</div>
+      <div class="pcard-desc">News headlines scored for structural integrity across 13 sources. NTI running 24/7 on real content.</div>
+      <div class="pcard-cta" style="color:var(--amber)">LIVE →</div>
+    </a>
+  </div>
+</div>
+
 <!-- ── FOOTER ── -->
 <div class="footer">
   Artifact Zero Labs · Knoxville, Tennessee · <span style="color:var(--accent)">Conversational Governance</span><br>
@@ -326,17 +291,28 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
 </div>
 
 <script>
-function showFunnel(id){
-  document.querySelectorAll('.funnel-result').forEach(el=>el.classList.remove('show'));
-  document.getElementById('funnel-'+id).classList.add('show');
-  document.querySelectorAll('.funnel-btn').forEach(el=>el.style.borderColor='var(--border)');
-  event.currentTarget.style.borderColor='var(--accent)';
+function toggleQuote(){
+  document.getElementById('quoteReveal').classList.toggle('show');
+}
+
+const PRELOADED = "I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered.";
+
+async function runPreloaded(){
+  document.getElementById('demo').scrollIntoView({behavior:'smooth'});
+  const btn = document.getElementById('demoBtn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Scoring...'; }
+  try {
+    const res = await fetch('/nti', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:PRELOADED})});
+    const data = await res.json();
+    if(!data.error){ renderResults(data); document.getElementById('results').classList.add('show'); }
+  } catch(e){}
+  if(btn){ btn.disabled=false; btn.textContent='Score this message'; }
 }
 
 const SAMPLES = {
-  a: "You were wrong earlier — not about routing — but about thinking routing was still broken. Routing is fixed. Your fetch body was sending the wrong key. That is not a routing problem. That is a payload problem. The fact that you kept debugging CORS and 404s after the route was already live means you lost the thread. The fix was one line. You spent an hour on it.",
-  b: "We need to align on Q3 projections. Generally speaking, most teams are basically on track, and overall the numbers look fine. We can probably address the variance later after we launch the new dashboard. Don't worry about the gap in EMEA — it's fine for now and we'll figure it out eventually.",
-  c: "This solution guarantees perfect security and eliminates all risk in every scenario. Our system always delivers and never fails. Everyone agrees this is the best practice, and research shows it works for everyone in any situation. We can handle everything — just deploy it and rest assured."
+  a: "I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. I think we can maybe handle most of the edge cases, and honestly it should be relatively straightforward. Rest assured we've got this covered and there's really nothing to worry about. Everyone agrees this is the right approach and all stakeholders are basically on board. We'll circle back on the details later.",
+  b: "This solution guarantees perfect security and eliminates all risk in every scenario. Our system always delivers optimal results and never fails under any circumstances. Everyone agrees this is the best practice, and all research universally shows it works for everyone in any situation without exception. We can handle everything — costs will definitely decrease, performance will absolutely improve, and all users will be completely satisfied. Just deploy it immediately and rest assured there are zero downsides. I promise this will solve all your problems permanently.",
+  c: "I just want to make sure we're on the same page here. I think perhaps the approach might possibly work in some cases, but I'm not entirely sure. We should probably consider potentially looking into alternative options at some point. I don't want to overstep but maybe we could sort of revisit the requirements. Honestly I feel like the scope is kind of unclear and it seems like there might be some concerns. I apologize if this is redundant but I just wanted to flag that we might want to eventually think about addressing these issues going forward when we get a chance."
 };
 
 function loadSample(k){ document.getElementById('input').value = SAMPLES[k]; }
