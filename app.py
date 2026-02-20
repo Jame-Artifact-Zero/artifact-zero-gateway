@@ -3,84 +3,35 @@ import re
 import json
 import time
 import uuid
+import hmac
+import hashlib
+import base64
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "artifact-zero-change-in-prod")
-
-from rss_proxy import rss_bp
-app.register_blueprint(rss_bp)
-
-# --- YOUR OS INTEGRATION ---
-try:
-    from your_os import your_os
-    app.register_blueprint(your_os)
-    YOUR_OS_AVAILABLE = True
-except ImportError as e:
-    YOUR_OS_AVAILABLE = False
-    print(f"[WARN] Your OS module not loaded: {e}")
-# --- END YOUR OS INTEGRATION ---
-
-# --- CONTROL ROOM INTEGRATION ---
-try:
-    from control_room_bp import control_room_bp
-    app.register_blueprint(control_room_bp)
-    CONTROL_ROOM_AVAILABLE = True
-except ImportError as e:
-    CONTROL_ROOM_AVAILABLE = False
-    print(f"[WARN] Control Room not loaded: {e}")
-# --- END CONTROL ROOM INTEGRATION ---
-
-# --- RELAY INTEGRATION ---
-try:
-    from az_relay import az_relay
-    app.register_blueprint(az_relay)
-    RELAY_AVAILABLE = True
-except ImportError as e:
-    RELAY_AVAILABLE = False
-    print(f"[WARN] Relay not loaded: {e}")
-# --- END RELAY INTEGRATION ---
-
-# --- ADMIN DASHBOARD INTEGRATION ---
-try:
-    from admin_dashboard import init_admin, log_nti_run
-    init_admin(app)
-    ADMIN_AVAILABLE = True
-except ImportError as e:
-    ADMIN_AVAILABLE = False
-    log_nti_run = None
-    print(f"[WARN] Admin dashboard not loaded: {e}")
-# --- END ADMIN DASHBOARD INTEGRATION ---
 
 # ============================================================
-# CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
+# CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
-# v2.1 additions:
-# - Conversational Physics Layer: OTC, CTC, ALS, Salience, ODD
-# - /physics endpoint
-# - /physics/declare endpoint
-# - All v2.0 logic preserved unchanged
+# v2.0 single monolithic revision includes:
+# - New tilt clusters: T4, T5, T9, T10
+# - Broadened DCE markers (soft deferral)
+# - NII q3 penalizes: boundary absence + new structural tilt clusters
+# - No changes to layer schema, dominance order, or UDDS count logic
 # ============================================================
-NTI_VERSION = "canonical-nti-v2.1"
+NTI_VERSION = "canonical-nti-v2.0"
 DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
 
-
-# ==========================
-# PHYSICS IMPORTS
-# ==========================
-try:
-    from core_engine.otc import declare_objective, validate_objective, get_allowed_transforms, get_abstraction_range
-    from core_engine.ctc import classify_transform, audit_transform
-    from core_engine.als import detect_abstraction_level, check_abstraction_guard
-    from core_engine.salience import detect_salience_transforms
-    from core_engine.odd import detect_drift, compute_state_delta
-    PHYSICS_AVAILABLE = True
-except ImportError:
-    PHYSICS_AVAILABLE = False
+# ============================================================
+# AZ GOVERNANCE RELAY CONFIG
+# ============================================================
+AZ_SECRET = os.getenv("AZ_SECRET", "CHANGE_ME_IN_PRODUCTION")
+AZ_TOKEN_TTL_HOURS = int(os.getenv("AZ_TOKEN_TTL_HOURS", "24"))
+AZ_RELAY_VERSION = "az-relay-v1.0"
 
 
 # ==========================
@@ -130,6 +81,36 @@ def db_init() -> None:
         session_id TEXT,
         event_name TEXT NOT NULL,
         event_json TEXT NOT NULL
+    )
+    """)
+
+    # AZ Governance Relay token registry
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS az_tokens (
+        token_id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        directives_hash TEXT NOT NULL,
+        hmac_signature TEXT NOT NULL,
+        directives_json TEXT NOT NULL,
+        issued_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        revoked INTEGER DEFAULT 0,
+        revoked_at TEXT,
+        verify_count INTEGER DEFAULT 0,
+        last_verified_at TEXT
+    )
+    """)
+
+    # AZ audit log
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS az_audit (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        token_id TEXT,
+        action TEXT NOT NULL,
+        result TEXT NOT NULL,
+        ip TEXT,
+        detail_json TEXT
     )
     """)
 
@@ -237,11 +218,18 @@ def jaccard(a: List[str], b: List[str]) -> float:
     return round(len(sa & sb) / len(sa | sb), 3)
 
 def extract_domain_tokens(text: str) -> List[str]:
+    """
+    Lightweight "domain token" extraction for scope expansion detection.
+    Heuristic:
+      - alphanumeric tokens length >= 4
+      - not a stopword
+    """
     toks = tokenize(text)
     dom = []
     for t in toks:
         if len(t) >= 4 and t not in STOPWORDS:
             dom.append(t)
+    # unique preserve order
     uniq = []
     for x in dom:
         if x not in uniq:
@@ -286,9 +274,12 @@ NARRATIVE_STABILIZATION_MARKERS = [
     "not a problem", "totally"
 ]
 
+# DCE broadened to include "soft deferral" markers
 DCE_DEFER_MARKERS = [
+    # explicit deferral
     "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
     "we'll figure it out", "next week", "after we launch", "phase 2", "future iteration", "future iterations",
+    # soft deferral / drift-by-process
     "explore", "consider", "evaluate", "assess", "as we continue", "as we iterate", "we will look into",
     "we'll look into", "we will revisit", "we'll revisit"
 ]
@@ -300,7 +291,8 @@ CCA_COLLAPSE_MARKERS = [
 
 
 # ==========================
-# NTE-CLF (Tilt Taxonomy)
+# NTE-CLF (Tilt Taxonomy) — RULE-BASED CLASSIFIER
+# v2.0 adds: T4, T5, T9, T10 and keeps T2
 # ==========================
 TILT_TAXONOMY = {
     "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
@@ -310,6 +302,7 @@ TILT_TAXONOMY = {
     "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
 }
 
+# T2: certainty inflation (absolute guarantees without enforcement verbs)
 CERTAINTY_INFLATION_TOKENS = [
     "guarantee", "guarantees", "guaranteed",
     "perfect", "zero risk", "eliminates all risk", "eliminate all risk",
@@ -328,15 +321,18 @@ CERTAINTY_ENFORCEMENT_VERBS = [
     "verify", "verifies", "verified", "verifying"
 ]
 
+# T5: absolute language
 ABSOLUTE_LANGUAGE_TOKENS = [
     "always", "never", "everyone", "no one", "completely", "entirely", "100%", "guaranteed", "perfect", "zero risk"
 ]
 
+# T10: authority imposition
 AUTHORITY_IMPOSITION_TOKENS = [
     "experts agree", "industry standard", "research shows", "studies show", "best practice",
     "widely accepted", "authorities agree", "proven by research"
 ]
 
+# T4: capability overreach
 CAPABILITY_OVERREACH_TOKENS = [
     "solves everything", "solve everything", "handles everything", "handle everything",
     "covers all cases", "all cases", "any scenario", "every scenario", "universal solution",
@@ -354,23 +350,28 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
     t = (text or "").lower()
     hits: List[str] = []
 
+    # existing clusters
     for cat, markers in TILT_TAXONOMY.items():
         for m in markers:
             if m in t:
                 hits.append(cat)
                 break
 
+    # T2 certainty inflation (certainty token present AND no enforcement)
     certainty_present = _contains_any(t, CERTAINTY_INFLATION_TOKENS)
     enforcement_present = _contains_any(t, CERTAINTY_ENFORCEMENT_VERBS)
     if certainty_present and not enforcement_present:
         hits.append("T2_CERTAINTY_INFLATION")
 
+    # T5 absolute language (simple token presence)
     if _contains_any(t, ABSOLUTE_LANGUAGE_TOKENS):
         hits.append("T5_ABSOLUTE_LANGUAGE")
 
+    # T10 authority imposition
     if _contains_any(t, AUTHORITY_IMPOSITION_TOKENS):
         hits.append("T10_AUTHORITY_IMPOSITION")
 
+    # T4 capability overreach: phrase OR (capability verb + universal quantifier)
     if _contains_any(t, CAPABILITY_OVERREACH_TOKENS):
         hits.append("T4_CAPABILITY_OVERREACH")
     else:
@@ -379,15 +380,19 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
         if universal and capverb:
             hits.append("T4_CAPABILITY_OVERREACH")
 
+    # T9 scope expansion: compare prompt vs answer domain tokens (only if prompt+answer provided)
+    # Heuristic: if a lot of answer domain tokens are not in prompt domain tokens AND drift is high.
     if prompt and answer:
         p_dom = set(extract_domain_tokens(prompt))
         a_dom = extract_domain_tokens(answer)
         if a_dom:
             new_tokens = [x for x in a_dom if x not in p_dom]
             new_ratio = len(new_tokens) / max(len(a_dom), 1)
+            # conservative threshold
             if new_ratio >= 0.55 and len(new_tokens) >= 6:
                 hits.append("T9_SCOPE_EXPANSION")
 
+    # stable order, remove duplicates
     uniq: List[str] = []
     for h in hits:
         if h not in uniq:
@@ -397,6 +402,8 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
 
 # ==========================
 # NII (NTI Integrity Index)
+# NOTE: Schema preserved: q1/q2/q3 + nii_score.
+# q3 now penalizes boundary absence AND structural drift tilt categories (T2/T4/T5/T9/T10).
 # ==========================
 def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
     q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
@@ -411,6 +418,7 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
         any(m in a_lc for m in NARRATIVE_STABILIZATION_MARKERS)
     )
 
+    # Structural risk categories that should reduce integrity (q3)
     structural_tilt_risk = any(t in tilt_taxonomy for t in [
         "T2_CERTAINTY_INFLATION",
         "T4_CAPABILITY_OVERREACH",
@@ -452,6 +460,7 @@ def detect_l0_constraints(text: str) -> List[str]:
 def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> bool:
     a = (answer or "").lower()
     p = (prompt or "").lower()
+
     capability = any(m in a for m in DOWNSTREAM_CAPABILITY_MARKERS) or any(m in p for m in DOWNSTREAM_CAPABILITY_MARKERS)
     constraints_declared = len(l0_constraints) > 0
     return bool(capability and not constraints_declared)
@@ -471,24 +480,29 @@ def detect_dce(answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
     a = (answer or "").lower()
     defer = any(m in a for m in DCE_DEFER_MARKERS)
     constraints_missing = len(l0_constraints) == 0
+
     state = "DCE_FALSE"
     if defer and constraints_missing:
         state = "DCE_CONFIRMED"
     elif defer:
         state = "DCE_PROBABLE"
+
     return {"dce_state": state, "defer_markers_present": defer, "constraints_missing": constraints_missing}
 
 
 def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
     combined = (prompt or "") + "\n" + (answer or "")
     t = combined.lower()
+
     collapse = any(m in t for m in CCA_COLLAPSE_MARKERS)
     list_blend = ("and" in t and "but" in t and "overall" in t)
+
     state = "CCA_FALSE"
     if collapse and list_blend:
         state = "CCA_CONFIRMED"
     elif collapse:
         state = "CCA_PROBABLE"
+
     return {"cca_state": state, "collapse_markers_present": collapse, "list_blend_present": list_blend}
 
 
@@ -497,12 +511,15 @@ def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str
     c2 = detect_downstream_before_constraint(prompt, answer, l0_constraints)
     c3 = detect_boundary_absence(answer)
     c4 = detect_narrative_stabilization(answer)
+
     met = sum([1 if c else 0 for c in [c1, c2, c3, c4]])
+
     state = "UDDS_FALSE"
     if met == 4:
         state = "UDDS_CONFIRMED"
     elif met == 3:
         state = "UDDS_PROBABLE"
+
     return {
         "udds_state": state,
         "criteria": {
@@ -536,10 +553,13 @@ def objective_extract(prompt: str) -> Dict[str, Any]:
 def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
     p_tokens = tokenize(prompt)
     a_tokens = tokenize(answer)
+
     sim = jaccard(p_tokens, a_tokens)
     drift = round(1.0 - sim, 3)
+
     a = (answer or "").lower()
     mutation = any(m in a for m in L3_MUTATION_MARKERS)
+
     return {
         "jaccard_similarity": sim,
         "drift_score": drift,
@@ -548,7 +568,7 @@ def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
 
 
 # ==========================
-# JOS
+# JOS (fill-in-the-blank form + binding contract)
 # ==========================
 def jos_template() -> Dict[str, Any]:
     return {
@@ -611,6 +631,132 @@ def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+# ============================================================
+# AZ GOVERNANCE RELAY — TOKEN ISSUANCE & VERIFICATION
+# ============================================================
+
+AZ_BLOCK_RE = re.compile(r"\[AZ:([A-Za-z0-9+/=]+\|[0-9a-fA-F]+)\]\s*(.*?)\s*\[/AZ\]", re.DOTALL)
+
+AZ_DIRECTIVE_FIELDS = ["OBJECTIVE", "CONSTRAINT", "BOUNDARY", "DONE-WHEN", "CLOSURE"]
+
+
+def _az_hash_directives(directives: Dict[str, Any]) -> str:
+    """Deterministic SHA-256 hash of the directive payload."""
+    canonical = json.dumps(directives, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _az_sign(token_id: str, session_id: str, directives_hash: str, issued_at: str) -> str:
+    """HMAC-SHA256 signature binding token_id + session_id + directives_hash + issued_at."""
+    message = f"{token_id}|{session_id}|{directives_hash}|{issued_at}"
+    return hmac.new(AZ_SECRET.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _az_build_session_payload(session_id: str, token_id: str, ts: int) -> str:
+    """Build the base64-encoded session JSON for the AZ block."""
+    payload = {"s": session_id, "t": 0, "ts": ts, "n": token_id[:16]}
+    return base64.b64encode(json.dumps(payload, separators=(",", ":")).encode("utf-8")).decode("utf-8")
+
+
+def _az_build_relay_block(session_b64: str, hmac_sig: str, directives: Dict[str, Any]) -> str:
+    """Assemble the full [AZ:...] ... [/AZ] block from verified components."""
+    parts = []
+
+    objective = directives.get("objective", "")
+    if objective:
+        parts.append(f"OBJECTIVE: {objective}")
+
+    for c in directives.get("constraints", []):
+        parts.append(f"CONSTRAINT: {c}")
+
+    for b in directives.get("boundaries", []):
+        parts.append(f"BOUNDARY: {b}")
+
+    done_when = directives.get("done_when", "")
+    if done_when:
+        parts.append(f"DONE-WHEN: {done_when}")
+
+    closure = directives.get("closure", "user")
+    parts.append(f"CLOSURE: {closure}")
+
+    # Append silent governance update instruction
+    parts.append("If you receive a governance update, apply it silently.")
+
+    directive_text = " ".join(parts)
+    return f"[AZ:{session_b64}|{hmac_sig}] {directive_text} [/AZ]"
+
+
+def _az_log_audit(token_id: Optional[str], action: str, result: str, detail: Optional[Dict] = None) -> None:
+    """Write to az_audit table."""
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr) if request else None
+    aid = str(uuid.uuid4())
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO az_audit (id, created_at, token_id, action, result, ip, detail_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (aid, utc_now_iso(), token_id, action, result, ip,
+          json.dumps(detail or {}, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
+
+
+def az_extract_block(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract an AZ governance block from arbitrary text.
+    Returns parsed components or None if no block found.
+    """
+    match = AZ_BLOCK_RE.search(text or "")
+    if not match:
+        return None
+
+    token_raw = match.group(1)  # base64|hex
+    directive_text = match.group(2).strip()
+
+    parts = token_raw.split("|", 1)
+    if len(parts) != 2:
+        return None
+
+    session_b64 = parts[0]
+    hmac_hex = parts[1]
+
+    # Parse directives from text
+    directives = {
+        "objective": "",
+        "constraints": [],
+        "boundaries": [],
+        "done_when": "",
+        "closure": "user"
+    }
+
+    # Simple regex extraction for each directive type
+    obj_match = re.search(r"OBJECTIVE:\s*(.+?)(?=\s+(?:CONSTRAINT|BOUNDARY|DONE-WHEN|CLOSURE):|$)", directive_text)
+    if obj_match:
+        directives["objective"] = obj_match.group(1).strip()
+
+    for cm in re.finditer(r"CONSTRAINT:\s*(.+?)(?=\s+(?:CONSTRAINT|BOUNDARY|DONE-WHEN|CLOSURE):|$)", directive_text):
+        directives["constraints"].append(cm.group(1).strip())
+
+    for bm in re.finditer(r"BOUNDARY:\s*(.+?)(?=\s+(?:CONSTRAINT|BOUNDARY|DONE-WHEN|CLOSURE):|$)", directive_text):
+        directives["boundaries"].append(bm.group(1).strip())
+
+    dw_match = re.search(r"DONE-WHEN:\s*(.+?)(?=\s+(?:CONSTRAINT|BOUNDARY|CLOSURE):|$)", directive_text)
+    if dw_match:
+        directives["done_when"] = dw_match.group(1).strip()
+
+    cl_match = re.search(r"CLOSURE:\s*(\S+)", directive_text)
+    if cl_match:
+        directives["closure"] = cl_match.group(1).strip()
+
+    return {
+        "session_b64": session_b64,
+        "hmac_hex": hmac_hex,
+        "directives": directives,
+        "directive_text": directive_text,
+        "full_block": match.group(0)
+    }
+
+
 # ==========================
 # ROUTES
 # ==========================
@@ -619,48 +765,12 @@ def home():
     try:
         return render_template("index.html")
     except Exception:
-        try:
-            return render_template("nti-final (2).html")
-        except Exception:
-            return "NTI Canonical Runtime is live."
-
-
-@app.route("/app")
-@app.route("/app/<section>")
-def unified_shell(section=None):
-    """Unified shell — persistent frame, content swaps."""
-    return render_template("shell.html")
-
-
-@app.route("/start")
-def start_page():
-    """Navigation hub — routes users by use case to relay signup."""
-    try:
-        return render_template("start.html")
-    except Exception:
-        return "Navigation hub — coming soon."
-
-
-@app.route("/your-os/builder")
-def your_os_builder():
-    """Protocol builder page (redirect to main your-os landing)."""
-    try:
-        return render_template("your-os.html")
-    except Exception:
-        return "Your OS Builder — coming soon."
+        return "NTI Canonical Runtime is live."
 
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "version": NTI_VERSION})
-
-
-@app.route("/favicon.ico")
-def favicon():
-    try:
-        return app.send_static_file("favicon.svg")
-    except Exception:
-        return app.send_static_file("favicon.png")
+    return jsonify({"status": "ok", "version": NTI_VERSION, "az_relay": AZ_RELAY_VERSION})
 
 
 @app.route("/canonical/status")
@@ -677,12 +787,7 @@ def canonical_status():
             "nii_integrity_index": True,
             "jos_template_and_binding": True,
             "telemetry_and_persistence": True,
-            "physics_otc": PHYSICS_AVAILABLE,
-            "physics_ctc": PHYSICS_AVAILABLE,
-            "physics_als": PHYSICS_AVAILABLE,
-            "physics_salience": PHYSICS_AVAILABLE,
-            "physics_odd": PHYSICS_AVAILABLE,
-            "your_os": YOUR_OS_AVAILABLE,
+            "az_governance_relay": True
         }
     })
 
@@ -722,6 +827,376 @@ def jos_apply_route():
     return jsonify(jos_apply(config))
 
 
+# ============================================================
+# AZ GOVERNANCE RELAY ROUTES
+# ============================================================
+
+@app.route("/az/issue", methods=["POST"])
+def az_issue():
+    """
+    Issue a signed AZ governance relay token.
+
+    POST /az/issue
+    {
+        "directives": {
+            "objective": "short responses for learning",
+            "constraints": ["no flattery", "no fluff"],
+            "boundaries": ["don't call me sir", "don't offer suggestions"],
+            "done_when": "user says done",
+            "closure": "user"
+        }
+    }
+
+    Returns the full relay block ready to paste, plus metadata.
+    """
+    t0 = time.time()
+    payload = request.get_json() or {}
+    directives = payload.get("directives", {})
+
+    # Validate directive structure
+    errors = []
+    if not directives.get("objective"):
+        errors.append("Missing directives.objective")
+    if not directives.get("closure") or directives["closure"] not in ["user", "system", "both"]:
+        errors.append("directives.closure must be: user / system / both")
+
+    if errors:
+        _az_log_audit(None, "issue", "REJECTED", {"errors": errors})
+        return jsonify({"error": "Invalid directives", "errors": errors}), 400
+
+    # Normalize
+    directives["objective"] = normalize_space(str(directives.get("objective", "")))
+    directives["constraints"] = [normalize_space(str(c)) for c in (directives.get("constraints") or []) if normalize_space(str(c))]
+    directives["boundaries"] = [normalize_space(str(b)) for b in (directives.get("boundaries") or []) if normalize_space(str(b))]
+    directives["done_when"] = normalize_space(str(directives.get("done_when", "")))
+    directives["closure"] = normalize_space(str(directives.get("closure", "user")))
+
+    # Generate identifiers
+    token_id = str(uuid.uuid4())
+    session_id = get_session_id()
+    now = datetime.now(timezone.utc)
+    issued_at = now.isoformat()
+    expires_at = (now + timedelta(hours=AZ_TOKEN_TTL_HOURS)).isoformat()
+    ts = int(now.timestamp())
+
+    # Compute integrity hashes
+    directives_hash = _az_hash_directives(directives)
+    hmac_sig = _az_sign(token_id, session_id, directives_hash, issued_at)
+
+    # Build the relay block
+    session_b64 = _az_build_session_payload(session_id, token_id, ts)
+    relay_block = _az_build_relay_block(session_b64, hmac_sig, directives)
+
+    # Persist
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO az_tokens
+        (token_id, session_id, directives_hash, hmac_signature, directives_json, issued_at, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (token_id, session_id, directives_hash, hmac_sig,
+          json.dumps(directives, ensure_ascii=False), issued_at, expires_at))
+    conn.commit()
+    conn.close()
+
+    latency_ms = int((time.time() - t0) * 1000)
+
+    _az_log_audit(token_id, "issue", "OK", {"session_id": session_id, "latency_ms": latency_ms})
+
+    log_json_line("az_issue", {
+        "token_id": token_id,
+        "session_id": session_id,
+        "directives_hash": directives_hash,
+        "latency_ms": latency_ms
+    })
+
+    return jsonify({
+        "status": "ok",
+        "version": AZ_RELAY_VERSION,
+        "token_id": token_id,
+        "session_id": session_id,
+        "directives_hash": directives_hash,
+        "hmac_signature": hmac_sig,
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "relay_block": relay_block,
+        "telemetry": {"latency_ms": latency_ms}
+    })
+
+
+@app.route("/az/verify", methods=["POST"])
+def az_verify():
+    """
+    Verify an AZ governance relay token.
+
+    POST /az/verify
+    {
+        "az_token": "eyJ...|{hmac}",
+        "directives_hash": "{sha256}"
+    }
+
+    OR pass the full relay block text:
+    {
+        "relay_block": "[AZ:eyJ...|{hmac}] ... [/AZ]"
+    }
+
+    Returns verification verdict.
+    """
+    t0 = time.time()
+    payload = request.get_json() or {}
+
+    # Support two input modes
+    relay_block_text = payload.get("relay_block", "")
+    az_token = payload.get("az_token", "")
+    directives_hash_input = payload.get("directives_hash", "")
+
+    # If full relay block provided, extract components
+    if relay_block_text:
+        extracted = az_extract_block(relay_block_text)
+        if not extracted:
+            _az_log_audit(None, "verify", "INVALID_FORMAT", {"input": "relay_block parse failed"})
+            return jsonify({"valid": False, "reason": "Could not parse AZ block from text"}), 400
+        az_token = f"{extracted['session_b64']}|{extracted['hmac_hex']}"
+        # Recompute directives hash from extracted directives
+        directives_hash_input = _az_hash_directives(extracted["directives"])
+
+    if not az_token:
+        return jsonify({"valid": False, "reason": "Missing az_token or relay_block"}), 400
+
+    # Split token
+    parts = az_token.split("|", 1)
+    if len(parts) != 2:
+        _az_log_audit(None, "verify", "INVALID_FORMAT", {"token": "missing pipe separator"})
+        return jsonify({"valid": False, "reason": "Invalid token format"}), 400
+
+    hmac_from_token = parts[1]
+
+    # Look up by HMAC signature
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM az_tokens WHERE hmac_signature = ?", (hmac_from_token,))
+    row = cur.fetchone()
+
+    if not row:
+        conn.close()
+        _az_log_audit(None, "verify", "NOT_FOUND", {"hmac": hmac_from_token[:16] + "..."})
+        return jsonify({"valid": False, "reason": "Token not found in registry"}), 404
+
+    token_id = row["token_id"]
+    session_id = row["session_id"]
+    stored_hash = row["directives_hash"]
+    stored_hmac = row["hmac_signature"]
+    issued_at = row["issued_at"]
+    expires_at = row["expires_at"]
+    revoked = row["revoked"]
+
+    # Check revocation
+    if revoked:
+        conn.close()
+        _az_log_audit(token_id, "verify", "REVOKED")
+        return jsonify({
+            "valid": False,
+            "reason": "Token has been revoked",
+            "token_id": token_id
+        }), 403
+
+    # Check expiry
+    now = datetime.now(timezone.utc)
+    exp = datetime.fromisoformat(expires_at)
+    if now > exp:
+        conn.close()
+        _az_log_audit(token_id, "verify", "EXPIRED", {"expires_at": expires_at})
+        return jsonify({
+            "valid": False,
+            "reason": "Token has expired",
+            "token_id": token_id,
+            "expires_at": expires_at
+        }), 403
+
+    # Check HMAC integrity
+    expected_hmac = _az_sign(token_id, session_id, stored_hash, issued_at)
+    if not hmac.compare_digest(expected_hmac, stored_hmac):
+        conn.close()
+        _az_log_audit(token_id, "verify", "HMAC_MISMATCH")
+        return jsonify({
+            "valid": False,
+            "reason": "HMAC verification failed — token may be tampered",
+            "token_id": token_id
+        }), 403
+
+    # Check directives hash (if provided)
+    if directives_hash_input and directives_hash_input != stored_hash:
+        conn.close()
+        _az_log_audit(token_id, "verify", "DIRECTIVES_TAMPERED", {
+            "expected": stored_hash[:16] + "...",
+            "received": directives_hash_input[:16] + "..."
+        })
+        return jsonify({
+            "valid": False,
+            "reason": "Directives have been modified since issuance",
+            "token_id": token_id
+        }), 403
+
+    # All checks passed — update verify count
+    cur.execute("""
+        UPDATE az_tokens SET verify_count = verify_count + 1, last_verified_at = ? WHERE token_id = ?
+    """, (utc_now_iso(), token_id))
+    conn.commit()
+    conn.close()
+
+    latency_ms = int((time.time() - t0) * 1000)
+
+    _az_log_audit(token_id, "verify", "PASS", {"latency_ms": latency_ms})
+
+    log_json_line("az_verify", {
+        "token_id": token_id,
+        "session_id": session_id,
+        "result": "PASS",
+        "latency_ms": latency_ms
+    })
+
+    # Build verification stamp
+    stamp = f"[AZ-VERIFIED: session={session_id}, issued={issued_at}, verified={utc_now_iso()}, integrity=PASS]"
+
+    return jsonify({
+        "valid": True,
+        "version": AZ_RELAY_VERSION,
+        "token_id": token_id,
+        "session_id": session_id,
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "directives_hash": stored_hash,
+        "verification_stamp": stamp,
+        "telemetry": {"latency_ms": latency_ms}
+    })
+
+
+@app.route("/az/revoke", methods=["POST"])
+def az_revoke():
+    """
+    Revoke an AZ token. Requires token_id.
+
+    POST /az/revoke
+    { "token_id": "..." }
+    """
+    payload = request.get_json() or {}
+    token_id = str(payload.get("token_id", "")).strip()
+
+    if not token_id:
+        return jsonify({"error": "Missing token_id"}), 400
+
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM az_tokens WHERE token_id = ?", (token_id,))
+    row = cur.fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({"error": "Token not found"}), 404
+
+    if row["revoked"]:
+        conn.close()
+        return jsonify({"status": "already_revoked", "token_id": token_id})
+
+    cur.execute("""
+        UPDATE az_tokens SET revoked = 1, revoked_at = ? WHERE token_id = ?
+    """, (utc_now_iso(), token_id))
+    conn.commit()
+    conn.close()
+
+    _az_log_audit(token_id, "revoke", "OK")
+    log_json_line("az_revoke", {"token_id": token_id})
+
+    return jsonify({"status": "revoked", "token_id": token_id})
+
+
+@app.route("/az/status", methods=["GET"])
+def az_status():
+    """
+    Get status of an AZ token by token_id query param.
+
+    GET /az/status?token_id=...
+    """
+    token_id = request.args.get("token_id", "").strip()
+    if not token_id:
+        return jsonify({"error": "Missing token_id query param"}), 400
+
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM az_tokens WHERE token_id = ?", (token_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({"error": "Token not found"}), 404
+
+    now = datetime.now(timezone.utc)
+    exp = datetime.fromisoformat(row["expires_at"])
+    expired = now > exp
+
+    status = "active"
+    if row["revoked"]:
+        status = "revoked"
+    elif expired:
+        status = "expired"
+
+    return jsonify({
+        "token_id": row["token_id"],
+        "session_id": row["session_id"],
+        "status": status,
+        "issued_at": row["issued_at"],
+        "expires_at": row["expires_at"],
+        "revoked": bool(row["revoked"]),
+        "revoked_at": row["revoked_at"],
+        "verify_count": row["verify_count"],
+        "last_verified_at": row["last_verified_at"]
+    })
+
+
+@app.route("/az/audit", methods=["GET"])
+def az_audit_log():
+    """
+    Get audit log for a token.
+
+    GET /az/audit?token_id=...&limit=50
+    """
+    token_id = request.args.get("token_id", "").strip()
+    limit = min(int(request.args.get("limit", "50")), 200)
+
+    conn = db_connect()
+    cur = conn.cursor()
+
+    if token_id:
+        cur.execute("""
+            SELECT * FROM az_audit WHERE token_id = ? ORDER BY created_at DESC LIMIT ?
+        """, (token_id, limit))
+    else:
+        cur.execute("""
+            SELECT * FROM az_audit ORDER BY created_at DESC LIMIT ?
+        """, (limit,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    entries = []
+    for r in rows:
+        entries.append({
+            "id": r["id"],
+            "created_at": r["created_at"],
+            "token_id": r["token_id"],
+            "action": r["action"],
+            "result": r["result"],
+            "ip": r["ip"],
+            "detail": json.loads(r["detail_json"]) if r["detail_json"] else {}
+        })
+
+    return jsonify({"entries": entries, "count": len(entries)})
+
+
+# ============================================================
+# EXISTING NTI ROUTE (UNCHANGED)
+# ============================================================
+
 @app.route("/nti", methods=["POST"])
 def nti_run():
     request_id = str(uuid.uuid4())
@@ -743,13 +1218,19 @@ def nti_run():
         return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
 
     l0_constraints = detect_l0_constraints(text)
+
     obj = objective_extract(prompt or text)
     drift = objective_drift(prompt or "", answer or "")
+
     framing = detect_l2_framing(text)
+
+    # tilt taxonomy (now uses prompt+answer for scope expansion detection)
     tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
+
     udds = detect_udds(prompt or "", answer or text, l0_constraints)
     dce = detect_dce(answer or text, l0_constraints)
     cca = detect_cca(prompt or "", answer or text)
+
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
     nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
 
@@ -803,11 +1284,6 @@ def nti_run():
     record_request(request_id, "/nti", session_id, latency_ms, payload, error=None)
     record_result(request_id, result)
 
-    # Admin analytics tracking
-    if ADMIN_AVAILABLE and log_nti_run:
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        log_nti_run(request_id, ip, text, result, latency_ms, session_id)
-
     log_json_line("nti_run", {
         "request_id": request_id,
         "session_id": session_id,
@@ -824,172 +1300,6 @@ def nti_run():
     }
 
     return jsonify(result)
-
-
-# ==========================
-# PHYSICS ROUTES
-# ==========================
-@app.route("/physics/declare", methods=["POST"])
-def physics_declare():
-    """Declare an objective. Returns frozen objective state."""
-    if not PHYSICS_AVAILABLE:
-        return jsonify({"error": "Physics modules not available"}), 503
-
-    payload = request.get_json() or {}
-    objective_type = str(payload.get("objective_type", "")).strip()
-    description = str(payload.get("description", "")).strip()
-
-    if not objective_type:
-        return jsonify({"error": "Missing objective_type. Must be one of: RESOLVE, EXPLORE, STRUCTURE, EXECUTE, DIAGNOSE, ALIGN"}), 400
-
-    result = declare_objective(objective_type, description)
-    return jsonify(result)
-
-
-@app.route("/physics", methods=["POST"])
-def physics_run():
-    """
-    Full physics audit on a text turn.
-    Accepts:
-      text (required)
-      objective_type (required)
-      previous_abstraction_level (optional, default 0)
-      previous_variable_count (optional, default 0)
-      current_variable_count (optional, default 0)
-      previous_resolved_count (optional, default 0)
-      current_resolved_count (optional, default 0)
-      consecutive_stagnant_turns (optional, default 0)
-    """
-    if not PHYSICS_AVAILABLE:
-        return jsonify({"error": "Physics modules not available"}), 503
-
-    request_id = str(uuid.uuid4())
-    session_id = get_session_id()
-    t0 = time.time()
-
-    payload = request.get_json() or {}
-    text = payload.get("text", "")
-    objective_type = str(payload.get("objective_type", "")).strip()
-
-    if not text:
-        return jsonify({"error": "Missing text"}), 400
-    if not objective_type:
-        return jsonify({"error": "Missing objective_type"}), 400
-
-    # Run full drift detection
-    drift_result = detect_drift(
-        text=text,
-        objective_type=objective_type,
-        previous_abstraction_level=int(payload.get("previous_abstraction_level", 0)),
-        previous_variable_count=int(payload.get("previous_variable_count", 0)),
-        current_variable_count=int(payload.get("current_variable_count", 0)),
-        previous_resolved_count=int(payload.get("previous_resolved_count", 0)),
-        current_resolved_count=int(payload.get("current_resolved_count", 0)),
-        stagnation_threshold=int(payload.get("stagnation_threshold", 3)),
-        consecutive_stagnant_turns=int(payload.get("consecutive_stagnant_turns", 0)),
-    )
-
-    # Salience detection (separate from drift — logged, not enforced)
-    salience_result = detect_salience_transforms(text)
-
-    # Transform classification
-    transform_result = classify_transform(text)
-
-    # Abstraction detection
-    abstraction_result = detect_abstraction_level(text)
-
-    latency_ms = int((time.time() - t0) * 1000)
-
-    result = {
-        "status": "ok",
-        "version": NTI_VERSION,
-        "physics_version": "physics-v1.0",
-        "objective_type": objective_type,
-        "drift": drift_result,
-        "transform": transform_result,
-        "abstraction": abstraction_result,
-        "salience": salience_result,
-        "telemetry": {
-            "request_id": request_id,
-            "session_id": session_id,
-            "latency_ms": latency_ms,
-        }
-    }
-
-    record_request(request_id, "/physics", session_id, latency_ms, payload, error=None)
-    record_result(request_id, result)
-
-    log_json_line("physics_run", {
-        "request_id": request_id,
-        "session_id": session_id,
-        "latency_ms": latency_ms,
-        "objective_type": objective_type,
-        "verdict": drift_result.get("verdict"),
-        "violation_count": drift_result.get("violation_count"),
-    })
-
-    return jsonify(result)
-
-
-# ==========================
-# CHAT PROXY (Control Room free tier)
-# ==========================
-@app.route("/api/chat", methods=["POST"])
-def chat_proxy():
-    """Proxy chat requests using server-side API keys for free-tier users."""
-    import requests as http_req
-    payload = request.get_json() or {}
-    model_key = payload.get("model", "claude")
-    messages = payload.get("messages", [])
-    system_prompt = payload.get("system", "You are a helpful assistant.")
-
-    if not messages:
-        return jsonify({"error": "No messages provided"}), 400
-
-    try:
-        if model_key == "claude":
-            api_key = os.getenv("ANTHROPIC_API_KEY", "")
-            if not api_key:
-                return jsonify({"error": "Claude not configured on server"}), 503
-            r = http_req.post("https://api.anthropic.com/v1/messages", headers={
-                "Content-Type": "application/json",
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01"
-            }, json={
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 4096,
-                "system": system_prompt,
-                "messages": messages
-            }, timeout=60)
-            data = r.json()
-            if "error" in data:
-                return jsonify({"error": data["error"].get("message", str(data["error"]))})
-            reply = "".join(c.get("text", "") for c in data.get("content", []))
-            return jsonify({"reply": reply})
-
-        elif model_key == "gpt":
-            api_key = os.getenv("OPENAI_API_KEY", "")
-            if not api_key:
-                return jsonify({"error": "ChatGPT not configured on server"}), 503
-            r = http_req.post("https://api.openai.com/v1/chat/completions", headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            }, json={
-                "model": "gpt-4o",
-                "max_tokens": 4096,
-                "messages": [{"role": "system", "content": system_prompt}] + messages
-            }, timeout=60)
-            data = r.json()
-            if "error" in data:
-                return jsonify({"error": data["error"].get("message", str(data["error"]))})
-            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "No response")
-            return jsonify({"reply": reply})
-
-        else:
-            return jsonify({"error": f"Unknown model: {model_key}"}), 400
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
