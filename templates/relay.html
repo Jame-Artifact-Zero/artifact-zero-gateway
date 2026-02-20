@@ -126,8 +126,18 @@ let currentToken = null;
 function render() {
   if (!user) { renderAuth(); return; }
   document.getElementById('app').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:8px;font-family:var(--mono);font-size:11px">
+      <a href="/" style="color:var(--green);font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
+      <div style="display:flex;gap:16px;align-items:center">
+        <a href="/relay" style="color:var(--green);font-weight:600">RELAY</a>
+        <a href="/chat" style="color:var(--dim)">CONTROL ROOM</a>
+        <a href="/lab" style="color:var(--dim)">LAB</a>
+        <a href="/live" style="color:var(--dim)">LIVE</a>
+        <a href="/your-os" style="color:var(--dim)">YOUR OS</a>
+      </div>
+    </div>
     <div class="top">
-      <div class="logo"><img src="/static/favicon.png" alt="0">ARTIFACT ZERO RELAY</div>
+      <div class="logo"><img src="/static/favicon.png" alt="0">RELAY</div>
       <div class="user-info">
         <span>${user.email}</span>
         <span class="turns">${user.turns_limit - user.turns_used} turns left</span>
@@ -204,7 +214,7 @@ async function doLogin() {
   const pass = document.getElementById('a-pass').value;
   const r = await fetch(API+'/relay/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
   const d = await r.json();
-  if (d.ok) { user = d; await loadProtocols(); render(); }
+  if (d.ok) { d.email = email; user = d; await loadProtocols(); render(); }
   else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
 }
 
