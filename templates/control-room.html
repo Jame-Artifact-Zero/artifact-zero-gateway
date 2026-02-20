@@ -108,15 +108,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   </div>
   <div class="sb-ch"><div class="sb-sc">Today</div><div class="si on" id="cc">New conversation</div></div>
   <div class="sb-ft">
-    <div class="lb">API Key</div>
-    <input type="password" class="ki" id="ak" placeholder="sk-ant-..." autocomplete="off">
+    <div class="lb">API Key <span style="font-size:8px;color:var(--green)">(optional)</span></div>
+    <input type="password" class="ki" id="ak" placeholder="Your key or leave blank for free" autocomplete="off">
     <div class="ub"><div class="ut"><div class="uf" id="ufill"></div></div><div class="ux"><span id="uc">0 / 25</span><span>FREE</span></div></div>
   </div>
 </div>
 <div class="mn">
   <div class="hd"><div class="hl"><div class="hb"><div class="zs">0</div><span id="ml">Claude Sonnet 4</span></div></div><div class="ns" onclick="tn()"><div class="ld" id="nl"></div>NTI</div></div>
   <div class="ms" id="ms"><div class="mi" id="mi">
-    <div class="wc" id="wc"><div class="zl"><img src="/static/favicon.png" alt="0"></div><h2>NTI Control Room</h2><p>Chat with Claude or ChatGPT. Every response scored — 28 governance KPIs, basin detection, sovereignty enforcement.</p><div class="fr">25 FREE MESSAGES · YOUR API KEY</div></div>
+    <div class="wc" id="wc"><div class="zl"><img src="/static/favicon.png" alt="0"></div><h2>NTI Control Room</h2><p>Chat with Claude or ChatGPT. Every response scored — 28 governance KPIs, basin detection, sovereignty enforcement.</p><div class="fr">25 FREE MESSAGES · NO API KEY REQUIRED</div></div>
   </div></div>
   <div class="iw"><div class="ib">
     <textarea class="if2" id="inp" placeholder="Message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();go()}"></textarea>
@@ -206,7 +206,6 @@ async function go(){
   if(!text||busy)return;
   if(!paid&&mc>=FL){swp();return;}
   const key=document.getElementById('ak').value.trim();
-  if(!key){alert('Enter your API key in the sidebar.');return;}
   const cfg=MD[am];
 
   const w=document.getElementById('wc');if(w)w.remove();
@@ -226,12 +225,21 @@ async function go(){
 
   try{
     let reply='';
-    if(am==='claude'){
-      const r=await fetch(cfg.e,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.m,max_tokens:4096,system:SY,messages:hi})});
-      const d=await r.json();reply=d.error?'Error: '+(d.error.message||JSON.stringify(d.error)):d.content.map(c=>c.text||'').join('');
+    if(key){
+      // User provided their own key — direct API call
+      if(am==='claude'){
+        const r=await fetch(cfg.e,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.m,max_tokens:4096,system:SY,messages:hi})});
+        const d=await r.json();reply=d.error?'Error: '+(d.error.message||JSON.stringify(d.error)):d.content.map(c=>c.text||'').join('');
+      }else{
+        const r=await fetch(cfg.e,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:cfg.m,max_tokens:4096,messages:[{role:'system',content:SY},...hi]})});
+        const d=await r.json();reply=d.error?'Error: '+(d.error.message||JSON.stringify(d.error)):d.choices?.[0]?.message?.content||'No response';
+      }
     }else{
-      const r=await fetch(cfg.e,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:cfg.m,max_tokens:4096,messages:[{role:'system',content:SY},...hi]})});
-      const d=await r.json();reply=d.error?'Error: '+(d.error.message||JSON.stringify(d.error)):d.choices?.[0]?.message?.content||'No response';
+      // No key — use server proxy (free tier)
+      const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:am,messages:hi,system:SY})});
+      const d=await r.json();
+      if(d.error){reply='Error: '+d.error;}
+      else{reply=d.reply||d.content||'No response';}
     }
     hi.push({role:'assistant',content:reply});
     const s=sc(reply,ht);

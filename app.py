@@ -924,5 +924,66 @@ def physics_run():
     return jsonify(result)
 
 
+# ==========================
+# CHAT PROXY (Control Room free tier)
+# ==========================
+@app.route("/api/chat", methods=["POST"])
+def chat_proxy():
+    """Proxy chat requests using server-side API keys for free-tier users."""
+    import requests as http_req
+    payload = request.get_json() or {}
+    model_key = payload.get("model", "claude")
+    messages = payload.get("messages", [])
+    system_prompt = payload.get("system", "You are a helpful assistant.")
+
+    if not messages:
+        return jsonify({"error": "No messages provided"}), 400
+
+    try:
+        if model_key == "claude":
+            api_key = os.getenv("ANTHROPIC_API_KEY", "")
+            if not api_key:
+                return jsonify({"error": "Claude not configured on server"}), 503
+            r = http_req.post("https://api.anthropic.com/v1/messages", headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01"
+            }, json={
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 4096,
+                "system": system_prompt,
+                "messages": messages
+            }, timeout=60)
+            data = r.json()
+            if "error" in data:
+                return jsonify({"error": data["error"].get("message", str(data["error"]))})
+            reply = "".join(c.get("text", "") for c in data.get("content", []))
+            return jsonify({"reply": reply})
+
+        elif model_key == "gpt":
+            api_key = os.getenv("OPENAI_API_KEY", "")
+            if not api_key:
+                return jsonify({"error": "ChatGPT not configured on server"}), 503
+            r = http_req.post("https://api.openai.com/v1/chat/completions", headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }, json={
+                "model": "gpt-4o",
+                "max_tokens": 4096,
+                "messages": [{"role": "system", "content": system_prompt}] + messages
+            }, timeout=60)
+            data = r.json()
+            if "error" in data:
+                return jsonify({"error": data["error"].get("message", str(data["error"]))})
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "No response")
+            return jsonify({"reply": reply})
+
+        else:
+            return jsonify({"error": f"Unknown model: {model_key}"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")), debug=True)
