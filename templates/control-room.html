@@ -100,7 +100,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 </head>
 <body>
 <!-- NAV BAR -->
-<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #252b38;background:#0f1117;font-family:'IBM Plex Mono',monospace;font-size:11px">
+<div data-shell-nav style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #252b38;background:#0f1117;font-family:'IBM Plex Mono',monospace;font-size:11px">
   <a href="/" style="color:#34d399;font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
   <div style="display:flex;gap:16px;align-items:center">
     <a href="/relay" style="color:#5a6275;text-decoration:none">RELAY</a>
@@ -263,6 +263,7 @@ async function go(){
 document.getElementById('inp').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,180)+'px';});
 const sk=localStorage.getItem('nti_ak');if(sk)document.getElementById('ak').value=sk;
 document.getElementById('ak').addEventListener('change',function(){localStorage.setItem('nti_ak',this.value);});
+if(window.self!==window.top){const n=document.querySelector('[data-shell-nav]');if(n)n.style.display='none';}
 uu();
 </script>
 </body>

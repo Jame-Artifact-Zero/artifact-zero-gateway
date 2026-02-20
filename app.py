@@ -625,6 +625,13 @@ def home():
             return "NTI Canonical Runtime is live."
 
 
+@app.route("/app")
+@app.route("/app/<section>")
+def unified_shell(section=None):
+    """Unified shell — persistent frame, content swaps."""
+    return render_template("shell.html")
+
+
 @app.route("/start")
 def start_page():
     """Navigation hub — routes users by use case to relay signup."""

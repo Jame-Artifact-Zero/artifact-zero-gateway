@@ -126,7 +126,7 @@ let currentToken = null;
 function render() {
   if (!user) { renderAuth(); return; }
   document.getElementById('app').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:8px;font-family:var(--mono);font-size:11px">
+    <div data-shell-nav style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:8px;font-family:var(--mono);font-size:11px">
       <a href="/" style="color:var(--green);font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
       <div style="display:flex;gap:16px;align-items:center">
         <a href="/relay" style="color:var(--green);font-weight:600">RELAY</a>
@@ -620,6 +620,11 @@ function copyBlock(id) {
 
 // ─── INIT ───
 async function init() {
+  // If inside shell iframe, hide the product nav bar
+  if (window.self !== window.top) {
+    const shellNav = document.querySelector('[data-shell-nav]');
+    if (shellNav) shellNav.style.display = 'none';
+  }
   try {
     const r = await fetch(API+'/relay/me');
     if (r.ok) {
