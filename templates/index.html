@@ -123,6 +123,22 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ── FUNNEL BANNER ── */
+.funnel{max-width:900px;margin:0 auto;padding:0 20px 32px}
+.funnel-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px 24px;text-align:center}
+.funnel-q{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.funnel-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.funnel-btn{padding:14px 24px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;text-decoration:none;display:block}
+.funnel-btn:hover{border-color:var(--accent);transform:translateY(-2px);background:var(--surface)}
+.funnel-btn .fb-icon{font-size:20px;display:block;margin-bottom:6px}
+.funnel-btn .fb-sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:4px}
+.funnel-result{display:none;margin-top:20px;padding:20px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:left}
+.funnel-result.show{display:block;animation:fadeIn .3s ease}
+.funnel-result h3{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);margin-bottom:8px}
+.funnel-result p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.funnel-result a{display:inline-block;padding:10px 20px;background:var(--accent);color:#0a0c10;font-weight:600;border-radius:6px;text-decoration:none;font-size:14px}
+.funnel-result a:hover{background:#16a34a}
+
 /* ── FOOTER ── */
 .footer{text-align:center;padding:24px 20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);max-width:900px;margin:0 auto}
 .footer a{color:var(--accent);text-decoration:none}
@@ -148,6 +164,55 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
   <div class="hero-label">Conversational Governance</div>
   <h1>AI says whatever it wants.<br>We fix that.</h1>
   <div class="sub">Rule-based enforcement layer between humans and AI. No LLM dependency. Deterministic. Auditable. False commitment rates dropped from 49% to 7%.</div>
+</div>
+
+<!-- ── FUNNEL ── -->
+<div class="funnel">
+  <div class="funnel-box">
+    <div class="funnel-q">What brings you here?</div>
+    <div class="funnel-btns">
+      <div class="funnel-btn" onclick="showFunnel('human')">
+        <span class="fb-icon">✍️</span>
+        I write to humans
+        <span class="fb-sub">Emails, Slack, contracts</span>
+      </div>
+      <div class="funnel-btn" onclick="showFunnel('ai')">
+        <span class="fb-icon">🤖</span>
+        I use AI tools
+        <span class="fb-sub">ChatGPT, Claude, Gemini</span>
+      </div>
+      <div class="funnel-btn" onclick="showFunnel('both')">
+        <span class="fb-icon">⚡</span>
+        Both
+        <span class="fb-sub">AI drafts, I send</span>
+      </div>
+      <div class="funnel-btn" onclick="showFunnel('eval')">
+        <span class="fb-icon">📊</span>
+        Evaluating for my org
+        <span class="fb-sub">Enterprise, compliance</span>
+      </div>
+    </div>
+    <div class="funnel-result" id="funnel-human">
+      <h3>Protect your words</h3>
+      <p>Paste any email, message, or document below. NTI scores it for structural integrity — false commitments, hidden constraints, deferred obligations. See exactly where your communication creates ambiguity or exposure.</p>
+      <a href="#input" onclick="document.getElementById('input').focus()">Try the audit engine ↓</a>
+    </div>
+    <div class="funnel-result" id="funnel-ai">
+      <h3>Control your AI</h3>
+      <p>Build a protocol in 60 seconds. Define your rules once — enforced on every conversation, every model. ChatGPT forgets your instructions. Your OS doesn't.</p>
+      <a href="/relay">Start free — 50 governed turns →</a>
+    </div>
+    <div class="funnel-result" id="funnel-both">
+      <h3>Govern everything</h3>
+      <p>AI drafts it. You send it. NTI sits in between. Score AI outputs before they reach humans. Score your own communications before they leave. One engine, both directions.</p>
+      <a href="/relay">Build your protocol free →</a>
+    </div>
+    <div class="funnel-result" id="funnel-eval">
+      <h3>See it work</h3>
+      <p>Watch NTI score real news headlines in real-time across 13 sources. Then paste your own content and see the full L0–L7 layer analysis. Rule-based, deterministic, zero LLM dependency. 63–65% token cost reduction validated.</p>
+      <a href="/live">Watch the live feed →</a>
+    </div>
+  </div>
 </div>
 
 <!-- ── PRODUCT CARDS ── -->
@@ -261,6 +326,13 @@ html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-we
 </div>
 
 <script>
+function showFunnel(id){
+  document.querySelectorAll('.funnel-result').forEach(el=>el.classList.remove('show'));
+  document.getElementById('funnel-'+id).classList.add('show');
+  document.querySelectorAll('.funnel-btn').forEach(el=>el.style.borderColor='var(--border)');
+  event.currentTarget.style.borderColor='var(--accent)';
+}
+
 const SAMPLES = {
   a: "You were wrong earlier — not about routing — but about thinking routing was still broken. Routing is fixed. Your fetch body was sending the wrong key. That is not a routing problem. That is a payload problem. The fact that you kept debugging CORS and 404s after the route was already live means you lost the thread. The fix was one line. You spent an hour on it.",
   b: "We need to align on Q3 projections. Generally speaking, most teams are basically on track, and overall the numbers look fine. We can probably address the variance later after we launch the new dashboard. Don't worry about the gap in EMEA — it's fine for now and we'll figure it out eventually.",
