@@ -215,7 +215,14 @@ async function doLogin() {
   const pass = document.getElementById('a-pass').value;
   const r = await fetch(API+'/relay/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
   const d = await r.json();
-  if (d.ok) { user = d; await loadProtocols(); render(); }
+  if (d.ok) {
+    // If standalone (not in shell), redirect to shell
+    if (window.self === window.top) {
+      window.location.href = '/app/relay';
+      return;
+    }
+    user = d; await loadProtocols(); render();
+  }
   else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
 }
 
@@ -226,7 +233,13 @@ async function doSignup() {
   if (!username) { document.getElementById('auth-err').innerHTML = '<div class="error">Username required</div>'; return; }
   const r = await fetch(API+'/relay/signup', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass,username})});
   const d = await r.json();
-  if (d.ok) { user = {email, username, turns_used:0, turns_limit:50, plan:'free'}; render(); }
+  if (d.ok) {
+    if (window.self === window.top) {
+      window.location.href = '/app/relay';
+      return;
+    }
+    user = {email, username, turns_used:0, turns_limit:50, plan:'free'}; render();
+  }
   else document.getElementById('auth-err').innerHTML = `<div class="error">${d.error}</div>`;
 }
 
@@ -629,6 +642,11 @@ async function init() {
     const r = await fetch(API+'/relay/me');
     if (r.ok) {
       user = await r.json();
+      // If logged in and standalone, redirect to shell
+      if (window.self === window.top) {
+        window.location.href = '/app/relay';
+        return;
+      }
       await loadProtocols();
     }
   } catch(e) {}
