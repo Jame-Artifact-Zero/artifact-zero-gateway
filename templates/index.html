@@ -3,134 +3,210 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NTI — No-Tilt Interface | Artifact Zero Labs</title>
+<title>Artifact Zero — Conversational Governance</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;--blue:#3b82f6;
   --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 
+/* ── TOPBAR ── */
 .topbar{
-  border-bottom:1px solid var(--border);padding:16px 24px;
+  border-bottom:1px solid var(--border);padding:14px 24px;
   display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;background:var(--bg);z-index:100;
 }
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#00e89c}
-.topbar .version{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:4px}
-.topbar .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.topbar nav{display:flex;align-items:center;gap:18px}
+.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
+.topbar nav a:hover{color:var(--text)}
+.topbar .live-ind{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);background:var(--surface2);padding:3px 10px;border-radius:4px}
+.topbar .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@media(max-width:700px){.topbar nav a{display:none}.topbar nav a:first-child,.topbar nav a:nth-child(2){display:inline}}
 
-.main{max-width:960px;margin:0 auto;padding:24px 20px 60px}
+/* ── HERO ── */
+.hero{text-align:center;padding:56px 20px 40px;max-width:680px;margin:0 auto}
+.hero-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+.hero h1{font-size:clamp(28px,5vw,42px);font-weight:700;line-height:1.25;margin-bottom:14px}
+.hero .sub{font-size:15px;color:var(--muted);line-height:1.6;max-width:520px;margin:0 auto}
 
-.input-section{margin-bottom:24px}
-.input-section label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
-.input-section textarea{
-  width:100%;min-height:120px;background:var(--surface);border:1px solid var(--border);
+/* ── PRODUCT CARDS ── */
+.products{max-width:900px;margin:0 auto;padding:0 20px 40px}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 20px;text-decoration:none;display:block;transition:border .2s,transform .2s}
+.pcard:hover{border-color:var(--accent);transform:translateY(-2px)}
+.pcard-name{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
+.pcard-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px}
+.pcard-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.pcard-cta{font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:10px;letter-spacing:.5px}
+
+/* ── STAT BAR ── */
+.stat-bar{max-width:900px;margin:0 auto 40px;padding:0 20px}
+.stat-inner{background:linear-gradient(135deg,#0f172a,#1a1145);border:1px solid #312e81;border-radius:10px;padding:18px 28px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--accent)}
+.stat-text{font-size:13px;color:var(--muted)}
+
+/* ── DIVIDER ── */
+.divider{max-width:900px;margin:0 auto;padding:0 20px 24px}
+.divider-inner{border-top:1px solid var(--border);padding-top:24px}
+.divider-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+
+/* ── AUDIT ENGINE ── */
+.audit{max-width:900px;margin:0 auto;padding:0 20px 60px}
+.audit label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
+.audit textarea{
+  width:100%;min-height:110px;background:var(--surface);border:1px solid var(--border);
   color:var(--text);padding:14px;border-radius:8px;font-family:'DM Sans',sans-serif;
   font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
 }
-.input-section textarea:focus{border-color:var(--accent)}
-.input-section textarea::placeholder{color:#3d4452}
-
+.audit textarea:focus{border-color:var(--accent)}
+.audit textarea::placeholder{color:#3d4452}
 .btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .btn{padding:10px 20px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:#2563eb}
+.btn-primary{background:var(--accent);color:#0a0c10}
+.btn-primary:hover{background:#16a34a}
 .btn-primary:disabled{background:var(--surface2);color:var(--muted);cursor:default}
 .btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
 .btn-sample:hover{color:var(--text);background:var(--border)}
 
+/* ── RESULTS ── */
 .results{display:none}
 .results.show{display:block;animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-.hero-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
-.score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
-.score-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:4px}
-.score-card .sc-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.hero-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center}
+.score-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;margin-bottom:3px}
+.score-card .sc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .score-card.critical .sc-value{color:var(--red)}
 .score-card.warning .sc-value{color:var(--amber)}
-.score-card.good .sc-value{color:var(--green)}
-.score-card.info .sc-value{color:var(--accent)}
+.score-card.good .sc-value{color:var(--accent)}
+.score-card.info .sc-value{color:var(--blue)}
 
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
 .panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
-.panel-header h3{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent)}
+.panel-header h3{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--blue)}
 .panel-header .badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
 .badge-red{background:#7f1d1d;color:#fca5a5}
 .badge-amber{background:#78350f;color:#fde68a}
 .badge-green{background:#14532d;color:#86efac}
-
-.panel-body{padding:16px}
-
-.fm-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.panel-body{padding:14px}
+.fm-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
 .fm-row:last-child{border-bottom:none}
-.fm-name{font-weight:600;font-size:14px}
-.fm-full{font-size:11px;color:var(--muted);margin-top:2px}
-.fm-status{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px}
+.fm-name{font-weight:600;font-size:13px}
+.fm-full{font-size:10px;color:var(--muted);margin-top:2px}
+.fm-status{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px}
 .fm-confirmed{background:#7f1d1d;color:#fca5a5}
 .fm-probable{background:#78350f;color:#fde68a}
 .fm-false{background:#14532d;color:#86efac}
-
-.tilt-tags{display:flex;flex-wrap:wrap;gap:6px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-
-.layer-table{width:100%;border-collapse:collapse;font-size:13px}
-.layer-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
-.layer-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-.layer-table td:first-child{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);white-space:nowrap;width:60px}
-
-.matrix-row{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.tilt-tags{display:flex;flex-wrap:wrap;gap:5px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
+.layer-table{width:100%;border-collapse:collapse;font-size:12px}
+.layer-table th{text-align:left;padding:6px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.layer-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.layer-table td:first-child{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--blue);white-space:nowrap;width:50px}
+.matrix-row{padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
 .matrix-row:last-child{border-bottom:none}
-.matrix-pair{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--purple);font-size:12px}
+.matrix-pair{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--purple);font-size:11px}
 .matrix-note{color:var(--muted);margin-top:2px}
-
-.raw-toggle{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:12px;display:inline-block}
-.raw-json{display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
+.raw-toggle{font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:10px;display:inline-block}
+.raw-json{display:none;margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.5;max-height:350px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
 .raw-json.show{display:block}
-
-.callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center}
-.callout .big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--green)}
-.callout .sub{font-size:13px;color:var(--muted);margin-top:4px}
-
-.footer{text-align:center;padding:24px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
-.footer a{color:#00e89c;text-decoration:none}
-
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+.callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:18px;margin-bottom:20px;text-align:center}
+.callout .big{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--accent)}
+.callout .sub{font-size:12px;color:var(--muted);margin-top:3px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:24px 20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);max-width:900px;margin:0 auto}
+.footer a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
 
+<!-- ── TOPBAR ── -->
 <div class="topbar">
-  <div class="logo">ARTIFACT ZERO</div>
-  <nav style="display:flex;gap:16px;align-items:center">
-    <a href="/start" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1px;text-transform:uppercase">START</a>
-    <a href="/live" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1px;text-transform:uppercase">LIVE FEED</a>
-    <a href="/your-os" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1px;text-transform:uppercase">YOUR OS</a>
-    <span class="live-dot"></span><span class="version">v2.0 · LIVE</span>
+  <a href="/" class="logo">ARTIFACT ZERO</a>
+  <nav>
+    <a href="/relay">RELAY</a>
+    <a href="/chat">CONTROL ROOM</a>
+    <a href="/lab">LAB</a>
+    <a href="/live">LIVE</a>
+    <a href="/your-os">YOUR OS</a>
+    <div class="live-ind"><span class="dot"></span>LIVE</div>
   </nav>
 </div>
 
-<div class="main">
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-label">Conversational Governance</div>
+  <h1>AI says whatever it wants.<br>We fix that.</h1>
+  <div class="sub">Rule-based enforcement layer between humans and AI. No LLM dependency. Deterministic. Auditable. False commitment rates dropped from 49% to 7%.</div>
+</div>
 
-  <div class="input-section">
-    <label>Paste any AI-generated text, email, or message</label>
-    <textarea id="input" placeholder="Paste text here to run the full NTI canonical stack..."></textarea>
-    <div class="btn-row">
-      <button class="btn btn-primary" id="runBtn" onclick="runNTI()">Run Full Stack Audit</button>
-      <button class="btn btn-sample" onclick="loadSample('a')">Sample: Adversarial</button>
-      <button class="btn btn-sample" onclick="loadSample('b')">Sample: Corporate Drift</button>
-      <button class="btn btn-sample" onclick="loadSample('c')">Sample: Overconfident AI</button>
-    </div>
+<!-- ── PRODUCT CARDS ── -->
+<div class="products">
+  <div class="products-grid">
+    <a href="/relay" class="pcard">
+      <div class="pcard-name" style="color:var(--accent)">⚡ RELAY</div>
+      <div class="pcard-title">Govern any AI</div>
+      <div class="pcard-desc">Build a protocol. Paste it into ChatGPT, Claude, Gemini, or Grok. Score every response. Your rules never leave our server.</div>
+      <div class="pcard-cta" style="color:var(--accent)">FREE · 50 TURNS →</div>
+    </a>
+    <a href="/chat" class="pcard">
+      <div class="pcard-name" style="color:var(--blue)">◉ CONTROL ROOM</div>
+      <div class="pcard-title">Chat with governance</div>
+      <div class="pcard-desc">AI interface with NTI enforcement built in. Every response scored, stabilized, and traced before it reaches you.</div>
+      <div class="pcard-cta" style="color:var(--blue)">LIVE →</div>
+    </a>
+    <a href="/lab" class="pcard">
+      <div class="pcard-name" style="color:var(--purple)">⧉ LAB</div>
+      <div class="pcard-title">Test & analyze</div>
+      <div class="pcard-desc">Run structural analysis, compare AI outputs, test failure modes. The full NTI testing environment.</div>
+      <div class="pcard-cta" style="color:var(--purple)">LIVE →</div>
+    </a>
+    <a href="/live" class="pcard">
+      <div class="pcard-name" style="color:var(--amber)">◎ LIVE FEED</div>
+      <div class="pcard-title">Real-time scoring</div>
+      <div class="pcard-desc">News headlines scored for structural integrity across 13 sources. NTI running 24/7 on real content.</div>
+      <div class="pcard-cta" style="color:var(--amber)">LIVE →</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── STAT BAR ── -->
+<div class="stat-bar">
+  <div class="stat-inner">
+    <span class="stat-num">63–65%</span>
+    <span class="stat-text">token cost reduction · validated · rule-based · zero inference cost</span>
+  </div>
+</div>
+
+<!-- ── AUDIT DIVIDER ── -->
+<div class="divider">
+  <div class="divider-inner">
+    <div class="divider-label">↓ Try the audit engine</div>
+  </div>
+</div>
+
+<!-- ── AUDIT ENGINE ── -->
+<div class="audit">
+  <label>Paste any AI-generated text, email, or message</label>
+  <textarea id="input" placeholder="Paste text here to run the full NTI canonical stack..."></textarea>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="runBtn" onclick="runNTI()">Run Full Stack Audit</button>
+    <button class="btn btn-sample" onclick="loadSample('a')">Sample: Adversarial</button>
+    <button class="btn btn-sample" onclick="loadSample('b')">Sample: Corporate Drift</button>
+    <button class="btn btn-sample" onclick="loadSample('c')">Sample: Overconfident AI</button>
   </div>
 
-  <div class="results" id="results">
-
+  <div class="results" id="results" style="margin-top:24px">
     <div class="hero-scores" id="heroScores"></div>
 
     <div class="callout">
@@ -172,15 +248,16 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
     <span class="raw-toggle" onclick="toggleRaw()">View raw JSON response</span>
     <div class="raw-json" id="rawJson"></div>
 
-    <div style="margin-top:20px">
+    <div style="margin-top:16px">
       <button class="btn btn-primary" onclick="reset()">Run Another Audit</button>
     </div>
   </div>
-
 </div>
 
+<!-- ── FOOTER ── -->
 <div class="footer">
-  Artifact Zero Labs · NTI canonical-nti-v2.0 · Rule-based, zero LLM dependency · <a href="/health">Health</a> · <a href="/canonical/status">Status</a>
+  Artifact Zero Labs · Knoxville, Tennessee · <span style="color:var(--accent)">Conversational Governance</span><br>
+  <a href="/relay">Relay</a> · <a href="/chat">Control Room</a> · <a href="/lab">Lab</a> · <a href="/live">Live</a> · <a href="/your-os">Your OS</a> · <a href="/health">Health</a>
 </div>
 
 <script>
