@@ -393,7 +393,11 @@ def login():
         log_relay_event("login", ip=ip, username=email)
     except Exception:
         pass
-    return jsonify({"ok": True, "user_id": user["id"], "email": user["email"], "username": user.get("username") or user["email"].split("@")[0], "plan": user["plan"], "turns_used": user["turns_used"], "turns_limit": user["turns_limit"]})
+    try:
+        uname = user["username"] or user["email"].split("@")[0]
+    except (KeyError, IndexError):
+        uname = user["email"].split("@")[0]
+    return jsonify({"ok": True, "user_id": user["id"], "email": user["email"], "username": uname, "plan": user["plan"], "turns_used": user["turns_used"], "turns_limit": user["turns_limit"]})
 
 
 @az_relay.route("/relay/logout", methods=["POST"])
@@ -405,10 +409,14 @@ def logout():
 @az_relay.route("/relay/me")
 @require_auth
 def me(user):
+    try:
+        uname = user.get("username") or user["email"].split("@")[0]
+    except (KeyError, AttributeError):
+        uname = user["email"].split("@")[0]
     return jsonify({
         "user_id": user["id"],
         "email": user["email"],
-        "username": user.get("username") or user["email"].split("@")[0],
+        "username": uname,
         "plan": user["plan"],
         "turns_used": user["turns_used"],
         "turns_limit": user["turns_limit"],
