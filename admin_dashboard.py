@@ -91,6 +91,12 @@ def init_analytics_db():
 # ── MIDDLEWARE: Track every request ──
 
 SKIP_PATHS = {'/health', '/favicon.ico', '/static'}
+BOT_MARKERS = {'bot', 'crawler', 'spider', 'curl', 'wget', 'python-requests', 'go-http', 'req/v3', 'Trident'}
+OWNER_IP = os.getenv("OWNER_IP", "")
+
+def _is_bot(ua):
+    ua_lower = (ua or "").lower()
+    return any(b.lower() in ua_lower for b in BOT_MARKERS)
 
 def track_request(app):
     """Register before/after request hooks on the Flask app."""
@@ -107,10 +113,17 @@ def track_request(app):
             if any(path.startswith(s) for s in SKIP_PATHS):
                 return response
 
-            latency = int((__import__('time').time() - getattr(g, 'req_start', 0)) * 1000)
             ip = request.headers.get("X-Forwarded-For", request.remote_addr)
             if ip and "," in ip:
                 ip = ip.split(",")[0].strip()
+
+            ua = request.headers.get("User-Agent") or ""
+
+            # Skip bots
+            if _is_bot(ua):
+                return response
+
+            latency = int((__import__('time').time() - getattr(g, 'req_start', 0)) * 1000)
 
             conn = analytics_db()
             conn.execute("""
@@ -122,7 +135,7 @@ def track_request(app):
                 path,
                 request.method,
                 ip,
-                (request.headers.get("User-Agent") or "")[:300],
+                ua[:300],
                 (request.headers.get("Referer") or "")[:500],
                 request.headers.get("X-Session-Id", ""),
                 latency,
@@ -138,6 +151,24 @@ def track_request(app):
 def log_nti_run(request_id, ip, text, result, latency_ms, session_id=""):
     """Call this from the /nti endpoint after scoring."""
     try:
+        # tilt_taxonomy can be a list of strings OR a dict with tags_detected
+        tilt = result.get("tilt_taxonomy", [])
+        if isinstance(tilt, dict):
+            tilt = tilt.get("tags_detected", [])
+        if not isinstance(tilt, list):
+            tilt = []
+
+        # dominance can be a list or nested in parent_failure_modes
+        dom = result.get("parent_failure_modes", {})
+        if isinstance(dom, dict):
+            dom = dom.get("dominance_order", "")
+        if isinstance(dom, list):
+            dom = " + ".join(str(d) for d in dom)
+
+        # nii can be a dict or direct
+        nii = result.get("nii", {})
+        nii_score = nii.get("nii_score") if isinstance(nii, dict) else nii
+
         conn = analytics_db()
         conn.execute("""
             INSERT OR IGNORE INTO nti_runs (id, created_at, ip, input_preview, word_count, nii_score, dominance, tilt_tags, latency_ms, session_id)
@@ -148,9 +179,9 @@ def log_nti_run(request_id, ip, text, result, latency_ms, session_id=""):
             ip,
             (text or "")[:200],
             len((text or "").split()),
-            result.get("nii", {}).get("nii_score"),
-            result.get("parent_failure_modes", {}).get("dominance_order", ""),
-            json.dumps(result.get("tilt_taxonomy", {}).get("tags_detected", [])),
+            nii_score,
+            str(dom),
+            json.dumps(tilt),
             latency_ms,
             session_id,
         ))
