@@ -25,7 +25,7 @@ opentelemetry-sdk==1.27.0
 opentelemetry-exporter-otlp==1.27.0
 opentelemetry-instrumentation-flask==0.48b0
 sentry-sdk[flask]==2.14.0
-prometheus-flask-instrumentator==7.0.0
+prometheus-flask-instrumentator==4.1.1
 
 # ── Email: transactional, notifications ──
 boto3==1.35.0
