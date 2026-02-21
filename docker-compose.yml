@@ -1,0 +1,57 @@
+# ============================================
+# Artifact Zero — Local Development
+# ============================================
+# Run: docker compose up
+# App: http://localhost:10000
+# DB:  postgres://az:az_local@localhost:5432/artifactzero
+# ============================================
+
+services:
+  app:
+    build: .
+    ports:
+      - "10000:10000"
+    environment:
+      - DATABASE_URL=postgresql://az:az_local@db:5432/artifactzero
+      - FLASK_SECRET_KEY=local-dev-key
+      - AZ_SECRET=local-dev-az-secret
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app  # Live reload during development
+    command: ["python", "app.py"]  # Use Flask dev server locally
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=az
+      - POSTGRES_PASSWORD=az_local
+      - POSTGRES_DB=artifactzero
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U az -d artifactzero"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:

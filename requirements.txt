@@ -1,3 +1,52 @@
+# ── Core ──
 flask==3.0.3
 gunicorn==22.0.0
-requests==2.31.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+feedparser==6.0.11
+
+# ── Auth: SSO / SAML / OAuth2 / OIDC / JWT / MFA ──
+flask-login==0.6.3
+PyJWT==2.9.0
+python-jose[cryptography]==3.3.0
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+authlib==1.3.2
+
+# ── API: versioning, rate-limiting, OpenAPI/Swagger, CORS ──
+flask-limiter==3.5.0
+flask-cors==4.0.1
+flask-restx==1.3.0
+marshmallow==3.22.0
+
+# ── Observability: tracing, metrics, error-tracking, alerting ──
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp==1.27.0
+opentelemetry-instrumentation-flask==0.48b0
+sentry-sdk[flask]==2.14.0
+prometheus-flask-instrumentator==7.0.0
+
+# ── Email: transactional, notifications ──
+boto3==1.35.0
+
+# ── Feature flags ──
+flagsmith==3.7.0
+
+# ── Webhooks / Async / Scheduling ──
+celery[redis]==5.4.0
+requests==2.32.3
+tenacity==9.0.0
+
+# ── Billing / Metering ──
+stripe==10.12.0
+
+# ── Security headers: HSTS / CSP / XSS ──
+flask-talisman==1.1.0
+
+# ── Database: migrations, connection pooling ──
+alembic==1.13.3
+SQLAlchemy==2.0.35
+
+# ── Data export / GDPR ──
+orjson==3.10.7
