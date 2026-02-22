@@ -837,7 +837,7 @@ def api_score():
             "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
             "dominance": dominance
         },
-        "tilt": {"tags": tilt.get("tags", []), "count": tilt.get("count", 0)},
+        "tilt": {"tags": tilt, "count": len(tilt)},
         "meta": {
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
             "tier": request._api_tier, "usage_this_month": request._api_usage, "monthly_limit": request._api_limit
