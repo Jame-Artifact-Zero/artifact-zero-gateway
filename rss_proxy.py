@@ -256,12 +256,14 @@ def knoxville_dashboard():
 @rss_bp.route('/live/anderson-county')
 def anderson_county_dashboard():
     """Anderson County Mayor Race — Frank vs Anderson"""
+    from flask import render_template
     return render_template('anderson-county-dashboard.html')
 
 
 @rss_bp.route('/live/birkbeck')
 def birkbeck_dashboard():
     """Katherine Birkbeck — School Board District 2"""
+    from flask import render_template
     return render_template('birkbeck-dashboard.html')
 
 
