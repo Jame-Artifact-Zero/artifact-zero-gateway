@@ -8,10 +8,8 @@ from typing import Any, Dict, List, Optional
 
 from flask import Flask, request, jsonify, render_template
 import db as database
-from api_v1 import api_v1
 
 app = Flask(__name__)
-app.register_blueprint(api_v1)
 
 # ============================================================
 # CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
@@ -705,6 +703,193 @@ def nti_run():
     }
 
     return jsonify(result)
+
+
+# ═══════════════════════════════════════
+# API v1 — PUBLIC SCORING ENDPOINT
+# ═══════════════════════════════════════
+import secrets as _secrets
+import functools
+
+_TIER_LIMITS = {
+    "free": {"monthly": 10, "rpm": 5},
+    "pro": {"monthly": 500, "rpm": 30},
+    "power": {"monthly": 2000, "rpm": 60},
+    "unlimited": {"monthly": 999999999, "rpm": 120},
+    "starter": {"monthly": 10000, "rpm": 60},
+    "core": {"monthly": 75000, "rpm": 120},
+    "pipeline": {"monthly": 300000, "rpm": 300},
+    "enterprise": {"monthly": 999999999, "rpm": 1000},
+}
+
+_rate_cache = {}
+
+
+def _month_start():
+    now = datetime.now(timezone.utc)
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+
+def _minute_key():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
+
+
+def require_api_key(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key") or request.args.get("api_key")
+        if not api_key:
+            return jsonify({"error": "Missing API key", "hint": "Pass key in X-API-Key header", "docs": "https://artifact0.com/docs"}), 401
+
+        try:
+            conn = database.db_connect()
+            cur = conn.cursor()
+            if database.USE_PG:
+                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = %s", (api_key,))
+            else:
+                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = ?", (api_key,))
+            row = cur.fetchone()
+            conn.close()
+        except Exception as e:
+            print(f"[api] Key lookup error: {e}", flush=True)
+            return jsonify({"error": "Database error", "detail": str(e)}), 500
+
+        if not row:
+            return jsonify({"error": "Invalid API key"}), 401
+
+        key_id = row[0] if database.USE_PG else row["id"]
+        tier = row[1] if database.USE_PG else row["tier"]
+        monthly_limit = row[2] if database.USE_PG else row["monthly_limit"]
+        active = row[3] if database.USE_PG else row["active"]
+
+        if not active:
+            return jsonify({"error": "API key deactivated"}), 403
+
+        usage_count = database.get_api_usage_count(key_id, _month_start())
+        if usage_count >= monthly_limit:
+            return jsonify({"error": "Monthly limit reached", "usage": usage_count, "limit": monthly_limit, "tier": tier}), 429
+
+        tier_config = _TIER_LIMITS.get(tier, _TIER_LIMITS["free"])
+        cache_key = f"{key_id}:{_minute_key()}"
+        current_rpm = _rate_cache.get(cache_key, 0)
+        if current_rpm >= tier_config["rpm"]:
+            return jsonify({"error": "Rate limit exceeded", "limit": f"{tier_config['rpm']} req/min"}), 429
+        _rate_cache[cache_key] = current_rpm + 1
+
+        request._api_key_id = key_id
+        request._api_tier = tier
+        request._api_usage = usage_count + 1
+        request._api_limit = monthly_limit
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@app.route("/api/v1/score", methods=["POST"])
+@require_api_key
+def api_score():
+    t0 = time.time()
+    payload = request.get_json() or {}
+    text = payload.get("text", "").strip()
+
+    if not text:
+        return jsonify({"error": "Missing 'text' field"}), 400
+    if len(text) > 50000:
+        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
+
+    try:
+        l0 = detect_l0_constraints(text)
+        obj = objective_extract(text)
+        drift = objective_drift("", text)
+        framing = detect_l2_framing(text)
+        tilt = classify_tilt(text)
+        udds = detect_udds("", text, l0)
+        dce = detect_dce(text, l0)
+        cca = detect_cca("", text)
+        dbc = detect_downstream_before_constraint("", text, l0)
+        nii = compute_nii("", text, l0, dbc, tilt)
+
+        dominance = []
+        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+            dominance.append("CCA")
+        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+            dominance.append("UDDS")
+        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+            dominance.append("DCE")
+        if not dominance:
+            dominance = ["NONE"]
+    except Exception as e:
+        print(f"[api] Scoring error: {e}", flush=True)
+        return jsonify({"error": "Scoring engine error", "detail": str(e)}), 500
+
+    latency_ms = int((time.time() - t0) * 1000)
+    usage_id = str(uuid.uuid4())
+    database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score", latency_ms, 200)
+
+    return jsonify({
+        "status": "ok",
+        "version": NTI_VERSION,
+        "score": {
+            "nii": nii.get("nii_score"),
+            "nii_label": nii.get("nii_label"),
+            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4")}
+        },
+        "failure_modes": {
+            "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
+            "dominance": dominance
+        },
+        "tilt": {"tags": tilt.get("tags", []), "count": tilt.get("count", 0)},
+        "meta": {
+            "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
+            "tier": request._api_tier, "usage_this_month": request._api_usage, "monthly_limit": request._api_limit
+        }
+    })
+
+
+@app.route("/api/v1/keys", methods=["POST"])
+def api_create_key():
+    payload = request.get_json() or {}
+    email = payload.get("email", "").strip().lower()
+    tier = payload.get("tier", "free").strip().lower()
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email required"}), 400
+    if tier not in _TIER_LIMITS:
+        return jsonify({"error": f"Invalid tier. Options: {list(_TIER_LIMITS.keys())}"}), 400
+
+    key_id = f"az_{_secrets.token_hex(24)}"
+    monthly_limit = _TIER_LIMITS[tier]["monthly"]
+    now = utc_now_iso()
+
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (%s, %s, %s, %s, %s, TRUE)",
+                        (key_id, now, email, tier, monthly_limit))
+        else:
+            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (?, ?, ?, ?, ?, 1)",
+                        (key_id, now, email, tier, monthly_limit))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[api] Key creation error: {e}", flush=True)
+        return jsonify({"error": "Failed to create key", "detail": str(e)}), 500
+
+    return jsonify({"api_key": key_id, "tier": tier, "monthly_limit": monthly_limit, "email": email,
+                    "message": "Store this key securely. It will not be shown again."}), 201
+
+
+@app.route("/api/v1/keys/usage", methods=["GET"])
+@require_api_key
+def api_usage():
+    usage_count = database.get_api_usage_count(request._api_key_id, _month_start())
+    return jsonify({
+        "api_key": request._api_key_id[:8] + "...",
+        "tier": request._api_tier,
+        "usage_this_month": usage_count,
+        "monthly_limit": request._api_limit,
+        "remaining": max(0, request._api_limit - usage_count)
+    })
 
 
 if __name__ == "__main__":
