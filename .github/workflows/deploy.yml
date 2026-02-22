@@ -70,11 +70,18 @@ jobs:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+          wait-for-service-stability: false
 
       - name: Verify deployment
         run: |
           echo "✅ Deployed ${{ steps.build.outputs.image }}"
-          echo "🔍 Checking health..."
-          sleep 30
-          # Health check will be verified by ECS service stability check above
+          echo "⏳ Waiting 60s for task to start..."
+          sleep 60
+          RUNNING=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query "services[0].runningCount" --output text)
+          echo "Running tasks: $RUNNING"
+          if [ "$RUNNING" -ge 1 ]; then
+            echo "✅ Service healthy — $RUNNING task(s) running"
+          else
+            echo "⚠️ No running tasks yet — check ECS console"
+            exit 1
+          fi
