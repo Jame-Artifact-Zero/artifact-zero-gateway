@@ -256,19 +256,13 @@ def knoxville_dashboard():
 @rss_bp.route('/live/anderson-county')
 def anderson_county_dashboard():
     """Anderson County Mayor Race — Frank vs Anderson"""
-    try:
-        return render_template('anderson-county-dashboard.html')
-    except Exception:
-        return "Anderson County dashboard not found", 404
+    return render_template('anderson-county-dashboard.html')
 
 
 @rss_bp.route('/live/birkbeck')
 def birkbeck_dashboard():
     """Katherine Birkbeck — School Board District 2"""
-    try:
-        return render_template('birkbeck-dashboard.html')
-    except Exception:
-        return "Birkbeck dashboard not found", 404
+    return render_template('birkbeck-dashboard.html')
 
 
 @rss_bp.route('/live/license/knoxville')

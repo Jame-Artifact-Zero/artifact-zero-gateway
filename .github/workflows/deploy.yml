@@ -112,18 +112,38 @@ jobs:
         if: success()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          cat > /tmp/email.json << 'EMAILEOF'
+          {
+            "Subject": {"Data": "Deploy OK — SHORTSHA"},
+            "Body": {"Text": {"Data": "Deploy succeeded.\n\nCommit: FULLSHA\nBranch: BRANCHNAME\nImage: IMAGETAG\n\nSite: https://artifact0.com\nHealth: https://artifact0.com/health"}}
+          }
+          EMAILEOF
+          sed -i "s|SHORTSHA|$SHORT_SHA|g" /tmp/email.json
+          sed -i "s|FULLSHA|${{ github.sha }}|g" /tmp/email.json
+          sed -i "s|BRANCHNAME|${{ github.ref_name }}|g" /tmp/email.json
+          sed -i "s|IMAGETAG|${{ steps.build.outputs.image }}|g" /tmp/email.json
           aws ses send-email \
             --from "Artifact Zero CI <noreply@artifact0.com>" \
-            --destination "ToAddresses=${{ secrets.NOTIFY_EMAIL_TO }}" \
-            --message "Subject={Data='Deploy OK — '$SHORT_SHA'},Body={Text={Data='Deploy succeeded.\n\nCommit: ${{ github.sha }}\nBranch: ${{ github.ref_name }}\nImage: ${{ steps.build.outputs.image }}\nTime: ${{ github.event.head_commit.timestamp }}\nMessage: ${{ github.event.head_commit.message }}\n\nSite: https://artifact0.com\nHealth: https://artifact0.com/health'}}" \
-            --region us-east-1
+            --destination '{"ToAddresses":["${{ secrets.NOTIFY_EMAIL_TO }}"]}' \
+            --message file:///tmp/email.json \
+            --region us-east-1 || echo "Notification send failed — deploy still succeeded"
 
       - name: Notify — Deploy Failed
         if: failure()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          cat > /tmp/email.json << 'EMAILEOF'
+          {
+            "Subject": {"Data": "DEPLOY FAILED — SHORTSHA"},
+            "Body": {"Text": {"Data": "Deploy FAILED. Auto-rollback attempted.\n\nCommit: FULLSHA\nBranch: BRANCHNAME\n\nCheck: https://github.com/REPONAME/actions"}}
+          }
+          EMAILEOF
+          sed -i "s|SHORTSHA|$SHORT_SHA|g" /tmp/email.json
+          sed -i "s|FULLSHA|${{ github.sha }}|g" /tmp/email.json
+          sed -i "s|BRANCHNAME|${{ github.ref_name }}|g" /tmp/email.json
+          sed -i "s|REPONAME|${{ github.repository }}|g" /tmp/email.json
           aws ses send-email \
             --from "Artifact Zero CI <noreply@artifact0.com>" \
-            --destination "ToAddresses=${{ secrets.NOTIFY_EMAIL_TO }}" \
-            --message "Subject={Data='DEPLOY FAILED — '$SHORT_SHA'},Body={Text={Data='Deploy FAILED. Auto-rollback attempted.\n\nCommit: ${{ github.sha }}\nBranch: ${{ github.ref_name }}\nMessage: ${{ github.event.head_commit.message }}\n\nCheck: https://github.com/${{ github.repository }}/actions\nConsole: https://us-east-1.console.aws.amazon.com/ecs/v2/clusters/artifact-zero-cluster/services'}}" \
-            --region us-east-1
+            --destination '{"ToAddresses":["${{ secrets.NOTIFY_EMAIL_TO }}"]}' \
+            --message file:///tmp/email.json \
+            --region us-east-1 || echo "Notification send failed"
