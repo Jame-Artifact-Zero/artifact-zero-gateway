@@ -15,6 +15,12 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "artifact-zero-change-in-prod")
 from rss_proxy import rss_bp
 app.register_blueprint(rss_bp)
 
+try:
+    from user_feeds import user_feeds_bp
+    app.register_blueprint(user_feeds_bp)
+except Exception:
+    pass
+
 # --- YOUR OS INTEGRATION ---
 try:
     from your_os import your_os

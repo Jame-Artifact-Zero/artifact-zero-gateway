@@ -73,6 +73,7 @@ jobs:
           wait-for-service-stability: false
 
       - name: Verify deployment
+        id: verify
         run: |
           echo "✅ Deployed ${{ steps.build.outputs.image }}"
           echo "⏳ Waiting 60s for task to start..."
@@ -81,7 +82,48 @@ jobs:
           echo "Running tasks: $RUNNING"
           if [ "$RUNNING" -ge 1 ]; then
             echo "✅ Service healthy — $RUNNING task(s) running"
+            echo "status=success" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ No running tasks yet — check ECS console"
+            echo "⚠️ No running tasks — triggering rollback"
+            echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "🔄 Rolling back to previous stable image..."
+          # Get the previous task definition (one before current)
+          PREV_TASK=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
+            --query "services[0].taskDefinition" --output text)
+          # List recent task definitions, grab the second one (previous stable)
+          PREV_ARN=$(aws ecs list-task-definitions --family-prefix $ECS_TASK_DEFINITION \
+            --sort DESC --query "taskDefinitionArns[1]" --output text)
+          if [ "$PREV_ARN" != "None" ] && [ -n "$PREV_ARN" ]; then
+            echo "Rolling back to: $PREV_ARN"
+            aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE \
+              --task-definition "$PREV_ARN" --force-new-deployment
+            echo "✅ Rollback initiated"
+          else
+            echo "❌ No previous task definition found — manual intervention required"
+          fi
+
+      - name: Notify — Deploy Success
+        if: success()
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          aws ses send-email \
+            --from "Artifact Zero CI <noreply@artifact0.com>" \
+            --destination "ToAddresses=${{ secrets.NOTIFY_EMAIL_TO }}" \
+            --message "Subject={Data='Deploy OK — '$SHORT_SHA'},Body={Text={Data='Deploy succeeded.\n\nCommit: ${{ github.sha }}\nBranch: ${{ github.ref_name }}\nImage: ${{ steps.build.outputs.image }}\nTime: ${{ github.event.head_commit.timestamp }}\nMessage: ${{ github.event.head_commit.message }}\n\nSite: https://artifact0.com\nHealth: https://artifact0.com/health'}}" \
+            --region us-east-1
+
+      - name: Notify — Deploy Failed
+        if: failure()
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          aws ses send-email \
+            --from "Artifact Zero CI <noreply@artifact0.com>" \
+            --destination "ToAddresses=${{ secrets.NOTIFY_EMAIL_TO }}" \
+            --message "Subject={Data='DEPLOY FAILED — '$SHORT_SHA'},Body={Text={Data='Deploy FAILED. Auto-rollback attempted.\n\nCommit: ${{ github.sha }}\nBranch: ${{ github.ref_name }}\nMessage: ${{ github.event.head_commit.message }}\n\nCheck: https://github.com/${{ github.repository }}/actions\nConsole: https://us-east-1.console.aws.amazon.com/ecs/v2/clusters/artifact-zero-cluster/services'}}" \
+            --region us-east-1
