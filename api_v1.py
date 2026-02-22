@@ -58,14 +58,18 @@ def validate_api_key(f):
             }), 401
 
         # Look up key
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = %s", (api_key,))
-        else:
-            cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = ?", (api_key,))
-        row = cur.fetchone()
-        conn.close()
+        try:
+            conn = database.db_connect()
+            cur = conn.cursor()
+            if database.USE_PG:
+                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = %s", (api_key,))
+            else:
+                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = ?", (api_key,))
+            row = cur.fetchone()
+            conn.close()
+        except Exception as e:
+            print(f"[api] Key lookup error: {e}", flush=True)
+            return jsonify({"error": "Database error during key lookup", "detail": str(e)}), 500
 
         if not row:
             return jsonify({"error": "Invalid API key"}), 401
@@ -230,20 +234,25 @@ def create_api_key():
     monthly_limit = TIER_LIMITS[tier]["monthly"]
     now = datetime.now(timezone.utc).isoformat()
 
-    conn = database.db_connect()
-    cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("""
-            INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active)
-            VALUES (%s, %s, %s, %s, %s, TRUE)
-        """, (key_id, now, email, tier, monthly_limit))
-    else:
-        cur.execute("""
-            INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active)
-            VALUES (?, ?, ?, ?, ?, 1)
-        """, (key_id, now, email, tier, monthly_limit))
-    conn.commit()
-    conn.close()
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("""
+                INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active)
+                VALUES (%s, %s, %s, %s, %s, TRUE)
+            """, (key_id, now, email, tier, monthly_limit))
+        else:
+            cur.execute("""
+                INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active)
+                VALUES (?, ?, ?, ?, ?, 1)
+            """, (key_id, now, email, tier, monthly_limit))
+        conn.commit()
+        conn.close()
+        print(f"[api] Key created: {key_id[:12]}... tier={tier} email={email}", flush=True)
+    except Exception as e:
+        print(f"[api] Key creation FAILED: {e}", flush=True)
+        return jsonify({"error": "Failed to create key", "detail": str(e)}), 500
 
     return jsonify({
         "api_key": key_id,
