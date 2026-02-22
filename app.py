@@ -8,8 +8,10 @@ from typing import Any, Dict, List, Optional
 
 from flask import Flask, request, jsonify, render_template
 import db as database
+from api_v1 import api_v1
 
 app = Flask(__name__)
+app.register_blueprint(api_v1)
 
 # ============================================================
 # CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
