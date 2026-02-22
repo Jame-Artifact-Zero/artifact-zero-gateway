@@ -3,8 +3,10 @@ Artifact Zero — Database Abstraction Layer
 Auto-detects DATABASE_URL for PostgreSQL, falls back to SQLite.
 """
 import os
+import sys
 import sqlite3
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -12,17 +14,29 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
 USE_PG = False
 
+print(f"[db] DATABASE_URL present: {bool(DATABASE_URL)}", flush=True)
+if DATABASE_URL:
+    print(f"[db] DATABASE_URL starts with: {DATABASE_URL[:20]}...", flush=True)
+
 if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
     try:
         import psycopg2
         import psycopg2.extras
+        # Test the connection immediately
+        print("[db] psycopg2 imported, testing connection...", flush=True)
+        test_conn = psycopg2.connect(DATABASE_URL, connect_timeout=5)
+        test_conn.close()
         USE_PG = True
-        logger.info("Database: PostgreSQL")
-    except ImportError:
-        logger.warning("psycopg2 not installed — falling back to SQLite")
+        print("[db] PostgreSQL connection successful", flush=True)
+    except ImportError as e:
+        print(f"[db] psycopg2 not installed, falling back to SQLite: {e}", flush=True)
+        USE_PG = False
+    except Exception as e:
+        print(f"[db] PostgreSQL connection FAILED, falling back to SQLite: {e}", flush=True)
+        traceback.print_exc()
         USE_PG = False
 else:
-    logger.info("Database: SQLite (%s)", DB_PATH)
+    print(f"[db] Using SQLite ({DB_PATH})", flush=True)
 
 
 def db_connect():
@@ -50,8 +64,15 @@ def db_execute(conn, sql, params=None):
 
 def db_init():
     """Create tables if they don't exist. Works on both SQLite and PostgreSQL."""
-    conn = db_connect()
-    cur = conn.cursor()
+    try:
+        conn = db_connect()
+        cur = conn.cursor()
+    except Exception as e:
+        print(f"[db] db_init connection failed, falling back to SQLite: {e}", flush=True)
+        global USE_PG
+        USE_PG = False
+        conn = db_connect()
+        cur = conn.cursor()
 
     if USE_PG:
         cur.execute("""
