@@ -169,6 +169,206 @@ def db_init():
     print(f"[DB] Initialized ({'PostgreSQL' if USE_POSTGRES else 'SQLite'})")
 
 
+def init_loop4_tables():
+    """Create Loop 4+5 tables: relay audit, pipeline config, vulnerability disclosures, provider scores.
+    Safe to call multiple times (CREATE IF NOT EXISTS)."""
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # MPI-001: Relay audit log
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS relay_audit_log (
+        id TEXT PRIMARY KEY,
+        org_id TEXT NOT NULL,
+        user_id TEXT,
+        original_input TEXT NOT NULL,
+        modified_output TEXT NOT NULL,
+        rules_fired TEXT NOT NULL DEFAULT '[]',
+        delta_json TEXT NOT NULL DEFAULT '{}',
+        nti_score_json TEXT NOT NULL DEFAULT '{}',
+        provider TEXT,
+        relay_latency_ms INTEGER,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # MPI-003: Relay pipeline config (per-org relay behavior)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS relay_pipeline_config (
+        id TEXT PRIMARY KEY,
+        org_id TEXT NOT NULL UNIQUE,
+        udds_enabled INTEGER NOT NULL DEFAULT 1,
+        dce_enabled INTEGER NOT NULL DEFAULT 1,
+        cca_enabled INTEGER NOT NULL DEFAULT 1,
+        modification_mode TEXT NOT NULL DEFAULT 'flag_only',
+        severity_threshold TEXT NOT NULL DEFAULT 'medium',
+        phi_detection INTEGER NOT NULL DEFAULT 0,
+        sandbox_strip_pii INTEGER NOT NULL DEFAULT 1,
+        custom_rules_json TEXT DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
+    # MPA-001: Vulnerability disclosure registry
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS vulnerability_disclosures (
+        id TEXT PRIMARY KEY,
+        provider TEXT NOT NULL,
+        severity TEXT NOT NULL DEFAULT 'medium',
+        title TEXT NOT NULL,
+        description TEXT,
+        cve_id TEXT,
+        bugcrowd_id TEXT,
+        discovered_at TEXT NOT NULL,
+        reported_at TEXT,
+        acknowledged_at TEXT,
+        resolved_at TEXT,
+        customer_notification_sent INTEGER NOT NULL DEFAULT 0,
+        customer_notification_at TEXT,
+        affected_orgs_json TEXT DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'discovered',
+        disclosure_url TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # MPA-003: Provider risk scores
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS provider_risk_scores (
+        id TEXT PRIMARY KEY,
+        provider TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        risk_score INTEGER NOT NULL DEFAULT 50,
+        total_disclosures INTEGER NOT NULL DEFAULT 0,
+        open_disclosures INTEGER NOT NULL DEFAULT 0,
+        last_disclosure_at TEXT,
+        notes TEXT,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
+    # MPI-002: Usage meters for billing
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS usage_meters (
+        id TEXT PRIMARY KEY,
+        org_id TEXT NOT NULL,
+        meter_type TEXT NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 0,
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # MPA-005: Runbooks
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS runbooks (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        trigger_condition TEXT,
+        steps_json TEXT NOT NULL DEFAULT '[]',
+        last_executed_at TEXT
+    )
+    """)
+
+    # Indexes (skip failures silently — already exist or not supported)
+    for idx_sql in [
+        "CREATE INDEX IF NOT EXISTS idx_relay_audit_org ON relay_audit_log(org_id)",
+        "CREATE INDEX IF NOT EXISTS idx_relay_audit_created ON relay_audit_log(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_vuln_provider ON vulnerability_disclosures(provider)",
+        "CREATE INDEX IF NOT EXISTS idx_vuln_status ON vulnerability_disclosures(status)",
+        "CREATE INDEX IF NOT EXISTS idx_usage_org ON usage_meters(org_id)",
+    ]:
+        try:
+            cur.execute(idx_sql)
+        except Exception:
+            pass
+
+    conn.commit()
+    release_conn(conn)
+    print("[DB] Loop 4+5 tables initialized")
+
+
+def seed_loop4_data():
+    """Seed initial data for Loop 4+5 tables. Idempotent."""
+    p = param_placeholder()
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Seed OpenAI vulnerability disclosure
+    try:
+        cur.execute(f"""
+        INSERT INTO vulnerability_disclosures (id, provider, severity, title, description, bugcrowd_id, discovered_at, reported_at, status, created_at)
+        VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+        """, (
+            'vuln-001', 'openai', 'high',
+            'Cross-Project Context Synthesis Without User Consent',
+            'ChatGPT synthesizes context across project boundaries without user consent or disclosure.',
+            'bbd51865-295b-4111-b203-14e834e1cab1',
+            '2026-02-19T00:00:00Z', '2026-02-19T20:04:00Z', 'reported',
+            '2026-02-19T00:00:00Z'
+        ))
+    except Exception:
+        conn.rollback()
+        conn = get_conn()
+        cur = conn.cursor()
+
+    # Seed provider risk scores
+    providers = [
+        ('prov-openai', 'openai', 'OpenAI (GPT-4, GPT-4o)', 65, 1, 1, '2026-02-19T00:00:00Z'),
+        ('prov-anthropic', 'anthropic', 'Anthropic (Claude)', 30, 0, 0, None),
+        ('prov-google', 'google', 'Google (Gemini)', 40, 0, 0, None),
+        ('prov-xai', 'xai', 'xAI (Grok)', 50, 0, 0, None),
+    ]
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    for pid, prov, dname, score, total, opendisc, last in providers:
+        try:
+            cur.execute(f"""
+            INSERT INTO provider_risk_scores (id, provider, display_name, risk_score, total_disclosures, open_disclosures, last_disclosure_at, updated_at)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p})
+            """, (pid, prov, dname, score, total, opendisc, last, now))
+        except Exception:
+            conn.rollback()
+            conn = get_conn()
+            cur = conn.cursor()
+
+    # Seed disclosure runbook
+    import json
+    steps = json.dumps([
+        {"step": 1, "action": "Document vulnerability with reproduction steps, timestamps, affected scope."},
+        {"step": 2, "action": "Insert record into vulnerability_disclosures with status=discovered."},
+        {"step": 3, "action": "Assess affected customers: which orgs route traffic through this provider?"},
+        {"step": 4, "action": "File disclosure with provider (Bugcrowd, HackerOne, or direct security@)."},
+        {"step": 5, "action": "Update disclosure record: status=reported, reported_at=now."},
+        {"step": 6, "action": "If severity=critical: route affected org traffic to alternate provider."},
+        {"step": 7, "action": "Generate customer notifications within 4 hours of discovery."},
+        {"step": 8, "action": "Update disclosure: customer_notification_sent=true."},
+        {"step": 9, "action": "Monitor provider response. Follow up at 30, 60, 90 days."},
+        {"step": 10, "action": "After resolution: update status, update provider_risk_scores."},
+    ])
+    try:
+        cur.execute(f"""
+        INSERT INTO runbooks (id, title, trigger_condition, steps_json)
+        VALUES ({p},{p},{p},{p})
+        """, (
+            'runbook-disclosure',
+            'Upstream Vulnerability Discovered',
+            'Relay detects anomalous output patterns OR manual security review identifies provider vulnerability',
+            steps
+        ))
+    except Exception:
+        conn.rollback()
+        conn = get_conn()
+        cur = conn.cursor()
+
+    conn.commit()
+    release_conn(conn)
+    print("[DB] Loop 4+5 seed data loaded")
+
+
 def upsert_sql(table, columns, conflict_col="id"):
     """Generate an upsert statement that works on both Postgres and SQLite."""
     placeholders = ", ".join(["%s" if USE_POSTGRES else "?" for _ in columns])

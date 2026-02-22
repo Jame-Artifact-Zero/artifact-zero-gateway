@@ -126,6 +126,14 @@ def init_relay_db():
 
 init_relay_db()
 
+# Initialize Loop 4+5 tables (audit, pipeline config, disclosures, provider scores)
+try:
+    from db import init_loop4_tables, seed_loop4_data
+    init_loop4_tables()
+    seed_loop4_data()
+except Exception as e:
+    print(f"[RELAY] Loop 4+5 init: {e}")
+
 
 # ─── CRYPTO ───
 def _sign(payload: str) -> str:
@@ -690,6 +698,19 @@ def process_relay(user):
         snr = scores.get("snr", 0)
         log_relay_event("score", ip=ip, username=user.get("email", ""),
                         detail=f"sovereignty={sov} snr={snr:.3f} turn={next_turn}")
+    except Exception:
+        pass
+
+    # MPI-001: Relay audit log
+    try:
+        audit_conn = get_conn()
+        audit_cur = audit_conn.cursor()
+        audit_cur.execute(
+            f"INSERT INTO relay_audit_log (id, org_id, user_id, original_input, modified_output, rules_fired, nti_score_json, created_at) VALUES ({P},{P},{P},{P},{P},{P},{P},{P})",
+            (str(uuid.uuid4()), user.get("id", "personal"), user["id"], ai_output[:2000], directives, json.dumps(scores.get("flags", [])), json.dumps(scores), now)
+        )
+        audit_conn.commit()
+        release_conn(audit_conn)
     except Exception:
         pass
 
