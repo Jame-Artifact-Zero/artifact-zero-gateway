@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Katherine Birkbeck — NTI Candidate Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080c;--surface:#0d1117;--surface2:#151b25;--border:#1e2736;--border-bright:#2a3547;
+  --text:#e4e8f0;--dim:#8892a4;--muted:#5c6577;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--serif:'Instrument Serif',serif;
+  --green:#00e89c;--green-dim:rgba(0,232,156,.08);
+  --red:#ff4466;--red-dim:rgba(255,68,102,.08);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.08);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.08);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding-bottom:60px}
+
+.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.topbar .logo{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
+.topbar .nav-links{display:flex;gap:16px;align-items:center}
+.topbar .nav-links a{font-family:var(--mono);font-size:11px;color:var(--dim);text-decoration:none;letter-spacing:1px}
+.topbar .nav-links a:hover{color:var(--text)}
+.live-badge{font-family:var(--mono);font-size:10px;color:var(--green);background:var(--green-dim);border:1px solid rgba(0,232,156,.2);padding:3px 10px;border-radius:3px;display:flex;align-items:center;gap:6px}
+.live-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* CANDIDATE HERO */
+.candidate-hero{max-width:720px;margin:0 auto;padding:48px 24px 16px;text-align:center}
+.candidate-hero .tag{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--purple);text-transform:uppercase;margin-bottom:8px}
+.candidate-hero h1{font-family:var(--serif);font-size:clamp(32px,6vw,52px);font-weight:400;line-height:1.1;margin-bottom:8px}
+.candidate-hero .office{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:1px}
+.candidate-hero .bio{font-size:14px;color:var(--dim);line-height:1.6;margin-top:16px;max-width:560px;margin-left:auto;margin-right:auto}
+.candidate-hero .meta-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.chip{font-family:var(--mono);font-size:10px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--dim);letter-spacing:.5px}
+
+/* SCORE DASHBOARD */
+.score-dash{max-width:720px;margin:32px auto;padding:0 24px}
+.score-main{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;margin-bottom:20px}
+.score-ring{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 16px;position:relative}
+.score-ring::before{content:'';position:absolute;inset:0;border-radius:50%;border:3px solid var(--border)}
+.score-ring .num{font-family:var(--mono);font-size:40px;font-weight:700;line-height:1}
+.score-ring .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-top:2px}
+.ring-green .num{color:var(--green)}.ring-green::before{border-color:var(--green)}
+.ring-amber .num{color:var(--amber)}.ring-amber::before{border-color:var(--amber)}
+.ring-red .num{color:var(--red)}.ring-red::before{border-color:var(--red)}
+
+.score-subtitle{font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:20px}
+
+/* LENS SELECTOR */
+.lens-bar{display:flex;gap:6px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+.lens-tab{font-family:var(--mono);font-size:10px;font-weight:600;padding:6px 14px;border-radius:16px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--dim);transition:all .2s;letter-spacing:.5px}
+.lens-tab:hover{border-color:var(--green);color:var(--green)}
+.lens-tab.active{background:var(--green);color:#000;border-color:var(--green)}
+
+/* METRIC BARS */
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+.metric-label{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.metric-val{font-family:var(--mono);font-size:24px;font-weight:700}
+.metric-bar{height:4px;border-radius:2px;background:var(--border);margin-top:8px;overflow:hidden}
+.metric-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* STATEMENTS LIST */
+.stmt-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.stmt-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.stmt-header h3{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase}
+.stmt-count{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.stmt{padding:16px 20px;border-bottom:1px solid var(--border);transition:background .15s}
+.stmt:last-child{border-bottom:none}
+.stmt:hover{background:var(--surface2)}
+.stmt-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.stmt-score-badge{font-family:var(--mono);font-size:13px;font-weight:700;min-width:32px;text-align:center}
+.stmt-text{font-size:14px;color:var(--text);line-height:1.6}
+.stmt-analysis{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.stmt-tag{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:3px;letter-spacing:.5px}
+.tag-tilt{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(251,191,36,.15)}
+.tag-clean{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,232,156,.15)}
+.tag-meta{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+
+/* ADD STATEMENT (for owner) */
+.add-stmt{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.add-stmt h3{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.add-stmt textarea{width:100%;min-height:80px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:var(--sans);font-size:14px;line-height:1.5;resize:vertical;outline:none}
+.add-stmt textarea:focus{border-color:var(--purple)}
+.add-stmt .add-btn{margin-top:10px;font-family:var(--mono);font-size:12px;font-weight:600;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;background:var(--purple);color:#fff;letter-spacing:.5px;transition:all .15s}
+.add-stmt .add-btn:hover{background:#8b5cf6}
+.add-stmt .add-note{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px}
+
+/* SHARE CTA */
+.share-section{background:linear-gradient(135deg,var(--surface),#0f1628);border:1px solid var(--border);border-radius:12px;padding:28px;text-align:center;margin-bottom:20px}
+.share-section h3{font-family:var(--serif);font-size:20px;margin-bottom:8px}
+.share-section p{font-size:13px;color:var(--dim);margin-bottom:16px}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.share-btn-social{font-family:var(--mono);font-size:11px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);transition:all .15s;display:flex;align-items:center;gap:6px;letter-spacing:.5px}
+.share-btn-social:hover{border-color:var(--blue);color:var(--blue)}
+
+/* OPPONENT COMPARISON */
+.opponent-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.opponent-section h3{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.opponent-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.opponent-row:last-child{border-bottom:none}
+.opponent-name{font-family:var(--sans);font-size:14px;color:var(--text);min-width:120px}
+.opponent-score{font-family:var(--mono);font-size:16px;font-weight:700;min-width:40px;text-align:center}
+.opponent-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.opponent-fill{height:100%;border-radius:3px}
+
+.disclaimer{max-width:720px;margin:32px auto;padding:0 24px;text-align:center}
+.disclaimer p{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6}
+
+.footer{text-align:center;padding:24px;font-family:var(--mono);font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
+.footer a{color:var(--blue);text-decoration:none}
+
+@media(max-width:480px){
+  .metrics{grid-template-columns:1fr}
+  .score-ring{width:100px;height:100px}
+  .score-ring .num{font-size:32px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">ARTIFACT ZERO</div>
+  <div class="nav-links">
+    <a href="/live">LIVE FEED</a>
+    <a href="/live/anderson-county">ANDERSON CO</a>
+    <span class="live-badge">LIVE</span>
+  </div>
+</div>
+
+<div class="candidate-hero">
+  <div class="tag">Individual Candidate Dashboard</div>
+  <h1>Katherine Birkbeck</h1>
+  <div class="office">School Board · District 2 · Anderson County</div>
+  <div class="bio">Clinton High School graduate, Berry College communications degree, entrepreneur, photographer, Executive Director of Historic Downtown Clinton/Main Street. Active on Education Foundation, Chamber of Commerce, and City of Clinton Beautification Committee.</div>
+  <div class="meta-chips">
+    <span class="chip">📅 May 5, 2026 — GOP Primary</span>
+    <span class="chip">🏫 School Board District 2</span>
+    <span class="chip">vs. Debra Heaton</span>
+  </div>
+</div>
+
+<div class="score-dash">
+  <div class="lens-bar">
+    <div class="lens-tab active" onclick="switchLens('composite')">COMPOSITE</div>
+    <div class="lens-tab" onclick="switchLens('clarity')">CLARITY</div>
+    <div class="lens-tab" onclick="switchLens('accountability')">ACCOUNTABILITY</div>
+    <div class="lens-tab" onclick="switchLens('substance')">SUBSTANCE</div>
+    <div class="lens-tab" onclick="switchLens('authenticity')">AUTHENTICITY</div>
+  </div>
+
+  <div class="score-main" id="scoreMain"></div>
+  <div class="metrics" id="metricsGrid"></div>
+  <div class="stmt-section" id="stmtSection"></div>
+
+  <div class="add-stmt">
+    <h3>Add Public Statement</h3>
+    <textarea id="newStmt" placeholder="Paste a public statement, quote from an article, or campaign language..."></textarea>
+    <button class="add-btn" onclick="addStatement()">Analyze & Add</button>
+    <div class="add-note">Statements are scored instantly. Public quotes only — sourced from articles, campaign sites, social media, and public meetings.</div>
+  </div>
+
+  <div class="opponent-section" id="opponentSection"></div>
+
+  <div class="share-section">
+    <h3>Share This Dashboard</h3>
+    <p>Let voters see the structural analysis. Nonpartisan, rule-based, no opinion.</p>
+    <div class="share-btns">
+      <button class="share-btn-social" onclick="shareX()">𝕏 Post</button>
+      <button class="share-btn-social" onclick="shareLinkedIn()">in LinkedIn</button>
+      <button class="share-btn-social" onclick="copyLink()">📋 Copy Link</button>
+    </div>
+  </div>
+</div>
+
+<div class="disclaimer">
+  <p>NTI analyzes structural patterns in public statements — not political positions, ideology, or character. All statements sourced from public records and campaign materials. Nonpartisan. Rule-based. Zero AI opinion.</p>
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · Candidate Dashboard · <a href="/">NTI Engine</a> · <a href="/live/anderson-county">Full Race</a>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// CANDIDATE DATA — Katherine Birkbeck
+// ══════════════════════════════════════
+let candidateStatements = [
+  // Public bio/role statements — sourced from Historical Society, county boards, campaign filing
+  "Once she photographed her first wedding, the business took off from there and in 2007 it was a full-time gig.",
+  "Katherine became an active Board Member for the Chamber of Commerce, the Education Foundation, the Business Development Committee and the Chair for the City of Clinton's beautification committee.",
+  "This all led to her taking the charge to apply for the State of Tennessee's Main Street designation and ultimately to her becoming the Executive Director for Historic Downtown Clinton.",
+];
+
+// Opponent for comparison
+const OPPONENT = {
+  name: "Debra Heaton",
+  statements: [
+    // Filing record only — limited public statements available
+  ]
+};
+
+// ══════════════════════════════════════
+// HCS v3 — Credit Score Model
+// ══════════════════════════════════════
+function countSyllables(word) {
+  word = word.toLowerCase().replace(/[^a-z]/g,'');
+  if(word.length<=2) return 1;
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'');
+  word = word.replace(/^y/,'');
+  const m = word.match(/[aeiouy]{1,2}/g);
+  return m ? m.length : 1;
+}
+
+const EMO_HIGH = ['slammed','devastating','outrage','fury','shocking','horrifying','terrifying','explosive','catastrophic','nightmare','brutal','crushed','destroyed','chaos','panic','crisis','tragic','heartbreaking','alarming','dire','desperate'];
+const EMO_MOD = ['concerns','tensions','controversial','criticized','warned','demanded','accused','rejected','condemned','fears','threatened','proud','incredibly','enormously','thankful','humbled','honored','blessed','excited','thrilled','amazing','wonderful'];
+const HEDGE = ['maybe','might','could','perhaps','generally','often','usually','likely','approximately','around','sort of','kind of','basically'];
+const TILT_MARKERS = {
+  T1:['don\'t worry','it\'s fine','it\'s okay','you got this','rest assured'],
+  T2:['guarantee','guarantees','guaranteed','perfect','zero risk','always','never fail','100%'],
+  T3:['most people','many people','everyone','no one','in general','typically'],
+  T5:['always','never','everyone','no one','completely','entirely','100%'],
+  T6:['later','eventually','phase 2','we\'ll figure it out'],
+  T7:['kind of','sort of','basically','overall','at the end of the day'],
+  T10:['experts agree','industry standard','research shows','best practice']
+};
+const SPECIFIC = ['$','%','percent',/\d{4}/,/\d+,\d{3}/,'january','february','march','april','may','june','july','august','september','october','november','december'];
+const PROMISE = ['will','pledge','commit','committed','promise','vow','guarantee','plan to','going to'];
+const VAGUE = ['things','stuff','issues','challenges','opportunities','synergy','leverage','stakeholders','moving forward','going forward','at the end of the day','make a difference'];
+
+function computeHCS(text) {
+  const t = text.toLowerCase();
+  const words = text.split(/\s+/).filter(w=>w.length>0);
+  const wc = words.length;
+  const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>0);
+  const sc = Math.max(sentences.length,1);
+  const syllables = words.reduce((s,w)=>s+countSyllables(w),0);
+  const grade = Math.max(0,Math.min(18,0.39*(wc/sc)+11.8*(syllables/wc)-15.59));
+  let emo = 0;
+  EMO_HIGH.forEach(w=>{if(t.includes(w))emo+=12});
+  EMO_MOD.forEach(w=>{if(t.includes(w))emo+=5});
+  emo = Math.min(100,emo);
+  let hedges=0; HEDGE.forEach(h=>{if(t.includes(h))hedges++});
+  let tilts=[]; let tiltCount=0;
+  Object.entries(TILT_MARKERS).forEach(([cat,markers])=>{
+    for(const m of markers){if(t.includes(m)){tilts.push(cat);tiltCount++;break}}
+  });
+  let specific=0;
+  SPECIFIC.forEach(s=>{if(s instanceof RegExp){if(s.test(t))specific++}else if(t.includes(s))specific++});
+  let promises=0; PROMISE.forEach(p=>{if(t.includes(p))promises++});
+  let vague=0; VAGUE.forEach(v=>{if(t.includes(v))vague++});
+
+  let score = 85;
+  if(grade>12) score -= (grade-12)*3;
+  if(grade>8&&grade<=12) score -= (grade-8)*1;
+  if(grade<=6) score += 4;
+  score -= emo*0.2;
+  score -= tiltCount*8;
+  score -= vague*4;
+  score -= Math.max(0,promises-1)*3;
+  score += Math.min(15,specific*5);
+  score += Math.min(8,specific*3);
+  if(hedges>0&&hedges<=2) score += 3;
+  if(hedges>2) score -= (hedges-2)*2;
+  if(wc<10) score -= 5;
+  if(wc>50) score -= 3;
+  score = Math.max(10,Math.min(97,Math.round(score)));
+
+  return {score,grade:Math.round(grade*10)/10,emo,hedges,tiltCount,tilts,specific,promises,vague,wc,
+    raw:{readability:grade,emotional:emo,hedges,tiltCount,promises,vague,specific,facts:specific,wordCount:wc}};
+}
+
+let activeLens = 'composite';
+function scoreLens(raw,lens){
+  let s;
+  switch(lens){
+    case'clarity':s=85;if(raw.readability>10)s-=(raw.readability-10)*4;if(raw.readability<=6)s+=5;s-=raw.emotional*.15;if(raw.wordCount<=15)s+=5;if(raw.wordCount>30)s-=3;break;
+    case'accountability':s=85;s-=raw.tiltCount*10;s-=Math.max(0,raw.promises-raw.hedges)*6;s+=Math.min(10,raw.hedges*4);s-=raw.vague*2;break;
+    case'substance':s=60;s+=Math.min(25,raw.specific*6);s+=Math.min(15,raw.facts*4);s-=Math.min(30,raw.vague*4);s-=raw.emotional*.1;break;
+    case'authenticity':s=85;s-=raw.emotional*.25;s-=raw.tiltCount*8;s-=Math.min(20,raw.vague*3);s+=Math.min(10,raw.hedges*3);s+=Math.min(8,raw.facts*2);if(raw.wordCount<=20)s+=3;break;
+    default:return null;
+  }
+  return Math.max(10,Math.min(97,Math.round(s)));
+}
+
+function getScore(text){
+  const r = computeHCS(text);
+  if(activeLens==='composite') return r.score;
+  return scoreLens(r.raw, activeLens);
+}
+
+function switchLens(lens){
+  activeLens=lens;
+  document.querySelectorAll('.lens-tab').forEach(t=>t.classList.remove('active'));
+  const names=['composite','clarity','accountability','substance','authenticity'];
+  const tabs=document.querySelectorAll('.lens-tab');
+  const idx=names.indexOf(lens);
+  if(idx>=0&&tabs[idx])tabs[idx].classList.add('active');
+  renderAll();
+}
+
+function addStatement(){
+  const el=document.getElementById('newStmt');
+  const text=el.value.trim();
+  if(!text)return;
+  candidateStatements.push(text);
+  el.value='';
+  renderAll();
+}
+
+// ══════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════
+function getScoreColor(s){return s>=75?'green':s>=55?'amber':'red'}
+function getRingClass(s){return s>=75?'ring-green':s>=55?'ring-amber':'ring-red'}
+function escHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
+
+function renderAll(){
+  const results = candidateStatements.map(s=>({text:s,...computeHCS(s)}));
+  const scores = results.map(r=> activeLens==='composite' ? r.score : scoreLens(r.raw,activeLens));
+  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+  const best = scores.length ? Math.max(...scores) : 0;
+  const worst = scores.length ? Math.min(...scores) : 0;
+  const totalTilt = results.reduce((s,r)=>s+r.tiltCount,0);
+  const avgEmo = results.length ? Math.round(results.reduce((s,r)=>s+r.emo,0)/results.length) : 0;
+  const totalSpecific = results.reduce((s,r)=>s+r.specific,0);
+
+  // Score ring
+  document.getElementById('scoreMain').innerHTML = `
+    <div class="score-ring ${getRingClass(avg)}">
+      <div class="num">${avg}</div>
+      <div class="lbl">${activeLens.toUpperCase()}</div>
+    </div>
+    <div class="score-subtitle">${scores.length} statements analyzed · Best ${best} · Worst ${worst} · ${totalTilt} tilt signals</div>`;
+
+  // Metrics
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">AVG READING LEVEL</div>
+      <div class="metric-val" style="color:var(--text)">${results.length?Math.round(results.reduce((s,r)=>s+r.grade,0)/results.length*10)/10:0}</div>
+      <div class="metric-bar"><div class="metric-fill" style="width:${results.length?(results.reduce((s,r)=>s+r.grade,0)/results.length/18*100):0}%;background:var(--blue)"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">EMOTIONAL CHARGE</div>
+      <div class="metric-val" style="color:var(--${avgEmo>30?'red':avgEmo>15?'amber':'green'})">${avgEmo}%</div>
+      <div class="metric-bar"><div class="metric-fill" style="width:${avgEmo}%;background:var(--${avgEmo>30?'red':avgEmo>15?'amber':'green'})"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">TILT SIGNALS</div>
+      <div class="metric-val" style="color:var(--${totalTilt>3?'red':totalTilt>0?'amber':'green'})">${totalTilt}</div>
+      <div class="metric-bar"><div class="metric-fill" style="width:${Math.min(100,totalTilt*15)}%;background:var(--${totalTilt>3?'red':totalTilt>0?'amber':'green'})"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">SPECIFICITY</div>
+      <div class="metric-val" style="color:var(--${totalSpecific>5?'green':totalSpecific>2?'amber':'red'})">${totalSpecific}</div>
+      <div class="metric-bar"><div class="metric-fill" style="width:${Math.min(100,totalSpecific*12)}%;background:var(--green)"></div></div>
+    </div>`;
+
+  // Statements
+  let stmtsHtml = results.map((r,i) => {
+    const sc = scores[i];
+    const color = getScoreColor(sc);
+    const tags = r.tilts.length>0
+      ? r.tilts.map(t=>`<span class="stmt-tag tag-tilt">${t}</span>`).join('')
+      : '<span class="stmt-tag tag-clean">Clean</span>';
+    const meta = [];
+    if(r.specific>0) meta.push(`<span class="stmt-tag tag-meta">${r.specific} specific</span>`);
+    if(r.promises>0) meta.push(`<span class="stmt-tag tag-meta">${r.promises} promise${r.promises>1?'s':''}</span>`);
+    return `
+      <div class="stmt">
+        <div class="stmt-top">
+          <span class="stmt-score-badge" style="color:var(--${color})">${sc}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Grade ${r.grade} · ${r.wc} words</span>
+        </div>
+        <div class="stmt-text">${escHtml(r.text)}</div>
+        <div class="stmt-analysis">${tags}${meta.join('')}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('stmtSection').innerHTML = `
+    <div class="stmt-header">
+      <h3>Public Statements</h3>
+      <span class="stmt-count">${scores.length} analyzed</span>
+    </div>
+    ${stmtsHtml}`;
+
+  // Opponent comparison
+  if(OPPONENT.statements.length > 0) {
+    const oppScores = OPPONENT.statements.map(s=>getScore(s));
+    const oppAvg = Math.round(oppScores.reduce((a,b)=>a+b,0)/oppScores.length);
+    document.getElementById('opponentSection').innerHTML = `
+      <h3>VS. OPPONENT — ${OPPONENT.name}</h3>
+      <div class="opponent-row">
+        <div class="opponent-name">Katherine Birkbeck</div>
+        <div class="opponent-score" style="color:var(--${getScoreColor(avg)})">${avg}</div>
+        <div class="opponent-bar"><div class="opponent-fill" style="width:${avg}%;background:var(--${getScoreColor(avg)})"></div></div>
+      </div>
+      <div class="opponent-row">
+        <div class="opponent-name">${OPPONENT.name}</div>
+        <div class="opponent-score" style="color:var(--${getScoreColor(oppAvg)})">${oppAvg}</div>
+        <div class="opponent-bar"><div class="opponent-fill" style="width:${oppAvg}%;background:var(--${getScoreColor(oppAvg)})"></div></div>
+      </div>`;
+  } else {
+    document.getElementById('opponentSection').innerHTML = `
+      <h3>VS. OPPONENT — ${OPPONENT.name}</h3>
+      <div style="font-size:13px;color:var(--muted);padding:8px 0">No public statements available yet for ${OPPONENT.name}. Dashboard updates automatically as campaign statements are published.</div>`;
+  }
+}
+
+// SHARE
+function shareX(){
+  const text=encodeURIComponent(`Structural analysis of Katherine Birkbeck's campaign language for Anderson County School Board.\n\nNonpartisan. Rule-based. No opinion.\n\ndontgofulltilt.com/live/birkbeck`);
+  window.open(`https://twitter.com/intent/tweet?text=${text}`,'_blank','width=550,height=420');
+}
+function shareLinkedIn(){
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://dontgofulltilt.com/live/birkbeck')}`,'_blank');
+}
+function copyLink(){
+  navigator.clipboard.writeText('https://dontgofulltilt.com/live/birkbeck');
+  const btns=document.querySelectorAll('.share-btn-social');
+  btns[2].textContent='✓ Copied!';
+  setTimeout(()=>{btns[2].textContent='📋 Copy Link'},1500);
+}
+
+// INIT
+renderAll();
+</script>
+</body>
+</html>

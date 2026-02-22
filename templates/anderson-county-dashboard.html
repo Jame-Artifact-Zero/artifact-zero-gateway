@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Anderson County Political Pulse — NTI Structural Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080c;--surface:#0d1117;--surface2:#151b25;--border:#1e2736;--border-bright:#2a3547;
+  --text:#e4e8f0;--dim:#8892a4;--muted:#5c6577;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--serif:'Instrument Serif',serif;
+  --green:#00e89c;--green-dim:rgba(0,232,156,.08);
+  --red:#ff4466;--red-dim:rgba(255,68,102,.08);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.08);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.08);
+  --purple:#a78bfa;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding-bottom:60px}
+
+/* TOPBAR */
+.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.topbar .logo{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
+.topbar .nav-links{display:flex;gap:16px;align-items:center}
+.topbar .nav-links a{font-family:var(--mono);font-size:11px;color:var(--dim);text-decoration:none;letter-spacing:1px}
+.topbar .nav-links a:hover{color:var(--text)}
+.topbar .live-badge{font-family:var(--mono);font-size:10px;color:var(--green);background:var(--green-dim);border:1px solid rgba(0,232,156,.2);padding:3px 10px;border-radius:3px;display:flex;align-items:center;gap:6px}
+.topbar .live-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* HERO */
+.hero{text-align:center;padding:48px 24px 32px;max-width:720px;margin:0 auto}
+.hero .county-tag{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin-bottom:12px}
+.hero h1{font-family:var(--serif);font-size:clamp(28px,5vw,44px);font-weight:400;line-height:1.15;margin-bottom:12px;color:var(--text)}
+.hero h1 .accent{color:var(--green)}
+.hero .sub{font-size:14px;color:var(--dim);line-height:1.5;max-width:520px;margin:0 auto}
+.hero .race-info{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:16px;display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.hero .race-info span{display:flex;align-items:center;gap:6px}
+
+/* LENS TABS */
+.lens-bar{display:flex;gap:6px;justify-content:center;padding:0 20px;margin:8px auto 24px;flex-wrap:wrap}
+.lens-tab{font-family:var(--mono);font-size:11px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--dim);transition:all .2s;letter-spacing:.5px}
+.lens-tab:hover{border-color:var(--green);color:var(--green)}
+.lens-tab.active{background:var(--green);color:#000;border-color:var(--green)}
+
+/* CANDIDATE GRID */
+.candidates{max-width:900px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
+
+/* CANDIDATE CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:var(--border-bright)}
+.card-header{padding:20px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-name{font-family:var(--serif);font-size:22px;font-weight:400;color:var(--text)}
+.card-role{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.card-party{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:1px}
+.party-r{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,68,102,.15)}
+
+/* SCORE RING */
+.score-section{padding:20px;text-align:center}
+.score-ring{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 12px;position:relative}
+.score-ring::before{content:'';position:absolute;inset:0;border-radius:50%;border:3px solid var(--border)}
+.score-ring .score-num{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1}
+.score-ring .score-label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-top:2px}
+
+.ring-green .score-num{color:var(--green)}
+.ring-green::before{border-color:var(--green)}
+.ring-amber .score-num{color:var(--amber)}
+.ring-amber::before{border-color:var(--amber)}
+.ring-red .score-num{color:var(--red)}
+.ring-red::before{border-color:var(--red)}
+
+.score-meta{display:flex;gap:16px;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.score-meta span{display:flex;align-items:center;gap:4px}
+
+/* STATEMENTS */
+.statements{padding:0 20px 20px}
+.stmt{padding:12px 0;border-bottom:1px solid var(--border)}
+.stmt:last-child{border-bottom:none}
+.stmt-score{font-family:var(--mono);font-size:12px;font-weight:700;display:inline-block;min-width:32px;margin-right:8px}
+.stmt-text{font-size:13px;color:var(--dim);line-height:1.5;display:inline}
+.stmt-tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.stmt-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;letter-spacing:.5px}
+.tag-tilt{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(251,191,36,.15)}
+.tag-clean{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,232,156,.15)}
+
+/* COMPARE BAR */
+.compare-bar{max-width:900px;margin:32px auto;padding:0 20px}
+.compare-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.compare-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.compare-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.compare-row:last-child{margin-bottom:0}
+.compare-label{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:80px}
+.compare-bars{flex:1;display:flex;gap:8px;align-items:center}
+.compare-fill{height:8px;border-radius:4px;transition:width .4s ease}
+.compare-val{font-family:var(--mono);font-size:11px;font-weight:700;min-width:28px;text-align:right}
+
+/* DISCLAIMER */
+.disclaimer{max-width:720px;margin:32px auto;padding:0 20px;text-align:center}
+.disclaimer p{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6}
+
+/* FOOTER */
+.footer{text-align:center;padding:24px;font-family:var(--mono);font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
+.footer a{color:var(--blue);text-decoration:none}
+
+@media(max-width:480px){
+  .candidates{grid-template-columns:1fr}
+  .hero h1{font-size:26px}
+  .score-ring{width:80px;height:80px}
+  .score-ring .score-num{font-size:26px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">ARTIFACT ZERO</div>
+  <div class="nav-links">
+    <a href="/live">LIVE FEED</a>
+    <a href="/live/knoxville">KNOX CO</a>
+    <span class="live-badge">LIVE</span>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="county-tag">Anderson County, Tennessee</div>
+  <h1>Political <span class="accent">Pulse</span></h1>
+  <div class="sub">Structural analysis of candidate language. Same words, measured differently. We don't say correct. We say different. You decide.</div>
+  <div class="race-info">
+    <span>📅 May 5, 2026 — GOP Primary</span>
+    <span>🏛️ County Mayor</span>
+    <span>👥 2 Candidates</span>
+  </div>
+</div>
+
+<div class="lens-bar">
+  <div class="lens-tab active" onclick="switchLens('composite')">COMPOSITE</div>
+  <div class="lens-tab" onclick="switchLens('clarity')">CLARITY</div>
+  <div class="lens-tab" onclick="switchLens('accountability')">ACCOUNTABILITY</div>
+  <div class="lens-tab" onclick="switchLens('substance')">SUBSTANCE</div>
+  <div class="lens-tab" onclick="switchLens('authenticity')">AUTHENTICITY</div>
+</div>
+
+<div class="candidates" id="candidateGrid"></div>
+<div class="compare-bar" id="compareBar"></div>
+
+<div class="disclaimer">
+  <p>NTI analyzes structural patterns in public statements — not political positions, ideology, or character. All statements sourced from public records, campaign materials, and news coverage. Nonpartisan. Rule-based. Zero AI opinion.</p>
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · Anderson County Political Pulse · <a href="/">NTI Engine</a> · <a href="/live">Live Feed</a>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// CANDIDATE DATA
+// ══════════════════════════════════════
+const CANDIDATES = [
+  {
+    name: "Terry Frank",
+    party: "R",
+    role: "Incumbent · County Mayor since 2012",
+    statements: [
+      "I can say without a doubt that I believe my job is serving people and I am enormously thankful for the opportunity I have had to work for the people of Anderson County.",
+      "But we can't stop our work recruiting business and industry that can help our citizens increase their wages and household income.",
+      "As we try to balance moderate growth with preservation of our vital rural farm areas.",
+      "The county opioid abatement committee awarded almost $430,000 to nonprofits and organizations in the county.",
+      "From sheriff's vehicles and pavement to ambulances, highway equipment, investments in water improvements, to additional funding for fire department equipment.",
+      "People in this county may not like my politics, my dress, my method of tackling problems, my governance, but there is one accusation that will never stick, and that is that I would abuse your tax dollars for my own personal enrichment.",
+      "I believe in the people of this county, and together, we can continue our work making Anderson County the best it can be.",
+      "The goal is to improve transparency and community involvement as the shelter expands services in 2026.",
+      "Anderson County partnered with both Highland Communications and Comcast on prior grants, but there remain many citizens in our county who want service.",
+    ]
+  },
+  {
+    name: "Joshua Anderson",
+    party: "R",
+    role: "Challenger · District 3 Commissioner",
+    statements: [
+      "After two terms serving as your county commissioner, I would be honored to serve as your county mayor.",
+      "I am committed to listening to our communities as we make planning and zoning decisions regarding the future development of our county.",
+      "I'm committed to making positive changes to our animal shelter and animal welfare situation in our county.",
+      "If elected, I pledge to serve no more than two terms.",
+      "I'm concerned Andersonville will end up like Emory Road or Kingston Pike if we don't plan well.",
+      "The expansion of the nuclear industry in Oak Ridge is huge, and will require a huge workforce.",
+      "We have a unique opportunity to train and educate our students to be part of that workforce, so our kids can afford to stay here when they graduate high school or college.",
+      "Supporting our already strong career and technical education in our school system will ensure our kids' resumes are at the top of the stack.",
+      "I'm not an expert on animal shelters or animal control by any means, but I'm committed to finding solutions and I'm willing to assemble a team of volunteers and experts who can improve the animal shelter situation.",
+    ]
+  }
+];
+
+// ══════════════════════════════════════
+// HCS v3 — Credit Score Model (same as Knox County)
+// ══════════════════════════════════════
+function countSyllables(word) {
+  word = word.toLowerCase().replace(/[^a-z]/g,'');
+  if(word.length<=2) return 1;
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'');
+  word = word.replace(/^y/,'');
+  const m = word.match(/[aeiouy]{1,2}/g);
+  return m ? m.length : 1;
+}
+
+const EMO_HIGH = ['slammed','devastating','outrage','fury','shocking','horrifying','terrifying','explosive','catastrophic','nightmare','brutal','crushed','destroyed','chaos','panic','crisis','tragic','heartbreaking','alarming','dire','desperate','rage','furious','bombshell','firestorm'];
+const EMO_MOD = ['concerns','tensions','controversial','criticized','warned','demanded','clashed','accused','rejected','condemned','fears','threatened','escalated','sparked','triggered','struggling','embattled','contentious','divisive','heated','pressured','proud','incredibly','enormously','thankful','humbled','honored','blessed','excited','thrilled','amazing','wonderful'];
+const HEDGE = ['maybe','might','could','perhaps','generally','often','usually','likely','approximately','around','sort of','kind of','basically'];
+const TILT_MARKERS = {
+  T1:['don\'t worry','it\'s fine','it\'s okay','you got this','rest assured'],
+  T2:['guarantee','guarantees','guaranteed','perfect','zero risk','eliminates all risk','always','never fail','100%'],
+  T3:['most people','many people','everyone','no one','in general','typically'],
+  T5:['always','never','everyone','no one','completely','entirely','100%','guaranteed','perfect'],
+  T6:['later','eventually','phase 2','we\'ll figure it out','future iteration'],
+  T7:['kind of','sort of','basically','overall','at the end of the day'],
+  T10:['experts agree','industry standard','research shows','studies show','best practice','widely accepted']
+};
+const SPECIFIC = ['$','%','percent',/\d{4}/,/\d+,\d{3}/,'january','february','march','april','may','june','july','august','september','october','november','december'];
+const PROMISE = ['will','pledge','commit','committed','promise','vow','guarantee','plan to','going to','I will','we will'];
+const VAGUE = ['things','stuff','issues','challenges','opportunities','synergy','leverage','stakeholders','moving forward','going forward','at the end of the day','make a difference'];
+
+function computeHCS(text) {
+  const t = text.toLowerCase();
+  const words = text.split(/\s+/).filter(w=>w.length>0);
+  const wc = words.length;
+  const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>0);
+  const sc = Math.max(sentences.length,1);
+  const syllables = words.reduce((s,w)=>s+countSyllables(w),0);
+  const grade = Math.max(0,Math.min(18, 0.39*(wc/sc)+11.8*(syllables/wc)-15.59));
+
+  let emo = 0;
+  EMO_HIGH.forEach(w=>{if(t.includes(w))emo+=12});
+  EMO_MOD.forEach(w=>{if(t.includes(w))emo+=5});
+  emo = Math.min(100,emo);
+
+  let hedges = 0; HEDGE.forEach(h=>{if(t.includes(h))hedges++});
+  let tilts = []; let tiltCount = 0;
+  Object.entries(TILT_MARKERS).forEach(([cat,markers])=>{
+    for(const m of markers){if(t.includes(m)){tilts.push(cat);tiltCount++;break}}
+  });
+
+  let specific = 0;
+  SPECIFIC.forEach(s=>{
+    if(s instanceof RegExp){if(s.test(t))specific++}
+    else if(t.includes(s))specific++
+  });
+
+  let promises = 0; PROMISE.forEach(p=>{if(t.includes(p))promises++});
+  let vague = 0; VAGUE.forEach(v=>{if(t.includes(v))vague++});
+  let facts = specific;
+
+  // Credit score: start at 85, deductions and bonuses
+  let score = 85;
+  if(grade>12) score -= (grade-12)*3;
+  if(grade>8 && grade<=12) score -= (grade-8)*1;
+  if(grade<=6) score += 4;
+  score -= emo * 0.2;
+  score -= tiltCount * 8;
+  score -= vague * 4;
+  score -= Math.max(0, promises - 1) * 3;
+  score += Math.min(15, specific * 5);
+  score += Math.min(8, facts * 3);
+  if(hedges>0 && hedges<=2) score += 3;
+  if(hedges>2) score -= (hedges-2)*2;
+  if(wc<10) score -= 5;
+  if(wc>50) score -= 3;
+
+  score = Math.max(10, Math.min(97, Math.round(score)));
+
+  return {
+    score, grade: Math.round(grade*10)/10, emo, hedges, tiltCount, tilts, specific,
+    promises, vague, facts, wc,
+    raw:{readability:grade, emotional:emo, hedges, tiltCount, promises, vague, specific, facts, wordCount:wc}
+  };
+}
+
+function computeCandidateHCS(candidate) {
+  const results = candidate.statements.map(s => computeHCS(s));
+  const scores = results.map(r => r.score);
+  const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+  const best = Math.max(...scores);
+  const worst = Math.min(...scores);
+  const totalTilt = results.reduce((s,r)=>s+r.tiltCount,0);
+  const avgEmo = Math.round(results.reduce((s,r)=>s+r.emo,0)/results.length);
+  const totalSpecific = results.reduce((s,r)=>s+r.specific,0);
+  const avgVague = Math.round(results.reduce((s,r)=>s+r.vague,0)/results.length*10)/10;
+  return { avg, scores, results, totalTilt, avgEmo, totalSpecific, avgVague, best, worst };
+}
+
+// ══════════════════════════════════════
+// SCORING LENSES
+// ══════════════════════════════════════
+let activeLens = 'composite';
+
+function scoreLens(raw, lens) {
+  let s;
+  switch(lens) {
+    case 'clarity':
+      s = 85;
+      if(raw.readability>10) s -= (raw.readability-10)*4;
+      if(raw.readability<=6) s += 5;
+      s -= raw.emotional*0.15;
+      if(raw.wordCount<=15) s += 5;
+      if(raw.wordCount>30) s -= 3;
+      break;
+    case 'accountability':
+      s = 85;
+      s -= raw.tiltCount*10;
+      s -= Math.max(0,raw.promises-raw.hedges)*6;
+      s += Math.min(10,raw.hedges*4);
+      s -= raw.vague*2;
+      break;
+    case 'substance':
+      s = 60;
+      s += Math.min(25,raw.specific*6);
+      s += Math.min(15,raw.facts*4);
+      s -= Math.min(30,raw.vague*4);
+      s -= raw.emotional*0.1;
+      break;
+    case 'authenticity':
+      s = 85;
+      s -= raw.emotional*0.25;
+      s -= raw.tiltCount*8;
+      s -= Math.min(20,raw.vague*3);
+      s += Math.min(10,raw.hedges*3);
+      s += Math.min(8,raw.facts*2);
+      if(raw.wordCount<=20) s += 3;
+      break;
+    default: return null;
+  }
+  return Math.max(10,Math.min(97,Math.round(s)));
+}
+
+function computeCandidateScore(candidate) {
+  if(activeLens==='composite') return computeCandidateHCS(candidate);
+  const base = computeCandidateHCS(candidate);
+  const lensScores = base.results.map(r => scoreLens(r.raw, activeLens));
+  const avg = Math.round(lensScores.reduce((a,b)=>a+b,0)/lensScores.length);
+  return { ...base, avg, scores: lensScores, best: Math.max(...lensScores), worst: Math.min(...lensScores) };
+}
+
+function switchLens(lens) {
+  activeLens = lens;
+  document.querySelectorAll('.lens-tab').forEach(t=>t.classList.remove('active'));
+  const names = ['composite','clarity','accountability','substance','authenticity'];
+  const tabs = document.querySelectorAll('.lens-tab');
+  const idx = names.indexOf(lens);
+  if(idx>=0 && tabs[idx]) tabs[idx].classList.add('active');
+  renderDashboard();
+}
+
+// ══════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════
+function getScoreColor(s){return s>=75?'green':s>=55?'amber':'red'}
+function getRingClass(s){return s>=75?'ring-green':s>=55?'ring-amber':'ring-red'}
+function escHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
+
+function renderCard(candidate) {
+  const hcs = computeCandidateScore(candidate);
+  const color = getScoreColor(hcs.avg);
+  const ring = getRingClass(hcs.avg);
+
+  let stmtsHtml = '';
+  candidate.statements.forEach((s, i) => {
+    const r = hcs.results[i];
+    const sc = hcs.scores[i];
+    const scColor = getScoreColor(sc);
+    const tags = r.tilts.length > 0
+      ? r.tilts.map(t=>`<span class="stmt-tag tag-tilt">${t}</span>`).join('')
+      : '<span class="stmt-tag tag-clean">Clean</span>';
+    stmtsHtml += `
+      <div class="stmt">
+        <span class="stmt-score" style="color:var(--${scColor})">${sc}</span>
+        <span class="stmt-text">${escHtml(s.length>120?s.substring(0,117)+'...':s)}</span>
+        <div class="stmt-tags">${tags}</div>
+      </div>`;
+  });
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-name">${candidate.name}</div>
+          <div class="card-role">${candidate.role}</div>
+        </div>
+        <span class="card-party party-${candidate.party.toLowerCase()}">${candidate.party}</span>
+      </div>
+      <div class="score-section">
+        <div class="score-ring ${ring}">
+          <div class="score-num">${hcs.avg}</div>
+          <div class="score-label">${activeLens.toUpperCase()}</div>
+        </div>
+        <div class="score-meta">
+          <span>Best: <strong style="color:var(--green)">${hcs.best}</strong></span>
+          <span>Worst: <strong style="color:var(--red)">${hcs.worst}</strong></span>
+          <span>Tilt: <strong style="color:var(--amber)">${hcs.totalTilt}</strong></span>
+        </div>
+      </div>
+      <div class="statements">${stmtsHtml}</div>
+    </div>`;
+}
+
+function renderCompare() {
+  const scores = CANDIDATES.map(c => ({ name: c.name, hcs: computeCandidateScore(c) }));
+  const maxAvg = Math.max(...scores.map(s=>s.hcs.avg));
+
+  const metrics = [
+    { label: activeLens.toUpperCase(), key: 'avg' },
+    { label: 'BEST', key: 'best' },
+    { label: 'WORST', key: 'worst' },
+    { label: 'TILT', key: 'totalTilt', invert: true },
+  ];
+
+  let rows = metrics.map(m => {
+    const bars = scores.map(s => {
+      const val = s.hcs[m.key];
+      const maxVal = m.invert ? Math.max(...scores.map(x=>x.hcs[m.key]||1)) : 97;
+      const pct = m.invert ? (val/(maxVal||1))*100 : (val/97)*100;
+      const color = m.invert ? (val<=2?'var(--green)':val<=5?'var(--amber)':'var(--red)') : `var(--${getScoreColor(val)})`;
+      return `<div class="compare-fill" style="width:${Math.max(8,pct)}%;background:${color}"></div><span class="compare-val" style="color:${color}">${val}</span>`;
+    }).join('');
+    return `<div class="compare-row"><div class="compare-label">${m.label}</div><div class="compare-bars">${bars}</div></div>`;
+  }).join('');
+
+  const legend = scores.map((s,i) => `<span style="font-family:var(--mono);font-size:11px;color:var(--dim)">${s.name}</span>`).join(' vs ');
+
+  document.getElementById('compareBar').innerHTML = `
+    <div class="compare-card">
+      <div class="compare-title">HEAD TO HEAD — ${legend}</div>
+      ${rows}
+    </div>`;
+}
+
+function renderDashboard() {
+  const sorted = [...CANDIDATES].sort((a,b) => computeCandidateScore(b).avg - computeCandidateScore(a).avg);
+  document.getElementById('candidateGrid').innerHTML = sorted.map(c => renderCard(c)).join('');
+  renderCompare();
+}
+
+// INIT
+renderDashboard();
+</script>
+</body>
+</html>
