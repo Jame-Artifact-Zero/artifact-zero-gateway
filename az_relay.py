@@ -20,7 +20,9 @@ Token design:
 - Server looks up session_id → gets full protocol from DB
 - Tamper = signature mismatch = rejected
 
-Zero new pip dependencies. Uses Flask, sqlite3, hashlib, hmac, secrets, base64.
+Database: Uses db.py abstraction layer.
+  - DATABASE_URL set → PostgreSQL (AWS/production)
+  - DATABASE_URL not set → SQLite (local dev)
 """
 
 import os
@@ -31,47 +33,32 @@ import hmac
 import hashlib
 import base64
 import secrets
-import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
 from flask import Blueprint, request, jsonify, render_template, session, redirect
+
+# ── Use the shared db.py abstraction layer ──
+from db import get_conn, release_conn, param_placeholder
 
 az_relay = Blueprint("az_relay", __name__)
 
 # ─── CONFIG ───
 RELAY_SECRET = os.getenv("AZ_RELAY_SECRET", "az-relay-change-in-prod-" + secrets.token_hex(8))
-
-# Persistent storage: try /var/data (Render disk), fall back to local
-_db_default = "az_relay.db"
-_db_persistent = "/var/data/az_relay.db"
-if "AZ_RELAY_DB" in os.environ:
-    DB_PATH = os.environ["AZ_RELAY_DB"]
-elif os.path.isdir("/var/data"):
-    DB_PATH = _db_persistent
-else:
-    try:
-        os.makedirs("/var/data", exist_ok=True)
-        DB_PATH = _db_persistent
-    except (OSError, PermissionError):
-        DB_PATH = _db_default
-print(f"[RELAY] DB path: {DB_PATH}")
-
 FREE_TURNS = 50
 MAX_PROTOCOL_LEN = 4000
 TOKEN_TTL = 3600 * 24
 
+# Placeholder for SQL queries — %s for Postgres, ? for SQLite
+P = param_placeholder()
+
 
 # ─── DATABASE ───
-def db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
-
-
 def init_relay_db():
-    conn = db()
-    conn.executescript("""
+    """Create relay tables. Works on both SQLite and PostgreSQL."""
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS az_users (
             id TEXT PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
@@ -83,7 +70,10 @@ def init_relay_db():
             turns_limit INTEGER DEFAULT 50,
             plan TEXT DEFAULT 'free',
             active INTEGER DEFAULT 1
-        );
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS az_protocols (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -91,9 +81,11 @@ def init_relay_db():
             protocol_json TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
-            active INTEGER DEFAULT 1,
-            FOREIGN KEY (user_id) REFERENCES az_users(id)
-        );
+            active INTEGER DEFAULT 1
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS az_sessions (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -102,10 +94,11 @@ def init_relay_db():
             last_turn_at TEXT,
             turn_count INTEGER DEFAULT 0,
             platform TEXT DEFAULT 'unknown',
-            active INTEGER DEFAULT 1,
-            FOREIGN KEY (user_id) REFERENCES az_users(id),
-            FOREIGN KEY (protocol_id) REFERENCES az_protocols(id)
-        );
+            active INTEGER DEFAULT 1
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS az_turns (
             id TEXT PRIMARY KEY,
             session_id TEXT NOT NULL,
@@ -113,24 +106,25 @@ def init_relay_db():
             ai_output TEXT,
             nti_scores TEXT,
             governance_directives TEXT,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (session_id) REFERENCES az_sessions(id)
-        );
+            created_at TEXT NOT NULL
+        )
     """)
+
+    # Indexes for performance
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_users_email ON az_users(email)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_protocols_user ON az_protocols(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_sessions_user ON az_sessions(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_turns_session ON az_turns(session_id)")
+    except Exception:
+        pass  # Indexes already exist or not supported
+
     conn.commit()
-    conn.close()
+    release_conn(conn)
+    print("[RELAY] Tables initialized")
 
 
 init_relay_db()
-
-# Migrate: add username column if missing
-try:
-    _mc = db()
-    _mc.execute("ALTER TABLE az_users ADD COLUMN username TEXT DEFAULT ''")
-    _mc.commit()
-    _mc.close()
-except Exception:
-    pass
 
 
 # ─── CRYPTO ───
@@ -181,16 +175,32 @@ def verify_token(token: str) -> dict:
         raise ValueError(f"Token verification failed: {e}")
 
 
+# ─── RESULT HELPER ───
+def _row_to_dict(row):
+    """Convert a database row to dict. Handles both SQLite Row and psycopg2 RealDictRow."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    try:
+        return dict(row)
+    except (TypeError, ValueError):
+        # psycopg2 with RealDictCursor already returns dict-like
+        return {k: row[k] for k in row.keys()}
+
+
 # ─── AUTH HELPERS ───
 def get_current_user():
     """Get current user from session cookie."""
     user_id = session.get("az_user_id")
     if not user_id:
         return None
-    conn = db()
-    user = conn.execute("SELECT * FROM az_users WHERE id=? AND active=1", (user_id,)).fetchone()
-    conn.close()
-    return dict(user) if user else None
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM az_users WHERE id={P} AND active=1", (user_id,))
+    user = cur.fetchone()
+    release_conn(conn)
+    return _row_to_dict(user)
 
 
 def require_auth(f):
@@ -348,17 +358,22 @@ def signup():
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
-    conn = db()
+    conn = get_conn()
+    cur = conn.cursor()
     try:
-        conn.execute(
-            "INSERT INTO az_users (id, email, username, password_hash, salt, created_at, turns_limit) VALUES (?,?,?,?,?,?,?)",
+        cur.execute(
+            f"INSERT INTO az_users (id, email, username, password_hash, salt, created_at, turns_limit) VALUES ({P},{P},{P},{P},{P},{P},{P})",
             (user_id, email, username, pw_hash, salt, now, FREE_TURNS)
         )
         conn.commit()
-    except sqlite3.IntegrityError:
-        conn.close()
-        return jsonify({"error": "Email already registered"}), 409
-    conn.close()
+    except Exception as e:
+        conn.rollback()
+        release_conn(conn)
+        err_str = str(e).lower()
+        if "unique" in err_str or "duplicate" in err_str or "integrity" in err_str:
+            return jsonify({"error": "Email already registered"}), 409
+        return jsonify({"error": "Registration failed"}), 500
+    release_conn(conn)
 
     session["az_user_id"] = user_id
     try:
@@ -376,12 +391,16 @@ def login():
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
 
-    conn = db()
-    user = conn.execute("SELECT * FROM az_users WHERE email=? AND active=1", (email,)).fetchone()
-    conn.close()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM az_users WHERE email={P} AND active=1", (email,))
+    user = cur.fetchone()
+    release_conn(conn)
 
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
+
+    user = _row_to_dict(user)
 
     if _hash_pw(password, user["salt"]) != user["password_hash"]:
         return jsonify({"error": "Invalid credentials"}), 401
@@ -393,10 +412,7 @@ def login():
         log_relay_event("login", ip=ip, username=email)
     except Exception:
         pass
-    try:
-        uname = user["username"] or user["email"].split("@")[0]
-    except (KeyError, IndexError):
-        uname = user["email"].split("@")[0]
+    uname = user.get("username") or user["email"].split("@")[0]
     return jsonify({"ok": True, "user_id": user["id"], "email": user["email"], "username": uname, "plan": user["plan"], "turns_used": user["turns_used"], "turns_limit": user["turns_limit"]})
 
 
@@ -409,10 +425,7 @@ def logout():
 @az_relay.route("/relay/me")
 @require_auth
 def me(user):
-    try:
-        uname = user.get("username") or user["email"].split("@")[0]
-    except (KeyError, AttributeError):
-        uname = user["email"].split("@")[0]
+    uname = user.get("username") or user["email"].split("@")[0]
     return jsonify({
         "user_id": user["id"],
         "email": user["email"],
@@ -442,13 +455,14 @@ def create_protocol(user):
     proto_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
-    conn = db()
-    conn.execute(
-        "INSERT INTO az_protocols (id, user_id, name, protocol_json, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"INSERT INTO az_protocols (id, user_id, name, protocol_json, created_at, updated_at) VALUES ({P},{P},{P},{P},{P},{P})",
         (proto_id, user["id"], name, proto_json, now, now)
     )
     conn.commit()
-    conn.close()
+    release_conn(conn)
 
     return jsonify({"ok": True, "protocol_id": proto_id})
 
@@ -456,13 +470,15 @@ def create_protocol(user):
 @az_relay.route("/relay/protocols")
 @require_auth
 def list_protocols(user):
-    conn = db()
-    rows = conn.execute(
-        "SELECT id, name, created_at, updated_at FROM az_protocols WHERE user_id=? AND active=1 ORDER BY updated_at DESC",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT id, name, created_at, updated_at FROM az_protocols WHERE user_id={P} AND active=1 ORDER BY updated_at DESC",
         (user["id"],)
-    ).fetchall()
-    conn.close()
-    return jsonify({"protocols": [dict(r) for r in rows]})
+    )
+    rows = cur.fetchall()
+    release_conn(conn)
+    return jsonify({"protocols": [_row_to_dict(r) for r in rows]})
 
 
 @az_relay.route("/relay/protocol/<proto_id>", methods=["PUT"])
@@ -472,24 +488,26 @@ def update_protocol(user, proto_id):
     protocol = data.get("protocol") or {}
     name = data.get("name")
 
-    conn = db()
-    existing = conn.execute(
-        "SELECT * FROM az_protocols WHERE id=? AND user_id=? AND active=1",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT * FROM az_protocols WHERE id={P} AND user_id={P} AND active=1",
         (proto_id, user["id"])
-    ).fetchone()
+    )
+    existing = cur.fetchone()
     if not existing:
-        conn.close()
+        release_conn(conn)
         return jsonify({"error": "Protocol not found"}), 404
 
     now = datetime.now(timezone.utc).isoformat()
     if name:
-        conn.execute("UPDATE az_protocols SET name=?, protocol_json=?, updated_at=? WHERE id=?",
+        cur.execute(f"UPDATE az_protocols SET name={P}, protocol_json={P}, updated_at={P} WHERE id={P}",
                       (name, json.dumps(protocol), now, proto_id))
     else:
-        conn.execute("UPDATE az_protocols SET protocol_json=?, updated_at=? WHERE id=?",
+        cur.execute(f"UPDATE az_protocols SET protocol_json={P}, updated_at={P} WHERE id={P}",
                       (json.dumps(protocol), now, proto_id))
     conn.commit()
-    conn.close()
+    release_conn(conn)
     return jsonify({"ok": True})
 
 
@@ -510,24 +528,27 @@ def start_session(user):
         return jsonify({"error": "Turn limit reached. Upgrade plan.", "upgrade": True}), 403
 
     # Verify protocol belongs to user
-    conn = db()
-    proto = conn.execute(
-        "SELECT * FROM az_protocols WHERE id=? AND user_id=? AND active=1",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT * FROM az_protocols WHERE id={P} AND user_id={P} AND active=1",
         (protocol_id, user["id"])
-    ).fetchone()
+    )
+    proto = cur.fetchone()
     if not proto:
-        conn.close()
+        release_conn(conn)
         return jsonify({"error": "Protocol not found"}), 404
 
+    proto = _row_to_dict(proto)
     session_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
-    conn.execute(
-        "INSERT INTO az_sessions (id, user_id, protocol_id, started_at, platform) VALUES (?,?,?,?,?)",
+    cur.execute(
+        f"INSERT INTO az_sessions (id, user_id, protocol_id, started_at, platform) VALUES ({P},{P},{P},{P},{P})",
         (session_id, user["id"], protocol_id, now, platform)
     )
     conn.commit()
-    conn.close()
+    release_conn(conn)
 
     # Generate the initial token
     token = make_token(session_id, 0)
@@ -575,8 +596,6 @@ def _build_init_block(token: str, protocol: dict, platform: str) -> str:
 
     return "\n".join(lines)
 
-    return "\n".join(lines)
-
 
 # ─── THE RELAY ───
 @az_relay.route("/relay/process", methods=["POST"])
@@ -606,29 +625,35 @@ def process_relay(user):
     expected_turn = payload["t"]
 
     # Load session
-    conn = db()
-    sess = conn.execute(
-        "SELECT * FROM az_sessions WHERE id=? AND user_id=? AND active=1",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT * FROM az_sessions WHERE id={P} AND user_id={P} AND active=1",
         (session_id, user["id"])
-    ).fetchone()
+    )
+    sess = cur.fetchone()
     if not sess:
-        conn.close()
+        release_conn(conn)
         return jsonify({"error": "Session not found or expired"}), 404
+
+    sess = _row_to_dict(sess)
 
     # Check turns
     if user["turns_used"] >= user["turns_limit"]:
-        conn.close()
+        release_conn(conn)
         return jsonify({"error": "Turn limit reached. Upgrade plan.", "upgrade": True}), 403
 
     # Load protocol
-    proto = conn.execute(
-        "SELECT * FROM az_protocols WHERE id=?",
+    cur.execute(
+        f"SELECT * FROM az_protocols WHERE id={P}",
         (sess["protocol_id"],)
-    ).fetchone()
+    )
+    proto = cur.fetchone()
     if not proto:
-        conn.close()
+        release_conn(conn)
         return jsonify({"error": "Protocol not found"}), 404
 
+    proto = _row_to_dict(proto)
     protocol_data = json.loads(proto["protocol_json"])
 
     # ── SCORE THE AI OUTPUT ──
@@ -642,20 +667,20 @@ def process_relay(user):
     turn_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
-    conn.execute(
-        "INSERT INTO az_turns (id, session_id, turn_number, ai_output, nti_scores, governance_directives, created_at) VALUES (?,?,?,?,?,?,?)",
+    cur.execute(
+        f"INSERT INTO az_turns (id, session_id, turn_number, ai_output, nti_scores, governance_directives, created_at) VALUES ({P},{P},{P},{P},{P},{P},{P})",
         (turn_id, session_id, next_turn, ai_output[:2000], json.dumps(scores), directives, now)
     )
-    conn.execute(
-        "UPDATE az_sessions SET turn_count=?, last_turn_at=? WHERE id=?",
+    cur.execute(
+        f"UPDATE az_sessions SET turn_count={P}, last_turn_at={P} WHERE id={P}",
         (next_turn, now, session_id)
     )
-    conn.execute(
-        "UPDATE az_users SET turns_used = turns_used + 1 WHERE id=?",
+    cur.execute(
+        f"UPDATE az_users SET turns_used = turns_used + 1 WHERE id={P}",
         (user["id"],)
     )
     conn.commit()
-    conn.close()
+    release_conn(conn)
 
     # Admin analytics
     try:
@@ -705,38 +730,43 @@ def _build_next_block(token: str, directives: str, scores: dict) -> str:
 @az_relay.route("/relay/sessions")
 @require_auth
 def list_sessions(user):
-    conn = db()
-    rows = conn.execute(
-        "SELECT s.id, s.protocol_id, s.started_at, s.turn_count, s.platform, p.name as protocol_name "
-        "FROM az_sessions s JOIN az_protocols p ON s.protocol_id = p.id "
-        "WHERE s.user_id=? ORDER BY s.started_at DESC LIMIT 50",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT s.id, s.protocol_id, s.started_at, s.turn_count, s.platform, p.name as protocol_name "
+        f"FROM az_sessions s JOIN az_protocols p ON s.protocol_id = p.id "
+        f"WHERE s.user_id={P} ORDER BY s.started_at DESC LIMIT 50",
         (user["id"],)
-    ).fetchall()
-    conn.close()
-    return jsonify({"sessions": [dict(r) for r in rows]})
+    )
+    rows = cur.fetchall()
+    release_conn(conn)
+    return jsonify({"sessions": [_row_to_dict(r) for r in rows]})
 
 
 @az_relay.route("/relay/session/<session_id>/turns")
 @require_auth
 def get_turns(user, session_id):
-    conn = db()
-    sess = conn.execute(
-        "SELECT * FROM az_sessions WHERE id=? AND user_id=?",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT * FROM az_sessions WHERE id={P} AND user_id={P}",
         (session_id, user["id"])
-    ).fetchone()
+    )
+    sess = cur.fetchone()
     if not sess:
-        conn.close()
+        release_conn(conn)
         return jsonify({"error": "Session not found"}), 404
 
-    rows = conn.execute(
-        "SELECT turn_number, nti_scores, governance_directives, created_at FROM az_turns WHERE session_id=? ORDER BY turn_number",
+    cur.execute(
+        f"SELECT turn_number, nti_scores, governance_directives, created_at FROM az_turns WHERE session_id={P} ORDER BY turn_number",
         (session_id,)
-    ).fetchall()
-    conn.close()
+    )
+    rows = cur.fetchall()
+    release_conn(conn)
 
     turns = []
     for r in rows:
-        t = dict(r)
+        t = _row_to_dict(r)
         t["nti_scores"] = json.loads(t["nti_scores"]) if t["nti_scores"] else {}
         turns.append(t)
 

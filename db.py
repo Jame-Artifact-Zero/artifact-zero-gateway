@@ -10,7 +10,7 @@ Usage:
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT * FROM requests WHERE id = %s", (rid,))
-    # NOTE: Always use %s placeholders, even for SQLite (we patch it)
+    # NOTE: Use %s for Postgres, ? for SQLite — use param_placeholder()
     release_conn(conn)
 """
 
@@ -39,6 +39,8 @@ if USE_POSTGRES:
     def get_conn():
         conn = _pool.getconn()
         conn.autocommit = False
+        # Use RealDictCursor so rows come back as dicts
+        conn.cursor_factory = psycopg2.extras.RealDictCursor
         return conn
 
     def release_conn(conn):
