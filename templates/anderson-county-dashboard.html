@@ -40,10 +40,10 @@ body{min-height:100vh;padding-bottom:60px}
 .hero .race-info span{display:flex;align-items:center;gap:6px}
 
 /* LENS TABS */
-.lens-bar{display:flex;gap:6px;justify-content:center;padding:0 20px;margin:8px auto 24px;flex-wrap:wrap}
-.lens-tab{font-family:var(--mono);font-size:11px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--dim);transition:all .2s;letter-spacing:.5px}
-.lens-tab:hover{border-color:var(--green);color:var(--green)}
-.lens-tab.active{background:var(--green);color:#000;border-color:var(--green)}
+.lens-bar{display:flex;gap:8px;justify-content:center;padding:0 20px;margin:8px auto 24px;flex-wrap:wrap}
+.lens-tab{font-family:var(--mono);font-size:11px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .2s;letter-spacing:.5px}
+.lens-tab:hover{border-color:var(--border-bright);color:var(--text)}
+.lens-tab.active{background:var(--green);color:#000;border-color:var(--green);font-weight:700}
 
 /* CANDIDATE GRID */
 .candidates{max-width:900px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
@@ -100,8 +100,24 @@ body{min-height:100vh;padding-bottom:60px}
 .disclaimer{max-width:720px;margin:32px auto;padding:0 20px;text-align:center}
 .disclaimer p{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6}
 
+/* METHODOLOGY */
+.methodology{max-width:900px;margin:32px auto;padding:0 20px}
+.method-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.method-title{font-family:var(--mono);font-size:12px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:16px}
+.method-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px}
+.method-item{padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+.method-item-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:4px}
+.method-item-desc{font-size:12px;color:var(--dim);line-height:1.4}
+.method-item-weight{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px}
+.glossary{max-width:900px;margin:24px auto;padding:0 20px}
+.glossary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.glossary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px}
+.glossary-item{display:flex;gap:10px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+.glossary-term{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);min-width:60px;flex-shrink:0}
+.glossary-def{font-size:12px;color:var(--dim);line-height:1.4}
+
 /* FOOTER */
-.footer{text-align:center;padding:24px;font-family:var(--mono);font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
+.footer{text-align:center;padding:24px;font-family:var(--mono);font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px;background:var(--surface)}
 .footer a{color:var(--blue);text-decoration:none}
 
 @media(max-width:480px){
@@ -119,6 +135,7 @@ body{min-height:100vh;padding-bottom:60px}
   <div class="nav-links">
     <a href="/live">LIVE FEED</a>
     <a href="/live/knoxville">KNOX CO</a>
+    <a href="/live/birkbeck">BIRKBECK</a>
     <span class="live-badge">LIVE</span>
   </div>
 </div>
@@ -145,12 +162,100 @@ body{min-height:100vh;padding-bottom:60px}
 <div class="candidates" id="candidateGrid"></div>
 <div class="compare-bar" id="compareBar"></div>
 
+<div class="methodology">
+  <div class="method-card">
+    <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
+    <p style="font-size:13px;color:var(--dim);line-height:1.6">Every public statement is scored 0–100 by analyzing six structural dimensions. No AI opinion. No sentiment analysis. Pure structural measurement of what was said and how it was said.</p>
+    <div class="method-grid">
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--red)">VAGUENESS</div>
+        <div class="method-item-desc">Platitude words (values, opportunity, incredible, families, freedom). More fluff = lower score.</div>
+        <div class="method-item-weight">Penalty: -3 per word</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--green)">SPECIFICITY</div>
+        <div class="method-item-desc">Concrete policy words (budget, tax, build, invest, plan, vote). Substance raises your score.</div>
+        <div class="method-item-weight">Bonus: +4 per word</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--amber)">PROMISE BALANCE</div>
+        <div class="method-item-desc">Unbounded promises ("I will never") get penalized. Hedged aspirations ("I want to") get rewarded.</div>
+        <div class="method-item-weight">-4 unbounded / +3 hedged</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--purple)">EMOTIONAL CHARGE</div>
+        <div class="method-item-desc">Density of emotionally loaded language. Lower charge = clearer structural integrity.</div>
+        <div class="method-item-weight">Penalty: -0.2 per %</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--amber)">TILT PATTERNS</div>
+        <div class="method-item-desc">Structural manipulation: certainty inflation, absolute language, manufactured consensus, pressure tactics.</div>
+        <div class="method-item-weight">Penalty: -7 per tag</div>
+      </div>
+      <div class="method-item">
+        <div class="method-item-name" style="color:var(--blue)">DATA DENSITY</div>
+        <div class="method-item-desc">Numbers, names, dates, percentages, dollar amounts. Facts in the text = credibility bonus.</div>
+        <div class="method-item-weight">Bonus: +3 per fact</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="glossary">
+  <div class="glossary-card">
+    <div class="method-title">◆ DEFINITIONS & ABBREVIATIONS</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">HCS</div>
+        <div class="glossary-def">Human Clarity Score. Composite 0–100 rating of structural integrity across all six dimensions.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">NTI</div>
+        <div class="glossary-def">No-Tilt Interface. The rule-based engine that measures communication structure without AI opinion.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">TILT</div>
+        <div class="glossary-def">A structural pattern that distorts clarity — absolute claims, manufactured urgency, certainty inflation, or emotional pressure.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">COMPOSITE</div>
+        <div class="glossary-def">Balanced view across all scoring dimensions. The default lens — weights every factor equally.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">CLARITY</div>
+        <div class="glossary-def">How clear and readable is the statement? Penalizes complexity. Rewards plain language.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">ACCOUNT&shy;ABILITY</div>
+        <div class="glossary-def">Does the candidate make verifiable commitments? Penalizes unbounded promises and vague pledges.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">SUBSTANCE</div>
+        <div class="glossary-def">How much real content is in the statement? Rewards specifics, data, and policy. Penalizes filler.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">AUTHEN&shy;TICITY</div>
+        <div class="glossary-def">Does it sound like a person or a press release? Penalizes emotional manipulation and manufactured language.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">R</div>
+        <div class="glossary-def">Republican. Party affiliation shown on candidate cards.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">BEST / WORST</div>
+        <div class="glossary-def">Highest and lowest individual statement scores for that candidate under the active lens.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="disclaimer">
   <p>NTI analyzes structural patterns in public statements — not political positions, ideology, or character. All statements sourced from public records, campaign materials, and news coverage. Nonpartisan. Rule-based. Zero AI opinion.</p>
 </div>
 
 <div class="footer">
-  Artifact Zero Labs · Anderson County Political Pulse · <a href="/">NTI Engine</a> · <a href="/live">Live Feed</a>
+  Artifact Zero Labs · Anderson County Political Pulse · <a href="/">NTI Engine</a> · <a href="/live/knoxville">Knox County Race</a> · <a href="/live/birkbeck">Birkbeck Dashboard</a> · <a href="/live">Live Feed</a><br>
+  <span style="color:var(--muted);font-size:10px;margin-top:4px;display:inline-block">Built by Jame Houghton · Knoxville, TN · Structural analysis, not opinion</span>
 </div>
 
 <script>
