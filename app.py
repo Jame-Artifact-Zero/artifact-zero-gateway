@@ -536,6 +536,11 @@ def relay_redirect():
     return redirect("/app/relay", code=301)
 
 
+@app.route("/docs")
+def docs():
+    return render_template("docs.html")
+
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})

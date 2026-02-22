@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Documentation — Artifact Zero</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+.topbar{
+  border-bottom:1px solid var(--border);padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent)}
+.topbar nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;font-family:'JetBrains Mono',monospace}
+.topbar nav a:hover{color:var(--green)}
+
+.main{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+
+h1{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--muted);font-size:15px;margin-bottom:40px}
+
+h2{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600;color:var(--green);margin:40px 0 16px;padding-top:20px;border-top:1px solid var(--border)}
+h2:first-of-type{border-top:none;margin-top:0}
+
+h3{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--accent);margin:24px 0 8px}
+
+p{line-height:1.7;margin-bottom:12px;color:var(--text);font-size:15px}
+
+.endpoint{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:20px;margin:16px 0;
+}
+.method{
+  display:inline-block;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+  padding:3px 10px;border-radius:4px;margin-right:10px;
+}
+.method.post{background:#22c55e22;color:var(--green)}
+.method.get{background:#3b82f622;color:var(--accent)}
+.path{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600}
+
+pre{
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:16px;margin:12px 0;overflow-x:auto;font-family:'JetBrains Mono',monospace;
+  font-size:13px;line-height:1.6;color:var(--text);
+}
+code{font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--surface2);padding:2px 6px;border-radius:3px}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th{text-align:left;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border)}
+td:first-child{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px}
+
+.tier-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin:16px 0}
+.tier-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+.tier-card h4{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);margin-bottom:4px}
+.tier-card .price{font-size:20px;font-weight:700;margin-bottom:4px}
+.tier-card .detail{font-size:12px;color:var(--muted)}
+
+.note{background:var(--surface);border-left:3px solid var(--amber);padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;font-size:14px}
+.note strong{color:var(--amber)}
+
+.footer{text-align:center;padding:40px;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);margin-top:60px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">ARTIFACT ZERO</span>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/docs" style="color:var(--green)">API Docs</a>
+    <a href="/live">Live Feed</a>
+  </nav>
+</div>
+
+<div class="main">
+
+<h1>API Documentation</h1>
+<p class="subtitle">Score any text for structural integrity. One endpoint. One API key. Millisecond response.</p>
+
+<h2>Base URL</h2>
+<pre>https://artifact0.com/api/v1</pre>
+
+<h2>Authentication</h2>
+<p>All scoring requests require an API key passed in the <code>X-API-Key</code> header.</p>
+<pre>curl -X POST https://artifact0.com/api/v1/score \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: az_your_key_here" \
+  -d '{"text": "Your text to score"}'</pre>
+
+<h2>Endpoints</h2>
+
+<!-- SCORE -->
+<div class="endpoint">
+  <span class="method post">POST</span>
+  <span class="path">/api/v1/score</span>
+  <p style="margin-top:12px">Score text for structural integrity. Returns NII score, failure modes, tilt patterns, and framing analysis.</p>
+
+  <h3>Request Body</h3>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td>text</td><td>string</td><td>Yes</td><td>Text to score (max 50,000 characters)</td></tr>
+  </table>
+
+  <h3>Response</h3>
+  <pre>{
+  "status": "ok",
+  "version": "canonical-nti-v2.0",
+  "score": {
+    "nii": 0.33,
+    "nii_label": "LOW_INTEGRITY",
+    "components": {
+      "q1": 0.5,
+      "q2": 0.25,
+      "q3": 0.1,
+      "q4": 0.45
+    }
+  },
+  "failure_modes": {
+    "UDDS": "UDDS_CONFIRMED",
+    "DCE": "DCE_FALSE",
+    "CCA": "CCA_PROBABLE",
+    "dominance": ["CCA", "UDDS"]
+  },
+  "tilt": {
+    "tags": ["T1_VAGUE_ASSURANCE", "T4_FALSE_COMPLETION"],
+    "count": 2
+  },
+  "meta": {
+    "latency_ms": 3,
+    "text_length": 245,
+    "word_count": 41,
+    "tier": "enterprise",
+    "usage_this_month": 147,
+    "monthly_limit": 999999999
+  }
+}</pre>
+</div>
+
+<!-- CREATE KEY -->
+<div class="endpoint">
+  <span class="method post">POST</span>
+  <span class="path">/api/v1/keys</span>
+  <p style="margin-top:12px">Create a new API key. No authentication required.</p>
+
+  <h3>Request Body</h3>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td>email</td><td>string</td><td>Yes</td><td>Your email address</td></tr>
+    <tr><td>tier</td><td>string</td><td>No</td><td>Pricing tier (default: "free")</td></tr>
+  </table>
+
+  <h3>Response</h3>
+  <pre>{
+  "api_key": "az_a1b2c3d4e5f6...",
+  "tier": "free",
+  "monthly_limit": 10,
+  "email": "you@company.com",
+  "message": "Store this key securely. It will not be shown again."
+}</pre>
+
+  <div class="note"><strong>Important:</strong> Your API key is shown only once. Store it immediately.</div>
+</div>
+
+<!-- USAGE -->
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/api/v1/keys/usage</span>
+  <p style="margin-top:12px">Check your current usage for the billing period.</p>
+
+  <h3>Response</h3>
+  <pre>{
+  "api_key": "az_a1b2c...",
+  "tier": "pro",
+  "usage_this_month": 312,
+  "monthly_limit": 500,
+  "remaining": 188
+}</pre>
+</div>
+
+<h2>Score Interpretation</h2>
+
+<h3>NII Score (0.0 – 1.0)</h3>
+<table>
+  <tr><th>Range</th><th>Label</th><th>Meaning</th></tr>
+  <tr><td>0.80 – 1.00</td><td>HIGH_INTEGRITY</td><td>Structurally sound. Clear objective, constraints honored.</td></tr>
+  <tr><td>0.50 – 0.79</td><td>MODERATE</td><td>Some structural gaps. Review before sending.</td></tr>
+  <tr><td>0.20 – 0.49</td><td>LOW_INTEGRITY</td><td>Significant structural issues. Likely to cause miscommunication.</td></tr>
+  <tr><td>0.00 – 0.19</td><td>CRITICAL</td><td>Structurally compromised. Do not send without revision.</td></tr>
+</table>
+
+<h3>Failure Modes</h3>
+<table>
+  <tr><th>Code</th><th>Name</th><th>Description</th></tr>
+  <tr><td>UDDS</td><td>Unacknowledged Dependency on Downstream Stability</td><td>Assumes future steps will work without verifying current constraints.</td></tr>
+  <tr><td>DCE</td><td>Deferred Constraint Enforcement</td><td>Pushes hard requirements to later, creating hidden risk.</td></tr>
+  <tr><td>CCA</td><td>Constraint Collapse via Abstraction</td><td>Replaces specific constraints with vague summaries, losing critical detail.</td></tr>
+</table>
+
+<h3>Tilt Patterns</h3>
+<table>
+  <tr><th>Tag</th><th>Pattern</th></tr>
+  <tr><td>T1</td><td>Vague assurance ("everything is fine")</td></tr>
+  <tr><td>T2</td><td>Premature closure ("we've addressed all issues")</td></tr>
+  <tr><td>T3</td><td>Scope expansion without acknowledgment</td></tr>
+  <tr><td>T4</td><td>False completion signal</td></tr>
+  <tr><td>T5</td><td>Hedge stacking</td></tr>
+  <tr><td>T9</td><td>Authority displacement</td></tr>
+  <tr><td>T10</td><td>Temporal deflection ("we'll figure it out eventually")</td></tr>
+</table>
+
+<h2>Pricing</h2>
+
+<div class="tier-grid">
+  <div class="tier-card">
+    <h4>Free</h4>
+    <div class="price">$0</div>
+    <div class="detail">10 scores / month</div>
+  </div>
+  <div class="tier-card">
+    <h4>Pro</h4>
+    <div class="price">$19/mo</div>
+    <div class="detail">500 scores / month</div>
+  </div>
+  <div class="tier-card">
+    <h4>Power</h4>
+    <div class="price">$49/mo</div>
+    <div class="detail">2,000 scores / month</div>
+  </div>
+  <div class="tier-card">
+    <h4>Unlimited</h4>
+    <div class="price">$99/mo</div>
+    <div class="detail">Unlimited scores</div>
+  </div>
+</div>
+
+<div class="tier-grid">
+  <div class="tier-card">
+    <h4>Starter</h4>
+    <div class="price">$500/mo</div>
+    <div class="detail">10K scores / $0.04 overage</div>
+  </div>
+  <div class="tier-card">
+    <h4>Core</h4>
+    <div class="price">$2,500/mo</div>
+    <div class="detail">75K scores / $0.028 overage</div>
+  </div>
+  <div class="tier-card">
+    <h4>Pipeline</h4>
+    <div class="price">$7,500/mo</div>
+    <div class="detail">300K scores / $0.018 overage</div>
+  </div>
+  <div class="tier-card">
+    <h4>Enterprise</h4>
+    <div class="price">Custom</div>
+    <div class="detail">Volume discount / BAA / SOC 2</div>
+  </div>
+</div>
+
+<h2>Rate Limits</h2>
+<table>
+  <tr><th>Tier</th><th>Requests / Minute</th></tr>
+  <tr><td>free</td><td>5</td></tr>
+  <tr><td>pro</td><td>30</td></tr>
+  <tr><td>power</td><td>60</td></tr>
+  <tr><td>starter</td><td>60</td></tr>
+  <tr><td>core</td><td>120</td></tr>
+  <tr><td>pipeline</td><td>300</td></tr>
+  <tr><td>enterprise</td><td>1,000</td></tr>
+</table>
+
+<h2>Error Codes</h2>
+<table>
+  <tr><th>Status</th><th>Meaning</th></tr>
+  <tr><td>200</td><td>Score returned successfully</td></tr>
+  <tr><td>400</td><td>Missing or invalid request body</td></tr>
+  <tr><td>401</td><td>Missing or invalid API key</td></tr>
+  <tr><td>403</td><td>API key deactivated</td></tr>
+  <tr><td>429</td><td>Rate limit or monthly limit exceeded</td></tr>
+  <tr><td>500</td><td>Server error</td></tr>
+</table>
+
+<h2>Quick Start</h2>
+<pre># 1. Get your API key
+curl -X POST https://artifact0.com/api/v1/keys \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@company.com"}'
+
+# 2. Score text
+curl -X POST https://artifact0.com/api/v1/score \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: az_your_key_here" \
+  -d '{"text": "I completely understand your concerns and I want to assure you that everything is fine. We have basically addressed all the issues."}'
+
+# 3. Check usage
+curl -X GET https://artifact0.com/api/v1/keys/usage \
+  -H "X-API-Key: az_your_key_here"</pre>
+
+<div class="note"><strong>Zero LLM dependency.</strong> Every score is computed by rule-based structural analysis. No AI models in the engine. Deterministic, transparent, auditable. Average response time: 3ms.</div>
+
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · Knoxville, Tennessee · artifact0.com<br>
+  NTI canonical-nti-v2.0 · 100% rule-based · Zero LLM dependency
+</div>
+
+</body>
+</html>
