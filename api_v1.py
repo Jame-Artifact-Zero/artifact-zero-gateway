@@ -140,35 +140,14 @@ def api_score():
     if len(text) > 50000:
         return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
 
-    # Import scoring functions from app (avoid circular import)
-    from app import (
-        detect_l0_constraints, objective_extract, objective_drift,
-        detect_l2_framing, classify_tilt, detect_udds, detect_dce,
-        detect_cca, detect_downstream_before_constraint, compute_nii,
-        NTI_VERSION
-    )
-
-    # Run the engine
-    l0 = detect_l0_constraints(text)
-    obj = objective_extract(text)
-    drift = objective_drift("", text)
-    framing = detect_l2_framing(text)
-    tilt = classify_tilt(text)
-    udds = detect_udds("", text, l0)
-    dce = detect_dce(text, l0)
-    cca = detect_cca("", text)
-    dbc = detect_downstream_before_constraint("", text, l0)
-    nii = compute_nii("", text, l0, dbc, tilt)
-
-    dominance = []
-    if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-        dominance.append("CCA")
-    if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
-        dominance.append("UDDS")
-    if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
-        dominance.append("DCE")
-    if not dominance:
-        dominance = ["NONE"]
+    try:
+        from flask import current_app
+        with current_app.test_client() as client:
+            resp = client.post("/nti", json={"text": text})
+            nti_result = resp.get_json()
+    except Exception as e:
+        print(f"[api] Scoring error: {e}", flush=True)
+        return jsonify({"error": "Scoring engine error", "detail": str(e)}), 500
 
     latency_ms = int((time.time() - t0) * 1000)
 
@@ -176,9 +155,14 @@ def api_score():
     usage_id = str(uuid.uuid4())
     database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score", latency_ms, 200)
 
+    # Reshape response for API consumers
+    nii = nti_result.get("nii", {})
+    tilt = nti_result.get("tilt_taxonomy", {})
+    failure = nti_result.get("parent_failure_modes", {})
+
     result = {
         "status": "ok",
-        "version": NTI_VERSION,
+        "version": nti_result.get("version"),
         "score": {
             "nii": nii.get("nii_score"),
             "nii_label": nii.get("nii_label"),
@@ -190,16 +174,15 @@ def api_score():
             }
         },
         "failure_modes": {
-            "UDDS": udds["udds_state"],
-            "DCE": dce["dce_state"],
-            "CCA": cca["cca_state"],
-            "dominance": dominance
+            "UDDS": failure.get("UDDS", {}).get("udds_state"),
+            "DCE": failure.get("DCE", {}).get("dce_state"),
+            "CCA": failure.get("CCA", {}).get("cca_state"),
+            "dominance": nti_result.get("interaction_matrix", {}).get("dominance_detected", [])
         },
         "tilt": {
             "tags": tilt.get("tags", []),
             "count": tilt.get("count", 0)
         },
-        "framing": framing,
         "meta": {
             "latency_ms": latency_ms,
             "text_length": len(text),
