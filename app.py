@@ -537,6 +537,25 @@ def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
 
+@app.route("/health/db")
+def health_db():
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT current_database(), version()")
+            row = cur.fetchone()
+            conn.close()
+            return jsonify({"db": "postgresql", "database": row[0], "version": row[1][:40]})
+        else:
+            cur.execute("SELECT sqlite_version()")
+            row = cur.fetchone()
+            conn.close()
+            return jsonify({"db": "sqlite", "version": row[0], "path": database.DB_PATH})
+    except Exception as e:
+        return jsonify({"db": "error", "detail": str(e)}), 500
+
+
 @app.route("/canonical/status")
 def canonical_status():
     return jsonify({
