@@ -541,6 +541,77 @@ def docs():
     return render_template("docs.html")
 
 
+@app.route("/score")
+def score_page():
+    return render_template("score.html")
+
+
+# Free tier scoring — no API key, IP-limited
+_free_usage = {}
+
+@app.route("/api/v1/score/free", methods=["POST"])
+def api_score_free():
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    month_key = f"{ip}:{datetime.now(timezone.utc).strftime('%Y-%m')}"
+    count = _free_usage.get(month_key, 0)
+    if count >= 10:
+        return jsonify({"error": "Free tier limit reached (10/month)", "upgrade": "https://artifact0.com/docs#pricing"}), 429
+    
+    t0 = time.time()
+    payload = request.get_json() or {}
+    text = payload.get("text", "").strip()
+    if not text:
+        return jsonify({"error": "Missing 'text' field"}), 400
+    if len(text) > 50000:
+        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
+
+    try:
+        l0 = detect_l0_constraints(text)
+        obj = objective_extract(text)
+        drift = objective_drift("", text)
+        framing = detect_l2_framing(text)
+        tilt = classify_tilt(text)
+        udds = detect_udds("", text, l0)
+        dce = detect_dce(text, l0)
+        cca = detect_cca("", text)
+        dbc = detect_downstream_before_constraint("", text, l0)
+        nii = compute_nii("", text, l0, dbc, tilt)
+
+        dominance = []
+        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+            dominance.append("CCA")
+        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+            dominance.append("UDDS")
+        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+            dominance.append("DCE")
+        if not dominance:
+            dominance = ["NONE"]
+    except Exception as e:
+        return jsonify({"error": "Scoring error", "detail": str(e)}), 500
+
+    _free_usage[month_key] = count + 1
+    latency_ms = int((time.time() - t0) * 1000)
+
+    return jsonify({
+        "status": "ok",
+        "version": NTI_VERSION,
+        "score": {
+            "nii": nii.get("nii_score"),
+            "nii_label": nii.get("nii_label"),
+            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4")}
+        },
+        "failure_modes": {
+            "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
+            "dominance": dominance
+        },
+        "tilt": {"tags": tilt, "count": len(tilt)},
+        "meta": {
+            "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
+            "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
+        }
+    })
+
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})

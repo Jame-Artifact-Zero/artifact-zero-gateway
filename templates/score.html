@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score — Artifact Zero</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+.topbar{
+  border-bottom:1px solid var(--border);padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.topbar nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;font-family:'JetBrains Mono',monospace}
+.topbar nav a:hover{color:var(--green)}
+.topbar nav a.active{color:var(--green)}
+
+.main{max-width:720px;margin:0 auto;padding:40px 20px 80px}
+
+h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:30px}
+.free-badge{display:inline-block;background:#22c55e22;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;margin-left:8px}
+
+textarea{
+  width:100%;min-height:160px;background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:16px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
+}
+textarea:focus{border-color:var(--accent)}
+textarea::placeholder{color:#3d4452}
+
+.controls{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
+.btn{padding:10px 24px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-score{background:var(--green);color:#000;font-size:15px;padding:12px 32px}
+.btn-score:hover{background:#16a34a}
+.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
+.btn-sample:hover{color:var(--text);background:var(--border)}
+.char-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+
+.usage-bar{margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.usage-bar .label{color:var(--muted);font-family:'JetBrains Mono',monospace}
+.usage-bar .count{color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:600}
+.usage-bar a{color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace}
+
+/* Results */
+.results{display:none;margin-top:30px}
+.results.show{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.score-hero{text-align:center;padding:30px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px}
+.score-number{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;line-height:1}
+.score-number.high{color:var(--green)}
+.score-number.mid{color:var(--amber)}
+.score-number.low{color:var(--red)}
+.score-number.crit{color:var(--red)}
+.score-label{font-family:'JetBrains Mono',monospace;font-size:13px;margin-top:6px;text-transform:uppercase;letter-spacing:2px}
+.score-label.high{color:var(--green)}
+.score-label.mid{color:var(--amber)}
+.score-label.low{color:var(--red)}
+.score-label.crit{color:var(--red)}
+
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:500px){.detail-grid{grid-template-columns:1fr}}
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.detail-card h3{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.detail-card .value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+.detail-card .value.green{color:var(--green)}
+.detail-card .value.red{color:var(--red)}
+.detail-card .value.amber{color:var(--amber)}
+
+.failure-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+.failure-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
+.failure-badge.confirmed{background:#ef444422;color:var(--red)}
+.failure-badge.probable{background:#f59e0b22;color:var(--amber)}
+.failure-badge.false{background:#22c55e22;color:var(--green)}
+.failure-name{font-size:13px;color:var(--muted)}
+
+.tilt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
+
+.meta-row{display:flex;gap:16px;margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap}
+
+.footer{text-align:center;padding:40px;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);margin-top:60px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo">ARTIFACT ZERO</a>
+  <nav>
+    <a href="/score" class="active">Score</a>
+    <a href="/docs">API Docs</a>
+    <a href="/live">Live Feed</a>
+  </nav>
+</div>
+
+<div class="main">
+
+<h1>Score your text <span class="free-badge">10 free / month</span></h1>
+<p class="subtitle">Paste any message, email, or AI output. Get a structural integrity score in milliseconds.</p>
+
+<textarea id="input" placeholder="Paste your text here...&#10;&#10;Example: &quot;I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.&quot;"></textarea>
+
+<div class="controls">
+  <div>
+    <button class="btn btn-score" id="scoreBtn" onclick="scoreText()">Score this →</button>
+    <button class="btn btn-sample" onclick="loadSample()">Load sample</button>
+  </div>
+  <span class="char-count" id="charCount">0 / 50,000</span>
+</div>
+
+<div class="usage-bar" id="usageBar">
+  <span class="label">Free tier</span>
+  <span class="count" id="usageCount">— / 10 this month</span>
+  <a href="/docs#pricing">Upgrade →</a>
+</div>
+
+<div class="results" id="results">
+  <div class="score-hero">
+    <div class="score-number" id="niiScore">—</div>
+    <div class="score-label" id="niiLabel">—</div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <h3>Failure Modes</h3>
+      <div id="failureModes">—</div>
+    </div>
+    <div class="detail-card">
+      <h3>Dominance</h3>
+      <div class="value" id="dominance">—</div>
+    </div>
+    <div class="detail-card">
+      <h3>Tilt Patterns</h3>
+      <div id="tiltTags">—</div>
+    </div>
+    <div class="detail-card">
+      <h3>Components</h3>
+      <div id="components">—</div>
+    </div>
+  </div>
+
+  <div class="meta-row" id="metaRow"></div>
+</div>
+
+</div>
+
+<div class="footer">
+  Artifact Zero Labs · Knoxville, Tennessee<br>
+  100% rule-based · Zero LLM dependency · <a href="/docs" style="color:var(--accent)">API Docs</a>
+</div>
+
+<script>
+const input = document.getElementById('input');
+const charCount = document.getElementById('charCount');
+const scoreBtn = document.getElementById('scoreBtn');
+const results = document.getElementById('results');
+
+const SAMPLE = `I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered.`;
+
+input.addEventListener('input', () => {
+  charCount.textContent = input.value.length.toLocaleString() + ' / 50,000';
+});
+
+function loadSample() {
+  input.value = SAMPLE;
+  input.dispatchEvent(new Event('input'));
+}
+
+function getScoreClass(nii) {
+  if (nii >= 0.80) return 'high';
+  if (nii >= 0.50) return 'mid';
+  if (nii >= 0.20) return 'low';
+  return 'crit';
+}
+
+function getLabel(nii) {
+  if (nii >= 0.80) return 'HIGH INTEGRITY';
+  if (nii >= 0.50) return 'MODERATE';
+  if (nii >= 0.20) return 'LOW INTEGRITY';
+  return 'CRITICAL';
+}
+
+function failureClass(state) {
+  if (state.includes('CONFIRMED')) return 'confirmed';
+  if (state.includes('PROBABLE')) return 'probable';
+  return 'false';
+}
+
+function failureLabel(state) {
+  if (state.includes('CONFIRMED')) return 'DETECTED';
+  if (state.includes('PROBABLE')) return 'PROBABLE';
+  return 'CLEAR';
+}
+
+// Track usage via localStorage
+function getUsage() {
+  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
+  return parseInt(localStorage.getItem(key) || '0');
+}
+function addUsage() {
+  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
+  const n = getUsage() + 1;
+  localStorage.setItem(key, n);
+  return n;
+}
+function updateUsageDisplay() {
+  const used = getUsage();
+  document.getElementById('usageCount').textContent = used + ' / 10 this month';
+}
+updateUsageDisplay();
+
+async function scoreText() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Check free tier limit (client-side)
+  if (getUsage() >= 10) {
+    alert('Free tier limit reached (10/month). Get an API key at /docs for more.');
+    return;
+  }
+
+  scoreBtn.disabled = true;
+  scoreBtn.textContent = 'Scoring...';
+
+  try {
+    const resp = await fetch('/api/v1/score/free', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+
+    if (resp.status === 429) {
+      alert('Free tier limit reached. Get an API key at /docs for more.');
+      return;
+    }
+
+    const data = await resp.json();
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+
+    addUsage();
+    updateUsageDisplay();
+    renderResults(data);
+  } catch (e) {
+    alert('Scoring failed: ' + e.message);
+  } finally {
+    scoreBtn.disabled = false;
+    scoreBtn.textContent = 'Score this →';
+  }
+}
+
+function renderResults(data) {
+  const nii = data.score?.nii ?? 0;
+  const cls = getScoreClass(nii);
+
+  document.getElementById('niiScore').textContent = nii.toFixed(2);
+  document.getElementById('niiScore').className = 'score-number ' + cls;
+  document.getElementById('niiLabel').textContent = getLabel(nii);
+  document.getElementById('niiLabel').className = 'score-label ' + cls;
+
+  // Failure modes
+  const fm = data.failure_modes || {};
+  let fmHtml = '';
+  ['UDDS', 'DCE', 'CCA'].forEach(mode => {
+    const state = fm[mode] || 'UNKNOWN';
+    fmHtml += `<div class="failure-row">
+      <span class="failure-badge ${failureClass(state)}">${failureLabel(state)}</span>
+      <span class="failure-name">${mode}</span>
+    </div>`;
+  });
+  document.getElementById('failureModes').innerHTML = fmHtml;
+
+  // Dominance
+  const dom = fm.dominance || ['NONE'];
+  const domEl = document.getElementById('dominance');
+  domEl.textContent = dom.join(' → ');
+  domEl.className = 'value ' + (dom[0] === 'NONE' ? 'green' : 'red');
+
+  // Tilt
+  const tilt = data.tilt || {};
+  const tags = tilt.tags || [];
+  if (tags.length === 0) {
+    document.getElementById('tiltTags').innerHTML = '<span class="value green">No tilt detected</span>';
+  } else {
+    document.getElementById('tiltTags').innerHTML = '<div class="tilt-tags">' +
+      tags.map(t => `<span class="tilt-tag">${t}</span>`).join('') + '</div>';
+  }
+
+  // Components
+  const c = data.score?.components || {};
+  let compHtml = '';
+  if (c.q1 != null) compHtml += `Q1: ${c.q1} · `;
+  if (c.q2 != null) compHtml += `Q2: ${c.q2} · `;
+  if (c.q3 != null) compHtml += `Q3: ${c.q3} · `;
+  if (c.q4 != null) compHtml += `Q4: ${c.q4}`;
+  document.getElementById('components').innerHTML = `<span class="value" style="font-size:12px">${compHtml || 'N/A'}</span>`;
+
+  // Meta
+  const meta = data.meta || {};
+  document.getElementById('metaRow').innerHTML =
+    `<span>${meta.latency_ms}ms</span>` +
+    `<span>${meta.word_count} words</span>` +
+    `<span>${meta.text_length} chars</span>` +
+    `<span>v${data.version || '?'}</span>`;
+
+  results.classList.add('show');
+}
+</script>
+
+</body>
+</html>
