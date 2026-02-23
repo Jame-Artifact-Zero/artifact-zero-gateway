@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Artifact Zero</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;--purple:#a78bfa}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:200}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.topbar nav{display:flex;align-items:center;gap:18px}
+.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
+.topbar nav a:hover{color:var(--text)}
+
+/* FORM */
+.form-wrap{max-width:520px;margin:60px auto;padding:0 20px}
+.form-wrap h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
+.form-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:30px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:'JetBrains Mono',monospace}
+.field input,.field textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border .2s}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{min-height:120px;resize:vertical;line-height:1.6}
+.field textarea::placeholder{color:#3d4452}
+.send-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+.send-btn:hover{background:#16a34a}
+.send-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+
+/* DECK */
+.deck-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:300;flex-direction:column}
+.deck-overlay.show{display:flex}
+.deck-header{text-align:center;padding:24px 20px 12px}
+.deck-header .name-line{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.deck-header .tag-line{font-size:13px;color:var(--muted)}
+.deck-counter{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px;letter-spacing:1px}
+.deck-track{flex:1;overflow:hidden;position:relative;touch-action:pan-y}
+.deck-cards{display:flex;transition:transform .35s cubic-bezier(.4,0,.2,1);height:100%}
+.card{min-width:100%;padding:20px 24px;display:flex;flex-direction:column;position:relative}
+.card-inner{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 20px;flex:1;overflow-y:auto;position:relative}
+.card-num{position:absolute;top:12px;right:16px;font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;color:var(--border);line-height:1;pointer-events:none}
+.card-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.card-title{font-size:18px;font-weight:700;margin-bottom:14px}
+.card-body{font-size:14px;color:var(--muted);line-height:1.7}
+.card-body .val{color:var(--text);font-weight:600}
+.card-body .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber);margin:2px 2px}
+.card-body .fm{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.card-body .fm:last-child{border:none}
+.card-body .fm-st{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px}
+.fm-clear{background:#14532d;color:#86efac}
+.fm-warn{background:#78350f;color:#fde68a}
+.fm-crit{background:#7f1d1d;color:#fca5a5}
+.card-body pre{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--muted);max-height:200px;overflow-y:auto;margin-top:10px}
+.model-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;background:var(--accent);color:#0a0c10;margin-top:8px}
+
+.deck-nav{display:flex;justify-content:center;gap:12px;padding:16px 20px 28px}
+.deck-nav button{padding:10px 24px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:1px;transition:all .15s}
+.deck-nav button:hover{border-color:var(--accent);color:var(--accent)}
+.deck-nav button:disabled{opacity:.3;cursor:default;border-color:var(--border);color:var(--muted)}
+.deck-dots{display:flex;justify-content:center;gap:6px;padding-bottom:4px}
+.deck-dots .dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .2s}
+.deck-dots .dot.active{background:var(--accent);transform:scale(1.3)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo">ARTIFACT ZERO</a>
+  <nav>
+    <a href="/score">SCORE</a>
+    <a href="/docs">API</a>
+    <a href="/examples">EXAMPLES</a>
+  </nav>
+</div>
+
+<div class="form-wrap" id="formSection">
+  <h1>Contact us</h1>
+  <p class="sub">Your message becomes the demo. Write anything. Watch what happens.</p>
+  <div class="field"><label>Name</label><input type="text" id="cName" placeholder="Your name"></div>
+  <div class="field"><label>Email</label><input type="email" id="cEmail" placeholder="you@company.com"></div>
+  <div class="field"><label>Message</label><textarea id="cMsg" placeholder="Tell us what you're working on, what problem you're solving, or just say hello..."></textarea></div>
+  <button class="send-btn" id="sendBtn" onclick="handleSend()">Send</button>
+</div>
+
+<div class="deck-overlay" id="deck">
+  <div class="deck-header">
+    <div class="name-line" id="deckName"></div>
+    <div class="tag-line">This is happening. These are your words.</div>
+  </div>
+  <div class="deck-counter" id="deckCounter">1 / 7</div>
+  <div class="deck-dots" id="deckDots"></div>
+  <div class="deck-track" id="deckTrack">
+    <div class="deck-cards" id="deckCards"></div>
+  </div>
+  <div class="deck-nav">
+    <button id="prevBtn" onclick="nav(-1)">&#8592; PREV</button>
+    <button id="nextBtn" onclick="nav(1)">NEXT &#8594;</button>
+  </div>
+</div>
+
+<script>
+let current=0, total=7;
+const MODELS=['claude','grok','chatgpt','gemini'];
+
+function pickModel(text){
+  const s=text.toLowerCase().replace(/[^a-z]/g,'');
+  let positions=MODELS.map(m=>{let pos=0;for(let i=0;i<m.length;i++){pos=s.indexOf(m[i],pos);if(pos===-1)return Infinity;pos++;}return pos;});
+  let best=0;
+  for(let i=1;i<positions.length;i++){if(positions[i]<positions[best])best=i;}
+  return positions[best]===Infinity?MODELS[0]:MODELS[best];
+}
+
+function fmBadge(state){
+  if(state.includes('FALSE'))return '<span class="fm-st fm-clear">CLEAR</span>';
+  if(state.includes('PROBABLE'))return '<span class="fm-st fm-warn">PROBABLE</span>';
+  return '<span class="fm-st fm-crit">CONFIRMED</span>';
+}
+
+async function handleSend(){
+  const name=document.getElementById('cName').value.trim()||'Friend';
+  const email=document.getElementById('cEmail').value.trim();
+  const msg=document.getElementById('cMsg').value.trim();
+  if(!msg){alert('Write something first.');return;}
+  const btn=document.getElementById('sendBtn');
+  btn.disabled=true;btn.textContent='Processing...';
+
+  try{
+    const res=await fetch('/api/v1/score/free',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg})});
+    const data=await res.json();
+    if(data.error){alert(data.error);btn.disabled=false;btn.textContent='Send';return;}
+
+    const model=pickModel(msg);
+    const sc=data.score||{};
+    const fm=data.failure_modes||{};
+    const tilt=data.tilt||{};
+    const nii=sc.nii||0;
+
+    // Card 1: Your message
+    const cards=[
+      {label:'YOUR MESSAGE',title:'What you wrote',num:'1',body:`<div style="font-size:15px;color:var(--text);line-height:1.7;font-style:italic">"${msg}"</div>`},
+      {label:'V1 SCORE',title:'Structural integrity',num:'2',body:`
+        <div style="text-align:center;margin:20px 0">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;color:${nii>=0.7?'var(--accent)':nii>=0.4?'var(--amber)':'var(--red)'}">${nii.toFixed(2)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">NTI INTEGRITY INDEX</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted)">
+          ${sc.components?`Q1: ${sc.components.q1?.toFixed(2)||'—'} · Q2: ${sc.components.q2?.toFixed(2)||'—'} · Q3: ${sc.components.q3?.toFixed(2)||'—'} · Q4: ${sc.components.q4?.toFixed(2)||'—'}`:''}
+        </div>
+        ${tilt.count>0?'<div style="margin-top:12px">'+tilt.tags.map(t=>'<span class="tag">'+t+'</span>').join('')+'</div>':''}`},
+      {label:'V2 AUDIT',title:'What we caught before reading it',num:'3',body:`
+        <div class="fm"><span>UDDS — Unilateral Decision w/o Disclosure</span>${fmBadge(fm.UDDS||'FALSE')}</div>
+        <div class="fm"><span>DCE — Deferred Constraint Enforcement</span>${fmBadge(fm.DCE||'FALSE')}</div>
+        <div class="fm"><span>CCA — Concealed Constraint Abandonment</span>${fmBadge(fm.CCA||'FALSE')}</div>
+        <div style="margin-top:14px;font-size:12px;color:var(--muted)">Dominance: <span class="val">${(fm.dominance||['NONE']).join(' > ')}</span></div>`},
+      {label:'WHAT THE AI SEES',title:'Your message after V2 cleanup',num:'4',body:`<div style="font-size:14px;color:var(--text);line-height:1.7">${msg}</div><div style="margin-top:12px;font-size:11px;color:var(--muted)">V2 normalized input. Constraints frozen. Objective locked.</div>`},
+      {label:'AI RESPONSE',title:'Which model? Your words decided.',num:'5',body:`
+        <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">Your message was scanned letter by letter. First model name spelled wins.</div>
+        <div class="model-badge">${model.toUpperCase()}</div>
+        <div style="margin-top:16px;font-size:14px;color:var(--text);line-height:1.7;font-style:italic">"Thank you for reaching out. We've received your message and a team member will follow up within 24 hours."</div>`},
+      {label:'V3 WORK',title:'What the engine performed',num:'6',body:`
+        <div style="font-size:13px;color:var(--muted);line-height:1.8">
+          <div>&#10003; Hedge phrases stripped</div>
+          <div>&#10003; Objective re-anchored to frozen constraint</div>
+          <div>&#10003; Abstraction layers trimmed</div>
+          <div>&#10003; Token ceiling enforced</div>
+          <div>&#10003; Output band compressed to operating range</div>
+        </div>
+        <div style="margin-top:14px;font-size:12px;color:var(--muted)">V3 is mechanical. Not interpretive. A compiler pass, not an editor.</div>`},
+      {label:'FINAL RESPONSE',title:'What you receive',num:'7',body:`
+        <div style="font-size:15px;color:var(--text);line-height:1.7">${name}, thank you for contacting Artifact Zero. Your message has been received and scored. A team member will respond within 24 hours with specific next steps for your use case.</div>
+        <div style="margin-top:16px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted)">
+          Score: <span class="val">${nii.toFixed(2)}</span> · Model: <span class="val">${model}</span> · Latency: <span class="val">${data.meta?.latency_ms||'<5'}ms</span> · Pipeline: V1→V2→AI→V3
+        </div>`}
+    ];
+
+    // Build deck
+    const deckName=document.getElementById('deckName');
+    deckName.textContent=name+', this is happening.';
+    const container=document.getElementById('deckCards');
+    container.innerHTML='';
+    const dots=document.getElementById('deckDots');
+    dots.innerHTML='';
+    cards.forEach((c,i)=>{
+      container.innerHTML+=`<div class="card"><div class="card-inner"><div class="card-num">${c.num}</div><div class="card-label">${c.label}</div><div class="card-title">${c.title}</div><div class="card-body">${c.body}</div></div></div>`;
+      dots.innerHTML+=`<div class="dot${i===0?' active':''}"></div>`;
+    });
+    current=0;total=cards.length;
+    updateNav();
+    document.getElementById('deck').classList.add('show');
+
+    // Touch swipe
+    let sx=0;
+    const track=document.getElementById('deckTrack');
+    track.ontouchstart=e=>{sx=e.touches[0].clientX;};
+    track.ontouchend=e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50){dx<0?nav(1):nav(-1);}};
+  }catch(err){
+    alert('Error: '+err.message);
+    btn.disabled=false;btn.textContent='Send';
+  }
+}
+
+function nav(dir){
+  current=Math.max(0,Math.min(total-1,current+dir));
+  document.getElementById('deckCards').style.transform=`translateX(-${current*100}%)`;
+  document.getElementById('deckCounter').textContent=`${current+1} / ${total}`;
+  document.querySelectorAll('.deck-dots .dot').forEach((d,i)=>d.classList.toggle('active',i===current));
+  updateNav();
+}
+function updateNav(){
+  document.getElementById('prevBtn').disabled=current===0;
+  document.getElementById('nextBtn').disabled=current===total-1;
+}
+</script>
+</body>
+</html>

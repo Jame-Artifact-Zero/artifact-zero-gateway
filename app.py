@@ -31,10 +31,10 @@ except ImportError:
     print("[app] your_os not found, skipping", flush=True)
 
 try:
-    from control_room import control_room_bp
+    from control_room_bp import control_room_bp
     app.register_blueprint(control_room_bp)
 except ImportError:
-    print("[app] control_room not found, skipping", flush=True)
+    print("[app] control_room_bp not found, skipping", flush=True)
 
 try:
     from az_relay import az_relay
@@ -567,22 +567,26 @@ def relay_redirect():
     return redirect("/app/relay", code=301)
 
 
-@app.route("/chat")
-def chat_redirect():
-    from flask import redirect
-    return redirect("/your-os/builder", code=301)
-
-
-@app.route("/lab")
-def lab_redirect():
-    from flask import redirect
-    return redirect("/", code=301)
-
 
 @app.route("/your-os")
 def youros_redirect():
     from flask import redirect
     return redirect("/your-os/builder", code=301)
+
+
+@app.route("/contact")
+def contact_page():
+    return render_template("contact.html")
+
+
+@app.route("/compose")
+def compose_page():
+    return render_template("compose.html")
+
+
+@app.route("/examples")
+def examples_page():
+    return render_template("examples.html")
 
 
 @app.route("/docs")

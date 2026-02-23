@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compose — Artifact Zero</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;--purple:#a78bfa}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:100}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.topbar nav{display:flex;gap:18px}
+.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase}
+.topbar nav a:hover{color:var(--text)}
+
+.compose-wrap{max-width:700px;margin:0 auto;padding:24px 20px}
+.compose-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.compose-header h1{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;letter-spacing:1px}
+.compose-header .tip{font-size:11px;color:var(--muted)}
+
+.email-shell{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.email-field{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:0 16px}
+.email-field label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--muted);width:60px;flex-shrink:0;letter-spacing:.5px}
+.email-field input{flex:1;background:transparent;border:none;color:var(--text);padding:14px 0;font-size:14px;font-family:'DM Sans',sans-serif;outline:none}
+.email-field input::placeholder{color:#3d4452}
+.email-body{padding:0}
+.email-body textarea{width:100%;min-height:280px;background:transparent;border:none;color:var(--text);padding:16px;font-size:15px;font-family:'DM Sans',sans-serif;line-height:1.7;resize:vertical;outline:none}
+.email-body textarea::placeholder{color:#3d4452}
+
+/* SCORE BAR */
+.score-bar{border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--surface2);cursor:pointer;transition:background .15s}
+.score-bar:hover{background:var(--border)}
+.score-left{display:flex;align-items:center;gap:14px}
+.score-nii{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700}
+.score-nii.good{color:var(--accent)}.score-nii.warn{color:var(--amber)}.score-nii.crit{color:var(--red)}.score-nii.idle{color:var(--muted)}
+.score-issues{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.score-latency{font-size:10px;color:var(--border);font-family:'JetBrains Mono',monospace}
+.score-expand{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:1px}
+
+/* DETAIL PANEL */
+.detail-panel{display:none;border-top:1px solid var(--border);padding:16px;background:var(--surface);max-height:300px;overflow-y:auto}
+.detail-panel.show{display:block;animation:slideUp .2s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.dp-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.dp-row:last-child{border:none}
+.dp-label{color:var(--muted)}
+.dp-val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
+.dp-clear{color:var(--accent)}.dp-warn{color:var(--amber)}.dp-crit{color:var(--red)}
+.dp-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.dp-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
+.dp-section{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border)}
+.dp-check{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--muted)}
+.dp-check .icon{font-size:14px}
+.dp-check .icon.pass{color:var(--accent)}.dp-check .icon.fail{color:var(--red)}
+
+/* SEND ROW */
+.send-row{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.send-btn{padding:10px 28px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+.send-btn:hover{background:#16a34a}
+.send-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.cmd-hint{font-size:10px;color:var(--border);font-family:'JetBrains Mono',monospace}
+
+/* GATE MODAL */
+.gate-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,12,16,.85);z-index:300;justify-content:center;align-items:center}
+.gate-modal.show{display:flex}
+.gate-box{background:var(--surface);border:1px solid var(--red);border-radius:12px;padding:28px 24px;max-width:400px;width:90%;text-align:center}
+.gate-box .gate-score{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--red);margin:8px 0}
+.gate-box p{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.gate-btns{display:flex;gap:10px;justify-content:center}
+.gate-btns button{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:none}
+.gate-btns .fix-btn{background:var(--accent);color:#0a0c10}
+.gate-btns .force-btn{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo">ARTIFACT ZERO</a>
+  <nav>
+    <a href="/score">SCORE</a>
+    <a href="/contact">CONTACT</a>
+    <a href="/docs">API</a>
+  </nav>
+</div>
+
+<div class="compose-wrap">
+  <div class="compose-header">
+    <h1>COMPOSE</h1>
+    <span class="tip">Structure check replaces spellcheck</span>
+  </div>
+
+  <div class="email-shell">
+    <div class="email-field"><label>To</label><input type="text" id="eTo" placeholder="recipient@company.com"></div>
+    <div class="email-field"><label>Subject</label><input type="text" id="eSubject" placeholder="Subject line"></div>
+    <div class="email-body"><textarea id="eBody" placeholder="Write your message here..."></textarea></div>
+    <div class="score-bar" id="scoreBar" onclick="togglePanel()">
+      <div class="score-left">
+        <span class="score-nii idle" id="niiDisplay">—</span>
+        <span class="score-issues" id="issueCount"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="score-latency" id="latencyDisplay"></span>
+        <span class="score-expand">&#9660; DETAILS</span>
+      </div>
+    </div>
+    <div class="detail-panel" id="detailPanel"></div>
+    <div class="send-row">
+      <span class="cmd-hint">Cmd+Enter to score now</span>
+      <button class="send-btn" id="sendBtn" onclick="handleSend()">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="gate-modal" id="gateModal">
+  <div class="gate-box">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);letter-spacing:2px">STRUCTURAL WARNING</div>
+    <div class="gate-score" id="gateScore">0.33</div>
+    <p>This message has structural issues that may cause miscommunication. Review the details below or send anyway.</p>
+    <div class="gate-btns">
+      <button class="fix-btn" onclick="closeGate(false)">Fix it</button>
+      <button class="force-btn" onclick="closeGate(true)">Send anyway</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let debounceTimer=null, lastScore=null, panelOpen=false;
+const body=document.getElementById('eBody');
+const niiEl=document.getElementById('niiDisplay');
+const issueEl=document.getElementById('issueCount');
+const latEl=document.getElementById('latencyDisplay');
+const panel=document.getElementById('detailPanel');
+
+body.addEventListener('input',()=>{
+  clearTimeout(debounceTimer);
+  debounceTimer=setTimeout(scoreNow,800);
+});
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();scoreNow();}
+});
+
+async function scoreNow(){
+  const text=body.value.trim();
+  if(!text||text.length<10){niiEl.textContent='—';niiEl.className='score-nii idle';issueEl.textContent='';latEl.textContent='';return;}
+  try{
+    const res=await fetch('/api/v1/score/free',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const data=await res.json();
+    if(data.error)return;
+    lastScore=data;
+    const nii=data.score?.nii||0;
+    niiEl.textContent=nii.toFixed(2);
+    niiEl.className='score-nii '+(nii>=0.7?'good':nii>=0.4?'warn':'crit');
+    const issues=[];
+    const fm=data.failure_modes||{};
+    if(!fm.UDDS?.includes('FALSE'))issues.push('UDDS');
+    if(!fm.DCE?.includes('FALSE'))issues.push('DCE');
+    if(!fm.CCA?.includes('FALSE'))issues.push('CCA');
+    const tc=(data.tilt?.count||0);
+    if(tc>0)issues.push(tc+' tilt');
+    issueEl.textContent=issues.length?issues.join(' · '):'All clear';
+    latEl.textContent=(data.meta?.latency_ms||0)+'ms';
+    if(panelOpen)renderPanel(data);
+  }catch(e){}
+}
+
+function togglePanel(){
+  panelOpen=!panelOpen;
+  panel.classList.toggle('show',panelOpen);
+  if(panelOpen&&lastScore)renderPanel(lastScore);
+}
+
+function renderPanel(data){
+  const fm=data.failure_modes||{};
+  const sc=data.score||{};
+  const tilt=data.tilt||{};
+  const cls=s=>s?.includes('FALSE')?'dp-clear':s?.includes('PROBABLE')?'dp-warn':'dp-crit';
+  const lbl=s=>s?.includes('FALSE')?'CLEAR':s?.replace('_',' ');
+  let h='<div class="dp-section">Failure Modes</div>';
+  h+=`<div class="dp-row"><span class="dp-label">UDDS</span><span class="dp-val ${cls(fm.UDDS)}">${lbl(fm.UDDS)}</span></div>`;
+  h+=`<div class="dp-row"><span class="dp-label">DCE</span><span class="dp-val ${cls(fm.DCE)}">${lbl(fm.DCE)}</span></div>`;
+  h+=`<div class="dp-row"><span class="dp-label">CCA</span><span class="dp-val ${cls(fm.CCA)}">${lbl(fm.CCA)}</span></div>`;
+  h+=`<div class="dp-row"><span class="dp-label">Dominance</span><span class="dp-val">${(fm.dominance||['NONE']).join(' > ')}</span></div>`;
+  if(tilt.count>0){
+    h+='<div class="dp-section">Tilt Patterns</div><div class="dp-tags">';
+    tilt.tags.forEach(t=>{h+=`<span class="dp-tag">${t}</span>`;});
+    h+='</div>';
+  }
+  h+='<div class="dp-section">Structural Checklist</div>';
+  const q=sc.components||{};
+  const checks=[
+    [q.q1>=0.7,'Constraints explicit'],
+    [q.q2>=0.7,'Constraints before capability'],
+    [q.q3>=0.7,'Boundary enforced'],
+    [q.q4>=0.7,'Objective clarity'],
+  ];
+  checks.forEach(([pass,label])=>{
+    h+=`<div class="dp-check"><span class="icon ${pass?'pass':'fail'}">${pass?'&#10003;':'&#10007;'}</span>${label}</div>`;
+  });
+  panel.innerHTML=h;
+}
+
+function handleSend(){
+  const nii=lastScore?.score?.nii||0;
+  if(nii<0.50&&body.value.trim().length>10){
+    document.getElementById('gateScore').textContent=nii.toFixed(2);
+    document.getElementById('gateModal').classList.add('show');
+    if(!panelOpen){panelOpen=true;panel.classList.add('show');if(lastScore)renderPanel(lastScore);}
+    return;
+  }
+  doSend();
+}
+
+function closeGate(force){
+  document.getElementById('gateModal').classList.remove('show');
+  if(force)doSend();
+}
+
+function doSend(){
+  alert('Message sent. In production this routes through your configured email provider.');
+}
+</script>
+</body>
+</html>
