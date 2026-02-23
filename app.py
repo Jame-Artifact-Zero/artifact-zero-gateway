@@ -536,6 +536,24 @@ def relay_redirect():
     return redirect("/app/relay", code=301)
 
 
+@app.route("/chat")
+def chat_redirect():
+    from flask import redirect
+    return redirect("/your-os/builder", code=301)
+
+
+@app.route("/lab")
+def lab_redirect():
+    from flask import redirect
+    return redirect("/", code=301)
+
+
+@app.route("/your-os")
+def youros_redirect():
+    from flask import redirect
+    return redirect("/your-os/builder", code=301)
+
+
 @app.route("/docs")
 def docs():
     return render_template("docs.html")
