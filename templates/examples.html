@@ -3,137 +3,247 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>25 Examples — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<title>25 Ways to Score It — Artifact Zero</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;--purple:#a78bfa}
+:root{
+  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--blue:#3b82f6;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:100}
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav{display:flex;gap:18px}
-.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase}
-.topbar nav a:hover{color:var(--text)}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
-.page-wrap{max-width:800px;margin:0 auto;padding:40px 20px 80px}
-.page-wrap h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
-.page-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);background:rgba(10,12,16,.85);border-bottom:1px solid var(--border)}
+.nav-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.nav-links{display:flex;gap:20px}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none}
+.nav-links a:hover{color:var(--accent)}
 
-.filters{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap}
-.filters button{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:all .15s}
-.filters button:hover{border-color:var(--accent);color:var(--accent)}
-.filters button.active{background:var(--accent);color:#0a0c10;border-color:var(--accent)}
+.hero{max-width:700px;margin:0 auto;padding:100px 20px 40px;text-align:center}
+.hero h1{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,4vw,32px);font-weight:700;margin-bottom:8px}
+.hero h1 .accent{color:var(--accent)}
+.hero p{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:24px}
 
-.ex-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;transition:border .2s}
-.ex-card:hover{border-color:var(--accent)}
-.ex-header{padding:16px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
-.ex-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:700;margin-right:12px;width:28px;flex-shrink:0}
-.ex-title{font-size:14px;font-weight:600;flex:1}
-.ex-motion{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;letter-spacing:.5px;flex-shrink:0;margin-left:8px}
-.motion-ws{background:#14532d;color:#86efac}
-.motion-wsp{background:#1e1b4b;color:#c4b5fd}
-.motion-rd{background:#78350f;color:#fde68a}
-.ex-arrow{color:var(--muted);font-size:12px;margin-left:8px;transition:transform .2s}
-.ex-card.open .ex-arrow{transform:rotate(180deg)}
+/* Filter tabs */
+.filters{display:flex;justify-content:center;gap:8px;padding:0 20px 32px;flex-wrap:wrap}
+.filter-btn{
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 16px;
+  border-radius:20px;border:1px solid var(--border);background:transparent;
+  color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.filter-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
 
-.ex-body{display:none;padding:0 18px 18px}
-.ex-card.open .ex-body{display:block;animation:fadeIn .2s ease}
+/* Cards */
+.grid{max-width:900px;margin:0 auto;padding:0 20px 60px;display:flex;flex-direction:column;gap:12px}
+
+.uc{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;transition:border-color .2s;
+}
+.uc:hover{border-color:var(--accent)}
+.uc-header{padding:16px;cursor:pointer;display:flex;align-items:flex-start;gap:12px}
+.uc-num{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  color:var(--accent);min-width:24px;padding-top:2px;
+}
+.uc-content{flex:1}
+.uc-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.uc-app{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.uc-type{
+  font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;
+  border-radius:3px;flex-shrink:0;font-weight:600;
+}
+.uc-type.send{background:#3b82f622;color:var(--blue)}
+.uc-type.speak{background:#a78bfa22;color:var(--purple)}
+.uc-type.read{background:#00e89c22;color:var(--accent)}
+
+.uc-detail{display:none;padding:0 16px 16px;padding-left:52px}
+.uc-detail.open{display:block;animation:fadeIn .2s ease}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.ex-section{margin-bottom:14px}
-.ex-section-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
-.ex-text{font-size:13px;line-height:1.7;color:var(--text);padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px}
-.ex-text.bad{border-left:3px solid var(--red)}
-.ex-text.good{border-left:3px solid var(--accent)}
-.ex-result{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 12px;background:var(--surface2);border-radius:6px}
-.ex-result .val{color:var(--accent);font-weight:600;font-family:'JetBrains Mono',monospace}
+
+.uc-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:600px){.uc-row{grid-template-columns:1fr}}
+.uc-box{background:var(--surface2);border-radius:6px;padding:12px}
+.uc-box-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.uc-box-label.red{color:var(--red)}
+.uc-box-label.green{color:var(--accent)}
+.uc-box p{font-size:13px;line-height:1.5;color:var(--text)}
+.uc-result{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);padding:8px 12px;background:var(--bg);border-radius:6px;margin-top:8px}
+
+.footer{text-align:center;padding:40px 20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.footer a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <a href="/" class="logo">ARTIFACT ZERO</a>
-  <nav>
-    <a href="/score">SCORE</a>
-    <a href="/compose">COMPOSE</a>
-    <a href="/contact">CONTACT</a>
+
+<div class="nav">
+  <a href="/" class="nav-logo">ARTIFACT ZERO.</a>
+  <div class="nav-links">
+    <a href="/score">Score</a>
     <a href="/docs">API</a>
-  </nav>
+    <a href="/live">Live</a>
+    <a href="/contact">Contact</a>
+  </div>
 </div>
 
-<div class="page-wrap">
-  <h1>25 Examples</h1>
-  <p class="sub">Real scenarios. Without NTI vs. with NTI. Three motions.</p>
+<div class="hero">
+  <h1>What do you <span class="accent">actually</span> do?</h1>
+  <p>Every person on a phone or computer is doing one of three things. Here are 25 real scenarios where structural scoring changes the outcome.</p>
+</div>
 
-  <div class="filters">
-    <button class="active" onclick="filter('all',this)">ALL</button>
-    <button onclick="filter('ws',this)">WRITE &amp; SEND</button>
-    <button onclick="filter('wsp',this)">WRITE &amp; SPEAK</button>
-    <button onclick="filter('rd',this)">READ &amp; DECIDE</button>
-  </div>
+<div class="filters">
+  <button class="filter-btn active" onclick="filter('all')">All 25</button>
+  <button class="filter-btn" onclick="filter('send')">✍️ Write & Send</button>
+  <button class="filter-btn" onclick="filter('speak')">🎤 Write & Speak</button>
+  <button class="filter-btn" onclick="filter('read')">📄 Read & Decide</button>
+</div>
 
-  <div id="exList"></div>
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <a href="/">artifact0.com</a> · <a href="/score">Try it</a> · <a href="/docs">API</a><br><br>
+  We don't say correct. We say different. You decide.
 </div>
 
 <script>
-const EX=[
-  {n:1,t:"Vendor follow-up email",m:"ws",bad:"Hi, just checking in on the proposal we discussed. Let me know if you have any questions or concerns. Happy to chat whenever works for you.",good:"Re: AcmeCorp proposal #4421. Decision needed by Friday Feb 28. Two items require your sign-off: pricing tier (Option A $24K or Option B $31K) and deployment date. Reply with selections or call me at 555-0142.",r:"Eliminated 2 follow-up cycles. Constraint: deadline + specific options. NII: 0.41 → 0.88."},
-  {n:2,t:"Patient appointment confirmation",m:"ws",bad:"Your appointment is coming up soon. Please make sure to arrive early and bring any relevant documents.",good:"Appointment: Dr. Chen, Tuesday March 4 at 2:15 PM. Location: Suite 300, 412 Main St. Bring: insurance card, photo ID, referral letter from Dr. Patel. Arrive by 2:00 PM. Cancel/reschedule: 865-555-0199 (24hr notice required).",r:"Zero ambiguity. Patient knows exactly what, when, where, what to bring. NII: 0.33 → 0.94."},
-  {n:3,t:"Project status update to leadership",m:"ws",bad:"Things are going well overall. The team is making good progress and we're generally on track. There are a few minor issues but nothing major.",good:"Project Atlas status — Feb 23. On track for March 14 delivery. 3 of 5 milestones complete. Open risk: API integration delayed 2 days (mitigation: parallel testing starts Monday). Budget: $42K of $50K spent. Decision needed: approve $3K overage for contractor support by Wednesday.",r:"Leadership has facts, timeline, risk, and a specific decision. No hedging. NII: 0.28 → 0.91."},
-  {n:4,t:"Insurance claim response",m:"ws",bad:"We've reviewed your claim and unfortunately we're not able to process it at this time. Please feel free to reach out if you have questions.",good:"Claim #INS-2026-44891 denied. Reason: missing documentation (Form 1099-HC not attached). To resubmit: upload Form 1099-HC to portal.insco.com/claims by March 10. Questions: claims@insco.com or 800-555-0177 ext 4.",r:"Claimant knows exactly why, what to do, and by when. Prevents 3+ phone calls. NII: 0.31 → 0.92."},
-  {n:5,t:"Sales outreach cold email",m:"ws",bad:"I'd love to connect and learn more about your business. I think we could really help your team with some exciting solutions.",good:"Your team posted 3 AI engineering roles last month. Companies hiring at that pace typically spend $140K+/year on AI tokens. We reduce that 63% with zero model changes. One API endpoint. 15-minute integration. Want to see your own token spend scored? artifact0.com/score",r:"Specific, relevant, measurable. CTA is concrete. NII: 0.22 → 0.85."},
-  {n:6,t:"Legal demand letter review",m:"rd",bad:"The letter seems aggressive but I think we should probably respond soon.",good:"Letter demands $45K settlement by March 15. Three claims: breach of contract (Section 4.2), negligence, consequential damages. Recommended response: deny negligence claim (no duty established), negotiate contract claim (our exposure: $12K-18K based on Section 7.1 limitation). File response by March 8 to preserve counterclaim window.",r:"Transformed vague impression into actionable legal strategy with deadlines. NII: 0.19 → 0.93."},
-  {n:7,t:"Board meeting prep talking points",m:"wsp",bad:"We should talk about growth and maybe mention the new product launch. Also probably touch on hiring.",good:"Three items, 4 minutes each. (1) Revenue: $2.1M Q4, up 23% QoQ. Ask: approve $400K Q1 marketing spend. (2) Product: V3 launches March 1. 12 beta customers confirmed. Ask: nothing, FYI only. (3) Hiring: 6 roles open, 3 offers out. Ask: approve Sr. VP Engineering comp package ($285K + 0.5% equity).",r:"Speaker knows exactly what to say, what to ask for, and time per item. NII: 0.26 → 0.95."},
-  {n:8,t:"Employee performance feedback",m:"wsp",bad:"You're doing a great job overall. Keep up the good work. Maybe try to be more proactive.",good:"Three specifics. (1) The client migration you led last month saved 40 hours — that's the standard I expect. (2) Your sprint estimates are consistently 30% under actual time. I need you to pad by 1.5x starting next sprint. (3) I want you to lead the Q2 architecture review. Confirm by Friday if you accept.",r:"Clear praise, clear correction, clear opportunity. No ambiguity. NII: 0.35 → 0.90."},
-  {n:9,t:"Tenant maintenance request",m:"ws",bad:"There seems to be an issue with the plumbing in my unit. It's been going on for a while and I'd appreciate if someone could look into it.",good:"Unit 4B, 822 Oak Ave. Kitchen sink leaking from base of faucet. Started Feb 20. Leak rate: approx 1 drip/second. Towel currently containing it. Available for maintenance access: Mon-Fri 8am-6pm. Contact: 865-555-0133.",r:"Maintenance can dispatch without a callback. Specific location, severity, availability. NII: 0.29 → 0.91."},
-  {n:10,t:"Investor update email",m:"ws",bad:"Things have been exciting lately. We're seeing some great traction and the team is really coming together. Looking forward to sharing more soon.",good:"February 2026 update. MRR: $14.2K (up 18% MoM). Runway: 11 months at current burn. Key wins: 3 enterprise pilots signed (healthcare, legal, insurance). Burn: $28K/mo. Ask: intro to BCBS TN — they match our ICP exactly. Next milestone: first $50K contract by April 1.",r:"Investor has numbers, timeline, specific ask. No fluff. NII: 0.21 → 0.93."},
-  {n:11,t:"Customer support escalation",m:"rd",bad:"The customer seems upset. We should probably do something about it.",good:"Customer: AcmeCorp (Enterprise tier, $2,500/mo). Issue: API returning 500 errors since Feb 22 14:30 UTC. Impact: their production pipeline is down. SLA breach in 6 hours. Action required: engineering escalation to P1. Customer contact: jane@acme.com, expecting callback within 1 hour.",r:"Support manager can act immediately. SLA clock visible. NII: 0.18 → 0.94."},
-  {n:12,t:"Commercial lease negotiation",m:"ws",bad:"We're interested in the space and would like to discuss terms. Looking forward to working together.",good:"Offer: 3,200 sq ft at 412 Market St, Suite 200. Terms: $22/sq ft NNN, 5-year lease, 6-month TI allowance of $15/sq ft. Move-in: May 1. Contingencies: building inspection by March 15, HVAC capacity verification. Response deadline: March 7.",r:"Landlord can evaluate immediately. No back-and-forth on basic terms. NII: 0.27 → 0.92."},
-  {n:13,t:"Team standup update",m:"wsp",bad:"I'm working on the thing from yesterday. Should be done soon hopefully.",good:"Yesterday: completed API rate limiter (PR #247, merged). Today: starting V3 enforcement module — estimated 6 hours. Blocker: none. Risk: if QA finds issues in rate limiter, I'll need 2 hours to patch.",r:"Team knows exactly what happened, what's next, and what could go wrong. NII: 0.15 → 0.92."},
-  {n:14,t:"Medical records request",m:"ws",bad:"We need the patient records for the case. Please send them when you get a chance.",good:"Records request: Patient Jane Doe, DOB 03/15/1982. Records needed: office visit notes 01/2025-12/2025, imaging reports (MRI lumbar 06/2025), billing statements. Authorization: HIPAA release attached (signed 02/20/2026). Send to: records@smithlaw.com. Deadline: March 10. Billing: invoice to Smith & Associates, PO #2026-0441.",r:"Provider can fulfill without a single phone call. NII: 0.24 → 0.96."},
-  {n:15,t:"Product requirements document review",m:"rd",bad:"The PRD looks good overall. Some parts could use more detail.",good:"PRD review — 4 issues found. (1) Section 3.2: 'fast response time' undefined — needs specific latency target (suggest <200ms P95). (2) Section 5: no error handling spec for API timeout. (3) Section 7.1: 'user-friendly' is not testable — replace with specific UX criteria. (4) Missing: load testing requirements for 10K concurrent users. Recommend: do not approve until items 1-4 resolved.",r:"PM gets specific, actionable feedback with clear blocking conditions. NII: 0.31 → 0.94."},
-  {n:16,t:"Restaurant reservation for group dinner",m:"ws",bad:"Hi, we'd like to make a reservation for a group dinner sometime next week if possible.",good:"Reservation request: 8 guests, Saturday March 1 at 7:30 PM. Preferences: private or semi-private area, one guest has nut allergy, one vegetarian. Budget: prix fixe if available under $85/person. Contact: 865-555-0142. Flexible on time between 7:00-8:00 PM.",r:"Restaurant can confirm or counter-offer in one response. NII: 0.22 → 0.90."},
-  {n:17,t:"Contract renewal negotiation",m:"wsp",bad:"We'd like to continue our partnership. Let's discuss what renewal might look like.",good:"Renewal proposal for AcmeCorp contract #AC-2024-019. Current: $120K/year, expires April 1. Proposed: 2-year renewal at $108K/year (10% discount for commitment). Added: V3 pipeline access (valued at $30K). Condition: payment terms net-30 (currently net-60). Decision needed by March 15.",r:"Both parties see exact terms, value add, trade-off, and deadline. NII: 0.25 → 0.93."},
-  {n:18,t:"Bug report to engineering",m:"ws",bad:"There's a bug in the app. It's not working right for some users.",good:"Bug: /api/v1/score returns 500 when input contains Unicode emoji (🎯). Reproduction: POST with body {\"text\":\"Test 🎯 message\"}. Expected: JSON score response. Actual: 500 Internal Server Error. Frequency: 100% reproducible. Environment: production (artifact0.com). Severity: P2 — affects ~5% of mobile users. Logs: CloudWatch error attached.",r:"Engineer can start debugging immediately. No clarification needed. NII: 0.19 → 0.95."},
-  {n:19,t:"Job offer negotiation",m:"wsp",bad:"I'm excited about the offer but I'd like to discuss a few things if that's okay.",good:"Thank you for the offer. I'd like to accept with three adjustments: (1) Base salary: requesting $165K (vs $155K offered) — aligned with my 8 years experience and your posted range. (2) Start date: March 17 (vs March 3) — need 2 weeks for current employer transition. (3) Remote: requesting 3 days/week remote (vs 2 offered). If these work, I'll sign today.",r:"Employer can approve, counter, or decline each point independently. No ambiguity. NII: 0.30 → 0.92."},
-  {n:20,t:"Compliance audit findings",m:"rd",bad:"The audit found some areas that need attention. We should look into addressing these soon.",good:"Audit findings — 3 items. Critical (1): PHI transmitted over unencrypted channel (HIPAA §164.312). Remediation: enable TLS on port 443 by Feb 28. High (1): access logs not retained 6 years per policy. Remediation: configure CloudWatch retention to 2190 days. Medium (1): password policy allows 8-char minimum (require 12). Deadline: critical item must be resolved before next audit March 15.",r:"Compliance officer has severity, regulation reference, fix, and deadline for each finding. NII: 0.20 → 0.96."},
-  {n:21,t:"Real estate showing feedback to agent",m:"ws",bad:"We liked the house but had some concerns. Can we talk about it?",good:"422 Maple Dr feedback: Like: layout, garage, school district. Concerns: (1) roof age — need inspection estimate before offer. (2) Kitchen needs $25-30K renovation — affects offer price. (3) HOA fee $380/mo seems high — what's included? Decision: willing to offer $415K (asking $435K) contingent on roof inspection. If roof needs replacement, reduce to $395K. Please submit by Thursday.",r:"Agent can write the offer immediately. No phone call needed. NII: 0.23 → 0.93."},
-  {n:22,t:"Conference talk proposal",m:"wsp",bad:"I'd like to give a talk about AI and communication. I think the audience would find it interesting.",good:"Talk: 'Why 98% of AI Prompts Fail Before the AI Reads Them.' 25 minutes. Thesis: structural drift in human input causes 63% of token waste. Live demo: audience texts a message, system scores it in real time on screen. Takeaway: 3 rules that cut AI cost immediately. Speaker: Jame, founder of Artifact Zero. Audience: CTOs, engineering leads, AI ops teams.",r:"Conference organizer can evaluate fit instantly. Specific hook, format, demo, audience. NII: 0.24 → 0.91."},
-  {n:23,t:"Pharmacy prescription transfer",m:"ws",bad:"I need to transfer my prescription to a new pharmacy. Can you help?",good:"Transfer request: Rx #7744821, Lisinopril 10mg, prescribed by Dr. Martinez (NPI: 1234567890). Current pharmacy: CVS #4412, 200 Main St. Transfer to: Walgreens #8891, 500 Oak Ave. Patient: John Smith, DOB 07/22/1975. Refills remaining: 3. Insurance: BlueCross ID #BCT-554-221.",r:"Pharmacist can process without a single callback. Every field covered. NII: 0.21 → 0.97."},
-  {n:24,t:"Investor pitch meeting prep notes",m:"rd",bad:"The deck looks fine. Just make sure to mention traction and the team.",good:"Pitch prep — 3 talking points, 2 landmines. Points: (1) Lead with $87K annual savings per enterprise customer (slide 4). (2) Live demo on their own Slack messages if they consent. (3) Close with: 'We're raising $1.5M on a $10M post. $400K committed. Decision by March 15.' Landmines: (1) They'll ask about moat — answer: rule-based, no LLM dependency, 1ms latency. (2) They'll ask about OpenAI doing this — answer: OpenAI sells the model, we govern the conversation around it.",r:"Founder walks in prepared for specific questions with specific numbers. NII: 0.28 → 0.94."},
-  {n:25,t:"Emergency contact notification",m:"ws",bad:"There's been a situation and we need to get in touch with the family.",good:"Emergency notification: Patient James Miller, DOB 11/03/1958, admitted 02/23/2026 14:22 to ER Bay 6, Knoxville General. Condition: stable, cardiac event. Emergency contact: Sarah Miller (spouse), 865-555-0188. Secondary: Tom Miller (son), 865-555-0199. Attending: Dr. Patel. Visitor hours: 24hr for immediate family. Parking: Lot C, validation at front desk.",r:"Family has everything needed in one message. Zero panic-inducing ambiguity. NII: 0.17 → 0.96."}
+const CASES = [
+  {n:1,type:"send",title:"Responding to a client complaint email",app:"Gmail / Outlook",
+   without:"Reads complaint, gets emotional, writes reactive response. Unresolved promises. Legal exposure from vague commitments.",
+   withNti:"Score shows false commitment and missing constraint on resolution timeline.",
+   result:"Prevents 1 false commitment per email. Removes legal exposure."},
+  {n:2,type:"send",title:"Writing a cold sales email to a prospect",app:"Gmail / CRM",
+   without:"Writes email that sounds like every other sales email. Too many hedges. No clear ask.",
+   withNti:"Score shows hedge density at 40%, missing objective, no constraint on next step.",
+   result:"Response rate increases. Every email has a scored structural baseline."},
+  {n:3,type:"send",title:"Texting a contractor about a deadline",app:"iMessage / SMS",
+   without:"Types fast, ambiguous message. 'Hey can you get that done soon?' No date. No scope.",
+   withNti:"Score flags MISSING_OBJECTIVE and no constraint on timeline.",
+   result:"Eliminates the follow-up cycle. One clear text replaces three vague ones."},
+  {n:4,type:"send",title:"Writing a Slack message about a project change",app:"Slack",
+   without:"Half update, half opinion, half question. Gets 5 confused replies. Clarification loop.",
+   withNti:"Score flags scope omission and mixed intent.",
+   result:"One message does the job of three. No clarification loop."},
+  {n:5,type:"send",title:"Sending a rent increase notice to a tenant",app:"Email / Letter",
+   without:"Either too harsh (legal blowback) or too vague (unenforceable). No effective date.",
+   withNti:"Score flags missing constraint (no effective date), vague language.",
+   result:"Removes legal exposure. Every notice hits structural requirements."},
+  {n:6,type:"send",title:"Emailing a professor about a grade dispute",app:"Email",
+   without:"Student writes emotional email. 'I feel like my grade doesn't reflect...' No specific ask.",
+   withNti:"Score flags emotional load, missing objective (no specific grade requested).",
+   result:"Turns an emotional email into a professional request."},
+  {n:7,type:"send",title:"Writing a LinkedIn post about your company",app:"LinkedIn",
+   without:"Sounds like ChatGPT. Hedge words everywhere. No concrete claim. Low engagement.",
+   withNti:"Score shows 60% filler, no concrete claim, no CTA.",
+   result:"Post performs better because it says something."},
+  {n:8,type:"send",title:"Drafting a cover letter for a job application",app:"Google Docs / Word",
+   without:"Uses ChatGPT. Gets polished-sounding letter that says nothing specific.",
+   withNti:"Score shows hedge density, false specificity, missing differentiation.",
+   result:"Cover letter actually differentiates. Structural scoring catches what humans miss."},
+  {n:9,type:"send",title:"Replying to an insurance denial",app:"Email / Portal",
+   without:"Patient writes emotional appeal. No reference to denial code. No structural argument.",
+   withNti:"Score flags: no reference to denial code, missing policy citation, emotional load.",
+   result:"Appeal addresses structural requirements for reversal."},
+  {n:10,type:"send",title:"Writing a proposal to a potential business partner",app:"Email / Google Docs",
+   without:"Full of 'synergies' and 'mutual benefit' without a single specific term.",
+   withNti:"Score flags: MISSING_OBJECTIVE, no constraint, no specific deliverable.",
+   result:"Partner can actually evaluate and respond."},
+  {n:11,type:"speak",title:"Preparing talking points for a board meeting",app:"Notes / Google Docs",
+   without:"2 pages of notes that are anxiety dumping. Gets to the meeting and rambles.",
+   withNti:"Score shows 3 objectives buried in 2 pages. Flags competing priorities.",
+   result:"Board meeting in 2 minutes instead of 8. One clear ask gets approved."},
+  {n:12,type:"speak",title:"Rehearsing a campaign speech",app:"Notes / Phone",
+   without:"Sounds good in her head. Gets to the podium. Mixed reception.",
+   withNti:"Score shows: clarity 72%, hedge density 18%, 2 unresolved commitments.",
+   result:"Every speech is scored before delivery. Public accountability becomes structural."},
+  {n:13,type:"speak",title:"Preparing for a salary negotiation",app:"Notes / Phone",
+   without:"All hedging. 'I was hoping maybe we could discuss...' No anchor number.",
+   withNti:"Score flags: 4 hedge phrases, missing anchor, no constraint on timeline.",
+   result:"Walks in with a structurally sound script. Doesn't fold."},
+  {n:14,type:"speak",title:"Giving a toast at a wedding",app:"Notes app / Phone",
+   without:"Heartfelt but rambling. 5 minutes. People check their phones.",
+   withNti:"Score shows: 3 unresolved threads, 2 competing stories. Flags length.",
+   result:"Toast lands. 90 seconds. Everyone laughs at the right moment."},
+  {n:15,type:"speak",title:"Presenting a quarterly report to executives",app:"PowerPoint / Notes",
+   without:"30-slide deck. 45 minutes. Executives check email at slide 8.",
+   withNti:"Score flags: no decision point, 4 competing objectives, missing ask.",
+   result:"5-minute presentation with a decision point. Executives say yes or no."},
+  {n:16,type:"speak",title:"Recording a video for social media",app:"Notes → Camera",
+   without:"Script sounds corporate. Video sounds stiff. 4 takes. Posts worst one.",
+   withNti:"Score shows: hedge density 35%, no direct claim, no hook.",
+   result:"Video has structural substance. Opening line hooks."},
+  {n:17,type:"speak",title:"Leading a parent-teacher conference",app:"Notes / Phone",
+   without:"8 things to cover. Gets derailed by minute 3. Runs out of time.",
+   withNti:"Score flags: 8 objectives (too many for 15 min), no priority ranking.",
+   result:"Conference stays on track. All priorities addressed."},
+  {n:18,type:"read",title:"Reading a long article before sharing it",app:"Browser / News app",
+   without:"Reads headline, skims 2 paragraphs, shares on social media.",
+   withNti:"Score shows: 3 unsupported claims, 2 emotional triggers, no cited sources.",
+   result:"Stops amplifying structurally weak content."},
+  {n:19,type:"read",title:"Reviewing a contract before signing",app:"PDF viewer / Email",
+   without:"Reads 12-page contract, eyes glaze at page 4. Signs.",
+   withNti:"Score flags: 3 scope omissions, 1 binary without penalty, undefined 'reasonable'.",
+   result:"Catches structural traps without a lawyer."},
+  {n:20,type:"read",title:"Deciding whether to apply for a job",app:"Job board / LinkedIn",
+   without:"Gets excited by title. Applies. Discovers it's not what they thought.",
+   withNti:"Score shows: 40% scope omission, no constraint on role definition.",
+   result:"Doesn't waste time on structurally vague postings."},
+  {n:21,type:"read",title:"Reading a medical report after a doctor visit",app:"Patient portal / PDF",
+   without:"Reads discharge summary. Doesn't understand. Googles. Panics.",
+   withNti:"Score flags: 2 unresolved recommendations, 1 missing follow-up timeline.",
+   result:"Patient becomes informed, not panicked. Asks the right questions."},
+  {n:22,type:"read",title:"Reviewing a report your employee wrote",app:"Email / Google Docs",
+   without:"Looks professional because it's long. Forwards to client. Client confused.",
+   withNti:"Score flags: missing objective, no conclusion, 3 unsupported assertions.",
+   result:"Report gets fixed before the client sees it."},
+  {n:23,type:"read",title:"Reading a lease agreement before signing",app:"PDF / Email",
+   without:"Reads first page and last page. Signs. Misses the auto-renewal clause.",
+   withNti:"Score flags: 'reasonable notice' as undefined, auto-renewal without exit constraint.",
+   result:"Catches the three things that would have cost money."},
+  {n:24,type:"read",title:"Evaluating a vendor proposal",app:"Email / PDF",
+   without:"Focuses on price. Misses that the SLA has no penalty clause.",
+   withNti:"Score flags: SLA without penalty, undefined scope, missing deliverable timeline.",
+   result:"Vendor relationship starts clean. No surprises at renewal."},
+  {n:25,type:"read",title:"Reading a news article about a candidate you'll vote for",app:"Browser / News app",
+   without:"Reads article. Confirms existing bias. Doesn't notice missing sources.",
+   withNti:"Score shows: 2 unverified claims, 1 missing source attribution.",
+   result:"Voter makes informed decision based on structural quality."}
 ];
 
-function buildList(items){
-  const el=document.getElementById('exList');
-  el.innerHTML='';
-  items.forEach(ex=>{
-    const mc=ex.m==='ws'?'motion-ws':ex.m==='wsp'?'motion-wsp':'motion-rd';
-    const ml=ex.m==='ws'?'WRITE & SEND':ex.m==='wsp'?'WRITE & SPEAK':'READ & DECIDE';
-    el.innerHTML+=`<div class="ex-card" data-motion="${ex.m}" onclick="toggle(this)">
-      <div class="ex-header">
-        <span class="ex-num">${String(ex.n).padStart(2,'0')}</span>
-        <span class="ex-title">${ex.t}</span>
-        <span class="ex-motion ${mc}">${ml}</span>
-        <span class="ex-arrow">&#9660;</span>
+function render(cases) {
+  document.getElementById('grid').innerHTML = cases.map(c => `
+    <div class="uc" data-type="${c.type}">
+      <div class="uc-header" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="uc-num">${String(c.n).padStart(2,'0')}</span>
+        <div class="uc-content">
+          <div class="uc-title">${c.title}</div>
+          <div class="uc-app">${c.app}</div>
+        </div>
+        <span class="uc-type ${c.type}">${c.type==='send'?'Write & Send':c.type==='speak'?'Write & Speak':'Read & Decide'}</span>
       </div>
-      <div class="ex-body">
-        <div class="ex-section"><div class="ex-section-label">Without NTI</div><div class="ex-text bad">${ex.bad}</div></div>
-        <div class="ex-section"><div class="ex-section-label">With NTI</div><div class="ex-text good">${ex.good}</div></div>
-        <div class="ex-section"><div class="ex-section-label">Result</div><div class="ex-result">${ex.r}</div></div>
+      <div class="uc-detail">
+        <div class="uc-row">
+          <div class="uc-box"><div class="uc-box-label red">Without NTI</div><p>${c.without}</p></div>
+          <div class="uc-box"><div class="uc-box-label green">With NTI</div><p>${c.withNti}</p></div>
+        </div>
+        <div class="uc-result">→ ${c.result}</div>
       </div>
-    </div>`;
-  });
+    </div>
+  `).join('');
 }
 
-function filter(m,btn){
-  document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  buildList(m==='all'?EX:EX.filter(e=>e.m===m));
+function filter(type) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (type === 'all') { render(CASES); return; }
+  render(CASES.filter(c => c.type === type));
 }
 
-function toggle(card){card.classList.toggle('open');}
-
-buildList(EX);
+render(CASES);
 </script>
 </body>
 </html>

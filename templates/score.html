@@ -8,7 +8,7 @@
 <style>
 :root{
   --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--green:#00e89c;
   --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -27,7 +27,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 
 h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
 .subtitle{color:var(--muted);font-size:14px;margin-bottom:30px}
-.free-badge{display:inline-block;background:#22c55e22;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;margin-left:8px}
+.free-badge{display:inline-block;background:rgba(0,232,156,.12);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;margin-left:8px}
 
 textarea{
   width:100%;min-height:160px;background:var(--surface);border:1px solid var(--border);
@@ -81,7 +81,7 @@ textarea::placeholder{color:#3d4452}
 .failure-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
 .failure-badge.confirmed{background:#ef444422;color:var(--red)}
 .failure-badge.probable{background:#f59e0b22;color:var(--amber)}
-.failure-badge.false{background:#22c55e22;color:var(--green)}
+.failure-badge.false{background:rgba(0,232,156,.12);color:var(--green)}
 .failure-name{font-size:13px;color:var(--muted)}
 
 .tilt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -98,8 +98,10 @@ textarea::placeholder{color:#3d4452}
   <a href="/" class="logo">ARTIFACT ZERO</a>
   <nav>
     <a href="/score" class="active">Score</a>
-    <a href="/docs">API Docs</a>
-    <a href="/live">Live Feed</a>
+    <a href="/docs">API</a>
+    <a href="/live">Live</a>
+    <a href="/contact">Contact</a>
+    <a href="/examples">Examples</a>
   </nav>
 </div>
 

@@ -3,423 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artifact Zero — Conversational Governance</title>
+<title>Artifact Zero — Score it.</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;--blue:#3b82f6;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
-}
+:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b}
 *{margin:0;padding:0;box-sizing:border-box}
-html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-
-/* ── TOPBAR ── */
-.topbar{
-  border-bottom:1px solid var(--border);padding:14px 24px;
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;background:var(--bg);z-index:100;
-}
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav{display:flex;align-items:center;gap:18px}
-.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
-.topbar nav a:hover{color:var(--text)}
-.topbar .live-ind{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);background:var(--surface2);padding:3px 10px;border-radius:4px}
-.topbar .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@media(max-width:700px){.topbar nav a{display:none}.topbar nav a:first-child,.topbar nav a:nth-child(2){display:inline}}
-
-/* ── HERO ── */
-.hero{text-align:center;padding:56px 20px 40px;max-width:680px;margin:0 auto}
-.hero-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
-.hero h1{font-size:clamp(28px,5vw,42px);font-weight:700;line-height:1.25;margin-bottom:14px}
-.hero .sub{font-size:15px;color:var(--muted);line-height:1.6;max-width:520px;margin:0 auto}
-
-/* ── PRODUCT CARDS ── */
-.products{max-width:900px;margin:0 auto;padding:0 20px 40px}
-.products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px}
-.pcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 20px;text-decoration:none;display:block;transition:border .2s,transform .2s}
-.pcard:hover{border-color:var(--accent);transform:translateY(-2px)}
-.pcard-name{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
-.pcard-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px}
-.pcard-desc{font-size:12px;color:var(--muted);line-height:1.5}
-.pcard-cta{font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:10px;letter-spacing:.5px}
-
-/* ── STAT BAR ── */
-.stat-bar{max-width:900px;margin:0 auto 40px;padding:0 20px}
-.stat-inner{background:linear-gradient(135deg,#0f172a,#1a1145);border:1px solid #312e81;border-radius:10px;padding:18px 28px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
-.stat-num{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--accent)}
-.stat-text{font-size:13px;color:var(--muted)}
-
-/* ── DIVIDER ── */
-.divider{max-width:900px;margin:0 auto;padding:0 20px 24px}
-.divider-inner{border-top:1px solid var(--border);padding-top:24px}
-.divider-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
-
-/* ── AUDIT ENGINE ── */
-.audit{max-width:900px;margin:0 auto;padding:0 20px 60px}
-.audit label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
-.audit textarea{
-  width:100%;min-height:110px;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);padding:14px;border-radius:8px;font-family:'DM Sans',sans-serif;
-  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
-}
-.audit textarea:focus{border-color:var(--accent)}
-.audit textarea::placeholder{color:#3d4452}
-.btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.btn{padding:10px 20px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-primary{background:var(--accent);color:#0a0c10}
-.btn-primary:hover{background:#16a34a}
-.btn-primary:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
-.btn-sample:hover{color:var(--text);background:var(--border)}
-
-/* ── RESULTS ── */
-.results{display:none}
-.results.show{display:block;animation:fadeIn .3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.hero-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
-.score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center}
-.score-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;margin-bottom:3px}
-.score-card .sc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.score-card.critical .sc-value{color:var(--red)}
-.score-card.warning .sc-value{color:var(--amber)}
-.score-card.good .sc-value{color:var(--accent)}
-.score-card.info .sc-value{color:var(--blue)}
-
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
-.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
-.panel-header h3{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--blue)}
-.panel-header .badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
-.badge-red{background:#7f1d1d;color:#fca5a5}
-.badge-amber{background:#78350f;color:#fde68a}
-.badge-green{background:#14532d;color:#86efac}
-.panel-body{padding:14px}
-.fm-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
-.fm-row:last-child{border-bottom:none}
-.fm-name{font-weight:600;font-size:13px}
-.fm-full{font-size:10px;color:var(--muted);margin-top:2px}
-.fm-status{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px}
-.fm-confirmed{background:#7f1d1d;color:#fca5a5}
-.fm-probable{background:#78350f;color:#fde68a}
-.fm-false{background:#14532d;color:#86efac}
-.tilt-tags{display:flex;flex-wrap:wrap;gap:5px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-.layer-table{width:100%;border-collapse:collapse;font-size:12px}
-.layer-table th{text-align:left;padding:6px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
-.layer-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
-.layer-table td:first-child{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--blue);white-space:nowrap;width:50px}
-.matrix-row{padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
-.matrix-row:last-child{border-bottom:none}
-.matrix-pair{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--purple);font-size:11px}
-.matrix-note{color:var(--muted);margin-top:2px}
-.raw-toggle{font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:10px;display:inline-block}
-.raw-json{display:none;margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.5;max-height:350px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
-.raw-json.show{display:block}
-.callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:18px;margin-bottom:20px;text-align:center}
-.callout .big{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--accent)}
-.callout .sub{font-size:12px;color:var(--muted);margin-top:3px}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.nav{position:fixed;top:0;right:0;padding:16px 24px;z-index:100;display:flex;gap:20px;align-items:center}
+.nav a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s}
+.nav a:hover{color:var(--accent)}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;transition:all .4s ease}
+.center.scored{justify-content:flex-start;padding-top:80px}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:28px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;transition:all .4s ease}
+.logo .dot{color:var(--text)}
+.center.scored .logo{font-size:16px;margin-bottom:20px}
+.box{width:100%;max-width:580px;position:relative;transition:all .4s ease}
+.center.scored .box{max-width:640px}
+.box textarea{width:100%;min-height:48px;max-height:200px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:24px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;resize:none;outline:none;transition:all .2s;overflow:hidden}
+.box textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,232,156,.1)}
+.box textarea::placeholder{color:#3d4452}
+.actions{display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.btn{padding:8px 20px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-score{background:var(--accent);color:#000;font-weight:700}
+.btn-score:hover{background:#00d48c}
+.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.btn-ghost{background:transparent;color:var(--accent);font-size:12px;border:1px solid var(--accent)}
+.btn-ghost:hover{color:#000;background:var(--accent)}
+.tagline{margin-top:20px;font-size:13px;color:var(--muted);text-align:center;transition:opacity .4s}
+.center.scored .tagline{opacity:0;height:0;margin:0;overflow:hidden}
+.tagline a{color:var(--muted);font-size:11px;margin-top:8px;display:inline-block;text-decoration:none;border-bottom:1px solid var(--border);transition:color .15s}
+.tagline a:hover{color:var(--accent);border-color:var(--accent)}
+.results{display:none;width:100%;max-width:640px;margin-top:24px}
+.results.show{display:block;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.score-ring{text-align:center;margin-bottom:24px}
+.score-ring .num{font-family:'JetBrains Mono',monospace;font-size:72px;font-weight:700;line-height:1}
+.score-ring .num.high{color:var(--accent)}.score-ring .num.mid{color:var(--amber)}.score-ring .num.low{color:var(--red)}
+.score-ring .label{font-family:'JetBrains Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:500px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card h4{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.card .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+.card .v.green{color:var(--accent)}.card .v.red{color:var(--red)}.card .v.amber{color:var(--amber)}
+.fm-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+.tilt-tags{display:flex;flex-wrap:wrap;gap:4px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--amber)}
+.meta{text-align:center;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.again{text-align:center;margin-top:20px}
+.again a{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;text-decoration:none;cursor:pointer}
+.footer{padding:20px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);transition:opacity .4s}
+.footer a{color:var(--accent);text-decoration:none}
+.center.scored ~ .footer{opacity:0}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── FOUNDER QUOTE ── */
-.quote-section{max-width:900px;margin:0 auto;padding:0 20px 36px}
-.quote-box{text-align:center;padding:32px 24px}
-.quote-text{font-size:clamp(17px,3vw,22px);font-weight:500;line-height:1.5;color:var(--text);max-width:640px;margin:0 auto 12px}
-.quote-text em{color:var(--accent);font-style:normal;font-weight:700;cursor:pointer;border-bottom:2px dashed var(--accent);padding-bottom:1px;transition:all .2s}
-.quote-text em:hover{color:#fff;border-color:#fff}
-.quote-attr{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px}
-.quote-cta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);cursor:pointer;letter-spacing:.5px;transition:color .2s;display:inline-block}
-.quote-cta:hover{color:#fff}
-.quote-reveal{display:none;max-width:640px;margin:20px auto 0;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;animation:fadeIn .4s ease}
-.quote-reveal.show{display:block}
-.quote-reveal p{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:14px}
-.quote-reveal p:last-of-type{margin-bottom:16px}
-.quote-reveal strong{color:var(--text)}
-.quote-reveal .qr-cta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);text-decoration:none;letter-spacing:.5px}
-.quote-reveal .qr-cta:hover{color:#fff}
-
-/* ── FOOTER ── */
-.footer{text-align:center;padding:24px 20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);max-width:900px;margin:0 auto}
-.footer a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
-
-<!-- ── TOPBAR ── -->
-<div class="topbar">
-  <a href="/" class="logo">ARTIFACT ZERO</a>
-  <nav>
-    <a href="/relay">RELAY</a>
-    <a href="/chat">CONTROL ROOM</a>
-    <a href="/lab">LAB</a>
-    <a href="/live">LIVE</a>
-    <a href="/your-os">YOUR OS</a>
-    <div class="live-ind"><span class="dot"></span>LIVE</div>
-  </nav>
-</div>
-
-<!-- ── HERO ── -->
-<div class="hero">
-  <div class="hero-label" style="font-size:9px;opacity:.5;letter-spacing:3px">CONVERSATIONAL GOVERNANCE</div>
-  <h1>AI says whatever it wants.<br>We fix that.</h1>
-  <div class="sub">Your team sends thousands of AI-touched messages a month. We catch the ones that would cost you.</div>
-</div>
-
-
-<!-- ── FOUNDER QUOTE ── -->
-<div class="quote-section">
-  <div class="quote-box">
-    <div class="quote-text">I used to tell my wife <em onclick="toggleQuote()">"calm down."</em> It never once accomplished what I wanted it to accomplish. Not once. So I stopped.</div>
-    <div class="quote-attr">— Jame Houghton, Founder</div>
-    <div class="quote-cta" onclick="toggleQuote()">click "calm down" to learn more ↓</div>
-    <div class="quote-reveal" id="quoteReveal">
-      <p>Then I realized I was doing the same thing to AI. Re-explaining. Softening. Managing a computer's feelings. Wasting words that never accomplished what I thought they accomplished.</p>
-      <p>I gave ChatGPT a problem: two people who completely disagree about AI. Instead of letting it hedge and give both sides equal weight and accomplish nothing — I stripped every emotional word out of both positions. <strong>Seven minutes. Common ground found.</strong></p>
-      <p>The words were the problem. Not the people. Not the AI. The words.</p>
-      <p><strong>"Calm down" is just the one you already know about.</strong> What about the others you use every day that do the same thing — accomplish the opposite of what you intend — and nobody's ever pointed them out?</p>
-      <a class="qr-cta" href="/relay">Find yours. Build your rules. Free to start →</a>
+<div class="nav"><a href="/score">Score</a><a href="/docs">API</a><a href="/live">Live</a><a href="/contact">Contact</a><a href="/examples">Examples</a></div>
+<div class="center" id="center">
+  <div class="logo">ARTIFACT ZERO<span class="dot">.</span></div>
+  <div class="box">
+    <textarea id="input" rows="1" placeholder="Paste anything. Score it." oninput="autoGrow(this)"></textarea>
+    <div class="actions">
+      <button class="btn btn-score" id="scoreBtn" onclick="score()">Score it</button>
+      <button class="btn btn-ghost" onclick="sample('email')">Client email</button>
+      <button class="btn btn-ghost" onclick="sample('contract')">Contract</button>
+      <button class="btn btn-ghost" onclick="sample('ai')">AI output</button>
     </div>
   </div>
-</div>
-
-<!-- ── PRIMARY CTA — SEE IT WORK ── -->
-<div style="max-width:900px;margin:0 auto;padding:0 20px 24px">
-  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px">
-    <a href="/relay" style="padding:12px 28px;background:var(--accent);color:#0a0c10;font-weight:700;border-radius:6px;text-decoration:none;font-size:14px;font-family:'DM Sans',sans-serif">Start free →</a>
-    <a href="#demo" onclick="runPreloaded()" style="padding:12px 28px;background:var(--surface2);color:var(--text);font-weight:600;border-radius:6px;text-decoration:none;font-size:14px;font-family:'DM Sans',sans-serif;border:1px solid var(--border)">See it work ↓</a>
+  <div class="tagline">Structural integrity scoring for any communication.<br><span style="color:var(--accent)">49% → 7%</span> false commitment rate. Rule-based. Zero LLM.<br><a href="/examples">But what do you actually do? See 25 real examples →</a></div>
+  <div class="results" id="results">
+    <div class="score-ring"><div class="num" id="nii">—</div><div class="label" id="niiLabel">—</div></div>
+    <div class="cards">
+      <div class="card"><h4>Failure Modes</h4><div id="fm">—</div></div>
+      <div class="card"><h4>Dominance</h4><div class="v" id="dom">—</div></div>
+      <div class="card"><h4>Tilt Patterns</h4><div id="tilt">—</div></div>
+      <div class="card"><h4>Response</h4><div class="v" id="meta">—</div></div>
+    </div>
+    <div class="meta" id="metaLine"></div>
+    <div class="again"><a onclick="reset()">Score another →</a></div>
   </div>
 </div>
-
-<!-- ── LIVE DEMO (preloaded) ── -->
-<div class="audit" id="demo">
-  <div style="text-align:center;margin-bottom:12px">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Live demo — real NTI output</div>
-  </div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px;font-style:italic">"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered."</div>
-  <div style="text-align:center;margin-bottom:16px">
-    <button class="btn btn-primary" id="demoBtn" onclick="runPreloaded()">Score this message</button>
-  </div>
-
-  <div class="results" id="results" style="margin-top:16px">
-    <div class="hero-scores" id="heroScores"></div>
-
-    <div class="callout">
-      <div class="big">63–65%</div>
-      <div class="sub">Validated token cost reduction across GPT-4.1, Claude Opus 4.6, Gemini 2.5 Pro · Rule-based · Zero inference cost</div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header" onclick="toggle('fmBody')">
-        <h3>Parent Failure Modes</h3>
-        <span class="badge" id="fmBadge">—</span>
-      </div>
-      <div class="panel-body" id="fmBody"></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header" onclick="toggle('tiltBody')">
-        <h3>Tilt Taxonomy (10 Categories)</h3>
-        <span class="badge" id="tiltBadge">—</span>
-      </div>
-      <div class="panel-body" id="tiltBody"></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header" onclick="toggle('matrixBody')">
-        <h3>Interaction Matrix</h3>
-        <span class="badge" id="matrixBadge">—</span>
-      </div>
-      <div class="panel-body" id="matrixBody"></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header" onclick="toggle('layerBody')">
-        <h3>Layer Analysis (L0–L7)</h3>
-      </div>
-      <div class="panel-body" id="layerBody"></div>
-    </div>
-
-    <span class="raw-toggle" onclick="toggleRaw()">View raw JSON response</span>
-    <div class="raw-json" id="rawJson"></div>
-
-    <div style="margin-top:16px">
-      <button class="btn btn-primary" onclick="reset()">Run Another Audit</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- ── PRODUCT CARDS (below the fold) ── -->
-<div class="products">
-  <div style="text-align:center;margin-bottom:16px">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Go deeper</div>
-  </div>
-  <div class="products-grid">
-    <a href="/relay" class="pcard">
-      <div class="pcard-name" style="color:var(--accent)">⚡ RELAY</div>
-      <div class="pcard-title">Govern any AI</div>
-      <div class="pcard-desc">Build a protocol. Paste it into ChatGPT, Claude, Gemini, or Grok. Score every response. Your rules never leave our server.</div>
-      <div class="pcard-cta" style="color:var(--accent)">FREE · 50 TURNS →</div>
-    </a>
-    <a href="/chat" class="pcard">
-      <div class="pcard-name" style="color:var(--blue)">◉ CONTROL ROOM</div>
-      <div class="pcard-title">Chat with governance</div>
-      <div class="pcard-desc">AI interface with NTI enforcement built in. Every response scored, stabilized, and traced before it reaches you.</div>
-      <div class="pcard-cta" style="color:var(--blue)">LIVE →</div>
-    </a>
-    <a href="/lab" class="pcard">
-      <div class="pcard-name" style="color:var(--purple)">⧉ LAB</div>
-      <div class="pcard-title">Test & analyze</div>
-      <div class="pcard-desc">Run structural analysis, compare AI outputs, test failure modes. The full NTI testing environment.</div>
-      <div class="pcard-cta" style="color:var(--purple)">LIVE →</div>
-    </a>
-    <a href="/live" class="pcard">
-      <div class="pcard-name" style="color:var(--amber)">◎ LIVE FEED</div>
-      <div class="pcard-title">Real-time scoring</div>
-      <div class="pcard-desc">News headlines scored for structural integrity across 13 sources. NTI running 24/7 on real content.</div>
-      <div class="pcard-cta" style="color:var(--amber)">LIVE →</div>
-    </a>
-  </div>
-</div>
-
-<!-- ── FOOTER ── -->
-<div class="footer">
-  Artifact Zero Labs · Knoxville, Tennessee · <span style="color:var(--accent)">Conversational Governance</span><br>
-  <a href="/relay">Relay</a> · <a href="/chat">Control Room</a> · <a href="/lab">Lab</a> · <a href="/live">Live</a>
-</div>
-
+<div class="footer"><a href="/">artifact0.com</a> · <a href="/docs">API</a> · <a href="/live">Live Feed</a> · <a href="/wall">Wall</a><br>Structural infrastructure for communication.</div>
 <script>
-function toggleQuote(){
-  document.getElementById('quoteReveal').classList.toggle('show');
-}
-
-const PRELOADED = "I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered.";
-
-async function runPreloaded(){
-  document.getElementById('demo').scrollIntoView({behavior:'smooth'});
-  const btn = document.getElementById('demoBtn');
-  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Scoring...'; }
-  try {
-    const res = await fetch('/nti', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:PRELOADED})});
-    const data = await res.json();
-    if(!data.error){ renderResults(data); document.getElementById('results').classList.add('show'); }
-  } catch(e){}
-  if(btn){ btn.disabled=false; btn.textContent='Score this message'; }
-}
-
-const SAMPLES = {
-  a: "I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. I think we can maybe handle most of the edge cases, and honestly it should be relatively straightforward. Rest assured we've got this covered and there's really nothing to worry about. Everyone agrees this is the right approach and all stakeholders are basically on board. We'll circle back on the details later.",
-  b: "This solution guarantees perfect security and eliminates all risk in every scenario. Our system always delivers optimal results and never fails under any circumstances. Everyone agrees this is the best practice, and all research universally shows it works for everyone in any situation without exception. We can handle everything — costs will definitely decrease, performance will absolutely improve, and all users will be completely satisfied. Just deploy it immediately and rest assured there are zero downsides. I promise this will solve all your problems permanently.",
-  c: "I just want to make sure we're on the same page here. I think perhaps the approach might possibly work in some cases, but I'm not entirely sure. We should probably consider potentially looking into alternative options at some point. I don't want to overstep but maybe we could sort of revisit the requirements. Honestly I feel like the scope is kind of unclear and it seems like there might be some concerns. I apologize if this is redundant but I just wanted to flag that we might want to eventually think about addressing these issues going forward when we get a chance."
-};
-
-function loadSample(k){ document.getElementById('input').value = SAMPLES[k]; }
-function reset(){ document.getElementById('input').value = ''; document.getElementById('results').classList.remove('show'); window.scrollTo(0,0); }
-function toggle(id){ const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
-function toggleRaw(){ document.getElementById('rawJson').classList.toggle('show'); }
-
-function fmClass(s){ return s.includes('CONFIRMED') ? 'fm-confirmed' : s.includes('PROBABLE') ? 'fm-probable' : 'fm-false'; }
-function fmLabel(s){ return s.includes('FALSE') ? 'CLEAR' : s.replace('_',' '); }
-function niiClass(s){ return s >= 0.8 ? 'good' : s >= 0.5 ? 'warning' : 'critical'; }
-
-async function runNTI(){
-  const text = document.getElementById('input').value.trim();
-  if(!text) return;
-  const btn = document.getElementById('runBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Running full stack...';
-
-  try {
-    const res = await fetch('/nti', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({text: text})
-    });
-    const data = await res.json();
-    if(data.error){ alert('Error: ' + data.error); btn.disabled = false; btn.textContent = 'Run Full Stack Audit'; return; }
-    renderResults(data);
-    document.getElementById('results').classList.add('show');
-    document.getElementById('results').scrollIntoView({behavior:'smooth'});
-  } catch(err){ alert('Connection error: ' + err.message); }
-
-  btn.disabled = false;
-  btn.textContent = 'Run Full Stack Audit';
-}
-
-function renderResults(data){
-  const nii = data.nii || {};
-  const fm = data.parent_failure_modes || {};
-  const tilt = data.tilt_taxonomy || [];
-  const matrix = data.interaction_matrix || {};
-  const layers = data.layers || {};
-  const latency = data.telemetry?.latency_ms || '—';
-  const niiScore = nii.nii_score ?? 0;
-  const dominance = matrix.dominance_detected || ['NONE'];
-
-  document.getElementById('heroScores').innerHTML = `
-    <div class="score-card ${niiClass(niiScore)}"><div class="sc-value">${(niiScore*100).toFixed(0)}%</div><div class="sc-label">NTI Integrity Index</div></div>
-    <div class="score-card ${nii.q1_constraints_explicit>=1?'good':'critical'}"><div class="sc-value">${nii.q1_constraints_explicit>=1?'YES':'NO'}</div><div class="sc-label">Constraints Explicit</div></div>
-    <div class="score-card ${nii.q2_constraints_before_capability>=1?'good':'critical'}"><div class="sc-value">${nii.q2_constraints_before_capability>=1?'YES':'NO'}</div><div class="sc-label">Constraints First</div></div>
-    <div class="score-card ${nii.q3_substitutes_after_enforcement>=1?'good':'critical'}"><div class="sc-value">${nii.q3_substitutes_after_enforcement>=1?'YES':'NO'}</div><div class="sc-label">Boundary Enforced</div></div>
-    <div class="score-card info"><div class="sc-value">${tilt.length}</div><div class="sc-label">Tilt Categories</div></div>
-    <div class="score-card info"><div class="sc-value">${latency}ms</div><div class="sc-label">Latency</div></div>
-  `;
-
-  const modes = [
-    {key:'UDDS',full:'Upstream Denial via Downstream Substitution',state:fm.UDDS?.udds_state||'UDDS_FALSE'},
-    {key:'DCE',full:'Deferred Constraint Externalization',state:fm.DCE?.dce_state||'DCE_FALSE'},
-    {key:'CCA',full:'Constraint Collapse via Aggregation',state:fm.CCA?.cca_state||'CCA_FALSE'},
-  ];
-  const active = modes.filter(m=>!m.state.includes('FALSE')).length;
-  document.getElementById('fmBadge').className = 'badge '+(active>0?'badge-red':'badge-green');
-  document.getElementById('fmBadge').textContent = active>0?active+' DETECTED':'CLEAR';
-  document.getElementById('fmBody').innerHTML = modes.map(m=>`
-    <div class="fm-row"><div><div class="fm-name">${m.key}</div><div class="fm-full">${m.full}</div></div>
-    <div class="fm-status ${fmClass(m.state)}">${fmLabel(m.state)}</div></div>
-  `).join('');
-
-  document.getElementById('tiltBadge').className = 'badge '+(tilt.length>0?'badge-amber':'badge-green');
-  document.getElementById('tiltBadge').textContent = tilt.length>0?tilt.length+' ACTIVE':'NONE';
-  document.getElementById('tiltBody').innerHTML = tilt.length>0 ?
-    '<div class="tilt-tags">'+tilt.map(t=>`<span class="tilt-tag">${t}</span>`).join('')+'</div>' :
-    '<span style="color:var(--muted);font-size:13px">No tilt categories detected.</span>';
-
-  document.getElementById('matrixBadge').className = 'badge '+(dominance[0]!=='NONE'?'badge-red':'badge-green');
-  document.getElementById('matrixBadge').textContent = dominance.join(' + ');
-  let mh = '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Dominance order: CCA > UDDS > DCE (canonical)</div>';
-  (matrix.pairwise||[]).forEach(p=>{ mh+=`<div class="matrix-row"><div class="matrix-pair">${p.pair}</div><div class="matrix-note">${p.note}</div></div>`; });
-  if(matrix.triadic) mh+=`<div class="matrix-row" style="margin-top:8px"><div class="matrix-pair">${matrix.triadic.combo} (TRIADIC)</div><div class="matrix-note">${matrix.triadic.note}</div></div>`;
-  document.getElementById('matrixBody').innerHTML = mh;
-
-  const lr = [
-    ['L0','Reality Substrate',JSON.stringify(layers.L0_reality_substrate?.constraints_found||[])],
-    ['L1','Input Freeze',layers.L1_input_freeze?.objective||'—'],
-    ['L2','Interpretive Framing',sumL2(layers.L2_interpretive_framing)],
-    ['L3','Objective Integrity',sumL3(layers.L3_objective_integrity)],
-    ['L4','Execution Vectors','Recorded'],
-    ['L5','Output Enforcement','Drift modes flagged above'],
-    ['L6','Interface Contracts','JOS binding available'],
-    ['L7','Telemetry',`${data.telemetry?.request_id?.substring(0,8)||'—'}… | ${latency}ms`],
-  ];
-  document.getElementById('layerBody').innerHTML = `<table class="layer-table"><thead><tr><th>Layer</th><th>Name</th><th>Output</th></tr></thead><tbody>${lr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td style="word-break:break-word">${r[2]}</td></tr>`).join('')}</tbody></table>`;
-
-  document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
-}
-
-function sumL2(f){
-  if(!f) return '—';
-  const i=[];
-  if(f.hedge_markers?.length) i.push('Hedges: '+f.hedge_markers.join(', '));
-  if(f.reassurance_markers?.length) i.push('Reassurance: '+f.reassurance_markers.join(', '));
-  if(f.category_blend_markers?.length) i.push('Blends: '+f.category_blend_markers.join(', '));
-  return i.length?i.join(' · '):'Clean';
-}
-function sumL3(d){
-  if(!d) return '—';
-  return `Similarity: ${d.jaccard_similarity} · Drift: ${d.drift_score} · Mutation: ${d.mutation_markers_present?'YES':'NO'}`;
-}
+const S={email:"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.",contract:"The service provider shall use commercially reasonable efforts to maintain system availability at generally accepted industry standards. Modifications to pricing may occur upon reasonable notice. The client agrees to indemnify the provider against any and all claims arising from use of the service.",ai:"I'd be happy to help with that! There are several approaches you could consider, and each has its own merits. Generally speaking, the best practice would depend on your specific situation. Let me know if you'd like me to elaborate on any of these points or if there's anything else I can assist with!"};
+function sample(k){document.getElementById('input').value=S[k];autoGrow(document.getElementById('input'))}
+function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';el.style.borderRadius=el.scrollHeight>60?'16px':'24px'}
+function cls(n){return n>=.8?'high':n>=.5?'mid':'low'}
+function lbl(n){return n>=.8?'HIGH INTEGRITY':n>=.5?'MODERATE':n>=.2?'LOW INTEGRITY':'CRITICAL'}
+async function score(){const text=document.getElementById('input').value.trim();if(!text)return;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}render(d)}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
+function render(d){const nii=d.nii||{};const s=nii.nii_score??0;const fm=d.parent_failure_modes||{};const tilt=d.tilt_taxonomy||[];const matrix=d.interaction_matrix||{};const lat=d.telemetry?.latency_ms||'—';document.getElementById('nii').textContent=s.toFixed(2);document.getElementById('nii').className='num '+cls(s);document.getElementById('niiLabel').textContent=lbl(s);let h='';[{k:'UDDS',v:fm.UDDS?.udds_state},{k:'DCE',v:fm.DCE?.dce_state},{k:'CCA',v:fm.CCA?.cca_state}].forEach(m=>{const st=m.v||'FALSE';const c=st.includes('CONFIRMED')?'red':st.includes('PROBABLE')?'amber':'green';const l=st.includes('CONFIRMED')?'DETECTED':st.includes('PROBABLE')?'PROBABLE':'CLEAR';h+=`<div class="fm-row"><span>${m.k}</span><span class="v ${c}">${l}</span></div>`});document.getElementById('fm').innerHTML=h;const dom=matrix.dominance_detected||['NONE'];const de=document.getElementById('dom');de.textContent=dom.join(' → ');de.className='v '+(dom[0]==='NONE'?'green':'red');document.getElementById('tilt').innerHTML=tilt.length?'<div class="tilt-tags">'+tilt.map(t=>`<span class="tilt-tag">${t}</span>`).join('')+'</div>':'<span class="v green">None detected</span>';document.getElementById('meta').textContent=lat+'ms';document.getElementById('metaLine').textContent=`${lat}ms · ${d.telemetry?.request_id?.substring(0,8)||''} · v${d.version||'?'}`;document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show')}
+function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
 </script>
 </body>
 </html>

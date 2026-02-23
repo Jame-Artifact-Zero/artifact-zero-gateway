@@ -589,6 +589,11 @@ def examples_page():
     return render_template("examples.html")
 
 
+@app.route("/wall")
+def wall_page():
+    return render_template("wall.html")
+
+
 @app.route("/docs")
 def docs():
     return render_template("docs.html")

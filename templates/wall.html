@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wall — Artifact Zero</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);background:rgba(10,12,16,.85);border-bottom:1px solid var(--border)}
+.nav-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.nav-links{display:flex;gap:20px}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s}
+.nav-links a:hover{color:var(--accent)}
+.hero{max-width:700px;margin:0 auto;padding:100px 20px 32px;text-align:center}
+.hero h1{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,4vw,32px);font-weight:700;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:14px;line-height:1.6}
+.post-box{max-width:600px;margin:0 auto 40px;padding:0 20px}
+.post-box textarea{width:100%;min-height:56px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;resize:vertical;outline:none;transition:border-color .2s}
+.post-box textarea:focus{border-color:var(--accent)}
+.post-box textarea::placeholder{color:#3d4452}
+.post-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.post-name{width:140px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none}
+.post-name::placeholder{color:#3d4452}
+.post-btn{padding:8px 20px;background:var(--accent);color:#000;font-weight:700;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+.post-btn:hover{background:#00d48c}
+.post-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.feed{max-width:900px;margin:0 auto;padding:0 20px 80px}
+.entry{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;animation:fadeIn .3s ease}
+@media(max-width:600px){.entry{grid-template-columns:1fr}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.entry-raw,.entry-scored{padding:16px}
+.entry-raw{background:var(--surface);border-right:1px solid var(--border)}
+.entry-scored{background:var(--surface2)}
+@media(max-width:600px){.entry-raw{border-right:none;border-bottom:1px solid var(--border)}}
+.entry-header{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px}
+.entry-text{font-size:14px;line-height:1.6;word-break:break-word}
+.entry-author{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:8px}
+.score-pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;margin-bottom:8px}
+.score-pill.high{color:var(--accent)}.score-pill.mid{color:var(--amber)}.score-pill.low{color:var(--red)}
+.fm-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 6px;border-radius:3px;margin-right:4px;margin-bottom:4px;display:inline-block}
+.fm-tag.red{background:rgba(239,68,68,.15);color:var(--red)}
+.fm-tag.amber{background:rgba(245,158,11,.15);color:var(--amber)}
+.fm-tag.green{background:rgba(0,232,156,.1);color:var(--accent)}
+.tilt-mini{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface);color:var(--amber);margin-right:3px;display:inline-block;margin-top:4px}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:14px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="/" class="nav-logo">ARTIFACT ZERO.</a>
+  <div class="nav-links">
+    <a href="/score">Score</a>
+    <a href="/docs">API</a>
+    <a href="/live">Live</a>
+    <a href="/contact">Contact</a>
+    <a href="/examples">Examples</a>
+  </div>
+</div>
+<div class="hero">
+  <h1>The Wall</h1>
+  <p>Say anything. The scoring engine doesn't care what you think — it measures how you said it.<br>Every comment scored live. Raw on the left. Structural analysis on the right.</p>
+</div>
+<div class="post-box">
+  <textarea id="commentInput" placeholder="Write something. Anything. The worse, the better the demo." maxlength="1000"></textarea>
+  <div class="post-row">
+    <input type="text" id="nameInput" class="post-name" placeholder="Name (optional)" maxlength="40">
+    <button class="post-btn" id="postBtn" onclick="postComment()">Post & Score</button>
+  </div>
+</div>
+<div class="feed" id="feed">
+  <div class="empty" id="emptyState">No comments yet. Be the first to hit the wall.</div>
+</div>
+<script>
+let comments=[];
+function cls(n){return n>=.8?'high':n>=.5?'mid':'low'}
+function fmTag(state,label){const c=state.includes('CONFIRMED')?'red':state.includes('PROBABLE')?'amber':'green';const t=state.includes('CONFIRMED')?'DETECTED':state.includes('PROBABLE')?'PROBABLE':'CLEAR';return `<span class="fm-tag ${c}">${label}: ${t}</span>`}
+async function postComment(){const text=document.getElementById('commentInput').value.trim();if(!text)return;const name=document.getElementById('nameInput').value.trim()||'Anonymous';const btn=document.getElementById('postBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();const entry={text,name,time:new Date().toLocaleTimeString(),score:d};comments.unshift(entry);renderFeed();document.getElementById('commentInput').value='';document.getElementById('nameInput').value=''}catch(e){alert('Score failed: '+e.message)}finally{btn.disabled=false;btn.textContent='Post & Score'}}
+function renderFeed(){const feed=document.getElementById('feed');document.getElementById('emptyState').style.display=comments.length?'none':'block';const html=comments.map(c=>{const s=c.score;const nii=s.nii||{};const sc=nii.nii_score??0;const fm=s.parent_failure_modes||{};const tilt=s.tilt_taxonomy||[];const lat=s.telemetry?.latency_ms||'—';return `<div class="entry">
+  <div class="entry-raw">
+    <div class="entry-header">Raw comment</div>
+    <div class="entry-text">${esc(c.text)}</div>
+    <div class="entry-author">${esc(c.name)} · ${c.time}</div>
+  </div>
+  <div class="entry-scored">
+    <div class="entry-header">NTI structural analysis</div>
+    <div class="score-pill ${cls(sc)}">${sc.toFixed(2)}</div>
+    <div>${fmTag(fm.UDDS?.udds_state||'FALSE','UDDS')}${fmTag(fm.DCE?.dce_state||'FALSE','DCE')}${fmTag(fm.CCA?.cca_state||'FALSE','CCA')}</div>
+    ${tilt.length?'<div style="margin-top:6px">'+tilt.map(t=>`<span class="tilt-mini">${t}</span>`).join('')+'</div>':''}
+    <div class="entry-author">${lat}ms · rule-based · zero LLM</div>
+  </div>
+</div>`}).join('');feed.innerHTML=(document.getElementById('emptyState').outerHTML||'')+html;document.getElementById('emptyState').style.display=comments.length?'none':'block'}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+</script>
+</body>
+</html>
