@@ -11,6 +11,37 @@ import db as database
 
 app = Flask(__name__)
 
+# Register blueprints
+try:
+    from rss_proxy import rss_bp
+    app.register_blueprint(rss_bp)
+except ImportError:
+    print("[app] rss_proxy not found, skipping", flush=True)
+
+try:
+    from user_feeds import user_feeds_bp
+    app.register_blueprint(user_feeds_bp)
+except ImportError:
+    print("[app] user_feeds not found, skipping", flush=True)
+
+try:
+    from your_os import your_os
+    app.register_blueprint(your_os)
+except ImportError:
+    print("[app] your_os not found, skipping", flush=True)
+
+try:
+    from control_room import control_room_bp
+    app.register_blueprint(control_room_bp)
+except ImportError:
+    print("[app] control_room not found, skipping", flush=True)
+
+try:
+    from az_relay import az_relay
+    app.register_blueprint(az_relay)
+except ImportError:
+    print("[app] az_relay not found, skipping", flush=True)
+
 # ============================================================
 # CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
