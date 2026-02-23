@@ -77,25 +77,24 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 <div class="feed" id="feed">
   <div class="empty" id="emptyState">No comments yet. Be the first to hit the wall.</div>
 </div>
+<script src="/static/nti-score-component.js"></script>
 <script>
 let comments=[];
-function cls(n){return n>=.8?'high':n>=.5?'mid':'low'}
-function fmTag(state,label){const c=state.includes('CONFIRMED')?'red':state.includes('PROBABLE')?'amber':'green';const t=state.includes('CONFIRMED')?'DETECTED':state.includes('PROBABLE')?'PROBABLE':'CLEAR';return `<span class="fm-tag ${c}">${label}: ${t}</span>`}
 async function postComment(){const text=document.getElementById('commentInput').value.trim();if(!text)return;const name=document.getElementById('nameInput').value.trim()||'Anonymous';const btn=document.getElementById('postBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();const entry={text,name,time:new Date().toLocaleTimeString(),score:d};comments.unshift(entry);renderFeed();document.getElementById('commentInput').value='';document.getElementById('nameInput').value=''}catch(e){alert('Score failed: '+e.message)}finally{btn.disabled=false;btn.textContent='Post & Score'}}
-function renderFeed(){const feed=document.getElementById('feed');document.getElementById('emptyState').style.display=comments.length?'none':'block';const html=comments.map(c=>{const s=c.score;const nii=s.nii||{};const sc=nii.nii_score??0;const fm=s.parent_failure_modes||{};const tilt=s.tilt_taxonomy||[];const lat=s.telemetry?.latency_ms||'—';return `<div class="entry">
-  <div class="entry-raw">
-    <div class="entry-header">Raw comment</div>
-    <div class="entry-text">${esc(c.text)}</div>
-    <div class="entry-author">${esc(c.name)} · ${c.time}</div>
-  </div>
-  <div class="entry-scored">
-    <div class="entry-header">NTI structural analysis</div>
-    <div class="score-pill ${cls(sc)}">${sc.toFixed(2)}</div>
-    <div>${fmTag(fm.UDDS?.udds_state||'FALSE','UDDS')}${fmTag(fm.DCE?.dce_state||'FALSE','DCE')}${fmTag(fm.CCA?.cca_state||'FALSE','CCA')}</div>
-    ${tilt.length?'<div style="margin-top:6px">'+tilt.map(t=>`<span class="tilt-mini">${t}</span>`).join('')+'</div>':''}
-    <div class="entry-author">${lat}ms · rule-based · zero LLM</div>
-  </div>
-</div>`}).join('');feed.innerHTML=(document.getElementById('emptyState').outerHTML||'')+html;document.getElementById('emptyState').style.display=comments.length?'none':'block'}
+function renderFeed(){const feed=document.getElementById('feed');document.getElementById('emptyState').style.display=comments.length?'none':'block';
+  // Remove old entries (keep empty state)
+  feed.querySelectorAll('.entry').forEach(e=>e.remove());
+  comments.forEach((c,i)=>{
+    const entry=document.createElement('div');entry.className='entry';
+    const rawDiv=document.createElement('div');rawDiv.className='entry-raw';
+    rawDiv.innerHTML=`<div class="entry-header">Raw comment</div><div class="entry-text">${esc(c.text)}</div><div class="entry-author">${esc(c.name)} · ${c.time}</div>`;
+    const scoredDiv=document.createElement('div');scoredDiv.className='entry-scored';
+    scoredDiv.innerHTML='<div class="entry-header">NTI structural analysis</div>';
+    scoredDiv.appendChild(NTIScore.render(c.score,c.text));
+    entry.appendChild(rawDiv);entry.appendChild(scoredDiv);
+    feed.appendChild(entry);
+  });
+}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 </script>
 </body>

@@ -189,6 +189,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="swipe-hint">Swipe to reveal <span class="arrow">→</span></div>
 </div>
 
+<script src="/static/nti-score-component.js"></script>
 <script>
 let currentCard = 0;
 let totalCards = 7;
@@ -310,22 +311,11 @@ function buildDeck(name, email, message, score, model) {
       </div>
     </div>`,
     
-    // Card 2: V1 Score
+    // Card 2: V1 Score (rendered by shared component)
     `<div class="card">
       <span class="card-num">2</span><span class="card-suit">♦</span>
       <h2>V1 — Structural Score</h2>
-      <div class="card-score">
-        <div class="big ${scoreClass(s)}">${s.toFixed(2)}</div>
-        <div class="lbl">${scoreLabel(s)}</div>
-      </div>
-      <div style="margin-bottom:12px">
-        ${['UDDS','DCE','CCA'].map(m => {
-          const st = fm[m] ? fm[m][m.toLowerCase()+'_state'] || m+'_FALSE' : m+'_FALSE';
-          return `<div class="fm-row"><span>${m}</span><span class="tag ${fmColor(st)}">${fmLabel(st)}</span></div>`;
-        }).join('')}
-      </div>
-      ${tilt.length ? '<div style="margin-top:8px">'+tilt.map(t=>`<span class="tag amber">${t}</span>`).join(' ')+'</div>' : '<span class="tag green">No tilt detected</span>'}
-      <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">${lat}ms · Rule-based · Zero LLM</div>
+      <div id="card2_nti"></div>
     </div>`,
     
     // Card 3: V2 Audit
@@ -402,6 +392,10 @@ function buildDeck(name, email, message, score, model) {
   ];
   
   document.getElementById('track').innerHTML = cards.join('');
+  
+  // Mount NTI component into Card 2
+  const card2 = document.getElementById('card2_nti');
+  if (card2) card2.appendChild(NTIScore.render(score, message));
   
   // Build dots
   let dotsHtml = '';

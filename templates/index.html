@@ -77,26 +77,19 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="tagline">Structural integrity scoring for any communication.<br><span style="color:var(--accent)">49% → 7%</span> false commitment rate. Rule-based. Zero LLM.<br><a href="/examples">But what do you actually do? See 25 real examples →</a></div>
   <div class="results" id="results">
     <div class="score-ring"><div class="num" id="nii">—</div><div class="label" id="niiLabel">—</div></div>
-    <div class="cards">
-      <div class="card"><h4>Failure Modes</h4><div id="fm">—</div></div>
-      <div class="card"><h4>Dominance</h4><div class="v" id="dom">—</div></div>
-      <div class="card"><h4>Tilt Patterns</h4><div id="tilt">—</div></div>
-      <div class="card"><h4>Response</h4><div class="v" id="meta">—</div></div>
-    </div>
-    <div class="meta" id="metaLine"></div>
-    <div class="again"><a onclick="reset()">Score another →</a></div>
+    <div id="ntiResults"></div>
+    <div class="again" id="againBtn" style="display:none"><a onclick="reset()">Score another →</a></div>
   </div>
 </div>
 <div class="footer"><a href="/">artifact0.com</a> · <a href="/docs">API</a> · <a href="/live">Live Feed</a> · <a href="/wall">Wall</a><br>Structural infrastructure for communication.</div>
+<script src="/static/nti-score-component.js"></script>
 <script>
 const S={email:"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.",contract:"The service provider shall use commercially reasonable efforts to maintain system availability at generally accepted industry standards. Modifications to pricing may occur upon reasonable notice. The client agrees to indemnify the provider against any and all claims arising from use of the service.",ai:"I'd be happy to help with that! There are several approaches you could consider, and each has its own merits. Generally speaking, the best practice would depend on your specific situation. Let me know if you'd like me to elaborate on any of these points or if there's anything else I can assist with!"};
+let _lastText='';
 function sample(k){document.getElementById('input').value=S[k];autoGrow(document.getElementById('input'))}
 function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';el.style.borderRadius=el.scrollHeight>60?'16px':'24px'}
-function cls(n){return n>=.8?'high':n>=.5?'mid':'low'}
-function lbl(n){return n>=.8?'HIGH INTEGRITY':n>=.5?'MODERATE':n>=.2?'LOW INTEGRITY':'CRITICAL'}
-async function score(){const text=document.getElementById('input').value.trim();if(!text)return;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}render(d)}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
-function render(d){const nii=d.nii||{};const s=nii.nii_score??0;const fm=d.parent_failure_modes||{};const tilt=d.tilt_taxonomy||[];const matrix=d.interaction_matrix||{};const lat=d.telemetry?.latency_ms||'—';document.getElementById('nii').textContent=s.toFixed(2);document.getElementById('nii').className='num '+cls(s);document.getElementById('niiLabel').textContent=lbl(s);let h='';[{k:'UDDS',v:fm.UDDS?.udds_state},{k:'DCE',v:fm.DCE?.dce_state},{k:'CCA',v:fm.CCA?.cca_state}].forEach(m=>{const st=m.v||'FALSE';const c=st.includes('CONFIRMED')?'red':st.includes('PROBABLE')?'amber':'green';const l=st.includes('CONFIRMED')?'DETECTED':st.includes('PROBABLE')?'PROBABLE':'CLEAR';h+=`<div class="fm-row"><span>${m.k}</span><span class="v ${c}">${l}</span></div>`});document.getElementById('fm').innerHTML=h;const dom=matrix.dominance_detected||['NONE'];const de=document.getElementById('dom');de.textContent=dom.join(' → ');de.className='v '+(dom[0]==='NONE'?'green':'red');document.getElementById('tilt').innerHTML=tilt.length?'<div class="tilt-tags">'+tilt.map(t=>`<span class="tilt-tag">${t}</span>`).join('')+'</div>':'<span class="v green">None detected</span>';document.getElementById('meta').textContent=lat+'ms';document.getElementById('metaLine').textContent=`${lat}ms · ${d.telemetry?.request_id?.substring(0,8)||''} · v${d.version||'?'}`;document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show')}
-function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
+async function score(){const text=document.getElementById('input').value.trim();if(!text)return;_lastText=text;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}const el=document.getElementById('ntiResults');el.innerHTML='';el.appendChild(NTIScore.render(d,_lastText));document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show');document.getElementById('againBtn').style.display='block'}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
+function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');document.getElementById('ntiResults').innerHTML='';document.getElementById('againBtn').style.display='none';autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
 </script>
 </body>
 </html>

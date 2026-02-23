@@ -183,6 +183,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   </div>
 </div>
 
+<script src="/static/nti-score-component.js"></script>
 <script>
 let scoreTimer = null;
 let lastText = '';
@@ -265,86 +266,10 @@ function updateBar(d) {
 }
 
 function updatePanel(d) {
-  const s = d.nii?.nii_score ?? 0;
-  const fm = d.parent_failure_modes || {};
-  const tilt = d.tilt_taxonomy || [];
-  const l2 = d.layers?.L2_interpretive_framing || {};
-  const lat = d.telemetry?.latency_ms || '—';
-  const matrix = d.interaction_matrix || {};
-  const dom = matrix.dominance_detected || ['NONE'];
-  
-  document.getElementById('spNii').textContent = s.toFixed(2);
-  document.getElementById('spNii').className = 'sp-nii ' + cls(s);
-  document.getElementById('spLabel').textContent = lbl(s);
-  
-  const badge = document.getElementById('spBadge');
-  if (s >= .8) { badge.textContent = 'PASS'; badge.className = 'sp-badge pass'; }
-  else if (s >= .5) { badge.textContent = 'REVIEW'; badge.className = 'sp-badge warn'; }
-  else { badge.textContent = 'ISSUES'; badge.className = 'sp-badge fail'; }
-  badge.style.display = '';
-  
-  let html = '';
-  
-  // Failure modes
-  const modes = [
-    { k: 'UDDS', full: 'Upstream Denial via Downstream Substitution', st: fm.UDDS?.udds_state || 'FALSE' },
-    { k: 'DCE', full: 'Deferred Constraint Externalization', st: fm.DCE?.dce_state || 'FALSE' },
-    { k: 'CCA', full: 'Constraint Collapse via Aggregation', st: fm.CCA?.cca_state || 'FALSE' },
-  ];
-  const activeM = modes.filter(m => !m.st.includes('FALSE'));
-  
-  if (activeM.length > 0) {
-    html += '<div class="sp-section"><div class="sp-section-title">Failure Modes Detected</div>';
-    activeM.forEach(m => {
-      const c = m.st.includes('CONFIRMED') ? 'red' : 'amber';
-      html += `<div class="sp-item"><span class="sp-dot ${c}"></span><div><strong>${m.k}</strong> — ${m.full}<br><span style="font-size:11px;color:var(--muted)">${m.st.includes('CONFIRMED') ? 'Confirmed in text' : 'Probable — review recommended'}</span></div></div>`;
-    });
-    html += '</div>';
-  }
-  
-  // Tilt patterns
-  if (tilt.length > 0) {
-    html += '<div class="sp-section"><div class="sp-section-title">Tilt Patterns</div><div class="sp-tags">';
-    tilt.forEach(t => { html += `<span class="sp-tag amber">${t}</span>`; });
-    html += '</div></div>';
-  }
-  
-  // Hedges
-  const hedges = l2.hedge_markers || [];
-  const reassurance = l2.reassurance_markers || [];
-  if (hedges.length > 0 || reassurance.length > 0) {
-    html += '<div class="sp-section"><div class="sp-section-title">Language Flags</div>';
-    hedges.forEach(h => {
-      html += `<div class="sp-item"><span class="sp-dot amber"></span><div>Hedge: <em>"${h}"</em></div></div>`;
-    });
-    reassurance.forEach(r => {
-      html += `<div class="sp-item"><span class="sp-dot amber"></span><div>False reassurance: <em>"${r}"</em></div></div>`;
-    });
-    html += '</div>';
-  }
-  
-  // Dominance
-  if (dom[0] !== 'NONE') {
-    html += `<div class="sp-section"><div class="sp-section-title">Dominance</div><div class="sp-item"><span class="sp-dot red"></span><div>${dom.join(' → ')}</div></div></div>`;
-  }
-  
-  // Structural checks
-  const nii = d.nii || {};
-  html += '<div class="sp-section"><div class="sp-section-title">Structure Check</div>';
-  html += `<div class="sp-item"><span class="sp-dot ${nii.q1_constraints_explicit >= 1 ? 'green' : 'red'}"></span><div>Constraints explicit ${nii.q1_constraints_explicit >= 1 ? '✓' : '✗'}</div></div>`;
-  html += `<div class="sp-item"><span class="sp-dot ${nii.q2_constraints_before_capability >= 1 ? 'green' : 'red'}"></span><div>Constraints before capability ${nii.q2_constraints_before_capability >= 1 ? '✓' : '✗'}</div></div>`;
-  html += `<div class="sp-item"><span class="sp-dot ${nii.q3_substitutes_after_enforcement >= 1 ? 'green' : 'amber'}"></span><div>Boundary enforced ${nii.q3_substitutes_after_enforcement >= 1 ? '✓' : '—'}</div></div>`;
-  html += '</div>';
-  
-  // Clean
-  if (activeM.length === 0 && tilt.length === 0 && hedges.length === 0) {
-    html = '<div style="text-align:center;padding:24px"><div style="font-size:32px;margin-bottom:8px">✓</div><div style="color:var(--accent);font-family:\'JetBrains Mono\',monospace;font-size:14px;font-weight:600">Structure is clean</div><div style="color:var(--muted);font-size:12px;margin-top:4px">No failure modes, hedge language, or tilt patterns detected.</div></div>' + html;
-  }
-  
-  // Meta
-  html += `<div style="text-align:center;padding:12px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">${lat}ms · rule-based · zero LLM · ${body.value.trim().split(/\s+/).length} words</div>`;
-  
-  document.getElementById('spBody').innerHTML = html;
+  const text = lastText;
+  const spBody = document.getElementById('spBody');
+  spBody.innerHTML = '';
+  spBody.appendChild(NTIScore.render(d, text));
 }
 
 function openPanel() {
