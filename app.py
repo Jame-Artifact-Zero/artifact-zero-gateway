@@ -12,6 +12,28 @@ import db as database
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", os.getenv("AZ_SECRET", "dev-fallback-secret-change-me"))
 
+
+# ═══════════════════════════════════════════
+# AUTH STATE — available to all templates + JS
+# ═══════════════════════════════════════════
+@app.context_processor
+def inject_auth_state():
+    """Make logged_in and user_email available in all templates."""
+    from flask import session as flask_session
+    uid = flask_session.get("user_id")
+    if uid:
+        return {"logged_in": True, "user_id": uid}
+    return {"logged_in": False, "user_id": None}
+
+
+@app.route("/api/auth/status")
+def auth_status():
+    """Lightweight endpoint for JS nav state check."""
+    uid = session.get("user_id")
+    if uid:
+        return jsonify({"logged_in": True})
+    return jsonify({"logged_in": False})
+
 # Register blueprints
 try:
     from auth import auth_bp
@@ -716,7 +738,7 @@ def api_score_free():
     _free_usage[month_key] = count + 1
     latency_ms = int((time.time() - t0) * 1000)
 
-    return jsonify({
+    result = {
         "status": "ok",
         "version": NTI_VERSION,
         "score": {
@@ -733,7 +755,20 @@ def api_score_free():
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
             "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
         }
-    })
+    }
+
+    # V3 rewrite — if requested
+    if payload.get("rewrite"):
+        try:
+            from core_engine.v3_enforcement import enforce
+            trace = enforce(text)
+            result["v3_rewrite"] = trace.get("final_output", "")
+            result["v3_actions"] = len(trace.get("level_0_actions", [])) + len(trace.get("level_1_actions", []))
+        except Exception as e:
+            result["v3_rewrite"] = None
+            result["v3_error"] = str(e)
+
+    return jsonify(result)
 
 
 @app.route("/health")

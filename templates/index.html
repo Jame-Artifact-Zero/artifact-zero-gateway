@@ -90,5 +90,6 @@ function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollH
 async function score(){const text=document.getElementById('input').value.trim();if(!text)return;_lastText=text;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}const el=document.getElementById('ntiResults');el.innerHTML='';el.appendChild(NTIScore.render(d,_lastText));document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show');document.getElementById('againBtn').style.display='block'}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
 function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');document.getElementById('ntiResults').innerHTML='';document.getElementById('againBtn').style.display='none';autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
 </script>
+<script src="/static/az-nav.js"></script>
 </body>
 </html>
