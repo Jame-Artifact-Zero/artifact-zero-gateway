@@ -112,6 +112,15 @@ textarea{min-height:100px;resize:vertical;font-family:var(--mono);font-size:13px
 </style>
 </head>
 <body>
+<div style="position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)">
+  <a href="/" style="font-family:monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#22c55e;text-decoration:none">ARTIFACT ZERO</a>
+  <nav style="display:flex;gap:16px">
+    <a href="/dashboard" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">DASHBOARD</a>
+    <a href="/safecheck" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">SAFECHECK</a>
+    <a href="/wall" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">WALL</a>
+    <a href="/logout" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">LOG OUT</a>
+  </nav>
+</div>
 
 <div class="app" id="app"></div>
 
@@ -654,5 +663,6 @@ async function init() {
 }
 init();
 </script>
+<script src="/static/az-nav.js"></script>
 </body>
 </html>
