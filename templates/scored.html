@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
+:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
@@ -40,7 +40,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .split{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
 .split-header{padding:10px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--border)}
 .split-header.copy-h{background:rgba(59,130,246,.06);color:var(--blue);border-right:1px solid var(--border)}
-.split-header.score-h{background:rgba(34,197,94,.06);color:var(--accent)}
+.split-header.score-h{background:rgba(0,232,156,.06);color:var(--accent)}
 .split-col{padding:16px;font-size:13px;line-height:1.8}
 .split-col.copy-col{border-right:1px solid var(--border);color:var(--muted);max-height:500px;overflow-y:auto}
 .split-col.score-col{max-height:500px;overflow-y:auto}
@@ -55,7 +55,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .sd-clear{color:var(--accent)}.sd-warn{color:var(--amber)}.sd-crit{color:var(--red)}
 .sd-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .sd-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-.sd-finding{padding:8px 10px;margin-top:6px;border-radius:6px;font-size:12px;line-height:1.6;background:rgba(34,197,94,.06);border-left:3px solid var(--accent);color:var(--text)}
+.sd-finding{padding:8px 10px;margin-top:6px;border-radius:6px;font-size:12px;line-height:1.6;background:rgba(0,232,156,.06);border-left:3px solid var(--accent);color:var(--text)}
 
 /* Share + Meta */
 .meta-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
@@ -63,13 +63,13 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .meta-left span{font-family:'JetBrains Mono',monospace}
 .share-btn{padding:8px 18px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);cursor:pointer;transition:all .15s}
 .share-btn:hover{border-color:var(--accent);background:var(--surface2)}
-.share-btn.copied{background:#14532d;border-color:var(--accent)}
+.share-btn.copied{background:#064e3b;border-color:var(--accent)}
 
 /* Bottom CTAs */
 .bottom-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:20px 0 40px}
 .bottom-row a{padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all .15s}
 .btn-check{background:var(--accent);color:#0a0c10}
-.btn-check:hover{background:#16a34a}
+.btn-check:hover{background:#00d48c}
 .btn-back{background:var(--surface);color:var(--text);border:1px solid var(--border)}
 .btn-back:hover{border-color:var(--accent);color:var(--accent)}
 

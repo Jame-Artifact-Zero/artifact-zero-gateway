@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
   --red:#ef4444;--amber:#f59e0b;
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -62,7 +62,7 @@ textarea#pasteBox::placeholder{color:transparent}
 /* ── SAFECHECK BUTTON ── */
 .check-row{padding:12px 16px;display:flex;align-items:center;justify-content:center}
 .check-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;-webkit-tap-highlight-color:transparent}
-.check-btn:hover{background:#16a34a}
+.check-btn:hover{background:#00d48c}
 .check-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
 
 /* ── RESULTS ── */
@@ -92,7 +92,7 @@ textarea#pasteBox::placeholder{color:transparent}
 /* ── FIX IT BUTTON ── */
 .fix-row{padding:12px 16px;border-top:1px solid var(--border)}
 .fix-btn{width:100%;padding:14px;background:var(--surface2);color:var(--accent);border:1px solid var(--accent);border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.fix-btn:hover{background:rgba(34,197,94,.1)}
+.fix-btn:hover{background:rgba(0,232,156,.1)}
 
 /* ── REWRITE PANEL ── */
 .rewrite{display:none;margin-top:16px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;overflow:hidden}
@@ -101,8 +101,8 @@ textarea#pasteBox::placeholder{color:transparent}
 .rewrite-body{padding:16px;font-size:15px;line-height:1.7;color:var(--text);white-space:pre-wrap}
 .copy-row{padding:12px 16px;border-top:1px solid var(--border)}
 .copy-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
-.copy-btn:hover{background:#16a34a}
-.copy-btn.copied{background:#14532d;color:var(--accent)}
+.copy-btn:hover{background:#00d48c}
+.copy-btn.copied{background:#064e3b;color:var(--accent)}
 
 /* ── CLEARED OVERLAY ── */
 .cleared-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:250;background:var(--bg);justify-content:center;align-items:center;flex-direction:column;gap:16px;padding:20px}
@@ -114,7 +114,7 @@ textarea#pasteBox::placeholder{color:transparent}
 .cleared-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
 .cleared-actions a,.cleared-actions button{padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;border:none;transition:all .15s;-webkit-tap-highlight-color:transparent}
 .start-over{background:var(--accent);color:#0a0c10}
-.start-over:hover{background:#16a34a}
+.start-over:hover{background:#00d48c}
 .go-deeper{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .go-deeper:hover{border-color:var(--accent);color:var(--accent)}
 
