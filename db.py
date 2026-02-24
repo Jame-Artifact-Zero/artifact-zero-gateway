@@ -317,4 +317,5 @@ def release_conn(conn):
         except Exception:
             pass
 
-param_placeholder = "%s" if USE_PG else "?"
+def param_placeholder():
+    return "%s" if USE_PG else "?"
