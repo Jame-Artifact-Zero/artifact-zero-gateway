@@ -643,6 +643,7 @@ def safecheck_page():
 
 
 @app.route("/fortune500")
+@app.route("/live")
 def fortune500_page():
     return render_template("fortune500.html")
 
@@ -685,6 +686,55 @@ def api_fortune500_detail(slug):
             result = dict(zip(cols, row))
         else:
             cur.execute("SELECT * FROM fortune500_scores WHERE slug = ?", (slug,))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return jsonify({"error": "Not found"}), 404
+            result = dict(row)
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/vc-funds")
+def vc_funds_page():
+    return render_template("vc_funds.html")
+
+
+@app.route("/api/vc-funds", methods=["GET"])
+def api_vc_funds_list():
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        else:
+            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
+            rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return jsonify({"funds": rows})
+    except Exception as e:
+        return jsonify({"funds": [], "note": "Scores loading. Check back soon."})
+
+
+@app.route("/api/vc-funds/<slug>", methods=["GET"])
+def api_vc_fund_detail(slug):
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT * FROM vc_fund_scores WHERE slug = %s", (slug,))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return jsonify({"error": "Not found"}), 404
+            cols = [d[0] for d in cur.description]
+            result = dict(zip(cols, row))
+        else:
+            cur.execute("SELECT * FROM vc_fund_scores WHERE slug = ?", (slug,))
             row = cur.fetchone()
             if not row:
                 conn.close()
