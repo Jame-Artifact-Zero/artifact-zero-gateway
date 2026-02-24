@@ -676,23 +676,30 @@ def api_fortune500_detail(slug):
     try:
         conn = database.db_connect()
         cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT * FROM fortune500_scores WHERE slug = %s", (slug,))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                return jsonify({"error": "Not found"}), 404
-            cols = [d[0] for d in cur.description]
-            result = dict(zip(cols, row))
-        else:
-            cur.execute("SELECT * FROM fortune500_scores WHERE slug = ?", (slug,))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                return jsonify({"error": "Not found"}), 404
-            result = dict(row)
+        # Check fortune500 first, then vc_fund_scores
+        for table in ["fortune500_scores", "vc_fund_scores"]:
+            if database.USE_PG:
+                cur.execute(f"SELECT * FROM {table} WHERE slug = %s", (slug,))
+                row = cur.fetchone()
+                if row:
+                    cols = [d[0] for d in cur.description]
+                    result = dict(zip(cols, row))
+                    # Normalize: vc table has fund_name, f500 has company_name
+                    if "fund_name" in result and "company_name" not in result:
+                        result["company_name"] = result["fund_name"]
+                    conn.close()
+                    return jsonify(result)
+            else:
+                cur.execute(f"SELECT * FROM {table} WHERE slug = ?", (slug,))
+                row = cur.fetchone()
+                if row:
+                    result = dict(row)
+                    if "fund_name" in result and "company_name" not in result:
+                        result["company_name"] = result["fund_name"]
+                    conn.close()
+                    return jsonify(result)
         conn.close()
-        return jsonify(result)
+        return jsonify({"error": "Not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

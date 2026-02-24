@@ -131,49 +131,81 @@ function render(c){
 
   document.getElementById('pageTitle').textContent = c.company_name + ' Structure Check — Artifact Zero';
 
-  // Parse score data — handle multiple response shapes
-  const fm = score.failure_modes || score.parent_failure_modes || {};
-  const tilt = score.tilt_taxonomy || score.tilt || {};
+  // Parse score data
+  const fm = score.failure_modes || {};
+  const tilt = score.tilt || {};
   const tiltTags = Array.isArray(tilt) ? tilt : (tilt.tags || []);
   const tiltCount = Array.isArray(tilt) ? tilt.length : (tilt.count || 0);
-  const niiData = score.nii || score.score || {};
+  const niiData = score.score || {};
   const components = niiData.components || {};
-  const latency = score.telemetry?.latency_ms || score.meta?.latency_ms || '—';
+  const framing = score.l2_framing || {};
+  const drift = score.drift || {};
+  const signals = score.structural_signals || {};
 
   // Failure mode states
   function fmState(key){
     const v = fm[key];
     if(!v) return 'CLEAR';
-    if(typeof v === 'string') return v.includes('FALSE') ? 'CLEAR' : v.replace('_',' ');
+    if(typeof v === 'string') return v.includes('FALSE') ? 'CLEAR' : v.replace(/_/g,' ');
     const st = v[key.toLowerCase()+'_state'] || v[key+'_state'] || '';
-    return st.includes('FALSE') ? 'CLEAR' : st.replace('_',' ');
+    return st.includes('FALSE') ? 'CLEAR' : st.replace(/_/g,' ');
   }
   function fmCls(key){
     const s = fmState(key);
     return s === 'CLEAR' ? 'sd-clear' : s.includes('PROBABLE') ? 'sd-warn' : 'sd-crit';
   }
 
-  // Structural checks
-  const checks = [
-    [(components.q1||niiData.q1_constraints_explicit||0) >= 0.7, 'Constraints explicit'],
-    [(components.q2||niiData.q2_constraints_before_capability||0) >= 0.7, 'Ask before context'],
-    [(components.q3||niiData.q3_substitutes_after_enforcement||0) >= 0.7, 'Boundary enforced'],
-    [(components.q4||0) >= 0.7, 'Objective clear'],
+  // Build the 15 criteria rows
+  const criteria = [
+    // NII Components
+    {cat: 'STRUCTURAL INTEGRITY (NII)', items: [
+      {label: 'Q1 — Constraints explicit', val: components.q1, pass: (components.q1||0) >= 0.7},
+      {label: 'Q2 — Constraints before capability', val: components.q2, pass: (components.q2||0) >= 0.7},
+      {label: 'Q3 — Enforcement boundary', val: components.q3, pass: (components.q3||0) >= 0.7},
+      {label: 'Q4 — Tilt resistance', val: components.q4, pass: (components.q4||0) >= 0.7},
+    ]},
+    // Failure Modes
+    {cat: 'FAILURE MODES', items: [
+      {label: 'UDDS — Upstream drift', val: fmState('UDDS'), pass: fmState('UDDS')==='CLEAR', cls: fmCls('UDDS')},
+      {label: 'DCE — Deferred enforcement', val: fmState('DCE'), pass: fmState('DCE')==='CLEAR', cls: fmCls('DCE')},
+      {label: 'CCA — Constraint collapse', val: fmState('CCA'), pass: fmState('CCA')==='CLEAR', cls: fmCls('CCA')},
+    ]},
+    // L2 Framing
+    {cat: 'L2 — INTERPRETIVE FRAMING', items: [
+      {label: 'Hedge markers', val: (framing.hedge_markers||[]).length, pass: (framing.hedge_markers||[]).length === 0, detail: (framing.hedge_markers||[]).join(', ')},
+      {label: 'Reassurance markers', val: (framing.reassurance_markers||[]).length, pass: (framing.reassurance_markers||[]).length === 0, detail: (framing.reassurance_markers||[]).join(', ')},
+      {label: 'Category blend', val: (framing.category_blend_markers||[]).length, pass: (framing.category_blend_markers||[]).length === 0, detail: (framing.category_blend_markers||[]).join(', ')},
+    ]},
+    // Structural Signals
+    {cat: 'STRUCTURAL SIGNALS', items: [
+      {label: 'Constraints found', val: signals.constraints_found ?? '—', pass: (signals.constraints_found||0) >= 1},
+      {label: 'Downstream before constraint', val: signals.downstream_before_constraint ? 'YES' : 'NO', pass: !signals.downstream_before_constraint},
+      {label: 'Boundary absence', val: signals.boundary_absence ? 'DETECTED' : 'CLEAR', pass: !signals.boundary_absence},
+      {label: 'Narrative stabilization', val: signals.narrative_stabilization ? 'DETECTED' : 'CLEAR', pass: !signals.narrative_stabilization},
+      {label: 'Content coherence', val: drift.coherence != null ? (drift.coherence * 100).toFixed(0) + '%' : '—', pass: (drift.coherence||1) >= 0.3},
+    ]},
   ];
 
-  // Plain language findings
+  // Build findings
   const findings = [];
-  if(!checks[0][0]) findings.push('No explicit constraints — readers interpret freely.');
-  if(!checks[1][0]) findings.push('Key information buried — may not be read.');
-  if(!checks[2][0]) findings.push('No enforcement boundary — commitments can be deferred.');
-  if(!checks[3][0]) findings.push('Objective unclear — visitor may not understand the ask.');
-  if(fmState('UDDS') !== 'CLEAR') findings.push('Benefits presented before constraints are established.');
+  if((components.q1||0) < 0.7) findings.push('No explicit constraints — readers interpret freely.');
+  if((components.q2||0) < 0.7) findings.push('Benefits presented before constraints are established.');
+  if((components.q3||0) < 0.7) findings.push('No enforcement boundary — commitments can be deferred.');
+  if((components.q4||0) < 0.7) findings.push('Tilt patterns detected — language may distort structural integrity.');
+  if(fmState('UDDS') !== 'CLEAR') findings.push('Upstream Drift Destabilization detected.');
   if(fmState('DCE') !== 'CLEAR') findings.push('Accountability deferred to future interaction.');
-  if(fmState('CCA') !== 'CLEAR') findings.push('Multiple distinct claims collapsed into vague statements.');
+  if(fmState('CCA') !== 'CLEAR') findings.push('Multiple claims collapsed into vague statements.');
+  if((framing.hedge_markers||[]).length > 2) findings.push('Heavy hedging weakens structural commitment.');
+  if((framing.reassurance_markers||[]).length > 1) findings.push('Reassurance language detected — may mask constraints.');
+  if(signals.boundary_absence) findings.push('Boundary enforcement absent or delayed.');
+  if(signals.narrative_stabilization) findings.push('Narrative stabilization present — language smooths over structural gaps.');
+
+  // Rank label
+  const rankLabel = c.rank ? (c.fund_name ? 'VC Fund · #' : 'Fortune 500 · #') + c.rank : '';
 
   let html = `
     <div class="company-header">
-      <div class="ch-rank">Fortune 500 · #${c.rank || '—'}</div>
+      <div class="ch-rank">${rankLabel}</div>
       <div class="ch-name">${c.company_name}</div>
       <div class="ch-url"><a href="${c.url}" target="_blank" rel="noopener">${c.url}</a></div>
     </div>
@@ -188,8 +220,8 @@ function render(c){
         <div class="sh-label">${issues>0?'Issues Found':'Clean'}</div>
       </div>
       <div class="sh-card">
-        <div class="sh-val" style="color:var(--blue)">${latency}${typeof latency==='number'?'ms':''}</div>
-        <div class="sh-label">Latency</div>
+        <div class="sh-val" style="color:var(--blue)">${criteria.reduce((n,g)=>n+g.items.filter(i=>i.pass).length,0)}/${criteria.reduce((n,g)=>n+g.items.length,0)}</div>
+        <div class="sh-label">Criteria Passed</div>
       </div>
     </div>
 
@@ -200,28 +232,30 @@ function render(c){
 
     <div class="split">
       <div class="split-header copy-h">Their Homepage Copy</div>
-      <div class="split-header score-h">Structure Check</div>
+      <div class="split-header score-h">Full Structure Analysis</div>
     </div>
     <div class="split">
       <div class="split-col copy-col">${(c.homepage_copy||'Copy not yet captured.').replace(/\n/g,'<br>')}</div>
       <div class="split-col score-col">
-        ${findings.length > 0 ? '<div class="sd-section">What We Found</div>' + findings.map(f => '<div class="sd-finding">'+f+'</div>').join('') : '<div class="sd-finding" style="border-color:var(--accent)">No structural issues detected. This copy is clear.</div>'}
+        ${findings.length > 0 ? '<div class="sd-section">Findings</div>' + findings.map(f => '<div class="sd-finding">'+f+'</div>').join('') : '<div class="sd-finding" style="border-color:var(--accent)">No structural issues detected. This copy is clear.</div>'}
 
-        <div class="sd-section">Failure Modes</div>
-        <div class="sd-row"><span class="sd-label">UDDS</span><span class="sd-val ${fmCls('UDDS')}">${fmState('UDDS')}</span></div>
-        <div class="sd-row"><span class="sd-label">DCE</span><span class="sd-val ${fmCls('DCE')}">${fmState('DCE')}</span></div>
-        <div class="sd-row"><span class="sd-label">CCA</span><span class="sd-val ${fmCls('CCA')}">${fmState('CCA')}</span></div>
+        ${criteria.map(group => `
+          <div class="sd-section">${group.cat}</div>
+          ${group.items.map(item => {
+            const valDisplay = item.cls ? item.val : (typeof item.val === 'number' && item.val <= 1 ? (item.val * 100).toFixed(0) + '%' : item.val);
+            const cls = item.cls || (item.pass ? 'sd-clear' : 'sd-crit');
+            return `<div class="sd-row"><span class="sd-label">${item.label}</span><span class="sd-val ${cls}">${item.pass && !item.cls ? '✓' : ''} ${valDisplay}</span></div>` +
+              (item.detail && !item.pass ? `<div style="font-size:10px;color:var(--muted);padding:2px 0 4px;font-family:'JetBrains Mono',monospace">${item.detail}</div>` : '');
+          }).join('')}
+        `).join('')}
 
         ${tiltCount > 0 ? '<div class="sd-section">Tilt Patterns</div><div class="sd-tags">' + tiltTags.map(t => '<span class="sd-tag">'+t+'</span>').join('') + '</div>' : ''}
-
-        <div class="sd-section">Checklist</div>
-        ${checks.map(([pass,label]) => '<div class="sd-row"><span class="sd-label">'+label+'</span><span class="sd-val '+(pass?'sd-clear':'sd-crit')+'">'+(pass?'&#10003;':'&#10007;')+'</span></div>').join('')}
       </div>
     </div>
 
     <div class="bottom-row">
       <a class="btn-check" href="/safecheck">Check your own words &rarr;</a>
-      <a class="btn-back" href="/fortune500">&larr; All 500 companies</a>
+      <a class="btn-back" href="/fortune500">&larr; All companies</a>
     </div>
   `;
 

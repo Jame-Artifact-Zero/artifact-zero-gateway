@@ -129,6 +129,19 @@ CCA_COLLAPSE_MARKERS = [
     "it all comes down to", "the main thing", "just"
 ]
 
+L2_HEDGE = [
+    "might", "could", "possibly", "perhaps", "it seems", "i think", "in some ways",
+    "to some extent", "arguably", "one might say", "it could be said", "potentially"
+]
+L2_REASSURE = [
+    "don't worry", "it's fine", "rest assured", "everything is", "we've got you",
+    "no problem", "all good", "you're safe", "you're covered", "trust us", "have confidence"
+]
+L2_CATEGORY_BLEND = [
+    "kind of", "sort of", "basically", "overall", "at the end of the day",
+    "more or less", "in a way", "it's like"
+]
+
 TILT_TAXONOMY = {
     "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
     "T3_CONSENSUS_CLAIMS": ["most people", "many people", "everyone", "no one", "in general", "typically"],
@@ -252,8 +265,33 @@ def compute_nii(prompt, answer, l0, dbc, tilt):
     label = "HIGH" if nii >= 0.7 else "MEDIUM" if nii >= 0.4 else "LOW"
     return {"nii_score": nii, "nii_label": label, "q1": q1, "q2": q2, "q3": q3, "q4": q4}
 
+def detect_l2_framing(text):
+    t = (text or "").lower()
+    hedges = [m for m in L2_HEDGE if m in t]
+    reassure = [m for m in L2_REASSURE if m in t]
+    blends = [m for m in L2_CATEGORY_BLEND if m in t]
+    return {"hedge_markers": hedges[:10], "reassurance_markers": reassure[:10], "category_blend_markers": blends[:10]}
+
+def detect_boundary_absence(text):
+    t = (text or "").lower()
+    return any(m in t for m in BOUNDARY_ABSENCE_MARKERS) or any(m in t for m in L2_CATEGORY_BLEND)
+
+def detect_narrative_stabilization(text):
+    t = (text or "").lower()
+    return any(m in t for m in NARRATIVE_STABILIZATION_MARKERS) or any(m in t for m in L2_REASSURE)
+
+def detect_objective_drift(text):
+    sents = split_sentences(text)
+    if len(sents) < 2:
+        return {"drift_score": 0.0, "coherence": 1.0}
+    first_tokens = tokenize(sents[0])
+    all_tokens = tokenize(text)
+    sim = jaccard(first_tokens, all_tokens)
+    return {"drift_score": round(1.0 - sim, 3), "coherence": round(sim, 3)}
+
+
 def score_text(text):
-    """Run full NTI scoring on text. Returns score dict."""
+    """Run full NTI scoring on text. Returns comprehensive score dict with all 15 criteria."""
     l0 = detect_l0_constraints(text)
     tilt = classify_tilt(text)
     udds = detect_udds("", text, l0)
@@ -261,6 +299,10 @@ def score_text(text):
     cca = detect_cca("", text)
     dbc = detect_downstream_before_constraint("", text, l0)
     nii = compute_nii("", text, l0, dbc, tilt)
+    framing = detect_l2_framing(text)
+    drift = detect_objective_drift(text)
+    boundary = detect_boundary_absence(text)
+    narrative = detect_narrative_stabilization(text)
     
     dominance = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]: dominance.append("CCA")
@@ -272,8 +314,21 @@ def score_text(text):
         "score": {"nii": nii["nii_score"], "nii_label": nii["nii_label"],
                   "components": {"q1": nii["q1"], "q2": nii["q2"], "q3": nii["q3"], "q4": nii["q4"]}},
         "failure_modes": {"UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
-                          "dominance": dominance},
-        "tilt": {"tags": tilt, "count": len(tilt)}
+                          "dominance": dominance,
+                          "UDDS_detail": udds, "DCE_detail": dce, "CCA_detail": cca},
+        "tilt": {"tags": tilt, "count": len(tilt)},
+        "l2_framing": framing,
+        "drift": drift,
+        "structural_signals": {
+            "constraints_found": len(l0),
+            "constraints_list": l0[:10],
+            "downstream_before_constraint": dbc,
+            "boundary_absence": boundary,
+            "narrative_stabilization": narrative,
+            "hedge_count": len(framing.get("hedge_markers", [])),
+            "reassurance_count": len(framing.get("reassurance_markers", [])),
+            "category_blend_count": len(framing.get("category_blend_markers", []))
+        }
     }
 
 
@@ -368,12 +423,49 @@ VC_FUNDS = [
 
 def extract_visible_text(html):
     soup = BeautifulSoup(html, "html.parser")
-    for tag in soup(["script", "style", "noscript", "header", "nav", "footer", "iframe", "svg"]):
+    # Remove non-content elements
+    for tag in soup(["script", "style", "noscript", "header", "nav", "footer", "iframe", "svg", "form", "button", "select", "option", "input"]):
         tag.decompose()
-    text = soup.get_text(separator="\n", strip=True)
-    lines = [line.strip() for line in text.split("\n") if len(line.strip()) > 20]
-    combined = "\n".join(lines)
-    return combined[:3000] if len(combined) > 3000 else combined
+
+    # Strategy 1: Pull from paragraph-like tags first
+    para_tags = soup.find_all(["p", "article", "blockquote", "figcaption"])
+    paragraphs = []
+    for tag in para_tags:
+        text = tag.get_text(separator=" ", strip=True)
+        if len(text) >= 80 and not _is_junk(text):
+            paragraphs.append(text)
+
+    # Strategy 2: If not enough paragraph content, pull from divs/sections with real sentences
+    if len(paragraphs) < 3:
+        for tag in soup.find_all(["div", "section", "main"]):
+            text = tag.get_text(separator=" ", strip=True)
+            # Only keep blocks that look like actual writing (has periods = sentences)
+            if len(text) >= 80 and text.count(".") >= 1 and not _is_junk(text):
+                # Avoid duplicates of content already captured
+                if not any(text[:60] in p for p in paragraphs):
+                    paragraphs.append(text)
+
+    combined = "\n".join(paragraphs)
+    # Deduplicate: if a longer block contains a shorter one, keep the longer
+    return combined[:5000] if len(combined) > 5000 else combined
+
+
+JUNK_PATTERNS = re.compile(r"^\$[\d,.]+$|^\d+\s*(ct|oz|lb|ml|pack|count)|add to cart|buy now|shop now|sign in|log in|subscribe|©|cookie|privacy policy", re.IGNORECASE)
+PRICE_RE = re.compile(r"\$\d+\.\d{2}")
+
+def _is_junk(text):
+    """Filter out product listings, prices, nav items, legal boilerplate."""
+    # Too many prices = product listing
+    if len(PRICE_RE.findall(text)) >= 3:
+        return True
+    # Mostly short fragments joined together
+    words = text.split()
+    if len(words) < 10:
+        return True
+    # Junk patterns
+    if JUNK_PATTERNS.search(text):
+        return True
+    return False
 
 def fetch_homepage(url, timeout=15):
     headers = {

@@ -179,7 +179,7 @@ function renderList(funds){
     const issues = c.issue_count || 0;
     const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString() : '';
     return `
-      <div class="company-card" onclick="window.open('${c.url}','_blank')" data-nii="${nii}" data-issues="${issues}">
+      <a class="company-card" href="/scored/${c.slug}" data-nii="${nii}" data-issues="${issues}">
         <div class="card-rank">${c.rank || '—'}</div>
         <div class="card-score ${cls}"><span class="val">${(nii*100).toFixed(0)}</span></div>
         <div class="card-info">
@@ -190,7 +190,7 @@ function renderList(funds){
           </div>
         </div>
         <span class="card-arrow">&rsaquo;</span>
-      </div>
+      </a>
     `;
   }).join('');
 }
