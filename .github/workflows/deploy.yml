@@ -56,6 +56,26 @@ jobs:
             --task-definition $ECS_TASK_DEFINITION \
             --query taskDefinition > task-definition.json
 
+      - name: Ensure DATABASE_URL in task definition
+        run: |
+          # Fetch DATABASE_URL from AWS SSM Parameter Store (SecureString)
+          DB_URL=$(aws ssm get-parameter --name "/artifact-zero/DATABASE_URL" --with-decryption --query "Parameter.Value" --output text --region us-east-1)
+          # Remove old DATABASE_URL if present, add correct one
+          python3 -c "
+          import json, sys
+          with open('task-definition.json') as f:
+              td = json.load(f)
+          env = td['containerDefinitions'][0].get('environment', [])
+          env = [e for e in env if e['name'] != 'DATABASE_URL']
+          env.append({'name': 'DATABASE_URL', 'value': sys.argv[1]})
+          td['containerDefinitions'][0]['environment'] = env
+          for key in ['taskDefinitionArn','revision','status','requiresAttributes','compatibilities','registeredAt','registeredBy']:
+              td.pop(key, None)
+          with open('task-definition.json','w') as f:
+              json.dump(td, f)
+          print(f'DATABASE_URL set. Total env vars: {len(env)}')
+          " "$DB_URL"
+
       - name: Update task definition with new image
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -93,10 +113,6 @@ jobs:
         if: failure()
         run: |
           echo "🔄 Rolling back to previous stable image..."
-          # Get the previous task definition (one before current)
-          PREV_TASK=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
-            --query "services[0].taskDefinition" --output text)
-          # List recent task definitions, grab the second one (previous stable)
           PREV_ARN=$(aws ecs list-task-definitions --family-prefix $ECS_TASK_DEFINITION \
             --sort DESC --query "taskDefinitionArns[1]" --output text)
           if [ "$PREV_ARN" != "None" ] && [ -n "$PREV_ARN" ]; then

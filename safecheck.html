@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SafeCheck — Artifact Zero</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#22c55e;
+  --red:#ef4444;--amber:#f59e0b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ── TOPBAR ── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.topbar nav{display:flex;align-items:center;gap:16px}
+.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
+.topbar nav a:hover{color:var(--text)}
+
+/* ── TIMER BAR ── */
+.timer-bar{position:fixed;top:53px;left:0;right:0;z-index:190;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.timer-left{display:flex;align-items:center;gap:10px}
+.timer-dot{width:8px;height:8px;border-radius:50%;transition:background .3s}
+.timer-dot.frozen{background:var(--muted)}
+.timer-dot.green{background:var(--accent)}
+.timer-dot.amber{background:var(--amber)}
+.timer-dot.red{background:var(--red);animation:pulse-red 1s ease infinite}
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.4}}
+.timer-display{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;letter-spacing:1px;transition:color .3s}
+.timer-display.frozen{color:var(--muted)}
+.timer-display.green{color:var(--accent)}
+.timer-display.amber{color:var(--amber)}
+.timer-display.red{color:var(--red)}
+.timer-msg{font-size:11px;color:var(--muted)}
+
+/* ── WORKSPACE ── */
+.workspace{max-width:600px;margin:0 auto;padding:108px 16px 40px}
+
+/* Privacy line */
+.privacy-line{text-align:center;margin-bottom:20px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.5}
+.privacy-line .lock{font-size:14px;opacity:.5}
+
+/* ── PASTE ZONE ── */
+.paste-zone{position:relative;background:var(--surface);border:2px dashed var(--border);border-radius:12px;transition:border-color .3s,border-style .3s;min-height:220px}
+.paste-zone.active{border-color:var(--accent);border-style:solid}
+.paste-zone.expired{border-color:var(--red);opacity:.3;pointer-events:none}
+.paste-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
+.paste-hint.hidden{opacity:0}
+.paste-icon{font-size:32px;opacity:.2;margin-bottom:8px}
+.paste-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:1px}
+.paste-sub{font-size:11px;color:var(--border);margin-top:4px}
+textarea#pasteBox{width:100%;min-height:220px;background:transparent;border:none;color:var(--text);padding:20px;font-size:16px;font-family:'DM Sans',sans-serif;line-height:1.7;resize:none;outline:none;position:relative;z-index:1}
+textarea#pasteBox::placeholder{color:transparent}
+
+/* ── SAFECHECK BUTTON ── */
+.check-row{padding:12px 16px;display:flex;align-items:center;justify-content:center}
+.check-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.check-btn:hover{background:#16a34a}
+.check-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+
+/* ── RESULTS ── */
+.results{display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.results.show{display:block;animation:slideUp .25s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.results-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.results-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;color:var(--accent)}
+.results-count{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.results-count.clear{color:var(--accent)}
+.results-count.warn{color:var(--amber)}
+.results-count.crit{color:var(--red)}
+
+.finding{padding:14px 16px;border-bottom:1px solid var(--border);line-height:1.6}
+.finding:last-child{border-bottom:none}
+.finding-issue{font-size:14px;color:var(--text);margin-bottom:6px}
+.finding-fix{font-size:12px;color:var(--accent);padding-left:12px;border-left:2px solid var(--accent)}
+
+.checklist{padding:12px 16px}
+.check-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.check-icon{font-size:16px;width:20px;text-align:center}
+.check-icon.pass{color:var(--accent)}
+.check-icon.fail{color:var(--red)}
+.check-label{color:var(--muted)}
+
+/* ── FIX IT BUTTON ── */
+.fix-row{padding:12px 16px;border-top:1px solid var(--border)}
+.fix-btn{width:100%;padding:14px;background:var(--surface2);color:var(--accent);border:1px solid var(--accent);border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.fix-btn:hover{background:rgba(34,197,94,.1)}
+
+/* ── REWRITE PANEL ── */
+.rewrite{display:none;margin-top:16px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;overflow:hidden}
+.rewrite.show{display:block;animation:slideUp .25s ease}
+.rewrite-header{padding:14px 16px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;color:var(--accent)}
+.rewrite-body{padding:16px;font-size:15px;line-height:1.7;color:var(--text);white-space:pre-wrap}
+.copy-row{padding:12px 16px;border-top:1px solid var(--border)}
+.copy-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+.copy-btn:hover{background:#16a34a}
+.copy-btn.copied{background:#14532d;color:var(--accent)}
+
+/* ── CLEARED OVERLAY ── */
+.cleared-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:250;background:var(--bg);justify-content:center;align-items:center;flex-direction:column;gap:16px;padding:20px}
+.cleared-overlay.show{display:flex;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.cleared-icon{font-size:48px;opacity:.3;margin-bottom:8px}
+.cleared-title{font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--accent);letter-spacing:2px}
+.cleared-sub{font-size:14px;color:var(--muted);max-width:340px;text-align:center;line-height:1.6}
+.cleared-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.cleared-actions a,.cleared-actions button{padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;border:none;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.start-over{background:var(--accent);color:#0a0c10}
+.start-over:hover{background:#16a34a}
+.go-deeper{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.go-deeper:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── MOBILE ── */
+@media(max-width:600px){
+  .workspace{padding:104px 12px 24px}
+  .topbar{padding:12px 16px}
+  .topbar nav{gap:12px}
+  .timer-bar{padding:6px 16px}
+  .timer-msg{font-size:10px}
+  textarea#pasteBox{font-size:16px;min-height:180px;padding:16px}
+  .check-btn,.fix-btn,.copy-btn{padding:16px;font-size:16px}
+  .finding-issue{font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="/" class="logo">ARTIFACT ZERO</a>
+  <nav>
+    <a href="/score">SCORE</a>
+    <a href="/examples">EXAMPLES</a>
+    <a href="/docs">API</a>
+  </nav>
+</div>
+
+<!-- TIMER BAR -->
+<div class="timer-bar">
+  <div class="timer-left">
+    <div class="timer-dot frozen" id="timerDot"></div>
+    <span class="timer-display frozen" id="timerDisplay">3:00</span>
+  </div>
+  <span class="timer-msg" id="timerMsg">Your words stay on your device.</span>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace" id="workspace">
+
+  <div class="privacy-line">
+    <span class="lock">&#128274;</span>
+    Nothing is stored. Nothing is shared. This page clears itself.
+  </div>
+
+  <!-- PASTE ZONE -->
+  <div class="paste-zone" id="pasteZone">
+    <div class="paste-hint" id="pasteHint">
+      <div class="paste-icon">&#128203;</div>
+      <div class="paste-label">PASTE WHAT YOU WROTE</div>
+      <div class="paste-sub">email · text · post · anything</div>
+    </div>
+    <textarea id="pasteBox" autocomplete="off" spellcheck="false"></textarea>
+  </div>
+
+  <!-- SAFECHECK BUTTON -->
+  <div class="check-row">
+    <button class="check-btn" id="checkBtn" disabled>SafeCheck</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results"></div>
+
+  <!-- REWRITE -->
+  <div class="rewrite" id="rewrite"></div>
+
+</div>
+
+<!-- CLEARED OVERLAY -->
+<div class="cleared-overlay" id="clearedOverlay">
+  <div class="cleared-icon">&#128683;</div>
+  <div class="cleared-title">SESSION CLEARED</div>
+  <div class="cleared-sub">Your words are gone. Nothing was stored. Nothing was saved.</div>
+  <div class="cleared-actions">
+    <button class="start-over" onclick="startOver()">Paste something new</button>
+    <a class="go-deeper" href="/relay">Get full tools &#8594;</a>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// TIMER — visible at 3:00, frozen until first input
+// ═══════════════════════════════════════════
+const TIMER_TOTAL = 180;
+let secondsLeft = TIMER_TOTAL;
+let timerInterval = null;
+let timerStarted = false;
+let sessionActive = true;
+
+const timerDisplay = document.getElementById('timerDisplay');
+const timerDot = document.getElementById('timerDot');
+const timerMsg = document.getElementById('timerMsg');
+
+function formatTime(s){
+  const m = Math.floor(s/60);
+  const sec = s%60;
+  return m + ':' + (sec<10?'0':'') + sec;
+}
+
+function updateTimerUI(){
+  timerDisplay.textContent = formatTime(secondsLeft);
+  if(!timerStarted){
+    timerDisplay.className = 'timer-display frozen';
+    timerDot.className = 'timer-dot frozen';
+    return;
+  }
+  let state = 'green';
+  if(secondsLeft <= 30) state = 'red';
+  else if(secondsLeft <= 60) state = 'amber';
+  timerDisplay.className = 'timer-display ' + state;
+  timerDot.className = 'timer-dot ' + state;
+}
+
+function startTimer(){
+  if(timerStarted) return;
+  timerStarted = true;
+  timerMsg.textContent = 'Session clears in ' + formatTime(secondsLeft) + '.';
+  updateTimerUI();
+  timerInterval = setInterval(tick, 1000);
+}
+
+function tick(){
+  if(!sessionActive) return;
+  secondsLeft--;
+  timerMsg.textContent = 'Session clears in ' + formatTime(secondsLeft) + '.';
+  if(secondsLeft <= 0){
+    clearSession();
+    return;
+  }
+  updateTimerUI();
+}
+
+function clearSession(){
+  sessionActive = false;
+  clearInterval(timerInterval);
+  document.getElementById('pasteBox').value = '';
+  document.getElementById('results').className = 'results';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('rewrite').className = 'rewrite';
+  document.getElementById('rewrite').innerHTML = '';
+  document.getElementById('pasteZone').classList.add('expired');
+  document.getElementById('pasteHint').classList.remove('hidden');
+  document.getElementById('checkBtn').disabled = true;
+  timerDisplay.textContent = '0:00';
+  timerDisplay.className = 'timer-display red';
+  timerDot.className = 'timer-dot red';
+  timerMsg.textContent = 'Session cleared.';
+  document.getElementById('clearedOverlay').classList.add('show');
+}
+
+function startOver(){
+  sessionActive = true;
+  timerStarted = false;
+  secondsLeft = TIMER_TOTAL;
+  updateTimerUI();
+  timerMsg.textContent = 'Your words stay on your device.';
+  document.getElementById('pasteZone').classList.remove('expired');
+  document.getElementById('pasteHint').classList.remove('hidden');
+  document.getElementById('clearedOverlay').classList.remove('show');
+  document.getElementById('results').className = 'results';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('rewrite').className = 'rewrite';
+  document.getElementById('rewrite').innerHTML = '';
+  document.getElementById('checkBtn').disabled = true;
+  document.getElementById('pasteBox').value = '';
+  document.getElementById('pasteBox').focus();
+}
+
+updateTimerUI();
+
+// ═══════════════════════════════════════════
+// PASTE ZONE — first character starts timer
+// ═══════════════════════════════════════════
+const pasteBox = document.getElementById('pasteBox');
+const pasteHint = document.getElementById('pasteHint');
+const pasteZone = document.getElementById('pasteZone');
+const checkBtn = document.getElementById('checkBtn');
+
+pasteBox.addEventListener('input', function(){
+  if(!sessionActive) return;
+  const hasText = this.value.trim().length > 0;
+  pasteHint.classList.toggle('hidden', hasText);
+  pasteZone.classList.toggle('active', hasText);
+  checkBtn.disabled = !hasText;
+  // First character starts the timer
+  if(hasText) startTimer();
+});
+
+pasteBox.addEventListener('focus', function(){
+  if(!sessionActive) return;
+  pasteZone.classList.add('active');
+});
+
+pasteBox.addEventListener('blur', function(){
+  if(!this.value.trim()) pasteZone.classList.remove('active');
+});
+
+// ═══════════════════════════════════════════
+// SAFECHECK — score on button press
+// ═══════════════════════════════════════════
+let lastScore = null;
+
+checkBtn.addEventListener('click', async function(){
+  if(!sessionActive) return;
+  const text = pasteBox.value.trim();
+  if(!text || text.length < 10) return;
+
+  this.disabled = true;
+  this.textContent = 'Checking...';
+
+  try {
+    const res = await fetch('/api/v1/score/free', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    if(data.error){
+      this.textContent = 'SafeCheck';
+      this.disabled = false;
+      return;
+    }
+    lastScore = data;
+    renderResults(data, text);
+    this.textContent = 'SafeCheck ✓';
+  } catch(e){
+    this.textContent = 'Connection error — try again';
+    this.disabled = false;
+  }
+});
+
+function renderResults(data, originalText){
+  const el = document.getElementById('results');
+  const sc = data.score || {};
+  const comp = sc.components || {};
+  const fm = data.failure_modes || {};
+  const tilt = data.tilt || {};
+  const nii = sc.nii || 0;
+
+  // Build findings in her words
+  const findings = [];
+  if((comp.q1||0) < 0.7) findings.push({
+    issue: "You didn't set any rules. The person reading this can interpret it however they want.",
+    fix: "Add what you need specifically. Dates, amounts, or conditions."
+  });
+  if((comp.q2||0) < 0.7) findings.push({
+    issue: "Your main point is buried. They might stop reading before they get to it.",
+    fix: "Move your ask to the first sentence."
+  });
+  if((comp.q3||0) < 0.7) findings.push({
+    issue: "There's no deadline or boundary. This can be ignored or pushed off.",
+    fix: "Add when you need it by. \"By Friday\" or \"before the meeting.\""
+  });
+  if((comp.q4||0) < 0.7) findings.push({
+    issue: "It's not clear what you're actually asking for.",
+    fix: "Start with what you need. One sentence."
+  });
+  if(fm.UDDS && !String(fm.UDDS).includes('FALSE')) findings.push({
+    issue: "You agreed to something before saying what you actually need. They'll hold you to the agreement and skip your ask.",
+    fix: "State what you need first. Then offer flexibility."
+  });
+  if(fm.DCE && !String(fm.DCE).includes('FALSE')) findings.push({
+    issue: "You pushed the real decision to a future conversation. Nothing gets resolved here.",
+    fix: "Make the ask now. Don't defer."
+  });
+  if(fm.CCA && !String(fm.CCA).includes('FALSE')) findings.push({
+    issue: "You combined multiple things into one vague statement. Each point gets weaker.",
+    fix: "Separate your points. One sentence per ask."
+  });
+
+  const totalIssues = findings.length;
+  const tiltCount = tilt.count || (Array.isArray(tilt) ? tilt.length : 0);
+
+  let h = '<div class="results-header">';
+  h += '<span class="results-title">SAFECHECK RESULTS</span>';
+  if(totalIssues === 0){
+    h += '<span class="results-count clear">Clear</span>';
+  } else {
+    h += `<span class="results-count ${totalIssues>=3?'crit':'warn'}">${totalIssues} issue${totalIssues>1?'s':''}</span>`;
+  }
+  h += '</div>';
+
+  if(findings.length === 0){
+    h += '<div class="finding"><div class="finding-issue" style="color:var(--accent)">Your message is structurally clear. No issues found.</div></div>';
+  } else {
+    findings.forEach(f => {
+      h += `<div class="finding">
+        <div class="finding-issue">${f.issue}</div>
+        <div class="finding-fix">${f.fix}</div>
+      </div>`;
+    });
+  }
+
+  // Checklist
+  const checks = [
+    [comp.q1 >= 0.7, 'Rules are stated'],
+    [comp.q2 >= 0.7, 'Main point comes first'],
+    [comp.q3 >= 0.7, 'Deadline or boundary set'],
+    [comp.q4 >= 0.7, 'Clear ask'],
+  ];
+  h += '<div class="checklist">';
+  checks.forEach(([pass, label]) => {
+    h += `<div class="check-item"><span class="check-icon ${pass?'pass':'fail'}">${pass?'✓':'✗'}</span><span class="check-label">${label}</span></div>`;
+  });
+  h += '</div>';
+
+  // Fix it button — only if there are issues
+  if(totalIssues > 0){
+    h += '<div class="fix-row"><button class="fix-btn" id="fixBtn" onclick="fixIt()">Fix it for me</button></div>';
+  }
+
+  el.innerHTML = h;
+  el.className = 'results show';
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ═══════════════════════════════════════════
+// FIX IT — V3 rewrite
+// ═══════════════════════════════════════════
+async function fixIt(){
+  if(!sessionActive) return;
+  const text = pasteBox.value.trim();
+  if(!text) return;
+  const btn = document.getElementById('fixBtn');
+  btn.disabled = true;
+  btn.textContent = 'Rewriting...';
+
+  try {
+    const res = await fetch('/api/v1/score/free', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text, rewrite: true})
+    });
+    const data = await res.json();
+    const rewritten = data.v3_rewrite || data.rewrite || data.stabilized || null;
+    if(!rewritten){
+      btn.textContent = 'Rewrite not available yet';
+      return;
+    }
+    renderRewrite(rewritten);
+    btn.textContent = 'Rewritten ✓';
+  } catch(e){
+    btn.textContent = 'Connection error — try again';
+    btn.disabled = false;
+  }
+}
+
+function renderRewrite(text){
+  const el = document.getElementById('rewrite');
+  el.innerHTML = `
+    <div class="rewrite-header">YOUR MESSAGE — FIXED</div>
+    <div class="rewrite-body">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    <div class="copy-row"><button class="copy-btn" id="copyBtn" onclick="copyRewrite()">Copy to clipboard</button></div>
+  `;
+  el.className = 'rewrite show';
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function copyRewrite(){
+  const text = document.querySelector('.rewrite-body').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy to clipboard'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
+<script src="/static/az-nav.js"></script>
+</body>
+</html>
