@@ -317,5 +317,12 @@ def release_conn(conn):
         except Exception:
             pass
 
-def param_placeholder():
-    return "%s" if USE_PG else "?"
+class _ParamPlaceholder(str):
+    """Works as both a string and a callable for compatibility."""
+    def __new__(cls):
+        val = "%s" if USE_PG else "?"
+        return str.__new__(cls, val)
+    def __call__(self):
+        return str(self)
+
+param_placeholder = _ParamPlaceholder()
