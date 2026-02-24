@@ -302,3 +302,19 @@ def get_api_usage_count(api_key_id, month_start):
     row = cur.fetchone()
     conn.close()
     return row[0] if row else 0
+
+
+# ═══════════════════════════════════════════
+# COMPATIBILITY WRAPPERS — used by az_relay.py
+# ═══════════════════════════════════════════
+def get_conn():
+    return db_connect()
+
+def release_conn(conn):
+    if conn:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+param_placeholder = "%s" if USE_PG else "?"
