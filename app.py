@@ -590,10 +590,7 @@ def home():
         return "NTI Canonical Runtime is live."
 
 
-@app.route("/relay")
-def relay_redirect():
-    from flask import redirect
-    return redirect("/app/relay", code=301)
+# /relay handled by az_relay blueprint
 
 
 
