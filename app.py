@@ -71,6 +71,13 @@ try:
 except ImportError:
     print("[app] az_relay not found, skipping", flush=True)
 
+try:
+    from credits import credits_bp
+    app.register_blueprint(credits_bp)
+    print("[app] credits system loaded", flush=True)
+except ImportError:
+    print("[app] credits not found, skipping", flush=True)
+
 # ============================================================
 # CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
@@ -997,16 +1004,27 @@ def require_api_key(f):
 
         key_id = row[0] if database.USE_PG else row["id"]
         tier = row[1] if database.USE_PG else row["tier"]
-        monthly_limit = row[2] if database.USE_PG else row["monthly_limit"]
         active = row[3] if database.USE_PG else row["active"]
 
         if not active:
             return jsonify({"error": "API key deactivated"}), 403
 
-        usage_count = database.get_api_usage_count(key_id, _month_start())
-        if usage_count >= monthly_limit:
-            return jsonify({"error": "Monthly limit reached", "usage": usage_count, "limit": monthly_limit, "tier": tier}), 429
+        # Credit balance check (replaces monthly limit for paid tiers)
+        if tier != "free":
+            try:
+                from credits import get_user_id_for_api_key, get_balance, COST_PER_SCORE
+                owner_user_id = get_user_id_for_api_key(key_id)
+                if owner_user_id:
+                    bal = get_balance(owner_user_id)
+                    cost_cents = int(COST_PER_SCORE["api"] * 100)
+                    if bal < cost_cents:
+                        return jsonify({"error": "Insufficient balance", "balance": bal / 100, "cost_per_score": cost_cents / 100,
+                                        "topup": f"{os.getenv('SITE_URL', 'https://artifact0.com')}/dashboard"}), 402
+                    request._credit_user_id = owner_user_id
+            except ImportError:
+                pass  # credits module not available, fall back to monthly limits
 
+        # Rate limit (per-minute, still applies)
         tier_config = _TIER_LIMITS.get(tier, _TIER_LIMITS["free"])
         cache_key = f"{key_id}:{_minute_key()}"
         current_rpm = _rate_cache.get(cache_key, 0)
@@ -1014,10 +1032,16 @@ def require_api_key(f):
             return jsonify({"error": "Rate limit exceeded", "limit": f"{tier_config['rpm']} req/min"}), 429
         _rate_cache[cache_key] = current_rpm + 1
 
+        # Free tier: still uses monthly limits
+        if tier == "free":
+            usage_count = database.get_api_usage_count(key_id, _month_start())
+            monthly_limit = row[2] if database.USE_PG else row["monthly_limit"]
+            if usage_count >= monthly_limit:
+                return jsonify({"error": "Free tier limit reached", "usage": usage_count, "limit": monthly_limit,
+                                "upgrade": f"{os.getenv('SITE_URL', 'https://artifact0.com')}/dashboard"}), 429
+
         request._api_key_id = key_id
         request._api_tier = tier
-        request._api_usage = usage_count + 1
-        request._api_limit = monthly_limit
         return f(*args, **kwargs)
     return wrapper
 
@@ -1063,6 +1087,16 @@ def api_score():
     usage_id = str(uuid.uuid4())
     database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score", latency_ms, 200)
 
+    # Deduct credit for paid tiers
+    credit_info = {}
+    if hasattr(request, '_credit_user_id') and request._credit_user_id:
+        try:
+            from credits import deduct_credit, get_balance
+            ok, new_bal = deduct_credit(request._credit_user_id, "api", request._api_key_id)
+            credit_info = {"charged": 0.01, "balance": new_bal / 100}
+        except Exception as e:
+            print(f"[api] Credit deduction error: {e}", flush=True)
+
     return jsonify({
         "status": "ok",
         "version": NTI_VERSION,
@@ -1078,8 +1112,9 @@ def api_score():
         "tilt": {"tags": tilt, "count": len(tilt)},
         "meta": {
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
-            "tier": request._api_tier, "usage_this_month": request._api_usage, "monthly_limit": request._api_limit
-        }
+            "tier": request._api_tier
+        },
+        **({"credits": credit_info} if credit_info else {})
     })
 
 
@@ -1121,13 +1156,77 @@ def api_create_key():
 @require_api_key
 def api_usage():
     usage_count = database.get_api_usage_count(request._api_key_id, _month_start())
-    return jsonify({
+    result = {
         "api_key": request._api_key_id[:8] + "...",
         "tier": request._api_tier,
         "usage_this_month": usage_count,
-        "monthly_limit": request._api_limit,
-        "remaining": max(0, request._api_limit - usage_count)
-    })
+    }
+    # Add credit balance if available
+    try:
+        from credits import get_user_id_for_api_key, get_balance_info
+        uid = get_user_id_for_api_key(request._api_key_id)
+        if uid:
+            result["credits"] = get_balance_info(uid)
+    except ImportError:
+        pass
+    return jsonify(result)
+
+
+# ═══════════════════════════════════════
+# STRIPE WEBHOOK
+# ═══════════════════════════════════════
+@app.route("/api/stripe/webhook", methods=["POST"])
+def stripe_webhook():
+    import json as _json
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature", "")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+    # If webhook secret is set, verify signature
+    if webhook_secret:
+        import hmac, hashlib
+        timestamp = None
+        sig_v1 = None
+        for item in sig_header.split(","):
+            k, _, v = item.strip().partition("=")
+            if k == "t": timestamp = v
+            elif k == "v1": sig_v1 = v
+        if not timestamp or not sig_v1:
+            return jsonify({"error": "Invalid signature"}), 400
+        signed_payload = f"{timestamp}.{payload}"
+        expected = hmac.new(webhook_secret.encode(), signed_payload.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, sig_v1):
+            return jsonify({"error": "Signature mismatch"}), 400
+
+    try:
+        event = _json.loads(payload)
+    except Exception:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    event_type = event.get("type", "")
+    print(f"[stripe] Webhook: {event_type}", flush=True)
+
+    if event_type == "checkout.session.completed":
+        try:
+            from credits import handle_topup_webhook
+            handled = handle_topup_webhook(event)
+            print(f"[stripe] Top-up handled: {handled}", flush=True)
+        except Exception as e:
+            print(f"[stripe] Webhook error: {e}", flush=True)
+
+    return jsonify({"received": True})
+
+
+# ═══════════════════════════════════════
+# DASHBOARD (balance, usage, top-up)
+# ═══════════════════════════════════════
+@app.route("/dashboard")
+def dashboard():
+    user_id = session.get("user_id")
+    if not user_id:
+        from flask import redirect
+        return redirect("/login")
+    return render_template("dashboard.html")
 
 
 if __name__ == "__main__":
