@@ -3,41 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Log In — Artifact Zero</title>
+<title>Log in — Artifact Zero</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0c10;--surface:#12151b;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;text-decoration:none}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:400px}
-h1{font-family:'JetBrains Mono',monospace;font-size:20px;margin-bottom:4px}
-.sub{color:var(--muted);font-size:14px;margin-bottom:24px}
-label{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:16px}
-input{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:15px;outline:none;transition:border .2s}
-input:focus{border-color:var(--accent)}
-.btn{width:100%;padding:12px;background:var(--accent);color:#000;font-weight:700;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-top:24px;font-family:'DM Sans',sans-serif;transition:background .15s}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{width:100%;max-width:380px;padding:40px 28px;margin:20px}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none;display:block;text-align:center;margin-bottom:32px}
+h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
+.field input{width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--accent)}
+.btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;transition:background .15s}
 .btn:hover{background:#00d48c}
-.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px}
-.link{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
-.link a{color:var(--accent);text-decoration:none}
+.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center}
+.links{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+.links a{color:var(--accent);text-decoration:none}
+.links a:hover{text-decoration:underline}
+.forgot{text-align:right;margin-top:-8px;margin-bottom:16px}
+.forgot a{font-size:12px;color:var(--muted);text-decoration:none}
+.forgot a:hover{color:var(--accent)}
 </style>
 </head>
 <body>
-<a href="/" class="logo">ARTIFACT ZERO.</a>
 <div class="card">
+<a href="/" class="logo">ARTIFACT ZERO</a>
 <h1>Log in</h1>
-<div class="sub">Welcome back.</div>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 <form method="POST" action="/login">
-<label>Email</label>
-<input type="email" name="email" placeholder="you@company.com" required autocomplete="email">
-<label>Password</label>
-<input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+<div class="field"><label>Email</label><input type="email" name="email" required autofocus placeholder="you@example.com"></div>
+<div class="field"><label>Password</label><input type="password" name="password" required placeholder="Your password"></div>
+<div class="forgot"><a href="/forgot">Forgot password?</a></div>
 <button type="submit" class="btn">Log in</button>
 </form>
-<div class="link">No account? <a href="/signup">Sign up</a></div>
+<div class="links">No account? <a href="/signup">Sign up</a></div>
 </div>
 <script src="/static/az-nav.js"></script>
 </body>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign up — Artifact Zero</title>
+<title>New Password — Artifact Zero</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -12,7 +12,8 @@
 html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
 .card{width:100%;max-width:380px;padding:40px 28px;margin:20px}
 .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none;display:block;text-align:center;margin-bottom:32px}
-h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:28px}
+h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
+.sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.5}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
 .field input{width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
@@ -20,7 +21,7 @@ h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:28px}
 .btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;transition:background .15s}
 .btn:hover{background:#00d48c}
 .error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center}
-.links{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+.links{text-align:center;margin-top:20px;font-size:13px}
 .links a{color:var(--accent);text-decoration:none}
 .links a:hover{text-decoration:underline}
 </style>
@@ -28,15 +29,19 @@ h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:28px}
 <body>
 <div class="card">
 <a href="/" class="logo">ARTIFACT ZERO</a>
-<h1>Create account</h1>
+<h1>Set new password</h1>
+<p class="sub">Choose a new password for your account.</p>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
-<form method="POST" action="/signup">
-<div class="field"><label>Name</label><input type="text" name="name" placeholder="Your name (optional)"></div>
-<div class="field"><label>Email</label><input type="email" name="email" required autofocus placeholder="you@example.com"></div>
-<div class="field"><label>Password</label><input type="password" name="password" required minlength="8" placeholder="At least 8 characters"></div>
-<button type="submit" class="btn">Sign up</button>
+{% if expired %}
+<div class="links"><a href="/forgot">Request a new reset link</a></div>
+{% else %}
+<form method="POST" action="/reset">
+<input type="hidden" name="token" value="{{ token }}">
+<div class="field"><label>New Password</label><input type="password" name="password" required minlength="8" autofocus placeholder="At least 8 characters"></div>
+<button type="submit" class="btn">Set password</button>
 </form>
-<div class="links">Have an account? <a href="/login">Log in</a></div>
+{% endif %}
+<div class="links"><a href="/login">Back to login</a></div>
 </div>
 <script src="/static/az-nav.js"></script>
 </body>
