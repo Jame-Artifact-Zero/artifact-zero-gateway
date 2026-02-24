@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — Artifact Zero</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c10;--surface:#12151b;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;text-decoration:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:400px}
+h1{font-family:'JetBrains Mono',monospace;font-size:20px;margin-bottom:4px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+label{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:16px}
+input{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:15px;outline:none;transition:border .2s}
+input:focus{border-color:var(--accent)}
+.btn{width:100%;padding:12px;background:var(--accent);color:#000;font-weight:700;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-top:24px;font-family:'DM Sans',sans-serif;transition:background .15s}
+.btn:hover{background:#00d48c}
+.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px}
+.link{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
+.link a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<a href="/" class="logo">ARTIFACT ZERO.</a>
+<div class="card">
+<h1>Create account</h1>
+<div class="sub">Score. Compose. Govern.</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="POST" action="/signup">
+<label>Name</label>
+<input type="text" name="name" placeholder="Your name" autocomplete="name">
+<label>Email</label>
+<input type="email" name="email" placeholder="you@company.com" required autocomplete="email">
+<label>Password</label>
+<input type="password" name="password" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
+<button type="submit" class="btn">Create account</button>
+</form>
+<div class="link">Already have an account? <a href="/login">Log in</a></div>
+</div>
+</body>
+</html>

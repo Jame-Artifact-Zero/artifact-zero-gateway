@@ -10,8 +10,15 @@ from flask import Flask, request, jsonify, render_template
 import db as database
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", os.getenv("AZ_SECRET", "dev-fallback-secret-change-me"))
 
 # Register blueprints
+try:
+    from auth import auth_bp
+    app.register_blueprint(auth_bp)
+except ImportError:
+    print("[app] auth not found, skipping", flush=True)
+
 try:
     from rss_proxy import rss_bp
     app.register_blueprint(rss_bp)

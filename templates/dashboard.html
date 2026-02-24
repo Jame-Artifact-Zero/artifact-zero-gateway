@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Artifact Zero</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
+.topbar nav{display:flex;gap:16px;align-items:center}
+.topbar nav a{color:var(--muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono',monospace;transition:color .15s}
+.topbar nav a:hover{color:var(--accent)}
+.topbar .user-badge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);background:rgba(0,232,156,.08);border:1px solid rgba(0,232,156,.2);padding:4px 10px;border-radius:4px}
+.main{max-width:800px;margin:0 auto;padding:40px 20px}
+h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:8px}
+.welcome{color:var(--muted);font-size:14px;margin-bottom:32px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+.stat-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700}
+.stat-value.green{color:var(--accent)}
+.stat-value.amber{color:var(--amber)}
+.tier-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:24px}
+.tier-card h2{font-family:'JetBrains Mono',monospace;font-size:16px;margin-bottom:8px}
+.tier-card .tier-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:4px;margin-bottom:12px}
+.tier-badge.free{background:rgba(107,114,128,.15);color:var(--muted)}
+.tier-badge.personal{background:rgba(0,232,156,.1);color:var(--accent)}
+.tier-card p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:16px}
+.btn{display:inline-block;padding:10px 24px;background:var(--accent);color:#000;font-weight:700;border:none;border-radius:6px;font-size:14px;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif;transition:background .15s}
+.btn:hover{background:#00d48c}
+.btn-ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn-ghost:hover{background:var(--accent);color:#000}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.actions a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);text-decoration:none;padding:8px 16px;border:1px solid var(--border);border-radius:6px;transition:all .15s}
+.actions a:hover{border-color:var(--accent);background:rgba(0,232,156,.05)}
+.success{background:rgba(0,232,156,.08);border:1px solid rgba(0,232,156,.2);color:var(--accent);padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:24px;font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo">ARTIFACT ZERO.</a>
+  <nav>
+    <a href="/score">Score</a>
+    <a href="/compose">Compose</a>
+    <a href="/docs">API</a>
+    <span class="user-badge">{{ user.email }}</span>
+    <a href="/logout">Log out</a>
+  </nav>
+</div>
+<div class="main">
+<h1>Dashboard</h1>
+<div class="welcome">{{ user.name or user.email }} · Member since {{ user.created_at[:10] if user.created_at else 'today' }}</div>
+
+{% if request.args.get('upgraded') %}
+<div class="success">✓ Upgraded to Personal tier. $0.04/score. Compose, history, and billing active.</div>
+{% endif %}
+{% if request.args.get('cancelled') %}
+<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--amber);padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:24px;font-family:'JetBrains Mono',monospace">Checkout cancelled. No charge.</div>
+{% endif %}
+
+<div class="grid">
+  <div class="stat">
+    <div class="stat-label">Total Scores</div>
+    <div class="stat-value green">{{ user.score_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Tier</div>
+    <div class="stat-value" style="font-size:18px;color:var(--accent)">{{ user.tier|upper }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Cost / Score</div>
+    <div class="stat-value" style="font-size:18px">{{ '$0.04' if user.tier == 'personal' else 'FREE' }}</div>
+  </div>
+</div>
+
+<div class="tier-card">
+  <h2>Your Plan</h2>
+  <span class="tier-badge {{ user.tier }}">{{ user.tier|upper }}</span>
+  {% if user.tier == 'free' %}
+  <p>Free tier: 10 scores/month on /score. Unlimited on homepage. Upgrade to Personal for $0.04/score with compose, history, and billing dashboard.</p>
+  <form method="POST" action="/checkout">
+    <button type="submit" class="btn">Upgrade to Personal →</button>
+  </form>
+  {% elif user.tier == 'personal' %}
+  <p>Personal tier active. $0.04/score. Compose with live scoring, score history, API access. Need enterprise? Contact jame@artifact0.com.</p>
+  {% endif %}
+</div>
+
+<div class="actions">
+  <a href="/score">Score →</a>
+  <a href="/compose">Compose →</a>
+  <a href="/examples">Examples →</a>
+  <a href="/docs">API Docs →</a>
+  <a href="/wall">The Wall →</a>
+</div>
+</div>
+</body>
+</html>
