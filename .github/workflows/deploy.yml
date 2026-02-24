@@ -58,40 +58,24 @@ jobs:
 
       - name: Inject env vars from SSM
         run: |
-          # Fetch all env vars from AWS SSM Parameter Store
+          # Fetch DATABASE_URL from AWS SSM Parameter Store (the only one stored there)
           DB_URL=$(aws ssm get-parameter --name "/artifact-zero/DATABASE_URL" --with-decryption --query "Parameter.Value" --output text --region us-east-1)
-          STRIPE_SK=$(aws ssm get-parameter --name "/artifact-zero/STRIPE_SECRET_KEY" --with-decryption --query "Parameter.Value" --output text --region us-east-1 2>/dev/null || echo "")
-          STRIPE_WH=$(aws ssm get-parameter --name "/artifact-zero/STRIPE_WEBHOOK_SECRET" --with-decryption --query "Parameter.Value" --output text --region us-east-1 2>/dev/null || echo "")
-          SENDGRID=$(aws ssm get-parameter --name "/artifact-zero/SENDGRID_API_KEY" --with-decryption --query "Parameter.Value" --output text --region us-east-1 2>/dev/null || echo "")
-          FROM_EMAIL=$(aws ssm get-parameter --name "/artifact-zero/FROM_EMAIL" --query "Parameter.Value" --output text --region us-east-1 2>/dev/null || echo "hello@artifact0.com")
-          SITE_URL=$(aws ssm get-parameter --name "/artifact-zero/SITE_URL" --query "Parameter.Value" --output text --region us-east-1 2>/dev/null || echo "https://artifact0.com")
 
           python3 -c "
-          import json, sys, os
+          import json, sys
           with open('task-definition.json') as f:
               td = json.load(f)
           env = td['containerDefinitions'][0].get('environment', [])
-          # Map of env var name → value
-          inject = {
-              'DATABASE_URL': sys.argv[1],
-              'STRIPE_SECRET_KEY': sys.argv[2],
-              'STRIPE_WEBHOOK_SECRET': sys.argv[3],
-              'SENDGRID_API_KEY': sys.argv[4],
-              'FROM_EMAIL': sys.argv[5],
-              'SITE_URL': sys.argv[6],
-          }
-          # Remove existing, add fresh
-          env = [e for e in env if e['name'] not in inject]
-          for k, v in inject.items():
-              if v:
-                  env.append({'name': k, 'value': v})
+          # Only update DATABASE_URL — all other env vars are already in the task def
+          env = [e for e in env if e['name'] != 'DATABASE_URL']
+          env.append({'name': 'DATABASE_URL', 'value': sys.argv[1]})
           td['containerDefinitions'][0]['environment'] = env
           for key in ['taskDefinitionArn','revision','status','requiresAttributes','compatibilities','registeredAt','registeredBy']:
               td.pop(key, None)
           with open('task-definition.json','w') as f:
               json.dump(td, f)
-          print(f'Env vars injected: {len(env)} total')
-          " "$DB_URL" "$STRIPE_SK" "$STRIPE_WH" "$SENDGRID" "$FROM_EMAIL" "$SITE_URL"
+          print(f'DATABASE_URL set. Total env vars: {len(env)}')
+          " "$DB_URL"
 
       - name: Update task definition with new image
         id: task-def
