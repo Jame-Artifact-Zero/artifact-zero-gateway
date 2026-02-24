@@ -117,7 +117,10 @@ def init_user_feeds_db():
     conn.close()
 
 
-init_user_feeds_db()
+try:
+    init_user_feeds_db()
+except Exception as e:
+    print(f"[user_feeds] DB init deferred: {e}")
 
 
 # ─── AUTH CHECK ───

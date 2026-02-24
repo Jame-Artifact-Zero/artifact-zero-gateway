@@ -129,6 +129,20 @@ def db_init():
         CREATE INDEX IF NOT EXISTS idx_api_usage_key_date 
         ON api_usage(api_key_id, created_at)
         """)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS fortune500_scores (
+            slug TEXT PRIMARY KEY,
+            company_name TEXT NOT NULL,
+            rank INTEGER,
+            url TEXT,
+            homepage_copy TEXT,
+            score_json TEXT,
+            nii_score REAL DEFAULT 0,
+            issue_count INTEGER DEFAULT 0,
+            last_checked TEXT,
+            last_changed TEXT
+        )
+        """)
     else:
         cur.execute("""
         CREATE TABLE IF NOT EXISTS requests (
@@ -179,6 +193,20 @@ def db_init():
             latency_ms INTEGER,
             status_code INTEGER,
             FOREIGN KEY(api_key_id) REFERENCES api_keys(id)
+        )
+        """)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS fortune500_scores (
+            slug TEXT PRIMARY KEY,
+            company_name TEXT NOT NULL,
+            rank INTEGER,
+            url TEXT,
+            homepage_copy TEXT,
+            score_json TEXT,
+            nii_score REAL DEFAULT 0,
+            issue_count INTEGER DEFAULT 0,
+            last_checked TEXT,
+            last_changed TEXT
         )
         """)
 

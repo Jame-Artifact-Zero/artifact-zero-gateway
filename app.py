@@ -611,6 +611,65 @@ def score_page():
     return render_template("score.html")
 
 
+@app.route("/safecheck")
+def safecheck_page():
+    return render_template("safecheck.html")
+
+
+@app.route("/fortune500")
+def fortune500_page():
+    return render_template("fortune500.html")
+
+
+@app.route("/scored/<slug>")
+def scored_page(slug):
+    return render_template("scored.html")
+
+
+@app.route("/api/fortune500", methods=["GET"])
+def api_fortune500_list():
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        else:
+            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
+            rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return jsonify({"companies": rows})
+    except Exception as e:
+        return jsonify({"companies": [], "note": "Scores loading. Check back soon."})
+
+
+@app.route("/api/fortune500/<slug>", methods=["GET"])
+def api_fortune500_detail(slug):
+    try:
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT * FROM fortune500_scores WHERE slug = %s", (slug,))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return jsonify({"error": "Not found"}), 404
+            cols = [d[0] for d in cur.description]
+            result = dict(zip(cols, row))
+        else:
+            cur.execute("SELECT * FROM fortune500_scores WHERE slug = ?", (slug,))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return jsonify({"error": "Not found"}), 404
+            result = dict(row)
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # Free tier scoring — no API key, IP-limited
 _free_usage = {}
 
