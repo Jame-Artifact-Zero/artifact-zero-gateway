@@ -227,7 +227,7 @@ async function doLogin() {
   if (d.ok) {
     // If standalone (not in shell), redirect to shell
     if (window.self === window.top) {
-      window.location.href = '/app/relay';
+      window.location.href = '/relay';
       return;
     }
     user = d; await loadProtocols(); render();
@@ -244,7 +244,7 @@ async function doSignup() {
   const d = await r.json();
   if (d.ok) {
     if (window.self === window.top) {
-      window.location.href = '/app/relay';
+      window.location.href = '/relay';
       return;
     }
     user = {email, username, turns_used:0, turns_limit:50, plan:'free'}; render();
@@ -653,7 +653,7 @@ async function init() {
       user = await r.json();
       // If logged in and standalone, redirect to shell
       if (window.self === window.top) {
-        window.location.href = '/app/relay';
+        window.location.href = '/relay';
         return;
       }
       await loadProtocols();

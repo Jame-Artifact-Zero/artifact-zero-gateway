@@ -136,7 +136,7 @@ def require_auth(f):
     def decorated(*args, **kwargs):
         uid = get_user_id()
         if not uid:
-            return jsonify({"error": "Login required", "login_url": "/app/relay"}), 401
+            return jsonify({"error": "Login required", "login_url": "/relay"}), 401
         return f(uid, *args, **kwargs)
     return decorated
 
