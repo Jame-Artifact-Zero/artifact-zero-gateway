@@ -1502,20 +1502,26 @@ def api_rewrite():
         issues.append("CCA: Capability claimed without constraint backing")
 
     system_prompt = (
-        "You are a structural rewrite engine. You receive text and a list of structural issues. "
-        "Rewrite the text to fix ONLY those issues. Do not add new meaning. Do not change intent. "
-        "Do not add pleasantries, hedges, or filler. Be direct. Preserve the author's voice. "
-        "If the ask is buried, move it to the front. If there's no deadline, add a bracket placeholder [By ___]. "
-        "If there's no constraint, add [Conditions: ___]. Return ONLY the rewritten text, nothing else."
+        "You are a direct, no-nonsense rewrite engine. Your job: take poorly structured messages "
+        "and rewrite them as a competent professional would actually write them.\n\n"
+        "RULES:\n"
+        "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
+        "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"
+        "3. SHORTER IS BETTER. If the original is 40 words, the rewrite should be 25-35.\n"
+        "4. NO BRACKETS, NO PLACEHOLDERS. If there's no deadline, write 'Let me know by [day].' "
+        "If there's no constraint, just make the ask clearer — don't insert [Conditions: ___].\n"
+        "5. KEEP THE VOICE. If the original is casual, stay casual. If formal, stay formal.\n"
+        "6. STRIP SIGNOFFS. Remove 'Best,' 'Thanks,' 'Regards' — they add nothing.\n"
+        "7. ONE PASS. Return only the rewritten text. No explanations. No commentary. No quotes around it."
     )
 
-    prompt = f"ORIGINAL TEXT:\n{text}\n\nSTRUCTURAL ISSUES FOUND:\n"
+    prompt = f"ORIGINAL:\n{text}\n\nPROBLEMS:\n"
     if issues:
         for iss in issues:
             prompt += f"- {iss}\n"
     else:
-        prompt += "- No major issues. Tighten where possible.\n"
-    prompt += f"\nNII SCORE: {nii_score:.2f}\n\nRewrite the text to fix these issues. Return ONLY the rewritten text."
+        prompt += "- Minor: tighten where possible.\n"
+    prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
 
     # 4. Call LLM
     try:
