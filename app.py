@@ -843,12 +843,18 @@ def health():
 @app.route("/health/net")
 def health_net():
     """Temporary: test outbound internet from ECS task."""
-    import requests as _req
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError, URLError
     results = {}
     for label, url in [("anthropic", "https://api.anthropic.com"), ("openai", "https://api.openai.com/v1/models"), ("google", "https://www.google.com")]:
         try:
-            r = _req.get(url, timeout=5)
-            results[label] = {"status": r.status_code, "ok": True}
+            req = Request(url, headers={"User-Agent": "AZ-NetTest/1.0"})
+            resp = urlopen(req, timeout=5)
+            results[label] = {"status": resp.status, "ok": True}
+        except HTTPError as e:
+            results[label] = {"status": e.code, "ok": True, "note": "HTTP error but outbound works"}
+        except URLError as e:
+            results[label] = {"status": str(e.reason)[:120], "ok": False}
         except Exception as e:
             results[label] = {"status": str(e)[:120], "ok": False}
     return jsonify(results)
