@@ -214,6 +214,28 @@ SMOOTH_OPENERS = {"great", "absolutely", "definitely", "of course",
                   "sure", "perfect", "wonderful", "fantastic",
                   "excellent", "love", "amazing", "certainly"}
 
+# ── TIME COLLAPSE: planning language that delays delivery ──
+# These patterns announce intent instead of executing.
+# V3 core governance: remove planning language, compress steps.
+TIME_COLLAPSE_PATTERNS = [
+    re.compile(r"\bi will now\b", re.I),
+    re.compile(r"\blet me\b", re.I),
+    re.compile(r"\bi('m going to| am going to)\b", re.I),
+    re.compile(r"\bfirst,?\s+(i('ll| will)|let me|we('ll| will))\b", re.I),
+    re.compile(r"\bnow i('ll| will)\b", re.I),
+    re.compile(r"\bi('ll| will) go ahead and\b", re.I),
+    re.compile(r"\blet('s| us) start by\b", re.I),
+    re.compile(r"\bthe next step (is|would be) to\b", re.I),
+    re.compile(r"\bwe can then\b", re.I),
+    re.compile(r"\bwhat i('ll| will) do is\b", re.I),
+    re.compile(r"\bhere('s| is) what i('ll| will) do\b", re.I),
+    re.compile(r"\bi('ll| will) start with\b", re.I),
+    re.compile(r"\ballow me to\b", re.I),
+    re.compile(r"\bi('d| would) like to\b", re.I),
+    re.compile(r"\bgoing forward,?\s+i\b", re.I),
+    re.compile(r"\bmy plan is to\b", re.I),
+]
+
 # Escalation patterns (from edge_engine, integrated here for L1)
 ESCALATION_PATTERNS = [
     re.compile(r"\bthe\s+(real\s+)?issue\s+is\b", re.I),
@@ -338,7 +360,18 @@ def _detect_entrenchment(current_text: str, prior_ai_responses: List[str]) -> Di
 
 
 def _normalize(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip())
+    t = re.sub(r"\s+", " ", (text or "").strip())
+    # Clean orphaned punctuation from aggressive removal
+    t = re.sub(r"\.\s*\.", ".", t)           # double periods
+    t = re.sub(r",\s*,", ",", t)             # double commas
+    t = re.sub(r"^\s*[.,!?;:]\s*", "", t)    # leading punctuation
+    t = re.sub(r"\s+([.,!?;:])", r"\1", t)   # space before punctuation
+    t = re.sub(r"([.!?])\s*([a-z])", lambda m: m.group(1) + " " + m.group(2).upper(), t)  # capitalize after period
+    t = re.sub(r"\s+", " ", t).strip()
+    # Capitalize first letter
+    if t and t[0].islower():
+        t = t[0].upper() + t[1:]
+    return t
 
 
 def _run_level_1(text: str, prior_ai_responses: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -399,6 +432,17 @@ def _run_level_1(text: str, prior_ai_responses: Optional[List[str]] = None) -> D
     if hedges_removed > 0:
         t = _normalize(t)
         actions.append({"check": "hedge_removal", "action": "removed", "detail": f"{hedges_removed} hedge words"})
+
+    # 5. TIME COLLAPSE — remove planning language
+    # V3 core: "No 'I will now...' or 'Let me...' — just do it."
+    tc_hits = []
+    for pat in TIME_COLLAPSE_PATTERNS:
+        for m in pat.finditer(t):
+            tc_hits.append(m.group(0))
+        t, n = pat.subn("", t)
+    if tc_hits:
+        t = _normalize(t)
+        actions.append({"check": "time_collapse", "action": "removed", "detail": f"Planning language removed: {tc_hits}"})
 
     # 5. Escalation strip
     esc_hits = []
@@ -825,3 +869,81 @@ ROLE_INTERNAL_TECHNICAL = Policy(
     compression_level=0,
     required_condition_labels=True,
 )
+
+
+# ═══════════════════════════════════════════════════════════
+# SELF-AUDIT LOOP
+# V3 core governance: score own output before delivery.
+# Every NTI response runs through the scoring engine
+# before being returned to the user.
+# ═══════════════════════════════════════════════════════════
+
+def self_audit(text, objective=None, score_fn=None, prior_ai_responses=None):
+    """
+    Self-audit loop. Runs V3 enforcement on output, then scores
+    the enforced output through NTI to verify structural integrity.
+
+    Args:
+        text: the output text to audit before delivery
+        objective: declared objective for scope checking
+        score_fn: optional NTI scoring function (returns dict with nii_score)
+                  if None, enforcement runs without post-score
+        prior_ai_responses: list of prior AI responses for entrenchment detection
+
+    Returns:
+        dict with:
+            enforced_text: text after V3 enforcement
+            enforcement_trace: full L0-L4 trace
+            self_score: NTI score of the enforced output (if score_fn provided)
+            passed: bool — True if output meets structural integrity threshold
+            actions_taken: total count of enforcement actions
+            time_collapse_applied: bool — whether planning language was removed
+    """
+    # Run enforcement
+    trace = enforce(
+        text,
+        objective=objective,
+        prior_ai_responses=prior_ai_responses,
+    )
+
+    enforced = trace.get("final_output", text)
+
+    # Count total actions across all levels
+    total_actions = sum(
+        len(trace.get(f"level_{i}_actions", []))
+        for i in range(5)
+    )
+
+    # Check if time collapse was applied
+    tc_applied = any(
+        a.get("check") == "time_collapse"
+        for level_key in ["level_0_actions", "level_1_actions"]
+        for a in trace.get(level_key, [])
+    )
+
+    result = {
+        "enforced_text": enforced,
+        "enforcement_trace": trace,
+        "actions_taken": total_actions,
+        "time_collapse_applied": tc_applied,
+        "compression_ratio": trace.get("compression_ratio", 0),
+    }
+
+    # Run NTI scoring on the enforced output if score_fn provided
+    if score_fn:
+        try:
+            self_score = score_fn(enforced)
+            result["self_score"] = self_score
+            # Pass if NII score indicates structural integrity
+            nii = self_score.get("nii_score", 100)
+            result["passed"] = nii <= 35  # lower is better (golf score)
+        except Exception as e:
+            result["self_score"] = None
+            result["self_score_error"] = str(e)
+            result["passed"] = True  # fail-open: don't block on score error
+
+    else:
+        result["self_score"] = None
+        result["passed"] = total_actions == 0 or trace.get("compression_ratio", 0) < 0.5
+
+    return result

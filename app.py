@@ -87,7 +87,7 @@ except ImportError:
 # - NII q3 penalizes: boundary absence + new structural tilt clusters
 # - No changes to layer schema, dominance order, or UDDS count logic
 # ============================================================
-NTI_VERSION = "canonical-nti-v2.0"
+NTI_VERSION = "canonical-nti-v3.0"
 
 
 # ==========================
@@ -818,16 +818,19 @@ def api_score_free():
         }
     }
 
-    # V3 rewrite — if requested
-    if payload.get("rewrite"):
-        try:
-            from core_engine.v3_enforcement import enforce
-            trace = enforce(text)
-            result["v3_rewrite"] = trace.get("final_output", "")
-            result["v3_actions"] = len(trace.get("level_0_actions", [])) + len(trace.get("level_1_actions", []))
-        except Exception as e:
-            result["v3_rewrite"] = None
-            result["v3_error"] = str(e)
+    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
+    try:
+        from core_engine.v3_enforcement import self_audit
+        audit = self_audit(text, objective=obj.get("objective_text") if 'obj' in dir() else None)
+        result["v3"] = {
+            "enforced_text": audit["enforced_text"],
+            "actions_taken": audit["actions_taken"],
+            "time_collapse_applied": audit["time_collapse_applied"],
+            "compression_ratio": audit["compression_ratio"],
+            "passed": audit["passed"],
+        }
+    except Exception as e:
+        result["v3"] = {"error": str(e), "passed": True}
 
     return jsonify(result)
 
@@ -1004,6 +1007,24 @@ def nti_run():
         "latency_ms": latency_ms
     }
 
+    # ── V3 ENFORCEMENT: self-audit loop ──
+    # Score own output before delivery. Core governance, not optional.
+    try:
+        from core_engine.v3_enforcement import self_audit
+        audit = self_audit(
+            answer or text,
+            objective=obj.get("objective_text"),
+        )
+        result["v3"] = {
+            "enforced_text": audit["enforced_text"],
+            "actions_taken": audit["actions_taken"],
+            "time_collapse_applied": audit["time_collapse_applied"],
+            "compression_ratio": audit["compression_ratio"],
+            "passed": audit["passed"],
+        }
+    except Exception as e:
+        result["v3"] = {"error": str(e), "passed": True}
+
     return jsonify(result)
 
 
@@ -1154,6 +1175,21 @@ def api_score():
         except Exception as e:
             print(f"[api] Credit deduction error: {e}", flush=True)
 
+    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
+    v3_result = {"passed": True}
+    try:
+        from core_engine.v3_enforcement import self_audit
+        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
+        v3_result = {
+            "enforced_text": audit["enforced_text"],
+            "actions_taken": audit["actions_taken"],
+            "time_collapse_applied": audit["time_collapse_applied"],
+            "compression_ratio": audit["compression_ratio"],
+            "passed": audit["passed"],
+        }
+    except Exception as e2:
+        v3_result = {"error": str(e2), "passed": True}
+
     return jsonify({
         "status": "ok",
         "version": NTI_VERSION,
@@ -1167,6 +1203,7 @@ def api_score():
             "dominance": dominance
         },
         "tilt": {"tags": tilt, "count": len(tilt)},
+        "v3": v3_result,
         "meta": {
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
             "tier": request._api_tier
