@@ -62,7 +62,18 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 </style>
 </head>
 <body>
-<!-- nav removed: az-shell.js -->
+<!-- nav handled by az-shell.js -->
+<div class="center" id="center">
+  <div class="logo">ARTIFACT ZERO<span class="dot">.</span></div>
+  <div class="box">
+    <textarea id="input" placeholder="Paste any message, email, or AI response..." oninput="autoGrow(this)" rows="1"></textarea>
+    <div class="actions">
+      <button class="btn btn-score" id="scoreBtn" onclick="score()">Score it</button>
+      <button class="btn btn-ghost" onclick="sample('email')">Try: Email</button>
+      <button class="btn btn-ghost" onclick="sample('contract')">Try: Contract</button>
+      <button class="btn btn-ghost" onclick="sample('ai')">Try: AI response</button>
+    </div>
+  </div>
   <div class="tagline">Structural integrity scoring for any communication.<br><span style="color:var(--accent)">49% → 7%</span> false commitment rate. Rule-based. Zero LLM.<br><a href="/examples">But what do you actually do? See 25 real examples →</a></div>
   <div class="results" id="results">
     <div id="ntiResults"></div>
