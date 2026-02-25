@@ -423,7 +423,7 @@ function renderResults(data, originalText){
 
   // Fix it button — only if there are issues
   if(totalIssues > 0){
-    h += '<div class="fix-row"><button class="fix-btn" id="fixBtn" onclick="fixIt()">Fix it for me</button></div>';
+    h += '<div class="fix-row"><button class="fix-btn" id="fixBtn" onclick="fixIt()">Rewrite with V3</button></div>';
   }
 
   el.innerHTML = h;
@@ -432,7 +432,39 @@ function renderResults(data, originalText){
 }
 
 // ═══════════════════════════════════════════
-// FIX IT — V3 rewrite
+// LLM LETTER RACE — deterministic model pick from text
+// Same logic as contact page cards
+// ═══════════════════════════════════════════
+function pickModel(text) {
+  const s = text.replace(/[^a-zA-Z]/g, '').toLowerCase();
+  const models = [
+    { name: 'Claude', letters: 'claude', color: '#d97706' },
+    { name: 'Grok', letters: 'grok', color: '#8b5cf6' },
+    { name: 'ChatGPT', letters: 'chatgpt', color: '#10b981' },
+    { name: 'Gemini', letters: 'gemini', color: '#3b82f6' }
+  ];
+  for (let i = 0; i < s.length; i++) {
+    let winners = models.map(m => {
+      let pos = 0;
+      for (let j = 0; j <= i && pos < m.letters.length; j++) {
+        if (s[j] === m.letters[pos]) pos++;
+      }
+      return { ...m, complete: pos >= m.letters.length, pos };
+    }).filter(r => r.complete);
+    if (winners.length > 0) return winners[0];
+  }
+  let results = models.map(m => {
+    let pos = 0;
+    for (let i = 0; i < s.length && pos < m.letters.length; i++) {
+      if (s[i] === m.letters[pos]) pos++;
+    }
+    return { ...m, ratio: pos / m.letters.length };
+  });
+  return results.reduce((a, b) => a.ratio > b.ratio ? a : b);
+}
+
+// ═══════════════════════════════════════════
+// FIX IT — V3 enforcement rewrite
 // ═══════════════════════════════════════════
 async function fixIt(){
   if(!sessionActive) return;
@@ -440,32 +472,57 @@ async function fixIt(){
   if(!text) return;
   const btn = document.getElementById('fixBtn');
   btn.disabled = true;
-  btn.textContent = 'Rewriting...';
 
-  try {
-    const res = await fetch('/api/v1/score/free', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({text, rewrite: true})
-    });
-    const data = await res.json();
-    const rewritten = data.v3_rewrite || data.rewrite || data.stabilized || null;
-    if(!rewritten){
-      btn.textContent = 'Rewrite not available yet';
-      return;
-    }
-    renderRewrite(rewritten);
-    btn.textContent = 'Rewritten ✓';
-  } catch(e){
-    btn.textContent = 'Connection error — try again';
-    btn.disabled = false;
+  // Letter race animation
+  const model = pickModel(text);
+  btn.innerHTML = '<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px">SELECTING MODEL...</span>';
+  await new Promise(r => setTimeout(r, 400));
+  btn.innerHTML = `<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px;color:${model.color||'var(--accent)'}">${model.name.toUpperCase()}</span> <span style="font-size:12px;color:var(--muted)">selected — rewriting...</span>`;
+  await new Promise(r => setTimeout(r, 600));
+
+  // Use the V3 enforced text from the last score call
+  // V3 is mandatory now — it runs on every score
+  let rewritten = null;
+
+  // First check if we already have it from the initial score
+  if(lastScore && lastScore.v3 && lastScore.v3.enforced_text){
+    rewritten = lastScore.v3.enforced_text;
   }
+
+  // If not, fetch fresh
+  if(!rewritten){
+    try {
+      const res = await fetch('/api/v1/score/free', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({text})
+      });
+      const data = await res.json();
+      rewritten = data.v3 && data.v3.enforced_text ? data.v3.enforced_text : null;
+    } catch(e){}
+  }
+
+  if(!rewritten || rewritten === text){
+    btn.innerHTML = `<span style="color:${model.color||'var(--accent)'}">${model.name}</span> says: already clean`;
+    return;
+  }
+
+  const originalWords = text.split(/\s+/).length;
+  const newWords = rewritten.split(/\s+/).length;
+  const saved = originalWords - newWords;
+  const pct = Math.round((saved / originalWords) * 100);
+
+  renderRewrite(rewritten, model, originalWords, newWords, pct);
+  btn.innerHTML = `<span style="color:${model.color||'var(--accent)'}">${model.name}</span> — Rewritten ✓`;
 }
 
-function renderRewrite(text){
+function renderRewrite(text, model, origWords, newWords, pct){
   const el = document.getElementById('rewrite');
   el.innerHTML = `
-    <div class="rewrite-header">YOUR MESSAGE — FIXED</div>
+    <div class="rewrite-header" style="display:flex;justify-content:space-between;align-items:center">
+      <span>V3 STRUCTURAL REWRITE</span>
+      <span style="color:${model.color||'var(--accent)'};font-size:12px">${model.name} · ${origWords}→${newWords} words · ${pct}% tighter</span>
+    </div>
     <div class="rewrite-body">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
     <div class="copy-row"><button class="copy-btn" id="copyBtn" onclick="copyRewrite()">Copy to clipboard</button></div>
   `;
