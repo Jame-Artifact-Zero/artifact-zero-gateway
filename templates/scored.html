@@ -110,8 +110,9 @@ async function loadScorecard(){
 }
 
 function scoreClass(nii){
-  if(nii >= 0.7) return 'good';
-  if(nii >= 0.4) return 'mid';
+  const v = nii > 1 ? nii : nii * 100;
+  if(v >= 70) return 'good';
+  if(v >= 40) return 'mid';
   return 'bad';
 }
 
@@ -151,9 +152,9 @@ function render(c){
   const criteria = [
     // NII Components
     {cat: 'STRUCTURAL INTEGRITY (NII)', items: [
-      {label: 'Q1 — Constraints explicit', val: components.q1, pass: (components.q1||0) >= 0.7},
-      {label: 'Q2 — Constraints before capability', val: components.q2, pass: (components.q2||0) >= 0.7},
-      {label: 'Q3 — Enforcement boundary', val: components.q3, pass: (components.q3||0) >= 0.7},
+      {label: 'Q1 — Constraint density', val: components.q1, pass: (components.q1||0) >= 0.5},
+      {label: 'Q2 — Ask architecture', val: components.q2, pass: (components.q2||0) >= 0.7},
+      {label: 'Q3 — Enforcement integrity', val: components.q3, pass: (components.q3||0) >= 0.7},
       {label: 'Q4 — Tilt resistance', val: components.q4, pass: (components.q4||0) >= 0.7},
     ]},
     // Failure Modes
@@ -204,7 +205,7 @@ function render(c){
 
     <div class="score-hero">
       <div class="sh-card">
-        <div class="sh-val ${scoreClass(nii)}">${(nii*100).toFixed(0)}%</div>
+        <div class="sh-val ${scoreClass(nii)}">${(nii > 1 ? nii : nii*100).toFixed(0)}%</div>
         <div class="sh-label">Structure Score</div>
       </div>
       <div class="sh-card ${issues>0?'issues':'clear'}">

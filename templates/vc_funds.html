@@ -148,14 +148,15 @@ function updateStats(){
   const clear = allFunds.filter(c => (c.issue_count||0) === 0).length;
   const issues = total - clear;
   document.getElementById('statTotal').textContent = total;
-  document.getElementById('statAvg').textContent = (avg*100).toFixed(0) + '%';
+  document.getElementById('statAvg').textContent = (avg > 1 ? avg : avg*100).toFixed(0) + '%';
   document.getElementById('statClear').textContent = clear;
   document.getElementById('statIssues').textContent = issues;
 }
 
 function scoreClass(nii){
-  if(nii >= 0.7) return 'good';
-  if(nii >= 0.4) return 'mid';
+  nii = nii > 1 ? nii : nii * 100;
+  if(nii >= 70) return 'good';
+  if(nii >= 40) return 'mid';
   return 'bad';
 }
 
@@ -173,7 +174,7 @@ function renderList(funds){
     return `
       <a class="company-card" href="/scored/${c.slug}" data-nii="${nii}" data-issues="${issues}">
         <div class="card-rank">${c.rank || '—'}</div>
-        <div class="card-score ${cls}"><span class="val">${(nii*100).toFixed(0)}</span></div>
+        <div class="card-score ${cls}"><span class="val">${(nii > 1 ? nii : nii*100).toFixed(0)}</span></div>
         <div class="card-info">
           <div class="card-name">${c.fund_name}</div>
           <div class="card-detail">
@@ -209,9 +210,9 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 function filterFunds(list, filter){
   switch(filter){
-    case 'good': return list.filter(c => (c.nii_score||0) >= 0.7);
-    case 'mid': return list.filter(c => (c.nii_score||0) >= 0.4 && (c.nii_score||0) < 0.7);
-    case 'bad': return list.filter(c => (c.nii_score||0) < 0.4);
+    case 'good': return list.filter(c => (c.nii_score||0) >= 70);
+    case 'mid': return list.filter(c => (c.nii_score||0) >= 40 && (c.nii_score||0) < 70);
+    case 'bad': return list.filter(c => (c.nii_score||0) < 40);
     case 'issues': return list.filter(c => (c.issue_count||0) > 0);
     default: return list;
   }

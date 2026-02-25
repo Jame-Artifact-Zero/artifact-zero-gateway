@@ -67,108 +67,14 @@ def ensure_table(conn):
 
 
 # ═══════════════════════════════════════════
-# NTI SCORING ENGINE — self-contained
+# NTI SCORING ENGINE — imports from app.py (v2 weighted scoring)
 # ═══════════════════════════════════════════
-WORD_RE = re.compile(r"[A-Za-z0-9']+")
-STOPWORDS = {
-    "the", "a", "an", "and", "or", "but", "if", "then", "so", "to", "of", "in", "on", "for", "with", "as",
-    "we", "you", "they", "it", "is", "are", "was", "were", "be", "been", "being", "this", "that", "these",
-    "those", "will", "would", "should", "can", "could", "may", "might", "do", "does", "did", "at", "by",
-    "from", "into", "over", "under", "before", "after", "about", "because", "while", "just", "now", "today"
-}
-
-def tokenize(text):
-    return [t.lower() for t in WORD_RE.findall(text or "")]
-
-def normalize_space(text):
-    return re.sub(r"\s+", " ", (text or "")).strip()
-
-def split_sentences(text):
-    t = normalize_space(text)
-    if not t: return []
-    parts = re.split(r"(?<=[.!?])\s+", t)
-    return [p.strip() for p in parts if p.strip()]
-
-def jaccard(a, b):
-    sa, sb = set(a), set(b)
-    if not sa and not sb: return 1.0
-    if not sa or not sb: return 0.0
-    return round(len(sa & sb) / len(sa | sb), 3)
-
-# Constraint markers
-L0_CONSTRAINT_MARKERS = [
-    "must", "cannot", "can't", "won't", "requires", "require", "only if", "no way", "not possible",
-    "dependency", "dependent", "api key", "legal", "policy", "security", "compliance",
-    "budget", "deadline", "today", "production", "cannot expose", "secret", "token", "rate limit", "auth"
-]
-
-DOWNSTREAM_CAPABILITY_MARKERS = [
-    "we can build", "we can add", "just add", "ship it", "deploy it", "we can do all of it",
-    "just use", "easy to", "quick fix", "we can implement"
-]
-
-BOUNDARY_ABSENCE_MARKERS = [
-    "maybe", "might", "could", "sort of", "kind of", "basically", "we'll see", "later",
-    "for now", "eventually", "not sure", "probably"
-]
-
-NARRATIVE_STABILIZATION_MARKERS = [
-    "don't worry", "it's fine", "no big deal", "you got this", "glad", "relief", "it's okay",
-    "not a problem", "totally"
-]
-
-DCE_DEFER_MARKERS = [
-    "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
-    "we'll figure it out", "next week", "after we launch", "phase 2", "future iteration",
-    "explore", "consider", "evaluate", "assess", "as we continue", "as we iterate",
-    "we will look into", "we'll look into", "we will revisit", "we'll revisit"
-]
-
-CCA_COLLAPSE_MARKERS = [
-    "overall", "basically", "in general", "at the end of the day", "all in all", "net net",
-    "it all comes down to", "the main thing", "just"
-]
-
-L2_HEDGE = [
-    "might", "could", "possibly", "perhaps", "it seems", "i think", "in some ways",
-    "to some extent", "arguably", "one might say", "it could be said", "potentially"
-]
-L2_REASSURE = [
-    "don't worry", "it's fine", "rest assured", "everything is", "we've got you",
-    "no problem", "all good", "you're safe", "you're covered", "trust us", "have confidence"
-]
-L2_CATEGORY_BLEND = [
-    "kind of", "sort of", "basically", "overall", "at the end of the day",
-    "more or less", "in a way", "it's like"
-]
-
-TILT_TAXONOMY = {
-    "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
-    "T3_CONSENSUS_CLAIMS": ["most people", "many people", "everyone", "no one", "in general", "typically"],
-    "T6_CONSTRAINT_DEFERRAL": ["later", "eventually", "phase 2", "after we launch", "we'll figure it out", "future iteration"],
-    "T7_CATEGORY_BLEND": ["kind of", "sort of", "basically", "overall", "at the end of the day"],
-    "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
-}
-
-CERTAINTY_INFLATION_TOKENS = [
-    "guarantee", "guarantees", "guaranteed", "perfect", "zero risk", "eliminates all risk",
-    "always", "never fail", "no possibility", "100%", "completely secure", "ensures complete", "every scenario"
-]
-CERTAINTY_ENFORCEMENT_VERBS = [
-    "block", "blocks", "prevent", "prevents", "restrict", "restricts", "deny", "denies",
-    "require", "requires", "enforce", "enforces", "validate", "validates", "verify", "verifies"
-]
-ABSOLUTE_LANGUAGE_TOKENS = [
-    "always", "never", "everyone", "no one", "completely", "entirely", "100%", "guaranteed", "perfect", "zero risk"
-]
-AUTHORITY_IMPOSITION_TOKENS = [
-    "experts agree", "industry standard", "research shows", "studies show", "best practice",
-    "widely accepted", "authorities agree", "proven by research"
-]
-CAPABILITY_OVERREACH_TOKENS = [
-    "solves everything", "handles everything", "covers all cases", "any scenario",
-    "every scenario", "universal solution", "works for everyone"
-]
+from app import (
+    detect_l0_constraints, classify_tilt, detect_udds, detect_dce, detect_cca,
+    detect_downstream_before_constraint, detect_l2_framing, compute_nii,
+    L0_CONSTRAINT_MARKERS, BOUNDARY_ABSENCE_MARKERS, NARRATIVE_STABILIZATION_MARKERS,
+    L2_HEDGE, L2_REASSURE, L2_CATEGORY_BLEND
+)
 
 def _contains_any(text_lc, needles):
     for n in needles:
@@ -176,101 +82,20 @@ def _contains_any(text_lc, needles):
             return True
     return False
 
-def classify_tilt(text, prompt="", answer=""):
-    t = (text or "").lower()
-    tags = []
-    for tag, markers in TILT_TAXONOMY.items():
-        if _contains_any(t, markers):
-            tags.append(tag)
-    cert = _contains_any(t, CERTAINTY_INFLATION_TOKENS)
-    enf = _contains_any(t, CERTAINTY_ENFORCEMENT_VERBS)
-    if cert and not enf:
-        tags.append("T2_CERTAINTY_INFLATION")
-    if _contains_any(t, ABSOLUTE_LANGUAGE_TOKENS) and "T2_CERTAINTY_INFLATION" not in tags:
-        tags.append("T5_ABSOLUTE_LANGUAGE")
-    if _contains_any(t, AUTHORITY_IMPOSITION_TOKENS):
-        tags.append("T10_AUTHORITY_IMPOSITION")
-    if _contains_any(t, CAPABILITY_OVERREACH_TOKENS):
-        tags.append("T4_CAPABILITY_OVERREACH")
-    cap_verbs = _contains_any(t, ["solve", "solves", "handle", "handles", "cover", "covers", "ensure", "ensures"])
-    if cap_verbs and _contains_any(t, ["everything", "all cases", "any scenario", "every"]):
-        if "T4_CAPABILITY_OVERREACH" not in tags:
-            tags.append("T4_CAPABILITY_OVERREACH")
-    return tags
+def split_sentences(text):
+    t = re.sub(r"\s+", " ", (text or "")).strip()
+    if not t: return []
+    parts = re.split(r"(?<=[.!?])\s+", t)
+    return [p.strip() for p in parts if p.strip()]
 
-def detect_l0_constraints(text):
-    t = (text or "").lower()
-    return [m for m in L0_CONSTRAINT_MARKERS if m in t]
+def tokenize(text):
+    return [t.lower() for t in re.findall(r"[A-Za-z0-9']+", text or "")]
 
-def detect_downstream_before_constraint(prompt, answer, l0):
-    if not l0: return False
-    a = (answer or "").lower()
-    first_cap = -1
-    for m in DOWNSTREAM_CAPABILITY_MARKERS:
-        idx = a.find(m)
-        if idx != -1 and (first_cap == -1 or idx < first_cap):
-            first_cap = idx
-    if first_cap == -1: return False
-    first_con = -1
-    for m in l0:
-        idx = a.find(m.lower())
-        if idx != -1 and (first_con == -1 or idx < first_con):
-            first_con = idx
-    if first_con == -1: return True
-    return first_cap < first_con
-
-def detect_udds(prompt, answer, l0):
-    a = (answer or "").lower()
-    cap = _contains_any(a, DOWNSTREAM_CAPABILITY_MARKERS)
-    bound = not _contains_any(a, [m.lower() for m in l0]) if l0 else True
-    narr = _contains_any(a, NARRATIVE_STABILIZATION_MARKERS)
-    if cap and bound:
-        return {"udds_state": "UDDS_CONFIRMED", "detail": "capability before constraint"}
-    if cap and narr:
-        return {"udds_state": "UDDS_PROBABLE", "detail": "capability + narrative stabilization"}
-    return {"udds_state": "UDDS_FALSE", "detail": ""}
-
-def detect_dce(answer, l0):
-    a = (answer or "").lower()
-    defer = _contains_any(a, DCE_DEFER_MARKERS)
-    has_constraint = bool(l0) and any(m.lower() in a for m in l0)
-    if defer and not has_constraint:
-        return {"dce_state": "DCE_CONFIRMED", "detail": "deferral without constraint enforcement"}
-    if defer:
-        return {"dce_state": "DCE_PROBABLE", "detail": "deferral present but constraints exist"}
-    return {"dce_state": "DCE_FALSE", "detail": ""}
-
-def detect_cca(prompt, answer):
-    a = (answer or "").lower()
-    collapse = _contains_any(a, CCA_COLLAPSE_MARKERS)
-    sents = split_sentences(answer or "")
-    long_sents = [s for s in sents if len(tokenize(s)) > 40]
-    if collapse and long_sents:
-        return {"cca_state": "CCA_CONFIRMED", "detail": "collapse markers + long undifferentiated sentences"}
-    if collapse:
-        return {"cca_state": "CCA_PROBABLE", "detail": "collapse markers present"}
-    return {"cca_state": "CCA_FALSE", "detail": ""}
-
-def compute_nii(prompt, answer, l0, dbc, tilt):
-    sents = split_sentences(answer or "")
-    total = max(len(sents), 1)
-    constraint_sents = sum(1 for s in sents if any(m in s.lower() for m in L0_CONSTRAINT_MARKERS))
-    q1 = round(constraint_sents / total, 3) if total > 0 else 0
-    q2 = 0.8 if not dbc else 0.2
-    boundary_sents = sum(1 for s in sents if not _contains_any(s.lower(), BOUNDARY_ABSENCE_MARKERS))
-    q3 = round(boundary_sents / total, 3) if total > 0 else 0
-    tilt_penalty = min(len(tilt) * 0.05, 0.3)
-    q4 = round(max(0, 1.0 - tilt_penalty), 3)
-    nii = round((q1 + q2 + q3 + q4) / 4, 3)
-    label = "HIGH" if nii >= 0.7 else "MEDIUM" if nii >= 0.4 else "LOW"
-    return {"nii_score": nii, "nii_label": label, "q1": q1, "q2": q2, "q3": q3, "q4": q4}
-
-def detect_l2_framing(text):
-    t = (text or "").lower()
-    hedges = [m for m in L2_HEDGE if m in t]
-    reassure = [m for m in L2_REASSURE if m in t]
-    blends = [m for m in L2_CATEGORY_BLEND if m in t]
-    return {"hedge_markers": hedges[:10], "reassurance_markers": reassure[:10], "category_blend_markers": blends[:10]}
+def jaccard(a, b):
+    sa, sb = set(a), set(b)
+    if not sa and not sb: return 1.0
+    if not sa or not sb: return 0.0
+    return round(len(sa & sb) / len(sa | sb), 3)
 
 def detect_boundary_absence(text):
     t = (text or "").lower()
@@ -291,7 +116,7 @@ def detect_objective_drift(text):
 
 
 def score_text(text):
-    """Run full NTI scoring on text. Returns comprehensive score dict with all 15 criteria."""
+    """Run full NTI v2 scoring. Uses 5-dimension weighted model from app.py."""
     l0 = detect_l0_constraints(text)
     tilt = classify_tilt(text)
     udds = detect_udds("", text, l0)
@@ -303,16 +128,25 @@ def score_text(text):
     drift = detect_objective_drift(text)
     boundary = detect_boundary_absence(text)
     narrative = detect_narrative_stabilization(text)
-    
+
     dominance = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]: dominance.append("CCA")
     if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]: dominance.append("UDDS")
     if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]: dominance.append("DCE")
     if not dominance: dominance = ["NONE"]
-    
+
     return {
-        "score": {"nii": nii["nii_score"], "nii_label": nii["nii_label"],
-                  "components": {"q1": nii["q1"], "q2": nii["q2"], "q3": nii["q3"], "q4": nii["q4"]}},
+        "score": {
+            "nii": nii["nii_score"],  # 0-100 integer
+            "nii_label": nii["nii_label"],
+            "components": {
+                "q1": nii.get("d1_constraint_density"),
+                "q2": nii.get("d2_ask_architecture"),
+                "q3": nii.get("d3_enforcement_integrity"),
+                "q4": nii.get("d4_tilt_resistance"),
+                "d5": nii.get("d5_failure_mode_severity")
+            }
+        },
         "failure_modes": {"UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
                           "dominance": dominance,
                           "UDDS_detail": udds, "DCE_detail": dce, "CCA_detail": cca},
