@@ -840,6 +840,20 @@ def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
 
+@app.route("/health/net")
+def health_net():
+    """Temporary: test outbound internet from ECS task."""
+    import requests as _req
+    results = {}
+    for label, url in [("anthropic", "https://api.anthropic.com"), ("openai", "https://api.openai.com/v1/models"), ("google", "https://www.google.com")]:
+        try:
+            r = _req.get(url, timeout=5)
+            results[label] = {"status": r.status_code, "ok": True}
+        except Exception as e:
+            results[label] = {"status": str(e)[:120], "ok": False}
+    return jsonify(results)
+
+
 @app.route("/health/db")
 def health_db():
     try:
