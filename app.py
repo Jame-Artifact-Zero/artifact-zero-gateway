@@ -360,39 +360,118 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
 # NOTE: Schema preserved: q1/q2/q3 + nii_score.
 # q3 now penalizes boundary absence AND structural drift tilt categories (T2/T4/T5/T9/T10).
 # ==========================
+def _split_sentences(text):
+    """Split text into sentences for per-sentence analysis."""
+    import re
+    return [s.strip() for s in re.split(r'[.!?]+', text) if s.strip() and len(s.strip()) > 3]
+
+
 def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
-    q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
-    q2 = 0.0 if downstream_before_constraints else 1.0
+    """
+    NTI Integrity Index v2 — 5-dimension weighted scoring.
+    Returns 0-100 continuous score with 6 bands.
 
-    a_lc = (answer or "").lower()
+    Dimensions (weights sum to 1.0):
+      D1: Constraint Density    (25%) — % of sentences containing explicit constraints
+      D2: Ask Architecture      (20%) — Ask positioned before capability claims
+      D3: Enforcement Integrity (20%) — Freedom from deferral/erosion markers
+      D4: Tilt Resistance       (15%) — Resistance to drift patterns
+      D5: Failure Mode Severity (20%) — UDDS/DCE/CCA penalty
+    """
+    text = answer or prompt or ""
+    sents = _split_sentences(text)
+    total_sents = max(len(sents), 1)
+    words = text.split()
+    word_count = max(len(words), 1)
+    t_lower = text.lower()
 
-    boundary_absent = (
-        any(m in a_lc for m in BOUNDARY_ABSENCE_MARKERS) or
-        any(m in a_lc for m in L2_CATEGORY_BLEND) or
-        any(m in a_lc for m in DCE_DEFER_MARKERS) or
-        any(m in a_lc for m in NARRATIVE_STABILIZATION_MARKERS)
-    )
+    # D1: CONSTRAINT DENSITY (25%)
+    constraint_sents = sum(1 for s in sents if any(m in s.lower() for m in L0_CONSTRAINT_MARKERS))
+    constraint_ratio = constraint_sents / total_sents
+    constraint_word_hits = sum(1 for m in L0_CONSTRAINT_MARKERS if m in t_lower)
+    constraint_density = min(constraint_word_hits / (word_count / 100), 1.0) if word_count > 0 else 0
+    d1 = constraint_ratio * 0.6 + constraint_density * 0.4
 
-    # Structural risk categories that should reduce integrity (q3)
-    structural_tilt_risk = any(t in tilt_taxonomy for t in [
-        "T2_CERTAINTY_INFLATION",
-        "T4_CAPABILITY_OVERREACH",
-        "T5_ABSOLUTE_LANGUAGE",
-        "T9_SCOPE_EXPANSION",
-        "T10_AUTHORITY_IMPOSITION",
-        "T7_CATEGORY_BLEND",
-        "T6_CONSTRAINT_DEFERRAL",
-        "T1_REASSURANCE_DRIFT"
-    ])
+    # D2: ASK ARCHITECTURE (20%)
+    first_sent = sents[0].lower() if sents else ""
+    ask_verbs = ["need", "want", "require", "send", "provide", "confirm", "review", "approve",
+                 "schedule", "complete", "submit", "deliver", "respond", "reply", "call", "meet"]
+    first_sent_has_ask = any(v in first_sent for v in ask_verbs)
+    d2_base = 0.8 if not downstream_before_constraints else 0.2
+    d2 = min(d2_base + (0.2 if first_sent_has_ask else 0.0), 1.0)
 
-    q3 = 0.0 if (boundary_absent or structural_tilt_risk) else 1.0
+    # D3: ENFORCEMENT INTEGRITY (20%)
+    erosion_markers = BOUNDARY_ABSENCE_MARKERS + DCE_DEFER_MARKERS + NARRATIVE_STABILIZATION_MARKERS
+    clean_sents = sum(1 for s in sents if not any(m in s.lower() for m in erosion_markers))
+    clean_ratio = clean_sents / total_sents
+    framing = detect_l2_framing(text)
+    hedge_count = len(framing.get("hedge_markers", []))
+    reassurance_count = len(framing.get("reassurance_markers", []))
+    blend_count = len(framing.get("category_blend_markers", []))
+    hedge_penalty = min((hedge_count + reassurance_count + blend_count) * 0.05, 0.4)
+    d3 = max(0, clean_ratio - hedge_penalty)
 
-    score = round((q1 + q2 + q3) / 3.0, 2)
+    # D4: TILT RESISTANCE (15%)
+    tilt_weights = {
+        "T1_REASSURANCE_DRIFT": 0.08, "T2_CERTAINTY_INFLATION": 0.12,
+        "T3_CONSENSUS_CLAIMS": 0.06, "T4_CAPABILITY_OVERREACH": 0.15,
+        "T5_ABSOLUTE_LANGUAGE": 0.10, "T6_CONSTRAINT_DEFERRAL": 0.12,
+        "T7_CATEGORY_BLEND": 0.06, "T8_PRESSURE_OPTIMIZATION": 0.04,
+        "T9_SCOPE_EXPANSION": 0.10, "T10_AUTHORITY_IMPOSITION": 0.08
+    }
+    tilt_penalty = sum(tilt_weights.get(t, 0.05) for t in tilt_taxonomy)
+    d4 = max(0, 1.0 - tilt_penalty)
+
+    # D5: FAILURE MODE SEVERITY (20%)
+    udds = detect_udds(prompt or "", answer or text, l0_constraints)
+    dce = detect_dce(answer or text, l0_constraints)
+    cca = detect_cca(prompt or "", answer or text)
+    fm_pen = {"CONFIRMED": 0.30, "PROBABLE": 0.15, "FALSE": 0.00}
+    def _fm_p(state):
+        for k, v in fm_pen.items():
+            if k in str(state):
+                return v
+        return 0.0
+    total_fm = min(_fm_p(udds.get("udds_state", "")) + _fm_p(dce.get("dce_state", "")) + _fm_p(cca.get("cca_state", "")), 0.80)
+    d5 = max(0, 1.0 - total_fm)
+
+    # WEIGHTED COMPOSITE
+    raw = (d1 * 0.25 + d2 * 0.20 + d3 * 0.20 + d4 * 0.15 + d5 * 0.20)
+    score = round(raw * 100)
+
+    if score >= 85: label = "STRONG"
+    elif score >= 70: label = "SOLID"
+    elif score >= 55: label = "MODERATE"
+    elif score >= 40: label = "WEAK"
+    elif score >= 25: label = "POOR"
+    else: label = "FAILING"
+
     return {
-        "q1_constraints_explicit": q1,
-        "q2_constraints_before_capability": q2,
-        "q3_substitutes_after_enforcement": q3,
-        "nii_score": score
+        "nii_score": score,
+        "nii_raw": round(raw, 4),
+        "nii_label": label,
+        "d1_constraint_density": round(d1, 3),
+        "d2_ask_architecture": round(d2, 3),
+        "d3_enforcement_integrity": round(d3, 3),
+        "d4_tilt_resistance": round(d4, 3),
+        "d5_failure_mode_severity": round(d5, 3),
+        # Legacy compat: map dimensions to Q names for existing UI
+        "q1": round(d1, 3),
+        "q2": round(d2, 3),
+        "q3": round(d3, 3),
+        "q4": round(d4, 3),
+        "q1_constraints_explicit": round(d1, 3),
+        "q2_constraints_before_capability": round(d2, 3),
+        "q3_substitutes_after_enforcement": round(d3, 3),
+        "detail": {
+            "constraint_sents": constraint_sents, "total_sents": total_sents,
+            "constraint_word_hits": constraint_word_hits,
+            "first_sent_has_ask": first_sent_has_ask,
+            "clean_sents": clean_sents, "hedge_count": hedge_count,
+            "reassurance_count": reassurance_count, "blend_count": blend_count,
+            "tilt_count": len(tilt_taxonomy), "tilt_patterns": tilt_taxonomy[:10],
+            "udds": udds.get("udds_state", ""), "dce": dce.get("dce_state", ""), "cca": cca.get("cca_state", "")
+        }
     }
 
 
@@ -805,7 +884,7 @@ def api_score_free():
         "score": {
             "nii": nii.get("nii_score"),
             "nii_label": nii.get("nii_label"),
-            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4")}
+            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
         },
         "failure_modes": {
             "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
@@ -1198,7 +1277,7 @@ def api_score():
         "score": {
             "nii": nii.get("nii_score"),
             "nii_label": nii.get("nii_label"),
-            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4")}
+            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
         },
         "failure_modes": {
             "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],

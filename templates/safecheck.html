@@ -346,15 +346,15 @@ function renderResults(data, originalText){
   const tilt = data.tilt || {};
   const v3 = data.v3 || {};
   const nii = sc.nii || 0;
-  const niiPct = Math.round(nii * 100);
+  const niiPct = (nii > 1) ? nii : Math.round(nii * 100);  // handle both 0-100 and 0.0-1.0
   const words = originalText.split(/\s+/).length;
   const hedges = data.hedge_phrases || [];
   const reassurances = data.reassurance_phrases || [];
   const lat = data.latency_ms || '?';
 
   // Stat colors
-  const niiColor = nii >= 0.8 ? '#00e89c' : nii >= 0.5 ? '#f59e0b' : '#ef4444';
-  const niiLabel = nii >= 0.8 ? 'STRONG' : nii >= 0.5 ? 'MODERATE' : 'WEAK';
+  const niiColor = niiPct >= 70 ? '#00e89c' : niiPct >= 40 ? '#f59e0b' : '#ef4444';
+  const niiLabel = sc.nii_label || (niiPct >= 85 ? 'STRONG' : niiPct >= 70 ? 'SOLID' : niiPct >= 55 ? 'MODERATE' : niiPct >= 40 ? 'WEAK' : niiPct >= 25 ? 'POOR' : 'FAILING');
 
   // Build findings
   const findings = [];
@@ -476,10 +476,10 @@ function renderResults(data, originalText){
   h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
   h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">STRUCTURAL ANALYSIS</div>';
   const bars = [
-    {label:'CONSTRAINTS', val:comp.q1||0, desc:'Rules stated explicitly'},
-    {label:'ASK POSITION', val:comp.q2||0, desc:'Main point comes first'},
-    {label:'ENFORCEMENT', val:comp.q3||0, desc:'Deadline or boundary set'},
-    {label:'CLARITY', val:comp.q4||0, desc:'Clear, resistable ask'},
+    {label:'CONSTRAINT DENSITY', val:comp.q1||0, desc:'% of content with explicit rules/boundaries'},
+    {label:'ASK ARCHITECTURE', val:comp.q2||0, desc:'Main point positioned before capability claims'},
+    {label:'ENFORCEMENT INTEGRITY', val:comp.q3||0, desc:'Freedom from deferral and erosion markers'},
+    {label:'TILT RESISTANCE', val:comp.q4||0, desc:'Resistance to drift patterns'},
   ];
   bars.forEach(b => {
     const pct = Math.round(b.val * 100);
