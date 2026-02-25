@@ -464,66 +464,65 @@ function pickModel(text) {
 }
 
 // ═══════════════════════════════════════════
-// FIX IT — V3 enforcement rewrite
+// FIX IT — LLM-powered V3 structural rewrite via /api/v1/rewrite
 // ═══════════════════════════════════════════
 async function fixIt(){
-  if(!sessionActive) return;
+  if(!sessionActive || !lastScore) return;
   const text = pasteBox.value.trim();
   if(!text) return;
   const btn = document.getElementById('fixBtn');
   btn.disabled = true;
 
-  // Letter race animation
+  // Letter race animation (client-side for instant UX)
   const model = pickModel(text);
   btn.innerHTML = '<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px">SELECTING MODEL...</span>';
   await new Promise(r => setTimeout(r, 400));
-  btn.innerHTML = `<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px;color:${model.color||'var(--accent)'}">${model.name.toUpperCase()}</span> <span style="font-size:12px;color:var(--muted)">selected — rewriting...</span>`;
-  await new Promise(r => setTimeout(r, 600));
+  btn.innerHTML = `<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px;color:${model.color||'var(--accent)'}">${model.name.toUpperCase()}</span> <span style="font-size:12px;color:var(--muted)">rewriting...</span>`;
 
-  // Use the V3 enforced text from the last score call
-  // V3 is mandatory now — it runs on every score
-  let rewritten = null;
+  try {
+    const resp = await fetch('/api/v1/rewrite', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await resp.json();
+    if(!resp.ok || data.error){
+      btn.innerHTML = `<span style="color:#ef4444">Error: ${data.error || 'rewrite failed'}</span>`;
+      btn.disabled = false;
+      return;
+    }
 
-  // First check if we already have it from the initial score
-  if(lastScore && lastScore.v3 && lastScore.v3.enforced_text){
-    rewritten = lastScore.v3.enforced_text;
+    const annotations = [];
+    if(data.issues) data.issues.forEach(iss => annotations.push(iss));
+    if(data.method === 'v3_rule_only') annotations.push('⚠ LLM unavailable — V3 rule-based rewrite used');
+    if(data.v3_actions && data.v3_actions.length > 0) annotations.push(`V3 applied: ${data.v3_actions.join(', ')}`);
+
+    const srvModel = {name: data.model, color: data.model_color || model.color};
+    renderRewrite(data.rewrite, srvModel, data.original_words, data.rewrite_words, parseInt(data.compression)||0, annotations);
+    btn.innerHTML = `<span style="color:${data.model_color||model.color}">${data.model}</span> — Rewritten ✓ <span style="font-size:11px;color:var(--muted)">${data.latency_ms}ms</span>`;
+  } catch(e) {
+    btn.innerHTML = `<span style="color:#ef4444">Network error</span>`;
+    btn.disabled = false;
   }
-
-  // If not, fetch fresh
-  if(!rewritten){
-    try {
-      const res = await fetch('/api/v1/score/free', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({text})
-      });
-      const data = await res.json();
-      rewritten = data.v3 && data.v3.enforced_text ? data.v3.enforced_text : null;
-    } catch(e){}
-  }
-
-  if(!rewritten || rewritten === text){
-    btn.innerHTML = `<span style="color:${model.color||'var(--accent)'}">${model.name}</span> says: already clean`;
-    return;
-  }
-
-  const originalWords = text.split(/\s+/).length;
-  const newWords = rewritten.split(/\s+/).length;
-  const saved = originalWords - newWords;
-  const pct = Math.round((saved / originalWords) * 100);
-
-  renderRewrite(rewritten, model, originalWords, newWords, pct);
-  btn.innerHTML = `<span style="color:${model.color||'var(--accent)'}">${model.name}</span> — Rewritten ✓`;
 }
 
-function renderRewrite(text, model, origWords, newWords, pct){
+function renderRewrite(text, model, origWords, newWords, pct, annotations){
   const el = document.getElementById('rewrite');
+  let statsText = origWords === newWords ? `${model.name} · restructured` : `${model.name} · ${origWords}→${newWords} words · ${pct}% ${newWords < origWords ? 'tighter' : 'expanded'}`;
+  
+  let annotHtml = '';
+  if(annotations && annotations.length > 0){
+    annotHtml = '<div style="padding:10px 16px;border-top:1px solid var(--border);font-family:var(--mono,monospace);font-size:11px;color:var(--muted);line-height:1.8">' +
+      annotations.map(a => `<div>${a}</div>`).join('') + '</div>';
+  }
+
   el.innerHTML = `
     <div class="rewrite-header" style="display:flex;justify-content:space-between;align-items:center">
       <span>V3 STRUCTURAL REWRITE</span>
-      <span style="color:${model.color||'var(--accent)'};font-size:12px">${model.name} · ${origWords}→${newWords} words · ${pct}% tighter</span>
+      <span style="color:${model.color||'var(--accent)'};font-size:12px">${statsText}</span>
     </div>
-    <div class="rewrite-body">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    <div class="rewrite-body">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\[([^\]]+)\]/g, '<span style="color:var(--amber);font-style:italic">[$1]</span>')}</div>
+    ${annotHtml}
     <div class="copy-row"><button class="copy-btn" id="copyBtn" onclick="copyRewrite()">Copy to clipboard</button></div>
   `;
   el.className = 'rewrite show';

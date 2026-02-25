@@ -840,24 +840,6 @@ def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
 
-@app.route("/health/net")
-def health_net():
-    """Temporary: test outbound internet from ECS task."""
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError, URLError
-    results = {}
-    for label, url in [("anthropic", "https://api.anthropic.com"), ("openai", "https://api.openai.com/v1/models"), ("google", "https://www.google.com")]:
-        try:
-            req = Request(url, headers={"User-Agent": "AZ-NetTest/1.0"})
-            resp = urlopen(req, timeout=5)
-            results[label] = {"status": resp.status, "ok": True}
-        except HTTPError as e:
-            results[label] = {"status": e.code, "ok": True, "note": "HTTP error but outbound works"}
-        except URLError as e:
-            results[label] = {"status": str(e.reason)[:120], "ok": False}
-        except Exception as e:
-            results[label] = {"status": str(e)[:120], "ok": False}
-    return jsonify(results)
 
 
 @app.route("/health/db")
@@ -1341,6 +1323,244 @@ def dashboard():
         from flask import redirect
         return redirect("/login")
     return render_template("dashboard.html")
+
+
+# ═══════════════════════════════════════
+# LLM-POWERED REWRITE (V3 structural rewrite via letter-race model)
+# ═══════════════════════════════════════
+def _letter_race(text):
+    """Pick model by racing letters through user text."""
+    s = re.sub(r'[^a-zA-Z]', '', text).lower()
+    models = [
+        {"name": "claude", "api": "anthropic", "color": "#d97706"},
+        {"name": "grok", "api": "xai", "color": "#8b5cf6"},
+        {"name": "chatgpt", "api": "openai", "color": "#10b981"},
+        {"name": "gemini", "api": "google", "color": "#3b82f6"},
+    ]
+    for i in range(len(s)):
+        for m in models:
+            pos = 0
+            for j in range(i + 1):
+                if j < len(s) and pos < len(m["name"]) and s[j] == m["name"][pos]:
+                    pos += 1
+            if pos >= len(m["name"]):
+                return m
+    # Fallback: highest ratio
+    best = models[0]
+    best_ratio = 0
+    for m in models:
+        pos = 0
+        for ch in s:
+            if pos < len(m["name"]) and ch == m["name"][pos]:
+                pos += 1
+        ratio = pos / len(m["name"])
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best = m
+    return best
+
+
+def _call_llm(model_info, prompt, system_prompt):
+    """Call the selected LLM API. Returns response text."""
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError
+    api = model_info["api"]
+    timeout = 15
+
+    if api == "anthropic":
+        key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not key:
+            return None, "No Anthropic API key"
+        body = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 1024,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode()
+        req = Request("https://api.anthropic.com/v1/messages", data=body, headers={
+            "Content-Type": "application/json",
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01"
+        })
+        resp = urlopen(req, timeout=timeout)
+        data = json.loads(resp.read())
+        text = ""
+        for block in data.get("content", []):
+            if block.get("type") == "text":
+                text += block["text"]
+        return text, None
+
+    elif api == "openai":
+        key = os.getenv("OPENAI_API_KEY", "")
+        if not key:
+            return None, "No OpenAI API key"
+        body = json.dumps({
+            "model": "gpt-4o-mini",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ]
+        }).encode()
+        req = Request("https://api.openai.com/v1/chat/completions", data=body, headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}"
+        })
+        resp = urlopen(req, timeout=timeout)
+        data = json.loads(resp.read())
+        return data["choices"][0]["message"]["content"], None
+
+    elif api == "xai":
+        key = os.getenv("XAI_API_KEY", "")
+        if not key:
+            return None, "No XAI API key"
+        body = json.dumps({
+            "model": "grok-2-latest",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ]
+        }).encode()
+        req = Request("https://api.x.ai/v1/chat/completions", data=body, headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}"
+        })
+        resp = urlopen(req, timeout=timeout)
+        data = json.loads(resp.read())
+        return data["choices"][0]["message"]["content"], None
+
+    elif api == "google":
+        key = os.getenv("GOOGLE_API_KEY", "")
+        if not key:
+            return None, "No Google API key"
+        body = json.dumps({
+            "contents": [{"parts": [{"text": system_prompt + "\n\n" + prompt}]}],
+            "generationConfig": {"maxOutputTokens": 1024}
+        }).encode()
+        req = Request(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
+            data=body, headers={"Content-Type": "application/json"}
+        )
+        resp = urlopen(req, timeout=timeout)
+        data = json.loads(resp.read())
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"], None
+        except (KeyError, IndexError):
+            return None, "Unexpected Google API response"
+
+    return None, f"Unknown API: {api}"
+
+
+@app.route("/api/v1/rewrite", methods=["POST"])
+def api_rewrite():
+    """LLM-powered structural rewrite. Letter-race selects model, V3 enforces output."""
+    t0 = time.time()
+    data = request.get_json(force=True, silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "text required"}), 400
+    if len(text) > 5000:
+        return jsonify({"error": "text too long (max 5000 chars)"}), 400
+
+    # 1. Score with V1
+    l0 = detect_l0_constraints(text)
+    obj = objective_extract(text)
+    tilt = classify_tilt(text)
+    udds = detect_udds("", text, l0)
+    dce = detect_dce(text, l0)
+    cca = detect_cca("", text)
+    dbc = detect_downstream_before_constraint("", text, l0)
+    nii = compute_nii("", text, l0, dbc, tilt)
+
+    nii_score = nii.get("nii_score", 0)
+    components = {k: v for k, v in nii.items() if k.startswith("q")}
+    failure_modes = {
+        "UDDS": udds.get("udds_state", ""),
+        "DCE": dce.get("dce_state", ""),
+        "CCA": cca.get("cca_state", "")
+    }
+
+    # 2. Letter-race model selection
+    model = _letter_race(text)
+
+    # 3. Build rewrite prompt from NTI findings
+    issues = []
+    if (components.get("q1") or 0) < 0.7:
+        issues.append("Missing explicit constraints or conditions")
+    if (components.get("q2") or 0) < 0.7:
+        issues.append("Main ask is buried — should lead")
+    if (components.get("q3") or 0) < 0.7:
+        issues.append("No deadline or enforcement boundary")
+    if (components.get("q4") or 0) < 0.7:
+        issues.append("Weak tilt resistance — hedge language or unclear intent")
+    if "CONFIRMED" in str(failure_modes.get("UDDS", "")):
+        issues.append("UDDS: Agreement given before the actual ask was stated")
+    if "CONFIRMED" in str(failure_modes.get("DCE", "")):
+        issues.append("DCE: Decision is deferred instead of made")
+    if "CONFIRMED" in str(failure_modes.get("CCA", "")):
+        issues.append("CCA: Capability claimed without constraint backing")
+
+    system_prompt = (
+        "You are a structural rewrite engine. You receive text and a list of structural issues. "
+        "Rewrite the text to fix ONLY those issues. Do not add new meaning. Do not change intent. "
+        "Do not add pleasantries, hedges, or filler. Be direct. Preserve the author's voice. "
+        "If the ask is buried, move it to the front. If there's no deadline, add a bracket placeholder [By ___]. "
+        "If there's no constraint, add [Conditions: ___]. Return ONLY the rewritten text, nothing else."
+    )
+
+    prompt = f"ORIGINAL TEXT:\n{text}\n\nSTRUCTURAL ISSUES FOUND:\n"
+    if issues:
+        for iss in issues:
+            prompt += f"- {iss}\n"
+    else:
+        prompt += "- No major issues. Tighten where possible.\n"
+    prompt += f"\nNII SCORE: {nii_score:.2f}\n\nRewrite the text to fix these issues. Return ONLY the rewritten text."
+
+    # 4. Call LLM
+    try:
+        llm_text, err = _call_llm(model, prompt, system_prompt)
+    except Exception as e:
+        llm_text, err = None, str(e)[:200]
+
+    if not llm_text:
+        # Fallback: return V3 rule-based enforcement only
+        from core_engine.v3_enforcement import enforce
+        v3_result = enforce(text, objective=obj.get("objective_text"))
+        return jsonify({
+            "rewrite": v3_result["final_output"],
+            "model": model["name"],
+            "model_color": model["color"],
+            "method": "v3_rule_only",
+            "fallback_reason": err or "LLM call failed",
+            "original_words": len(text.split()),
+            "rewrite_words": len(v3_result["final_output"].split()),
+            "nii_score": nii_score,
+            "issues": issues,
+            "latency_ms": int((time.time() - t0) * 1000)
+        })
+
+    # 5. Run V3 enforcement on LLM output
+    from core_engine.v3_enforcement import enforce
+    v3_result = enforce(llm_text, objective=obj.get("objective_text"))
+    final = v3_result["final_output"]
+
+    original_words = len(text.split())
+    rewrite_words = len(final.split())
+
+    return jsonify({
+        "rewrite": final,
+        "model": model["name"],
+        "model_color": model["color"],
+        "method": "llm_v3",
+        "original_words": original_words,
+        "rewrite_words": rewrite_words,
+        "compression": f"{abs(original_words - rewrite_words) / max(original_words, 1) * 100:.0f}%",
+        "nii_score": nii_score,
+        "issues": issues,
+        "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
+        "latency_ms": int((time.time() - t0) * 1000)
+    })
 
 
 if __name__ == "__main__":
