@@ -121,7 +121,7 @@ const NTIScore = (() => {
         <div class="nti-source-body" id="${uid}_body"></div>
       </div>
       <div class="nti-score-footer">
-        <div class="nti-sf-score ${score>=0.8?'green':score>=0.5?'amber':'red'}">${(score*100).toFixed(0)}</div>
+        <div class="nti-sf-score ${score>=80?'green':score>=50?'amber':'red'}">${score}</div>
         <div class="nti-sf-meta"><span>Structural Integrity</span><span>${lat}ms \u00B7 ${enrich.wordCount} words \u00B7 v${ver}</span></div>
       </div>`;
     c.dataset.originalText = originalText || '';
