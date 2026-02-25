@@ -1439,7 +1439,7 @@ def _call_llm(model_info, prompt, system_prompt):
             "generationConfig": {"maxOutputTokens": 1024}
         }).encode()
         req = Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
             data=body, headers={"Content-Type": "application/json"}
         )
         resp = urlopen(req, timeout=timeout)
@@ -1485,15 +1485,24 @@ def api_rewrite():
     model = _letter_race(text)
 
     # 3. Build rewrite prompt from NTI findings
+    # Smart issue detection: short/simple messages don't need enterprise-level constraints
+    word_count = len(text.split())
+    is_question = text.strip().rstrip('.!').endswith('?') or text.lower().startswith(('what ', 'when ', 'where ', 'who ', 'how ', 'why ', 'which ', 'can ', 'could ', 'will ', 'would ', 'do ', 'does ', 'is ', 'are '))
+    is_short = word_count <= 15
+    has_real_failure = any("CONFIRMED" in str(v) for v in failure_modes.values())
+
     issues = []
-    if (components.get("q1") or 0) < 0.7:
-        issues.append("Missing explicit constraints or conditions")
-    if (components.get("q2") or 0) < 0.7:
-        issues.append("Main ask is buried — should lead")
-    if (components.get("q3") or 0) < 0.7:
-        issues.append("No deadline or enforcement boundary")
-    if (components.get("q4") or 0) < 0.7:
-        issues.append("Weak tilt resistance — hedge language or unclear intent")
+    # Only flag Q components on substantive messages (not short questions or casual texts)
+    if not (is_short and is_question):
+        if (components.get("q1") or 0) < 0.7 and not is_short:
+            issues.append("Missing explicit constraints or conditions")
+        if (components.get("q2") or 0) < 0.7 and word_count > 20:
+            issues.append("Main ask is buried — should lead")
+        if (components.get("q3") or 0) < 0.7 and not is_question:
+            issues.append("No deadline or enforcement boundary")
+        if (components.get("q4") or 0) < 0.7 and len(tilt) > 0:
+            issues.append("Weak tilt resistance — hedge language detected")
+    # Always flag real failure modes regardless of length
     if "CONFIRMED" in str(failure_modes.get("UDDS", "")):
         issues.append("UDDS: Agreement given before the actual ask was stated")
     if "CONFIRMED" in str(failure_modes.get("DCE", "")):
@@ -1515,13 +1524,14 @@ def api_rewrite():
         "7. ONE PASS. Return only the rewritten text. No explanations. No commentary. No quotes around it."
     )
 
-    prompt = f"ORIGINAL:\n{text}\n\nPROBLEMS:\n"
+    prompt = f"ORIGINAL:\n{text}\n\n"
     if issues:
+        prompt += "PROBLEMS:\n"
         for iss in issues:
             prompt += f"- {iss}\n"
+        prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
     else:
-        prompt += "- Minor: tighten where possible.\n"
-    prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
+        prompt += "This message is structurally clean. Tighten it if possible — remove any unnecessary words. If it's already tight, return it unchanged. Do not add anything."
 
     # 4. Call LLM
     try:

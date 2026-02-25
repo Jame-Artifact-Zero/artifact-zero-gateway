@@ -352,9 +352,19 @@ function renderResults(data, originalText){
   const comp = sc.components || {};
   const fm = data.failure_modes || {};
   const tilt = data.tilt || {};
+  const v3 = data.v3 || {};
   const nii = sc.nii || 0;
+  const niiPct = Math.round(nii * 100);
+  const words = originalText.split(/\s+/).length;
+  const hedges = data.hedge_phrases || [];
+  const reassurances = data.reassurance_phrases || [];
+  const lat = data.latency_ms || '?';
 
-  // Build findings in her words
+  // Stat colors
+  const niiColor = nii >= 0.8 ? '#00e89c' : nii >= 0.5 ? '#f59e0b' : '#ef4444';
+  const niiLabel = nii >= 0.8 ? 'STRONG' : nii >= 0.5 ? 'MODERATE' : 'WEAK';
+
+  // Build findings
   const findings = [];
   if((comp.q1||0) < 0.7) findings.push({
     issue: "You didn't set any rules. The person reading this can interpret it however they want.",
@@ -366,70 +376,157 @@ function renderResults(data, originalText){
   });
   if((comp.q3||0) < 0.7) findings.push({
     issue: "There's no deadline or boundary. This can be ignored or pushed off.",
-    fix: "Add when you need it by. \"By Friday\" or \"before the meeting.\""
+    fix: 'Add when you need it by. "By Friday" or "before the meeting."'
   });
   if((comp.q4||0) < 0.7) findings.push({
     issue: "It's not clear what you're actually asking for.",
     fix: "Start with what you need. One sentence."
   });
   if(fm.UDDS && !String(fm.UDDS).includes('FALSE')) findings.push({
-    issue: "You agreed to something before saying what you actually need. They'll hold you to the agreement and skip your ask.",
+    issue: "You agreed to something before saying what you actually need.",
     fix: "State what you need first. Then offer flexibility."
   });
   if(fm.DCE && !String(fm.DCE).includes('FALSE')) findings.push({
-    issue: "You pushed the real decision to a future conversation. Nothing gets resolved here.",
+    issue: "You pushed the real decision to a future conversation.",
     fix: "Make the ask now. Don't defer."
   });
   if(fm.CCA && !String(fm.CCA).includes('FALSE')) findings.push({
-    issue: "You combined multiple things into one vague statement. Each point gets weaker.",
+    issue: "You combined multiple things into one vague statement.",
     fix: "Separate your points. One sentence per ask."
   });
 
   const totalIssues = findings.length;
-  const tiltCount = tilt.count || (Array.isArray(tilt) ? tilt.length : 0);
 
-  let h = '<div class="results-header">';
-  h += '<span class="results-title">SAFECHECK RESULTS</span>';
-  if(totalIssues === 0){
-    h += '<span class="results-count clear">Clear</span>';
-  } else {
-    h += `<span class="results-count ${totalIssues>=3?'crit':'warn'}">${totalIssues} issue${totalIssues>1?'s':''}</span>`;
-  }
-  h += '</div>';
+  // Tilt tags
+  const tiltTags = Array.isArray(tilt) ? tilt : (tilt.tags || []);
 
-  if(findings.length === 0){
-    h += '<div class="finding"><div class="finding-issue" style="color:var(--accent)">Your message is structurally clear. No issues found.</div></div>';
-  } else {
-    findings.forEach(f => {
-      h += `<div class="finding">
-        <div class="finding-issue">${f.issue}</div>
-        <div class="finding-fix">${f.fix}</div>
-      </div>`;
-    });
-  }
+  let h = '';
 
-  // Checklist
-  const checks = [
-    [comp.q1 >= 0.7, 'Rules are stated'],
-    [comp.q2 >= 0.7, 'Main point comes first'],
-    [comp.q3 >= 0.7, 'Deadline or boundary set'],
-    [comp.q4 >= 0.7, 'Clear ask'],
+  // ── SCORE HERO ──
+  h += `<div style="padding:24px 16px;text-align:center;border-bottom:1px solid var(--border)">
+    <div style="font-size:56px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${niiColor};line-height:1">${niiPct}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;color:${niiColor};margin-top:4px">${niiLabel}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">${lat}ms · ${words} words · v3.0</div>
+  </div>`;
+
+  // ── STAT BOXES (2x3 grid) ──
+  const hedgeCount = hedges.length || (data.l2_framing ? data.l2_framing.hedge_count || 0 : 0);
+  const reassureCount = reassurances.length || (data.l2_framing ? data.l2_framing.reassurance_count || 0 : 0);
+  const tiltCount = tiltTags.length;
+  const fmCount = ['UDDS','DCE','CCA'].filter(k => fm[k] && !String(fm[k]).includes('FALSE')).length;
+
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)">';
+  const stats = [
+    { n: hedgeCount, label: 'HEDGES', color: hedgeCount > 0 ? '#f59e0b' : '#00e89c', items: hedges.slice(0,2) },
+    { n: reassureCount, label: 'REASSURANCES', color: reassureCount > 0 ? '#f59e0b' : '#00e89c', items: reassurances.slice(0,2) },
+    { n: fmCount, label: 'FAILURE MODES', color: fmCount > 0 ? '#ef4444' : '#00e89c', items: [] },
+    { n: tiltCount, label: 'TILT PATTERNS', color: tiltCount > 0 ? '#f59e0b' : '#00e89c', items: [] },
+    { n: totalIssues, label: 'ISSUES', color: totalIssues > 0 ? '#ef4444' : '#00e89c', items: [] },
+    { n: words, label: 'WORDS', color: '#3b82f6', items: [] },
   ];
-  h += '<div class="checklist">';
-  checks.forEach(([pass, label]) => {
-    h += `<div class="check-item"><span class="check-icon ${pass?'pass':'fail'}">${pass?'✓':'✗'}</span><span class="check-label">${label}</span></div>`;
+  stats.forEach(s => {
+    h += `<div style="background:var(--surface);padding:16px;text-align:center">
+      <div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${s.color}">${s.n}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-top:4px">${s.label}</div>
+      ${s.items.length ? '<div style="margin-top:6px">' + s.items.map(i => '<span style="font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;padding:2px 6px;border-radius:4px;margin:2px">' + esc(i) + '</span>').join('') + '</div>' : ''}
+    </div>`;
   });
   h += '</div>';
 
-  // Fix it button — only if there are issues
-  if(totalIssues > 0){
-    h += '<div class="fix-row"><button class="fix-btn" id="fixBtn" onclick="fixIt()">Rewrite with V3</button></div>';
+  // ── FAILURE MODES ──
+  if(fmCount > 0 || true) {
+    h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
+    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">FAILURE MODES</div>';
+    ['UDDS','DCE','CCA'].forEach(mode => {
+      const state = String(fm[mode] || '');
+      const detected = !state.includes('FALSE') && state.length > 0;
+      const probable = state.includes('PROBABLE');
+      const labels = {UDDS:'Upstream Downstream', DCE:'Deferred Constraint', CCA:'Collapsed Constraint'};
+      const descs = {UDDS:'Agreement before ask', DCE:'Deferred the hard part', CCA:'Vague bundled claims'};
+      let badge, badgeColor;
+      if(state.includes('CONFIRMED')){ badge='DETECTED'; badgeColor='#ef4444'; }
+      else if(probable){ badge='PROBABLE'; badgeColor='#f59e0b'; }
+      else { badge='CLEAR'; badgeColor='#00e89c'; }
+      h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${detected?'rgba(239,68,68,.06)':'var(--surface)'};border:1px solid ${detected?'rgba(239,68,68,.2)':'var(--border)'};border-radius:8px;margin-bottom:6px">
+        <div><div style="font-weight:600;font-size:13px;color:var(--text)">${mode}</div><div style="font-size:11px;color:var(--muted)">${descs[mode]}</div></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:${badgeColor}">${badge}</span>
+      </div>`;
+    });
+    h += '</div>';
   }
+
+  // ── TILT PATTERNS ──
+  if(tiltTags.length > 0){
+    h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
+    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">COMMUNICATION HABITS DETECTED</div>';
+    const tiltDefs = {
+      T1_REASSURANCE_DRIFT:{label:'Reassurance Drift',desc:'Reassurance used instead of evidence',icon:'🛡'},
+      T2_CERTAINTY_INFLATION:{label:'Certainty Inflation',desc:'Claims certainty without proof',icon:'📈'},
+      T3_SCOPE_EXPANSION:{label:'Scope Expansion',desc:'Widens topic without acknowledging it',icon:'🔄'},
+      T4_CAPABILITY_OVERREACH:{label:'Capability Overreach',desc:'Promises beyond deliverable',icon:'⚡'},
+      T5_ABSOLUTE_LANGUAGE:{label:'Absolute Language',desc:'Uses never/always/every without evidence',icon:'🔒'},
+      T6_CONSTRAINT_DEFERRAL:{label:'Constraint Deferral',desc:'Pushes limits to later',icon:'⏳'},
+      T7_CATEGORY_BLEND:{label:'Category Blend',desc:'Mixes unrelated things',icon:'🌀'},
+      T8_PRESSURE_OPTIMIZATION:{label:'Pressure Pattern',desc:'Urgency without substance',icon:'🔥'},
+    };
+    tiltTags.forEach(t => {
+      const d = tiltDefs[t] || {label:t.replace(/_/g,' '),desc:'',icon:'⚠'};
+      h += `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="this.querySelector('.td').style.display=this.querySelector('.td').style.display==='none'?'block':'none'">
+        <span style="font-size:18px">${d.icon}</span>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px;color:#f59e0b">${d.label}</div><div style="font-size:11px;color:var(--muted)">${d.desc}</div></div>
+        <span style="color:var(--muted);font-size:14px">›</span>
+      </div>`;
+    });
+    h += '</div>';
+  }
+
+  // ── Q COMPONENT BARS ──
+  h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
+  h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">STRUCTURAL ANALYSIS</div>';
+  const bars = [
+    {label:'CONSTRAINTS', val:comp.q1||0, desc:'Rules stated explicitly'},
+    {label:'ASK POSITION', val:comp.q2||0, desc:'Main point comes first'},
+    {label:'ENFORCEMENT', val:comp.q3||0, desc:'Deadline or boundary set'},
+    {label:'CLARITY', val:comp.q4||0, desc:'Clear, resistable ask'},
+  ];
+  bars.forEach(b => {
+    const pct = Math.round(b.val * 100);
+    const col = b.val >= 0.7 ? '#00e89c' : b.val >= 0.4 ? '#f59e0b' : '#ef4444';
+    h += `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted)">${b.label}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:${col}">${pct}%</span>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .6s ease"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${b.desc}</div>
+    </div>`;
+  });
+  h += '</div>';
+
+  // ── FINDINGS (plain language) ──
+  if(findings.length > 0){
+    h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
+    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">WHAT TO FIX</div>';
+    findings.forEach(f => {
+      h += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;color:var(--text);line-height:1.5">${f.issue}</div>
+        <div style="font-size:12px;color:var(--accent);padding-left:12px;border-left:2px solid var(--accent);margin-top:6px">${f.fix}</div>
+      </div>`;
+    });
+    h += '</div>';
+  }
+
+  // ── REWRITE BUTTON ──
+  h += '<div class="fix-row"><button class="fix-btn" id="fixBtn" onclick="fixIt()">Rewrite with V3</button></div>';
 
   el.innerHTML = h;
   el.className = 'results show';
   el.scrollIntoView({behavior:'smooth', block:'start'});
 }
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ═══════════════════════════════════════════
 // LLM LETTER RACE — deterministic model pick from text
