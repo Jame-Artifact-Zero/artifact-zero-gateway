@@ -51,6 +51,23 @@ def db_connect():
         return conn
 
 
+# V3 compatibility — context manager and placeholder helpers for standalone modules
+from contextlib import contextmanager
+
+@contextmanager
+def db_connection():
+    """Context manager wrapping db_connect. Auto-closes on exit."""
+    conn = db_connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+def param_placeholder():
+    """Return '%s' for PostgreSQL or '?' for SQLite."""
+    return "%s" if USE_PG else "?"
+
+
 def db_execute(conn, sql, params=None):
     """Execute SQL, converting ? placeholders to %s for PostgreSQL."""
     if USE_PG:

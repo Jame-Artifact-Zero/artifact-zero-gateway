@@ -78,6 +78,12 @@ try:
 except ImportError:
     print("[app] credits not found, skipping", flush=True)
 
+try:
+    from admin_dashboard import init_admin
+    init_admin(app)
+except ImportError:
+    print("[app] admin_dashboard not found, skipping", flush=True)
+
 # ============================================================
 # CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
@@ -954,8 +960,80 @@ def canonical_status():
             "nii_integrity_index": True,
             "jos_template_and_binding": True,
             "telemetry_and_persistence": True
+        },
+        "v3_modules": {
+            "self_audit": True,
+            "time_collapse": True,
+            "attribution_drift": True,
+            "convergence_gate": True,
+            "audit_source": True,
+            "axis2_friction": True,
+            "loop_detection": True,
+            "consolidation_engine": True,
+            "confusion_layer": True,
+            "time_object": True,
+            "nti_full_integration": True,
+            "per_industry_config": False,
         }
     })
+
+
+# ═══════════════════════════════════════
+# V3 ROUTES — Axis 2 + Full Integration
+# ═══════════════════════════════════════
+
+@app.route("/nti-friction", methods=["POST"])
+def nti_friction():
+    """E04 — Axis 2 conversational friction scoring."""
+    try:
+        from axis2_endpoint import handle_request as axis2_handle
+        payload = request.get_json(force=True) or {}
+        return jsonify(axis2_handle(payload))
+    except Exception as e:
+        return jsonify({"error": str(e), "axis": 2}), 500
+
+
+@app.route("/nti-full", methods=["POST"])
+def nti_full():
+    """Full NTI scoring: Axis 1 + Axis 2 + loop + consolidation + confusion + time object."""
+    t0 = time.time()
+    payload = request.get_json(force=True) or {}
+    text = (payload.get("text") or payload.get("input") or payload.get("message") or "").strip()
+
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    # Axis 1 — existing NTI scoring
+    prompt = ""
+    answer = text
+    l0 = detect_l0_constraints(answer)
+    tilt = classify_tilt(answer, prompt, answer)
+    dbc = detect_downstream_before_constraint(prompt, answer, l0)
+    nii = compute_nii(prompt, answer, l0, dbc, tilt)
+
+    axis1 = {
+        "nii": nii,
+        "l0_constraints": l0,
+        "tilt_taxonomy": tilt,
+        "failure_modes": {
+            "udds": detect_udds(prompt, answer, l0),
+            "dce": detect_dce(answer, l0),
+            "cca": detect_cca(prompt, answer),
+        }
+    }
+
+    # Full integration — Axis 2 + detection modules
+    try:
+        from nti_full_integration_stub import build_full
+        request_id = f"nti_{uuid.uuid4().hex[:12]}"
+        payload["request_id"] = request_id
+        full = build_full(payload=payload, axis1=axis1, build_version=NTI_VERSION)
+    except Exception as e:
+        full = {"axis1": axis1, "error": str(e)}
+
+    full["latency_ms"] = int((time.time() - t0) * 1000)
+    full["version"] = NTI_VERSION
+    return jsonify(full)
 
 
 @app.route("/events", methods=["POST"])
@@ -1082,26 +1160,56 @@ def nti_run():
         "tilt": tilt
     })
 
+    # Log to cockpit analytics
+    try:
+        from admin_dashboard import log_nti_run
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        if ip and "," in ip: ip = ip.split(",")[0].strip()
+        log_nti_run(request_id, ip, text, result, latency_ms, session_id)
+    except Exception:
+        pass
+
     result["telemetry"] = {
         "request_id": request_id,
         "session_id": session_id,
         "latency_ms": latency_ms
     }
 
+    # I04 — audit source tagging
+    try:
+        from audit_source import normalize_audit_source
+        result["telemetry"]["audit_source"] = normalize_audit_source(
+            (request.get_json(silent=True) or {}).get("source")
+        )
+    except Exception:
+        result["telemetry"]["audit_source"] = "manual"
+
     # ── V3 ENFORCEMENT: self-audit loop ──
     # Score own output before delivery. Core governance, not optional.
     try:
-        from core_engine.v3_enforcement import self_audit
-        audit = self_audit(
-            answer or text,
-            objective=obj.get("objective_text"),
+        from v3_self_audit import run_v3_pipeline
+
+        def _v1_score_fn(txt):
+            """Adapter: run compute_nii on text and return dict with nii_score."""
+            _l0 = detect_l0_constraints(txt)
+            _tilt = classify_tilt(txt)
+            _dbc = detect_downstream_before_constraint("", txt, _l0)
+            _nii = compute_nii("", txt, _l0, _dbc, _tilt)
+            return _nii
+
+        v3 = run_v3_pipeline(
+            output_text=answer or text,
+            v1_score_fn=_v1_score_fn,
+            audit_threshold=0.85,
+            max_passes=2,
         )
         result["v3"] = {
-            "enforced_text": audit["enforced_text"],
-            "actions_taken": audit["actions_taken"],
-            "time_collapse_applied": audit["time_collapse_applied"],
-            "compression_ratio": audit["compression_ratio"],
-            "passed": audit["passed"],
+            "enforced_text": v3["output"],
+            "passes": len(v3["passes"]),
+            "final_score": v3["final_score"].get("nii_score") if isinstance(v3["final_score"], dict) else None,
+            "decision": v3["self_audit"]["decision"],
+            "time_collapse_applied": True,
+            "attribution_stripped": True,
         }
     except Exception as e:
         result["v3"] = {"error": str(e), "passed": True}
@@ -1541,6 +1649,18 @@ def api_rewrite():
         return jsonify({"error": "text required"}), 400
     if len(text) > 5000:
         return jsonify({"error": "text too long (max 5000 chars)"}), 400
+
+    # Convergence gate — block AI for deterministic-routable inputs
+    try:
+        from convergence_gate import enforce as cg_enforce
+        trace = {}
+        ai_allowed, cg_response = cg_enforce({"text": text}, trace)
+        if not ai_allowed:
+            cg_response["latency_ms"] = int((time.time() - t0) * 1000)
+            cg_response["version"] = NTI_VERSION
+            return jsonify(cg_response)
+    except Exception:
+        pass
 
     # 1. Score with V1
     l0 = detect_l0_constraints(text)

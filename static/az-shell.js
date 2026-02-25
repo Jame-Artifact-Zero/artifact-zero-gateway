@@ -171,6 +171,74 @@
   }
 
   // ═══════════════════════════════════════
+  // COCKPIT CLIENT — reads admin controls
+  // ═══════════════════════════════════════
+  function loadCockpit(){
+    fetch('/api/cockpit/config').then(r=>r.json()).then(cfg=>{
+      // Banner
+      if(cfg.banner && cfg.banner.on && cfg.banner.text){
+        const old = document.getElementById('az-cockpit-banner');
+        if(old) old.remove();
+        const b = document.createElement('div');
+        b.id = 'az-cockpit-banner';
+        b.style.cssText = 'position:fixed;top:48px;left:0;right:0;z-index:9998;padding:8px 16px;text-align:center;font-family:monospace;font-size:13px;font-weight:bold;cursor:pointer;';
+        b.style.color = cfg.banner.color || '#00e89c';
+        b.style.background = cfg.banner.bg || '#064e3b';
+        b.textContent = cfg.banner.text;
+        if(cfg.banner.link){
+          b.onclick = function(){ window.location.href = cfg.banner.link; };
+        }
+        document.body.appendChild(b);
+        // Push content down
+        const spacers = document.querySelectorAll('.az-topbar-spacer');
+        spacers.forEach(function(s){ s.style.height = '90px'; });
+      }
+
+      // Modal pop-up
+      if(cfg.modal && cfg.modal.on && cfg.modal.title){
+        const shown = sessionStorage.getItem('az-modal-shown');
+        const pages = (cfg.modal.pages || '*').split(',').map(function(p){ return p.trim(); });
+        const onPage = pages.includes('*') || pages.includes(window.location.pathname);
+        if(!shown && onPage){
+          sessionStorage.setItem('az-modal-shown', '1');
+          const overlay = document.createElement('div');
+          overlay.id = 'az-modal-overlay';
+          overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
+          const box = document.createElement('div');
+          box.style.cssText = 'background:#12151b;border:1px solid #252a35;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;position:relative;';
+          box.innerHTML = '<div style="position:absolute;top:12px;right:16px;color:#6b7280;cursor:pointer;font-size:18px" onclick="this.parentElement.parentElement.remove()">✕</div>'
+            + '<h2 style="color:#00e89c;font-family:monospace;font-size:16px;letter-spacing:2px;margin-bottom:12px">' + (cfg.modal.title||'') + '</h2>'
+            + '<p style="color:#e8eaf0;font-size:14px;line-height:1.6;margin-bottom:20px">' + (cfg.modal.body||'') + '</p>'
+            + (cfg.modal.cta ? '<a href="'+(cfg.modal.cta_link||'#')+'" style="display:inline-block;background:#00e89c;color:#000;padding:10px 24px;border-radius:6px;text-decoration:none;font-family:monospace;font-weight:bold;font-size:13px;letter-spacing:1px">' + cfg.modal.cta + '</a>' : '');
+          overlay.appendChild(box);
+          overlay.onclick = function(e){ if(e.target === overlay) overlay.remove(); };
+          document.body.appendChild(overlay);
+        }
+      }
+
+      // Copy overrides
+      if(cfg.copy){
+        if(cfg.copy.hero_h1){
+          var h1 = document.querySelector('h1');
+          if(h1) h1.textContent = cfg.copy.hero_h1;
+        }
+        if(cfg.copy.hero_sub){
+          var sub = document.querySelector('.subline, .subtitle, .hero-sub, h2');
+          if(sub) sub.textContent = cfg.copy.hero_sub;
+        }
+        if(cfg.copy.cta_btn){
+          var cta = document.querySelector('.score-button, .cta-button, button[type="submit"]');
+          if(cta) cta.textContent = cfg.copy.cta_btn;
+        }
+        if(cfg.copy.custom_selector && cfg.copy.custom_value){
+          var el = document.querySelector(cfg.copy.custom_selector);
+          if(el) el.textContent = cfg.copy.custom_value;
+        }
+      }
+    }).catch(function(){});
+  }
+
+  // ═══════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════
   function init(){
@@ -178,6 +246,7 @@
     buildTopbar();
     buildFooter();
     adjustPadding();
+    loadCockpit();
   }
 
   if(document.readyState === 'loading'){

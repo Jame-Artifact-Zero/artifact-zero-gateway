@@ -45,8 +45,14 @@ def _ensure_users_table():
             id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
             name TEXT NOT NULL DEFAULT '', tier TEXT NOT NULL DEFAULT 'free',
+            role TEXT NOT NULL DEFAULT 'user',
             stripe_customer_id TEXT, stripe_subscription_id TEXT,
             score_count INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE)""")
+        # Add role column if missing (migration)
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+        except Exception:
+            conn.rollback()
         cur.execute("""CREATE TABLE IF NOT EXISTS password_resets (
             id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token TEXT UNIQUE NOT NULL,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), used BOOLEAN NOT NULL DEFAULT FALSE)""")
@@ -55,6 +61,7 @@ def _ensure_users_table():
             id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
             name TEXT NOT NULL DEFAULT '', tier TEXT NOT NULL DEFAULT 'free',
+            role TEXT NOT NULL DEFAULT 'user',
             stripe_customer_id TEXT, stripe_subscription_id TEXT,
             score_count INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS password_resets (
@@ -66,23 +73,23 @@ def _ensure_users_table():
 def _user_by_email(email):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id FROM users WHERE email=%s" if database.USE_PG else "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id FROM users WHERE email=?"
+    q = "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id,role FROM users WHERE email=%s" if database.USE_PG else "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id,role FROM users WHERE email=?"
     cur.execute(q, (email.lower(),))
     row = cur.fetchone()
     conn.close()
     if not row: return None
-    keys = ["id","email","password_hash","name","tier","score_count","stripe_customer_id"]
+    keys = ["id","email","password_hash","name","tier","score_count","stripe_customer_id","role"]
     return dict(zip(keys, row)) if database.USE_PG else dict(row)
 
 def _user_by_id(uid):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at FROM users WHERE id=%s" if database.USE_PG else "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at FROM users WHERE id=?"
+    q = "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at,role FROM users WHERE id=%s" if database.USE_PG else "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at,role FROM users WHERE id=?"
     cur.execute(q, (uid,))
     row = cur.fetchone()
     conn.close()
     if not row: return None
-    keys = ["id","email","name","tier","score_count","stripe_customer_id","created_at"]
+    keys = ["id","email","name","tier","score_count","stripe_customer_id","created_at","role"]
     return dict(zip(keys, [str(v) if i==6 else v for i,v in enumerate(row)])) if database.USE_PG else dict(row)
 
 def _create_user(email, pw, name=""):
@@ -210,6 +217,7 @@ def login():
     if not user or not verify_password(pw, user["password_hash"]):
         return render_template("login.html", error="Invalid email or password."), 401
     session["user_id"] = user["id"]
+    session["role"] = user.get("role", "user")
     return redirect("/dashboard")
 
 @auth_bp.route("/logout")
