@@ -204,5 +204,24 @@ async function scoreText() {
 </script>
 
 <script src="/static/az-nav.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+<script>
+// Add rewrite capability to score page
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form') || document.querySelector('textarea');
+  if (form) {
+    const rw = document.createElement('div');
+    rw.id = 'score-rewrite-out';
+    rw.style.cssText = 'display:none;margin-top:16px;background:#12151b;border:1px solid #00e89c;border-radius:10px;padding:16px';
+    const ta = document.querySelector('textarea');
+    if (ta && ta.parentElement) {
+      ta.parentElement.appendChild(rw);
+      NTI.rewriteButton('textarea', '#score-rewrite-out');
+    }
+  }
+});
+</script>
 </body>
 </html>

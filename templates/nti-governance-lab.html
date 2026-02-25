@@ -442,5 +442,16 @@ function runThread() {
 if(window.self!==window.top){const n=document.querySelector('[data-shell-nav]');if(n)n.style.display='none';}
 </script>
 <script src="/static/az-nav.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+<script>
+// Wire governance lab to server-side /nti instead of pure client-side
+const _origRunSingle = typeof runSingle === 'function' ? runSingle : null;
+const _origRunThread = typeof runThread === 'function' ? runThread : null;
+// Expose NTI.score for lab use
+window.ntiServerScore = NTI.score;
+window.ntiRewrite = NTI.rewrite;
+</script>
 </body>
 </html>

@@ -276,5 +276,24 @@ if(window.self!==window.top){const n=document.querySelector('[data-shell-nav]');
 uu();
 </script>
 <script src="/static/az-nav.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+<script>
+// V3 enforce on AI responses in control room
+const _origRender = typeof renderMsg === 'function' ? renderMsg : null;
+// Hook: after any AI message is rendered, score it inline
+document.addEventListener('nti:ai-response', async (e) => {
+  if (e.detail && e.detail.text && e.detail.el) {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'font-family:monospace;font-size:11px;margin-top:4px;color:#5a6275';
+    e.detail.el.appendChild(bar);
+    const data = await NTI.score(e.detail.text);
+    const nii = data.score?.nii_score ?? data.nii_score ?? 0;
+    const color = nii >= 0.8 ? '#00e89c' : nii >= 0.5 ? '#f59e0b' : '#ef4444';
+    bar.innerHTML = `NTI <span style="color:${color};font-weight:700">${(nii*100).toFixed(0)}</span>`;
+  }
+});
+</script>
 </body>
 </html>

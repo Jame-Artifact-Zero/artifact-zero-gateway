@@ -664,5 +664,14 @@ async function init() {
 init();
 </script>
 <script src="/static/az-nav.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+<script>
+// Relay: expose NTI engine for scoring generated content
+window.ntiScore = NTI.score;
+window.ntiRewrite = NTI.rewrite;
+window.ntiPickModel = NTI.pickModel;
+</script>
 </body>
 </html>

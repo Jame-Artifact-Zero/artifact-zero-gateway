@@ -99,5 +99,12 @@ function renderFeed(){const feed=document.getElementById('feed');document.getEle
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 </script>
 <script src="/static/az-nav.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+<script>
+// Wall: score each comment server-side via NTI.score
+window.ntiScore = NTI.score;
+</script>
 </body>
 </html>
