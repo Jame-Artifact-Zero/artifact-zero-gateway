@@ -153,18 +153,23 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <h1>Contact us</h1>
   <p class="sub">Tell us what you're working on. We'll show you what we see.</p>
   <div class="field">
-    <label>Name</label>
-    <input type="text" id="fname" placeholder="Your name">
+    <label>First Name</label>
+    <input type="text" id="ffirst" placeholder="First name" required>
+  </div>
+  <div class="field">
+    <label>Last Name</label>
+    <input type="text" id="flast" placeholder="Last name" required>
   </div>
   <div class="field">
     <label>Email</label>
-    <input type="email" id="femail" placeholder="you@company.com">
+    <input type="email" id="femail" placeholder="you@company.com" required>
   </div>
   <div class="field">
     <label>Message</label>
     <textarea id="fmessage" placeholder="What are you working on? What problem are you trying to solve?"></textarea>
   </div>
   <button class="send-btn" id="sendBtn" onclick="send()">Send message</button>
+  <div id="formErr" style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px"></div>
 </div>
 
 <!-- CARD DECK -->
@@ -184,7 +189,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 <script src="/static/nti-score-component.js"></script>
 <script>
 let currentCard = 0;
-let totalCards = 7;
+let totalCards = 8;
 let startX = 0;
 let currentX = 0;
 let isDragging = false;
@@ -233,46 +238,79 @@ function fmColor(s) { return s.includes('CONFIRMED') ? 'red' : s.includes('PROBA
 function fmLabel(s) { return s.includes('CONFIRMED') ? 'DETECTED' : s.includes('PROBABLE') ? 'PROBABLE' : 'CLEAR'; }
 
 async function send() {
-  const name = document.getElementById('fname').value.trim();
+  const first = document.getElementById('ffirst').value.trim();
+  const last = document.getElementById('flast').value.trim();
   const email = document.getElementById('femail').value.trim();
   const message = document.getElementById('fmessage').value.trim();
-  
-  if (!name || !email || !message) { alert('All fields required.'); return; }
-  
+  const err = document.getElementById('formErr');
+  err.textContent = '';
+
+  if (!first) { err.textContent = 'First name required.'; return; }
+  if (!last) { err.textContent = 'Last name required.'; return; }
+  if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { err.textContent = 'Valid email required.'; return; }
+  if (!message) { err.textContent = 'Message required.'; return; }
+
+  const name = first + ' ' + last;
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Processing your message...';
-  
+
   try {
-    // Score via V1
+    // V2 PRE-SCORE GATE — score via /nti first
     const res = await fetch('/nti', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: message })
     });
     const score = await res.json();
-    
+
+    // V2 gate: if the API rejected it as gibberish, don't proceed
+    if (score.status === 'rejected' || score.gate) {
+      err.textContent = score.error || 'That does not look like a real message. Try again with a real business inquiry.';
+      btn.disabled = false;
+      btn.textContent = 'Send message';
+      return;
+    }
+
     // Pick model
     const model = pickModel(message);
-    
+
+    // Fire V3 rewrite in parallel
+    let v3Rewrite = null;
+    try {
+      const rwRes = await fetch('/api/v1/rewrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: message })
+      });
+      v3Rewrite = await rwRes.json();
+    } catch(e) { /* rewrite failed, continue without */ }
+
     // Build cards
-    buildDeck(name, email, message, score, model);
-    
+    buildDeck(name, email, message, score, model, v3Rewrite);
+
+    // Store the contact submission
+    fetch('/api/developer-apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message, type: 'contact_form' })
+    }).catch(() => {});
+
     // Switch to deck
     document.getElementById('formWrap').classList.add('hidden');
     document.getElementById('deckBanner').textContent = name + ', this is happening. These are your words.';
     document.getElementById('deck').classList.add('active');
     initSwipe();
     updateDots();
-    
+
   } catch (e) {
-    alert('Error: ' + e.message);
+    err.textContent = 'Error: ' + e.message;
     btn.disabled = false;
     btn.textContent = 'Send message';
   }
 }
 
-function buildDeck(name, email, message, score, model) {
+function buildDeck(name, email, message, score, model, v3Rewrite) {
   const nii = score.nii || {};
   const s = nii.nii_score ?? 0;
   const fm = score.parent_failure_modes || {};
@@ -280,18 +318,27 @@ function buildDeck(name, email, message, score, model) {
   const matrix = score.interaction_matrix || {};
   const dom = matrix.dominance_detected || ['NONE'];
   const lat = score.telemetry?.latency_ms || '—';
-  
-  // V2 flags (simulated from V1 data)
+
+  // V2 flags (from V1 data)
   const v2flags = [];
   if (!message.match(/\b(need|want|require|looking for|interested in)\b/i)) v2flags.push('MISSING_OBJECTIVE');
   if (message.match(/\b(maybe|possibly|perhaps|might|could)\b/gi)?.length > 1) v2flags.push('HEDGE_DENSITY');
   if (!message.match(/\b(by|before|within|deadline|timeline|date)\b/i)) v2flags.push('NO_TIMELINE_CONSTRAINT');
   if (message.length < 50) v2flags.push('LOW_SPECIFICITY');
-  
-  // V3 work (simulated)
-  const hedges = message.match(/\b(just|basically|actually|really|very|quite|somewhat|generally|perhaps|maybe)\b/gi) || [];
-  const fillers = message.match(/\b(I think|I feel like|I was wondering|I would like to)\b/gi) || [];
-  
+
+  // V3 rewrite data
+  const rwText = v3Rewrite ? (v3Rewrite.rewrite || '') : '';
+  const rwModel = v3Rewrite ? (v3Rewrite.model || 'Claude') : '';
+  const rwModelColor = v3Rewrite ? (v3Rewrite.model_color || '#00e89c') : '#00e89c';
+  const rwIssues = v3Rewrite ? (v3Rewrite.issues || []) : [];
+  const rwActions = v3Rewrite ? (v3Rewrite.v3_actions || []) : [];
+  const rwOrigWords = v3Rewrite ? (v3Rewrite.original_words || 0) : 0;
+  const rwNewWords = v3Rewrite ? (v3Rewrite.rewrite_words || 0) : 0;
+  const rwCompression = v3Rewrite ? (v3Rewrite.compression || '0%') : '0%';
+  const rwLatency = v3Rewrite ? (v3Rewrite.latency_ms || 0) : 0;
+
+  totalCards = 8;
+
   const cards = [
     // Card 1: Your message
     `<div class="card">
@@ -302,28 +349,28 @@ function buildDeck(name, email, message, score, model) {
         ${message.split(/\s+/).length} words · ${message.length} characters · from ${escHtml(name)}
       </div>
     </div>`,
-    
-    // Card 2: V1 Score (rendered by shared component)
+
+    // Card 2: V1 Score (shared component)
     `<div class="card">
       <span class="card-num">2</span><span class="card-suit">♦</span>
       <h2>V1 — Structural Score</h2>
       <div id="card2_nti"></div>
     </div>`,
-    
+
     // Card 3: V2 Audit
     `<div class="card">
       <span class="card-num">3</span><span class="card-suit">♣</span>
       <h2>V2 — Inbound Audit</h2>
       <div class="card-body">
         <p style="color:var(--muted);margin-bottom:16px">Before we read your message, V2 scanned it for structural completeness.</p>
-        ${v2flags.length === 0 
+        ${v2flags.length === 0
           ? '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ Message passed structural gate</div>'
           : v2flags.map(f => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag amber">${f}</span></div>`).join('')
         }
         ${v2flags.length > 0 ? '<p style="color:var(--muted);margin-top:16px;font-size:13px">These flags would trigger a revision prompt before routing to an AI agent in a production NTI pipeline.</p>' : ''}
       </div>
     </div>`,
-    
+
     // Card 4: What the AI sees
     `<div class="card">
       <span class="card-num">4</span><span class="card-suit">♥</span>
@@ -333,7 +380,7 @@ function buildDeck(name, email, message, score, model) {
         <div class="response-text">${escHtml(message)}${v2flags.length > 0 ? '<br><br><span style="color:var(--accent);font-size:12px">[V2 appended: Structural flags — '+v2flags.join(', ')+'. Respond with specificity.]</span>' : ''}</div>
       </div>
     </div>`,
-    
+
     // Card 5: Model selection + AI response
     `<div class="card">
       <span class="card-num">5</span><span class="card-suit">♠</span>
@@ -348,47 +395,73 @@ function buildDeck(name, email, message, score, model) {
       </div>
       <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization</div>
     </div>`,
-    
-    // Card 6: V3 work
+
+    // Card 6: V3 findings
     `<div class="card">
       <span class="card-num">6</span><span class="card-suit">♦</span>
-      <h2>V3 — Stabilization</h2>
+      <h2>V3 — Stabilization Findings</h2>
       <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">V3 analyzed the AI response and performed structural cleanup.</p>
-        <div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag red">REMOVED</span> <span style="font-size:13px">5 hedge phrases</span></div>
-        <div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag red">REMOVED</span> <span style="font-size:13px">2 filler openings</span></div>
-        <div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag amber">FLAGGED</span> <span style="font-size:13px">No specific next step</span></div>
-        <div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag green">ADDED</span> <span style="font-size:13px">Concrete response timeline</span></div>
-        <div style="padding:8px 0"><span class="tag green">ADDED</span> <span style="font-size:13px">Specific action item</span></div>
-        <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Token reduction: ~40% · Structural integrity: ↑ 0.38 → 0.84</div>
+        <p style="color:var(--muted);margin-bottom:16px">V3 analyzed ${rwModel ? 'the ' + rwModel + ' response' : 'the AI response'} and found:</p>
+        ${rwIssues.length > 0
+          ? rwIssues.map(i => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag red">FLAGGED</span> <span style="font-size:13px">${escHtml(i)}</span></div>`).join('')
+          : '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ No structural issues detected</div>'
+        }
+        ${rwActions.length > 0
+          ? '<div style="margin-top:12px">' + rwActions.map(a => {
+              const detail = typeof a === 'string' ? a : (a.detail || a.check + ': ' + a.action);
+              const actionType = typeof a === 'object' ? a.action : 'applied';
+              const tagCls = actionType === 'removed' ? 'red' : actionType === 'flagged' ? 'amber' : 'green';
+              return '<div style="padding:6px 0;border-bottom:1px solid var(--border)"><span class="tag ' + tagCls + '">' + (actionType || 'APPLIED').toUpperCase() + '</span> <span style="font-size:12px">' + escHtml(detail) + '</span></div>';
+            }).join('') + '</div>'
+          : ''
+        }
+        <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+          ${rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
+        </div>
       </div>
     </div>`,
-    
-    // Card 7: Final response
+
+    // Card 7: V3 FINAL OUTPUT — the actual rewritten message
     `<div class="card">
       <span class="card-num">7</span><span class="card-suit">♣</span>
-      <h2>That's the product.</h2>
+      <h2>V3 — Final Output</h2>
       <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">You just experienced the full NTI pipeline on your own words. Seven cards. Three engines. Zero LLM in the scoring.</p>
-        <div class="response-text">
-          V1 scored your message. V2 audited the inbound. V3 stabilized the response. That's what every message gets — client emails, contracts, AI outputs, all of it.<br><br>
-          The scoring engine is live right now. Free on the homepage. API starts at $0.01/score.<br><br>
-          <span style="color:var(--accent)">Score something →</span> or <span style="color:var(--accent)">read the API docs →</span>
+        <p style="color:var(--muted);margin-bottom:16px">After V3 governance, this is what gets delivered. No filler. No false commitments. Structurally clean.</p>
+        <div class="response-text" style="color:var(--accent);font-size:15px;line-height:1.6;padding:16px;background:rgba(0,232,156,.04);border:1px solid rgba(0,232,156,.15);border-radius:8px">
+          ${rwText ? escHtml(rwText) : '<span style="color:var(--muted)">V3 rewrite unavailable — try again with a longer message.</span>'}
         </div>
-        <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-          <a href="/" style="padding:10px 20px;background:var(--accent);color:#000;font-weight:700;border-radius:6px;text-decoration:none;font-size:13px">Score something →</a>
-          <a href="/docs" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px">API docs →</a>
+        <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">
+          Model: ${rwModel || '—'} · Enforced by NTI V3 · ${rwLatency}ms
+        </div>
+      </div>
+    </div>`,
+
+    // Card 8: Confirmation + next steps
+    `<div class="card">
+      <span class="card-num">8</span><span class="card-suit">♥</span>
+      <h2>We got it.</h2>
+      <div class="card-body">
+        <p style="color:var(--text);margin-bottom:16px;font-size:15px">
+          ${escHtml(name)}, your message hit HQ. That was the full NTI pipeline on your own words — eight cards, three engines, zero LLM in the scoring.
+        </p>
+        <p style="color:var(--muted);margin-bottom:24px;font-size:13px">
+          V1 scored it. V2 audited the inbound. V3 stabilized the response. That's what every message gets — emails, contracts, AI outputs, all of it.
+        </p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a href="/score" style="padding:10px 20px;background:var(--accent);color:#000;font-weight:700;border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">Score something →</a>
+          <a href="/docs" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">API docs →</a>
+          <a href="/developers" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">Developer access →</a>
         </div>
       </div>
     </div>`
   ];
-  
+
   document.getElementById('track').innerHTML = cards.join('');
-  
+
   // Mount NTI component into Card 2
   const card2 = document.getElementById('card2_nti');
   if (card2) card2.appendChild(NTIScore.render(score, message));
-  
+
   // Build dots
   let dotsHtml = '';
   for (let i = 0; i < totalCards; i++) {

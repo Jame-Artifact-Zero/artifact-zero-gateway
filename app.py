@@ -5,6 +5,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from pre_score_gate import pre_score_gate
 
 from flask import Flask, request, jsonify, render_template, session
 import db as database
@@ -700,6 +701,33 @@ def contact_page():
     return render_template("contact.html")
 
 
+@app.route("/developers")
+def developers_page():
+    return render_template("developers.html")
+
+
+@app.route("/api/developer-apply", methods=["POST"])
+def api_developer_apply():
+    """Developer/vendor access request. Stores in DB, sends notification."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+    message = (data.get("message") or "").strip()
+    if not name or not email or not message:
+        return jsonify({"error": "All fields required"}), 400
+    try:
+        conn = _get_db()
+        conn.execute(
+            "INSERT INTO contact_submissions (name, email, message, type, created_at) VALUES (?, ?, ?, ?, ?)",
+            (name, email, message, "developer_apply", utc_now_iso())
+        )
+        conn.commit()
+    except Exception:
+        pass  # DB table may not exist yet — fail silently, log below
+    log_json_line("developer_apply", {"name": name, "email": email, "message": message[:200]})
+    return jsonify({"status": "ok"})
+
+
 @app.route("/compose")
 def compose_page():
     return render_template("compose.html")
@@ -859,6 +887,11 @@ def api_score_free():
         return jsonify({"error": "Missing 'text' field"}), 400
     if len(text) > 50000:
         return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
+
+    # V2 PRE-SCORE GATE — reject gibberish/junk before scoring
+    gate = pre_score_gate(text)
+    if not gate["pass"]:
+        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
 
     try:
         l0 = detect_l0_constraints(text)
@@ -1087,6 +1120,11 @@ def nti_run():
         latency_ms = int((time.time() - t0) * 1000)
         record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
         return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
+
+    # V2 PRE-SCORE GATE
+    gate = pre_score_gate(text)
+    if not gate["pass"]:
+        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
 
     l0_constraints = detect_l0_constraints(text)
 
@@ -1328,6 +1366,11 @@ def api_score():
         return jsonify({"error": "Missing 'text' field"}), 400
     if len(text) > 50000:
         return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
+
+    # V2 PRE-SCORE GATE
+    gate = pre_score_gate(text)
+    if not gate["pass"]:
+        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
 
     try:
         l0 = detect_l0_constraints(text)
@@ -1654,6 +1697,11 @@ def api_rewrite():
     if len(text) > 5000:
         return jsonify({"error": "text too long (max 5000 chars)"}), 400
 
+    # V2 PRE-SCORE GATE
+    gate = pre_score_gate(text)
+    if not gate["pass"]:
+        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
+
     # Convergence gate — block AI for deterministic-routable inputs
     try:
         from convergence_gate import enforce as cg_enforce
@@ -1714,8 +1762,15 @@ def api_rewrite():
         issues.append("CCA: Capability claimed without constraint backing")
 
     system_prompt = (
-        "You are a direct, no-nonsense rewrite engine. Your job: take poorly structured messages "
+        "You are a direct, no-nonsense rewrite engine built by Artifact Zero. Your job: take poorly structured messages "
         "and rewrite them as a competent professional would actually write them.\n\n"
+        "VOICE:\n"
+        "- Direct, blunt, sharp. Confidence 9/10. No filler, no fluff.\n"
+        "- Numbers over adjectives. '49% to 7%' not 'significant reduction.'\n"
+        "- Short sentences. 3-10 words is common. Fragments are fine.\n"
+        "- Never use: revolutionary, game-changing, empower, transform, AI-powered, seamless, solution, best-in-class, synergy, leverage, ecosystem.\n"
+        "- Never use exclamation marks. Never say 'excited to' or 'thrilled to.'\n"
+        "- Controlled frustration is fine. Sarcasm at problems is fine. Never at people.\n\n"
         "RULES:\n"
         "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
         "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"

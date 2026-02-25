@@ -24,6 +24,7 @@
     { label: 'Examples',  href: '/examples' },
     { label: 'API',       href: '/docs' },
     { label: 'Contact',   href: '/contact' },
+    { label: 'Sign Up',   href: '/signup' },
   ];
 
   // ═══════════════════════════════════════
@@ -138,7 +139,8 @@
       {label:'API',href:'/docs'},
       {label:'Examples',href:'/examples'},
       {label:'Live',href:'/live'},
-      {label:'Contact',href:'/contact'}
+      {label:'Contact',href:'/contact'},
+      {label:'Sign Up',href:'/signup'},
     ];
     footerLinks.forEach(link => {
       const a = document.createElement('a');

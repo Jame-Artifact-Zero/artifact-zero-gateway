@@ -325,6 +325,10 @@ checkBtn.addEventListener('click', async function(){
     });
     const data = await res.json();
     if(data.error){
+      // Show gate rejection or other error to user
+      const errDiv = document.getElementById('results');
+      errDiv.className = 'results show';
+      errDiv.innerHTML = '<div style="text-align:center;padding:24px;color:var(--amber);font-family:\'JetBrains Mono\',monospace;font-size:13px">' + (data.error || 'Scoring error') + '</div>';
       this.textContent = 'SafeCheck';
       this.disabled = false;
       return;
