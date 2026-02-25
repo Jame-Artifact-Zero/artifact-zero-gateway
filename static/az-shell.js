@@ -26,31 +26,6 @@
     { label: 'Contact',   href: '/contact' },
   ];
 
-  const FOOTER_LINKS = [
-    { section: 'Product', links: [
-      { label: 'SafeCheck', href: '/safecheck' },
-      { label: 'Score', href: '/score' },
-      { label: 'Compose', href: '/compose' },
-      { label: 'Control Room', href: '/chat' },
-      { label: 'Governance Lab', href: '/lab' },
-    ]},
-    { section: 'Live', links: [
-      { label: 'News Feed', href: '/live' },
-      { label: 'Knoxville', href: '/live/knoxville' },
-      { label: 'Anderson County', href: '/live/anderson-county' },
-      { label: 'Troll Wall', href: '/wall' },
-    ]},
-    { section: 'Developers', links: [
-      { label: 'API Docs', href: '/docs' },
-      { label: 'Examples', href: '/examples' },
-      { label: 'Pricing', href: '/docs#pricing' },
-    ]},
-    { section: 'Company', links: [
-      { label: 'Contact', href: '/contact' },
-      { label: 'Relay', href: '/relay' },
-    ]},
-  ];
-
   // ═══════════════════════════════════════
   // STYLES (injected once)
   // ═══════════════════════════════════════
@@ -65,19 +40,17 @@
       .az-topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s;padding:4px 0}
       .az-topbar nav a:hover{color:#e8eaf0}
       .az-topbar nav a.active{color:#00e89c}
-      .az-footer{border-top:1px solid #252a35;padding:48px 20px 32px;margin-top:60px;background:#0a0c10}
-      .az-footer-grid{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
-      .az-footer-section h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#6b7280;margin-bottom:12px;text-transform:uppercase}
-      .az-footer-section a{display:block;font-size:13px;color:#9ca3af;text-decoration:none;padding:3px 0;transition:color .15s}
-      .az-footer-section a:hover{color:#00e89c}
-      .az-footer-bottom{max-width:900px;margin:24px auto 0;padding-top:20px;border-top:1px solid #1a1e27;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#4b5563}
-      .az-footer-bottom a{color:#6b7280;text-decoration:none}
-      .az-footer-bottom a:hover{color:#00e89c}
+      .az-footer{border-top:1px solid #252a35;padding:14px 24px;background:#0a0c10;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px}
+      .az-footer-left{color:#4b5563}
+      .az-footer-right{display:flex;gap:16px}
+      .az-footer-right a{color:#6b7280;text-decoration:none;font-size:11px;letter-spacing:1px;transition:color .15s}
+      .az-footer-right a:hover{color:#00e89c}
       @media(max-width:640px){
         .az-topbar{padding:12px 16px}
         .az-topbar nav{gap:12px}
         .az-topbar nav a{font-size:9px;letter-spacing:1px}
-        .az-footer-grid{grid-template-columns:repeat(2,1fr);gap:24px}
+        .az-footer{flex-direction:column;gap:8px;text-align:center;padding:12px 16px}
+        .az-footer-right{flex-wrap:wrap;justify-content:center}
       }
     `;
     document.head.appendChild(style);
@@ -87,13 +60,14 @@
   // DETECT & REMOVE EXISTING TOPBAR
   // ═══════════════════════════════════════
   function removeExisting(){
-    // Common patterns for existing topbars across all AZ pages
+    // Common patterns for existing topbars/footers across all AZ pages
     const selectors = [
       '.topbar',           // safecheck, docs, score, dashboards, etc
       '.nav',              // contact, examples, wall
       '.header-bar',
       'header.topbar',
       '[class*="topbar"]',
+      '.footer',           // old inline footers
     ];
     selectors.forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
@@ -152,31 +126,27 @@
     const footer = document.createElement('div');
     footer.className = 'az-footer';
 
-    const grid = document.createElement('div');
-    grid.className = 'az-footer-grid';
+    const left = document.createElement('span');
+    left.className = 'az-footer-left';
+    left.textContent = `\u00A9 ${new Date().getFullYear()} Artifact Zero Labs \u00B7 Knoxville, TN`;
+    footer.appendChild(left);
 
-    FOOTER_LINKS.forEach(section => {
-      const col = document.createElement('div');
-      col.className = 'az-footer-section';
-      const h4 = document.createElement('h4');
-      h4.textContent = section.section;
-      col.appendChild(h4);
-      section.links.forEach(link => {
-        const a = document.createElement('a');
-        a.href = link.href;
-        a.textContent = link.label;
-        col.appendChild(a);
-      });
-      grid.appendChild(col);
+    const right = document.createElement('span');
+    right.className = 'az-footer-right';
+    const footerLinks = [
+      {label:'SafeCheck',href:'/safecheck'},
+      {label:'API',href:'/docs'},
+      {label:'Examples',href:'/examples'},
+      {label:'Live',href:'/live'},
+      {label:'Contact',href:'/contact'}
+    ];
+    footerLinks.forEach(link => {
+      const a = document.createElement('a');
+      a.href = link.href;
+      a.textContent = link.label;
+      right.appendChild(a);
     });
-
-    footer.appendChild(grid);
-
-    // Bottom bar
-    const bottom = document.createElement('div');
-    bottom.className = 'az-footer-bottom';
-    bottom.innerHTML = `<span>&copy; ${new Date().getFullYear()} Artifact Zero Labs · Knoxville, TN</span><span><a href="/docs">API</a> · <a href="/contact">Contact</a></span>`;
-    footer.appendChild(bottom);
+    footer.appendChild(right);
 
     document.body.appendChild(footer);
   }
