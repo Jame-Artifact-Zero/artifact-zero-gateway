@@ -371,8 +371,8 @@ function renderResults(data, originalText){
     fix: 'Add when you need it by. "By Friday" or "before the meeting."'
   });
   if((comp.q4||0) < 0.7) findings.push({
-    issue: "It's not clear what you're actually asking for.",
-    fix: "Start with what you need. One sentence."
+    issue: "Your message drifts from its own point. Filler, hedges, or tangents are pulling it off course.",
+    fix: "Cut anything that doesn't directly support your ask."
   });
   if(fm.UDDS && !String(fm.UDDS).includes('FALSE')) findings.push({
     issue: "You agreed to something before saying what you actually need.",
@@ -479,6 +479,8 @@ function renderResults(data, originalText){
     {label:'CONSTRAINT DENSITY', val:comp.q1||0, desc:'% of content with explicit rules/boundaries'},
     {label:'ASK ARCHITECTURE', val:comp.q2||0, desc:'Main point positioned before capability claims'},
     {label:'ENFORCEMENT INTEGRITY', val:comp.q3||0, desc:'Freedom from deferral and erosion markers'},
+    {label:'TILT RESISTANCE', val:comp.q4||0, desc:'Resistance to drift patterns and filler'},
+    {label:'FAILURE MODE SEVERITY', val:sc.components?.d5||data.score?.components?.d5||0, desc:'Freedom from structural failure modes (UDDS/DCE/CCA)'},
     {label:'TILT RESISTANCE', val:comp.q4||0, desc:'Resistance to drift patterns'},
   ];
   bars.forEach(b => {
@@ -584,7 +586,10 @@ async function fixIt(){
     const annotations = [];
     if(data.issues) data.issues.forEach(iss => annotations.push(iss));
     if(data.method === 'v3_rule_only') annotations.push('⚠ LLM unavailable — V3 rule-based rewrite used');
-    if(data.v3_actions && data.v3_actions.length > 0) annotations.push(`V3 applied: ${data.v3_actions.join(', ')}`);
+    if(data.v3_actions && data.v3_actions.length > 0) {
+      const actionStrs = data.v3_actions.map(a => typeof a === 'string' ? a : (a.detail || `${a.check}: ${a.action}`));
+      annotations.push(`V3 applied: ${actionStrs.join(', ')}`);
+    }
 
     const srvModel = {name: data.model, color: data.model_color || model.color};
     renderRewrite(data.rewrite, srvModel, data.original_words, data.rewrite_words, parseInt(data.compression)||0, annotations);

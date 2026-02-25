@@ -85,13 +85,16 @@ except ImportError:
     print("[app] admin_dashboard not found, skipping", flush=True)
 
 # ============================================================
-# CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
+# CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
-# v2.0 single monolithic revision includes:
-# - New tilt clusters: T4, T5, T9, T10
+# v3.0 includes:
+# - 5-dimension weighted NII scoring (D1-D5, continuous 0-100)
+# - Tilt clusters: T1-T10
 # - Broadened DCE markers (soft deferral)
-# - NII q3 penalizes: boundary absence + new structural tilt clusters
-# - No changes to layer schema, dominance order, or UDDS count logic
+# - V3 self-audit loop, time collapse, attribution drift stripping
+# - Convergence gate, loop detection, consolidation engine
+# - Confusion layer, axis2 friction, audit source tagging
+# - Full enforcement priority tree (L0-L4)
 # ============================================================
 NTI_VERSION = "canonical-nti-v3.0"
 
@@ -860,22 +863,23 @@ def api_score_free():
     try:
         l0 = detect_l0_constraints(text)
         obj = objective_extract(text)
-        drift = objective_drift("", text)
-        framing = detect_l2_framing(text)
         tilt = classify_tilt(text)
-        udds = detect_udds("", text, l0)
-        dce = detect_dce(text, l0)
-        cca = detect_cca("", text)
         dbc = detect_downstream_before_constraint("", text, l0)
         nii = compute_nii("", text, l0, dbc, tilt)
 
+        # Failure modes already computed inside compute_nii — read from detail
+        detail = nii.get("detail", {})
+        udds_state = detail.get("udds", "FALSE")
+        dce_state = detail.get("dce", "FALSE")
+        cca_state = detail.get("cca", "FALSE")
+
         dominance = []
-        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-            dominance.append("CCA")
-        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+        if "CONFIRMED" in udds_state or "PROBABLE" in udds_state:
             dominance.append("UDDS")
-        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+        if "CONFIRMED" in dce_state or "PROBABLE" in dce_state:
             dominance.append("DCE")
+        if "CONFIRMED" in cca_state or "PROBABLE" in cca_state:
+            dominance.append("CCA")
         if not dominance:
             dominance = ["NONE"]
     except Exception as e:
@@ -893,7 +897,7 @@ def api_score_free():
             "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
         },
         "failure_modes": {
-            "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
+            "UDDS": udds_state, "DCE": dce_state, "CCA": cca_state,
             "dominance": dominance
         },
         "tilt": {"tags": tilt, "count": len(tilt)},
@@ -906,7 +910,7 @@ def api_score_free():
     # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
     try:
         from core_engine.v3_enforcement import self_audit
-        audit = self_audit(text, objective=obj.get("objective_text") if 'obj' in dir() else None)
+        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
         result["v3"] = {
             "enforced_text": audit["enforced_text"],
             "actions_taken": audit["actions_taken"],
