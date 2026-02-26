@@ -524,6 +524,7 @@ tr:hover{{background:var(--s2)}}
   <h3>Fortune 500 + VC Fund Scraper</h3>
   <p style="color:var(--m);font-size:11px;margin-bottom:12px">Re-scrapes corporate pages and re-scores. Takes 5-15 minutes.</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn" onclick="runSeed()" style="background:#a78bfa;border-color:#a78bfa">SEED DATA (score + store)</button>
     <button class="btn" onclick="runScrape('both',50)">RESCRAPE ALL (50)</button>
     <button class="btn btn-s" onclick="runScrape('f500',50)">F500 ONLY</button>
     <button class="btn btn-s" onclick="runScrape('vc',30)">VC ONLY</button>
@@ -567,6 +568,7 @@ function sP(){{fetch(aU('/az-cockpit/api/pricing'),{{method:'POST',headers:{{'Co
 function sC(){{fetch(aU('/az-cockpit/api/copy'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{hero_h1:document.getElementById('c-h1').value,hero_sub:document.getElementById('c-sub').value,cta_btn:document.getElementById('c-cta').value,custom_selector:document.getElementById('c-sel').value,custom_value:document.getElementById('c-val').value}})}}).then(r=>r.json()).then(()=>toast('Copy updated'))}}
 function pA(){{const em=document.getElementById('a-email').value;if(!em)return;if(!confirm('Grant admin to '+em+'?'))return;fetch(aU('/az-cockpit/api/set-admin-email'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email:em}})}}).then(r=>r.json()).then(d=>toast(d.affected?'Admin granted':'User not found'))}}
 function runScrape(target,limit){{const st=document.getElementById('scrape-status');st.textContent='Starting scrape...';st.style.color='#f59e0b';fetch(aU('/az-cockpit/api/rescrape'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{target:target,limit:limit}})}}).then(r=>r.json()).then(d=>{{if(d.error){{st.textContent=d.error;st.style.color='#ef4444';}}else{{st.textContent='Running: '+target+' (limit '+limit+')... started '+d.started;st.style.color='#00e89c';pollScrape();}}}}).catch(e=>{{st.textContent='Error: '+e;st.style.color='#ef4444';}})}}
+function runSeed(){{const st=document.getElementById('scrape-status');st.textContent='Seeding data...';st.style.color='#a78bfa';fetch(aU('/az-cockpit/api/run-seed'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:'{{}}'}}).then(r=>r.json()).then(d=>{{if(d.error){{st.textContent=d.error;st.style.color='#ef4444';}}else{{st.textContent='Seeding in progress... started '+d.started;st.style.color='#a78bfa';pollScrape();}}}}).catch(e=>{{st.textContent='Error: '+e;st.style.color='#ef4444';}})}}
 function pollScrape(){{const st=document.getElementById('scrape-status');const iv=setInterval(()=>{{fetch(aU('/az-cockpit/api/rescrape-status')).then(r=>r.json()).then(d=>{{if(d.running){{st.textContent='⏳ Scraping... started '+d.started;st.style.color='#f59e0b';}}else if(d.last_result){{st.textContent='✓ '+d.last_result;st.style.color='#00e89c';clearInterval(iv);}}}})}},5000)}}
 setTimeout(()=>location.reload(),60000);
 </script></body></html>'''
@@ -625,6 +627,233 @@ def api_rescrape_status():
     if not _is_admin():
         return jsonify(error="unauthorized"), 403
     return jsonify(**_scrape_status)
+
+
+@admin.route('/az-cockpit/api/seed-score', methods=['POST'])
+def api_seed_score():
+    """Seed a company/fund score: accepts text, scores via NTI engine, writes to DB."""
+    if not _is_admin():
+        return jsonify(error="unauthorized"), 403
+    data = request.get_json(silent=True) or {}
+    table = data.get("table", "fortune500_scores")  # or "vc_fund_scores"
+    name_col = "company_name" if table == "fortune500_scores" else "fund_name"
+    slug = data.get("slug")
+    name = data.get("name")
+    rank = data.get("rank", 0)
+    url = data.get("url", "")
+    text = data.get("text", "")
+    if not slug or not name or len(text) < 50:
+        return jsonify(error="Need slug, name, and text (50+ chars)"), 400
+
+    # Score via NTI engine on the server
+    import requests as req
+    try:
+        r = req.post("http://127.0.0.1:10000/nti", json={"text": text}, timeout=30)
+        score_data = r.json()
+    except Exception as e:
+        return jsonify(error=f"Scoring failed: {e}"), 500
+
+    # Extract NII
+    nii_raw = 0
+    if "nii" in score_data:
+        nii = score_data["nii"]
+        nii_raw = nii.get("nii_score", 0) if isinstance(nii, dict) else nii
+    nii_display = round(nii_raw * 100) if isinstance(nii_raw, float) and nii_raw <= 1.0 else round(nii_raw)
+
+    # Count issues
+    issues = 0
+    fm = score_data.get("parent_failure_modes") or score_data.get("failure_modes", {})
+    if isinstance(fm, dict):
+        for key in ["UDDS", "DCE", "CCA"]:
+            val = fm.get(key)
+            if isinstance(val, dict):
+                st = str(val.get(f"{key.lower()}_state", ""))
+                if "CONFIRMED" in st or "PROBABLE" in st:
+                    issues += 1
+    tilt = score_data.get("tilt_taxonomy") or []
+    if isinstance(tilt, list):
+        issues += len(tilt)
+
+    now = utc_now()
+    conn = None
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute(f"""
+                INSERT INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (slug) DO UPDATE SET
+                    homepage_copy=EXCLUDED.homepage_copy, score_json=EXCLUDED.score_json,
+                    nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count,
+                    last_checked=EXCLUDED.last_checked, last_changed=EXCLUDED.last_changed
+            """, (slug, name, rank, url, text, json.dumps(score_data), nii_display, issues, now, now))
+        else:
+            cur.execute(f"""
+                INSERT OR REPLACE INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (slug, name, rank, url, text, json.dumps(score_data), nii_display, issues, now, now))
+        conn.commit()
+        conn.close()
+        return jsonify(ok=True, slug=slug, nii=nii_display, issues=issues)
+    except Exception as e:
+        if conn: conn.close()
+        return jsonify(error=str(e)), 500
+
+
+@admin.route('/az-cockpit/api/seed-batch', methods=['POST'])
+def api_seed_batch():
+    """Seed multiple companies in one call."""
+    if not _is_admin():
+        return jsonify(error="unauthorized"), 403
+    data = request.get_json(silent=True) or {}
+    items = data.get("items", [])
+    results = []
+    for item in items:
+        try:
+            import requests as req
+            text = item.get("text", "")
+            if len(text) < 50:
+                results.append({"slug": item.get("slug"), "error": "text too short"})
+                continue
+            r = req.post("http://127.0.0.1:10000/nti", json={"text": text}, timeout=30)
+            score_data = r.json()
+
+            nii_raw = 0
+            if "nii" in score_data:
+                nii = score_data["nii"]
+                nii_raw = nii.get("nii_score", 0) if isinstance(nii, dict) else nii
+            nii_display = round(nii_raw * 100) if isinstance(nii_raw, float) and nii_raw <= 1.0 else round(nii_raw)
+
+            issues = 0
+            fm = score_data.get("parent_failure_modes") or {}
+            if isinstance(fm, dict):
+                for key in ["UDDS", "DCE", "CCA"]:
+                    val = fm.get(key)
+                    if isinstance(val, dict):
+                        st = str(val.get(f"{key.lower()}_state", ""))
+                        if "CONFIRMED" in st or "PROBABLE" in st:
+                            issues += 1
+            tilt = score_data.get("tilt_taxonomy") or []
+            if isinstance(tilt, list):
+                issues += len(tilt)
+
+            table = item.get("table", "fortune500_scores")
+            name_col = "company_name" if table == "fortune500_scores" else "fund_name"
+            now = utc_now()
+
+            import db as database
+            conn = database.db_connect()
+            cur = conn.cursor()
+            if database.USE_PG:
+                cur.execute(f"""
+                    INSERT INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (slug) DO UPDATE SET
+                        homepage_copy=EXCLUDED.homepage_copy, score_json=EXCLUDED.score_json,
+                        nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count,
+                        last_checked=EXCLUDED.last_checked, last_changed=EXCLUDED.last_changed
+                """, (item["slug"], item["name"], item.get("rank", 0), item.get("url", ""), text, json.dumps(score_data), nii_display, issues, now, now))
+            else:
+                cur.execute(f"""
+                    INSERT OR REPLACE INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (item["slug"], item["name"], item.get("rank", 0), item.get("url", ""), text, json.dumps(score_data), nii_display, issues, now, now))
+            conn.commit()
+            conn.close()
+            results.append({"slug": item["slug"], "nii": nii_display, "issues": issues})
+        except Exception as e:
+            results.append({"slug": item.get("slug"), "error": str(e)})
+    return jsonify(results=results)
+
+
+@admin.route('/az-cockpit/api/run-seed', methods=['POST'])
+def api_run_seed():
+    """Load seed_data.py and score+store all companies and VC funds."""
+    if not _is_admin():
+        return jsonify(error="unauthorized"), 403
+    if _scrape_status["running"]:
+        return jsonify(error="Already running"), 409
+
+    import threading
+    def _run():
+        _scrape_status["running"] = True
+        _scrape_status["started"] = utc_now()
+        _scrape_status["last_result"] = None
+        try:
+            from seed_data import FORTUNE_500, VC_FUNDS
+            import requests as req
+            import db as database
+
+            ok_f, ok_v, total = 0, 0, 0
+            all_items = [(item, "fortune500_scores", "company_name") for item in FORTUNE_500] + \
+                        [(item, "vc_fund_scores", "fund_name") for item in VC_FUNDS]
+
+            for item, table, name_col in all_items:
+                total += 1
+                try:
+                    text = item["text"]
+                    r = req.post("http://127.0.0.1:10000/nti", json={"text": text}, timeout=30)
+                    score_data = r.json()
+                    if "error" in score_data:
+                        continue
+
+                    nii_raw = 0
+                    if "nii" in score_data:
+                        nii = score_data["nii"]
+                        nii_raw = nii.get("nii_score", 0) if isinstance(nii, dict) else nii
+                    nii_display = round(nii_raw * 100) if isinstance(nii_raw, float) and nii_raw <= 1.0 else round(nii_raw)
+
+                    issues = 0
+                    fm = score_data.get("parent_failure_modes") or {}
+                    if isinstance(fm, dict):
+                        for key in ["UDDS", "DCE", "CCA"]:
+                            val = fm.get(key)
+                            if isinstance(val, dict):
+                                st = str(val.get(f"{key.lower()}_state", ""))
+                                if "CONFIRMED" in st or "PROBABLE" in st:
+                                    issues += 1
+                    tilt = score_data.get("tilt_taxonomy") or []
+                    if isinstance(tilt, list):
+                        issues += len(tilt)
+
+                    now = utc_now()
+                    conn = database.db_connect()
+                    cur = conn.cursor()
+                    if database.USE_PG:
+                        cur.execute(f"""
+                            INSERT INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (slug) DO UPDATE SET
+                                homepage_copy=EXCLUDED.homepage_copy, score_json=EXCLUDED.score_json,
+                                nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count,
+                                last_checked=EXCLUDED.last_checked, last_changed=EXCLUDED.last_changed
+                        """, (item["slug"], item["name"], item.get("rank", 0), item.get("url", ""), text, json.dumps(score_data), nii_display, issues, now, now))
+                    else:
+                        cur.execute(f"""
+                            INSERT OR REPLACE INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (item["slug"], item["name"], item.get("rank", 0), item.get("url", ""), text, json.dumps(score_data), nii_display, issues, now, now))
+                    conn.commit()
+                    conn.close()
+                    if table == "fortune500_scores":
+                        ok_f += 1
+                    else:
+                        ok_v += 1
+                    print(f"[SEED] {item['slug']}: NII={nii_display} issues={issues}", flush=True)
+                except Exception as e:
+                    print(f"[SEED] Error {item.get('slug')}: {e}", flush=True)
+
+            _scrape_status["last_result"] = f"Done. F500: {ok_f}/{len(FORTUNE_500)} | VC: {ok_v}/{len(VC_FUNDS)}"
+        except Exception as e:
+            _scrape_status["last_result"] = f"Error: {e}"
+        finally:
+            _scrape_status["running"] = False
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return jsonify(ok=True, started=_scrape_status["started"])
 
 
 def init_admin(app):
