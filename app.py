@@ -3,115 +3,25 @@ import re
 import json
 import time
 import uuid
+import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from pre_score_gate import pre_score_gate
 
-from flask import Flask, request, jsonify, render_template, session
-import db as database
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
-# ── Session Security ──
-_secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
-if not _secret:
-    _secret = uuid.uuid4().hex + uuid.uuid4().hex          # random per-boot fallback (sessions won't persist across restarts, but never guessable)
-    print("[SECURITY] WARNING: No FLASK_SECRET_KEY or AZ_SECRET set — using random ephemeral key", flush=True)
-app.secret_key = _secret
-app.config["SESSION_COOKIE_SECURE"] = True                  # only send over HTTPS
-app.config["SESSION_COOKIE_HTTPONLY"] = True                 # no JS access
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"               # CSRF protection for top-level nav
-app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7        # 7 day max session
-
-# ── CSRF Protection ──
-from csrf import init_csrf
-init_csrf(app)
-
-
-# ═══════════════════════════════════════════
-# AUTH STATE — available to all templates + JS
-# ═══════════════════════════════════════════
-@app.context_processor
-def inject_auth_state():
-    """Make logged_in and user_email available in all templates."""
-    from flask import session as flask_session
-    uid = flask_session.get("user_id")
-    if uid:
-        return {"logged_in": True, "user_id": uid}
-    return {"logged_in": False, "user_id": None}
-
-
-@app.route("/api/auth/status")
-def auth_status():
-    """Lightweight endpoint for JS nav state check."""
-    uid = session.get("user_id")
-    if uid:
-        return jsonify({"logged_in": True})
-    return jsonify({"logged_in": False})
-
-# Register blueprints
-try:
-    from auth import auth_bp
-    app.register_blueprint(auth_bp)
-except ImportError:
-    print("[app] auth not found, skipping", flush=True)
-
-try:
-    from rss_proxy import rss_bp
-    app.register_blueprint(rss_bp)
-except ImportError:
-    print("[app] rss_proxy not found, skipping", flush=True)
-
-try:
-    from user_feeds import user_feeds_bp
-    app.register_blueprint(user_feeds_bp)
-except ImportError:
-    print("[app] user_feeds not found, skipping", flush=True)
-
-try:
-    from your_os import your_os
-    app.register_blueprint(your_os)
-except ImportError:
-    print("[app] your_os not found, skipping", flush=True)
-
-try:
-    from control_room_bp import control_room_bp
-    app.register_blueprint(control_room_bp)
-except ImportError:
-    print("[app] control_room_bp not found, skipping", flush=True)
-
-try:
-    from az_relay import az_relay
-    app.register_blueprint(az_relay)
-except ImportError:
-    print("[app] az_relay not found, skipping", flush=True)
-
-try:
-    from credits import credits_bp
-    app.register_blueprint(credits_bp)
-    print("[app] credits system loaded", flush=True)
-except ImportError:
-    print("[app] credits not found, skipping", flush=True)
-
-try:
-    from admin_dashboard import init_admin
-    init_admin(app)
-except ImportError:
-    print("[app] admin_dashboard not found, skipping", flush=True)
-
 # ============================================================
-# CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
+# CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
-# v3.0 includes:
-# - 5-dimension weighted NII scoring (D1-D5, continuous 0-100)
-# - Tilt clusters: T1-T10
+# v2.0 single monolithic revision includes:
+# - New tilt clusters: T4, T5, T9, T10
 # - Broadened DCE markers (soft deferral)
-# - V3 self-audit loop, time collapse, attribution drift stripping
-# - Convergence gate, loop detection, consolidation engine
-# - Confusion layer, axis2 friction, audit source tagging
-# - Full enforcement priority tree (L0-L4)
+# - NII q3 penalizes: boundary absence + new structural tilt clusters
+# - No changes to layer schema, dominance order, or UDDS count logic
 # ============================================================
-NTI_VERSION = "canonical-nti-v3.0"
+NTI_VERSION = "canonical-nti-v2.0"
+DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
 
 
 # ==========================
@@ -121,7 +31,54 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-database.db_init()
+def db_connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def db_init() -> None:
+    conn = db_connect()
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS requests (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        route TEXT NOT NULL,
+        ip TEXT,
+        user_agent TEXT,
+        session_id TEXT,
+        latency_ms INTEGER,
+        payload_json TEXT,
+        error TEXT
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS results (
+        request_id TEXT PRIMARY KEY,
+        version TEXT NOT NULL,
+        result_json TEXT NOT NULL,
+        FOREIGN KEY(request_id) REFERENCES requests(id)
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS events (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        session_id TEXT,
+        event_name TEXT NOT NULL,
+        event_json TEXT NOT NULL
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+db_init()
 
 
 # ==========================
@@ -149,17 +106,41 @@ def record_request(
 ) -> None:
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     ua = request.headers.get("User-Agent")
-    database.record_request(
-        request_id, route, ip, ua, session_id,
-        latency_ms, json.dumps(payload, ensure_ascii=False), error
-    )
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT OR REPLACE INTO requests
+        (id, created_at, route, ip, user_agent, session_id, latency_ms, payload_json, error)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        request_id,
+        utc_now_iso(),
+        route,
+        ip,
+        ua,
+        session_id,
+        latency_ms,
+        json.dumps(payload, ensure_ascii=False),
+        error
+    ))
+    conn.commit()
+    conn.close()
 
 
 def record_result(request_id: str, result: Dict[str, Any]) -> None:
-    database.record_result(
-        request_id, NTI_VERSION,
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT OR REPLACE INTO results
+        (request_id, version, result_json)
+        VALUES (?, ?, ?)
+    """, (
+        request_id,
+        NTI_VERSION,
         json.dumps(result, ensure_ascii=False)
-    )
+    ))
+    conn.commit()
+    conn.close()
 
 
 # ==========================
@@ -384,118 +365,39 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
 # NOTE: Schema preserved: q1/q2/q3 + nii_score.
 # q3 now penalizes boundary absence AND structural drift tilt categories (T2/T4/T5/T9/T10).
 # ==========================
-def _split_sentences(text):
-    """Split text into sentences for per-sentence analysis."""
-    import re
-    return [s.strip() for s in re.split(r'[.!?]+', text) if s.strip() and len(s.strip()) > 3]
-
-
 def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
-    """
-    NTI Integrity Index v2 — 5-dimension weighted scoring.
-    Returns 0-100 continuous score with 6 bands.
+    q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
+    q2 = 0.0 if downstream_before_constraints else 1.0
 
-    Dimensions (weights sum to 1.0):
-      D1: Constraint Density    (25%) — % of sentences containing explicit constraints
-      D2: Ask Architecture      (20%) — Ask positioned before capability claims
-      D3: Enforcement Integrity (20%) — Freedom from deferral/erosion markers
-      D4: Tilt Resistance       (15%) — Resistance to drift patterns
-      D5: Failure Mode Severity (20%) — UDDS/DCE/CCA penalty
-    """
-    text = answer or prompt or ""
-    sents = _split_sentences(text)
-    total_sents = max(len(sents), 1)
-    words = text.split()
-    word_count = max(len(words), 1)
-    t_lower = text.lower()
+    a_lc = (answer or "").lower()
 
-    # D1: CONSTRAINT DENSITY (25%)
-    constraint_sents = sum(1 for s in sents if any(m in s.lower() for m in L0_CONSTRAINT_MARKERS))
-    constraint_ratio = constraint_sents / total_sents
-    constraint_word_hits = sum(1 for m in L0_CONSTRAINT_MARKERS if m in t_lower)
-    constraint_density = min(constraint_word_hits / (word_count / 100), 1.0) if word_count > 0 else 0
-    d1 = constraint_ratio * 0.6 + constraint_density * 0.4
+    boundary_absent = (
+        any(m in a_lc for m in BOUNDARY_ABSENCE_MARKERS) or
+        any(m in a_lc for m in L2_CATEGORY_BLEND) or
+        any(m in a_lc for m in DCE_DEFER_MARKERS) or
+        any(m in a_lc for m in NARRATIVE_STABILIZATION_MARKERS)
+    )
 
-    # D2: ASK ARCHITECTURE (20%)
-    first_sent = sents[0].lower() if sents else ""
-    ask_verbs = ["need", "want", "require", "send", "provide", "confirm", "review", "approve",
-                 "schedule", "complete", "submit", "deliver", "respond", "reply", "call", "meet"]
-    first_sent_has_ask = any(v in first_sent for v in ask_verbs)
-    d2_base = 0.8 if not downstream_before_constraints else 0.2
-    d2 = min(d2_base + (0.2 if first_sent_has_ask else 0.0), 1.0)
+    # Structural risk categories that should reduce integrity (q3)
+    structural_tilt_risk = any(t in tilt_taxonomy for t in [
+        "T2_CERTAINTY_INFLATION",
+        "T4_CAPABILITY_OVERREACH",
+        "T5_ABSOLUTE_LANGUAGE",
+        "T9_SCOPE_EXPANSION",
+        "T10_AUTHORITY_IMPOSITION",
+        "T7_CATEGORY_BLEND",
+        "T6_CONSTRAINT_DEFERRAL",
+        "T1_REASSURANCE_DRIFT"
+    ])
 
-    # D3: ENFORCEMENT INTEGRITY (20%)
-    erosion_markers = BOUNDARY_ABSENCE_MARKERS + DCE_DEFER_MARKERS + NARRATIVE_STABILIZATION_MARKERS
-    clean_sents = sum(1 for s in sents if not any(m in s.lower() for m in erosion_markers))
-    clean_ratio = clean_sents / total_sents
-    framing = detect_l2_framing(text)
-    hedge_count = len(framing.get("hedge_markers", []))
-    reassurance_count = len(framing.get("reassurance_markers", []))
-    blend_count = len(framing.get("category_blend_markers", []))
-    hedge_penalty = min((hedge_count + reassurance_count + blend_count) * 0.05, 0.4)
-    d3 = max(0, clean_ratio - hedge_penalty)
+    q3 = 0.0 if (boundary_absent or structural_tilt_risk) else 1.0
 
-    # D4: TILT RESISTANCE (15%)
-    tilt_weights = {
-        "T1_REASSURANCE_DRIFT": 0.08, "T2_CERTAINTY_INFLATION": 0.12,
-        "T3_CONSENSUS_CLAIMS": 0.06, "T4_CAPABILITY_OVERREACH": 0.15,
-        "T5_ABSOLUTE_LANGUAGE": 0.10, "T6_CONSTRAINT_DEFERRAL": 0.12,
-        "T7_CATEGORY_BLEND": 0.06, "T8_PRESSURE_OPTIMIZATION": 0.04,
-        "T9_SCOPE_EXPANSION": 0.10, "T10_AUTHORITY_IMPOSITION": 0.08
-    }
-    tilt_penalty = sum(tilt_weights.get(t, 0.05) for t in tilt_taxonomy)
-    d4 = max(0, 1.0 - tilt_penalty)
-
-    # D5: FAILURE MODE SEVERITY (20%)
-    udds = detect_udds(prompt or "", answer or text, l0_constraints)
-    dce = detect_dce(answer or text, l0_constraints)
-    cca = detect_cca(prompt or "", answer or text)
-    fm_pen = {"CONFIRMED": 0.30, "PROBABLE": 0.15, "FALSE": 0.00}
-    def _fm_p(state):
-        for k, v in fm_pen.items():
-            if k in str(state):
-                return v
-        return 0.0
-    total_fm = min(_fm_p(udds.get("udds_state", "")) + _fm_p(dce.get("dce_state", "")) + _fm_p(cca.get("cca_state", "")), 0.80)
-    d5 = max(0, 1.0 - total_fm)
-
-    # WEIGHTED COMPOSITE
-    raw = (d1 * 0.25 + d2 * 0.20 + d3 * 0.20 + d4 * 0.15 + d5 * 0.20)
-    score = round(raw * 100)
-
-    if score >= 85: label = "STRONG"
-    elif score >= 70: label = "SOLID"
-    elif score >= 55: label = "MODERATE"
-    elif score >= 40: label = "WEAK"
-    elif score >= 25: label = "POOR"
-    else: label = "FAILING"
-
+    score = round((q1 + q2 + q3) / 3.0, 2)
     return {
-        "nii_score": score,
-        "nii_raw": round(raw, 4),
-        "nii_label": label,
-        "d1_constraint_density": round(d1, 3),
-        "d2_ask_architecture": round(d2, 3),
-        "d3_enforcement_integrity": round(d3, 3),
-        "d4_tilt_resistance": round(d4, 3),
-        "d5_failure_mode_severity": round(d5, 3),
-        # Legacy compat: map dimensions to Q names for existing UI
-        "q1": round(d1, 3),
-        "q2": round(d2, 3),
-        "q3": round(d3, 3),
-        "q4": round(d4, 3),
-        "q1_constraints_explicit": round(d1, 3),
-        "q2_constraints_before_capability": round(d2, 3),
-        "q3_substitutes_after_enforcement": round(d3, 3),
-        "detail": {
-            "constraint_sents": constraint_sents, "total_sents": total_sents,
-            "constraint_word_hits": constraint_word_hits,
-            "first_sent_has_ask": first_sent_has_ask,
-            "clean_sents": clean_sents, "hedge_count": hedge_count,
-            "reassurance_count": reassurance_count, "blend_count": blend_count,
-            "tilt_count": len(tilt_taxonomy), "tilt_patterns": tilt_taxonomy[:10],
-            "udds": udds.get("udds_state", ""), "dce": dce.get("dce_state", ""), "cca": cca.get("cca_state", "")
-        }
+        "q1_constraints_explicit": q1,
+        "q2_constraints_before_capability": q2,
+        "q3_substitutes_after_enforcement": q3,
+        "nii_score": score
     }
 
 
@@ -700,325 +602,9 @@ def home():
         return "NTI Canonical Runtime is live."
 
 
-# /relay handled by az_relay blueprint
-
-
-
-@app.route("/your-os")
-def youros_redirect():
-    from flask import redirect
-    return redirect("/your-os/builder", code=301)
-
-
-@app.route("/contact")
-def contact_page():
-    return render_template("contact.html")
-
-
-@app.route("/developers")
-def developers_page():
-    return render_template("developers.html")
-
-
-@app.route("/api/developer-apply", methods=["POST"])
-def api_developer_apply():
-    """Developer/vendor access request. Stores in DB, sends notification."""
-    data = request.get_json() or {}
-    name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip()
-    message = (data.get("message") or "").strip()
-    if not name or not email or not message:
-        return jsonify({"error": "All fields required"}), 400
-    try:
-        conn = _get_db()
-        conn.execute(
-            "INSERT INTO contact_submissions (name, email, message, type, created_at) VALUES (?, ?, ?, ?, ?)",
-            (name, email, message, "developer_apply", utc_now_iso())
-        )
-        conn.commit()
-    except Exception:
-        pass  # DB table may not exist yet — fail silently, log below
-    log_json_line("developer_apply", {"name": name, "email": email, "message": message[:200]})
-    return jsonify({"status": "ok"})
-
-
-@app.route("/compose")
-def compose_page():
-    return render_template("compose.html")
-
-
-@app.route("/examples")
-def examples_page():
-    return render_template("examples.html")
-
-
-@app.route("/wall")
-def wall_page():
-    return render_template("wall.html")
-
-
-@app.route("/docs")
-def docs():
-    return render_template("docs.html")
-
-
-@app.route("/score")
-def score_page():
-    return render_template("score.html")
-
-
-@app.route("/safecheck")
-def safecheck_page():
-    return render_template("safecheck.html")
-
-
-@app.route("/fortune500")
-@app.route("/live")
-def fortune500_page():
-    return render_template("fortune500.html")
-
-
-@app.route("/scored/<slug>")
-def scored_page(slug):
-    return render_template("scored.html")
-
-
-@app.route("/api/fortune500", methods=["GET"])
-def api_fortune500_list():
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        else:
-            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
-            rows = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return jsonify({"companies": rows})
-    except Exception as e:
-        return jsonify({"companies": [], "note": "Scores loading. Check back soon."})
-
-
-@app.route("/api/fortune500/<slug>", methods=["GET"])
-def api_fortune500_detail(slug):
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        # Check fortune500 first, then vc_fund_scores
-        for table in ["fortune500_scores", "vc_fund_scores"]:
-            if database.USE_PG:
-                cur.execute(f"SELECT * FROM {table} WHERE slug = %s", (slug,))
-                row = cur.fetchone()
-                if row:
-                    cols = [d[0] for d in cur.description]
-                    result = dict(zip(cols, row))
-                    # Normalize: vc table has fund_name, f500 has company_name
-                    if "fund_name" in result and "company_name" not in result:
-                        result["company_name"] = result["fund_name"]
-                    conn.close()
-                    return jsonify(result)
-            else:
-                cur.execute(f"SELECT * FROM {table} WHERE slug = ?", (slug,))
-                row = cur.fetchone()
-                if row:
-                    result = dict(row)
-                    if "fund_name" in result and "company_name" not in result:
-                        result["company_name"] = result["fund_name"]
-                    conn.close()
-                    return jsonify(result)
-        conn.close()
-        return jsonify({"error": "Not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/vc-funds")
-def vc_funds_page():
-    return render_template("vc_funds.html")
-
-
-@app.route("/api/vc-funds", methods=["GET"])
-def api_vc_funds_list():
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        else:
-            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
-            rows = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return jsonify({"funds": rows})
-    except Exception as e:
-        return jsonify({"funds": [], "note": "Scores loading. Check back soon."})
-
-
-@app.route("/api/vc-funds/<slug>", methods=["GET"])
-def api_vc_fund_detail(slug):
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT * FROM vc_fund_scores WHERE slug = %s", (slug,))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                return jsonify({"error": "Not found"}), 404
-            cols = [d[0] for d in cur.description]
-            result = dict(zip(cols, row))
-        else:
-            cur.execute("SELECT * FROM vc_fund_scores WHERE slug = ?", (slug,))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                return jsonify({"error": "Not found"}), 404
-            result = dict(row)
-        conn.close()
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# Free tier scoring — no API key, IP-limited
-_free_usage = {}
-
-@app.route("/api/v1/score/free", methods=["POST"])
-def api_score_free():
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    month_key = f"{ip}:{datetime.now(timezone.utc).strftime('%Y-%m')}"
-    count = _free_usage.get(month_key, 0)
-    if count >= 10:
-        return jsonify({"error": "Free tier limit reached (10/month)", "upgrade": "https://artifact0.com/docs#pricing"}), 429
-    
-    t0 = time.time()
-    payload = request.get_json() or {}
-    text = payload.get("text", "").strip()
-    if not text:
-        return jsonify({"error": "Missing 'text' field"}), 400
-    if len(text) > 50000:
-        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
-
-    # V2 PRE-SCORE GATE — reject gibberish/junk before scoring
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    try:
-        l0 = detect_l0_constraints(text)
-        obj = objective_extract(text)
-        tilt = classify_tilt(text)
-        dbc = detect_downstream_before_constraint("", text, l0)
-        nii = compute_nii("", text, l0, dbc, tilt)
-
-        # Failure modes already computed inside compute_nii — read from detail
-        detail = nii.get("detail", {})
-        udds_state = detail.get("udds", "FALSE")
-        dce_state = detail.get("dce", "FALSE")
-        cca_state = detail.get("cca", "FALSE")
-
-        dominance = []
-        if "CONFIRMED" in udds_state or "PROBABLE" in udds_state:
-            dominance.append("UDDS")
-        if "CONFIRMED" in dce_state or "PROBABLE" in dce_state:
-            dominance.append("DCE")
-        if "CONFIRMED" in cca_state or "PROBABLE" in cca_state:
-            dominance.append("CCA")
-        if not dominance:
-            dominance = ["NONE"]
-    except Exception as e:
-        return jsonify({"error": "Scoring error", "detail": str(e)}), 500
-
-    _free_usage[month_key] = count + 1
-    latency_ms = int((time.time() - t0) * 1000)
-
-    result = {
-        "status": "ok",
-        "version": NTI_VERSION,
-        "score": {
-            "nii": nii.get("nii_score"),
-            "nii_label": nii.get("nii_label"),
-            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
-        },
-        "failure_modes": {
-            "UDDS": udds_state, "DCE": dce_state, "CCA": cca_state,
-            "dominance": dominance
-        },
-        "tilt": {"tags": tilt, "count": len(tilt)},
-        "meta": {
-            "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
-            "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
-        }
-    }
-
-    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
-    try:
-        from core_engine.v3_enforcement import self_audit
-        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
-        result["v3"] = {
-            "enforced_text": audit["enforced_text"],
-            "actions_taken": audit["actions_taken"],
-            "time_collapse_applied": audit["time_collapse_applied"],
-            "compression_ratio": audit["compression_ratio"],
-            "passed": audit["passed"],
-        }
-    except Exception as e:
-        result["v3"] = {"error": str(e), "passed": True}
-
-    return jsonify(result)
-
-
 @app.route("/health")
 def health():
-
-# ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
-@app.route("/api/promote-admin", methods=["POST"])
-def promote_admin():
-    """One-time admin promotion. DELETE THIS ROUTE AFTER USE."""
-    token = os.getenv("ADMIN_PROMOTE_TOKEN") or "aztempfix2026"
-    if not token:
-        return jsonify(error="disabled"), 404
-    data = request.get_json(silent=True) or {}
-    if data.get("token") != token:
-        return jsonify(error="bad token"), 403
-    email = data.get("email", "").strip().lower()
-    if not email:
-        return jsonify(error="no email"), 400
-    conn = db.db_connect()
-    cur = conn.cursor()
-    if db.USE_PG:
-        cur.execute("UPDATE users SET role='admin' WHERE email=%s", (email,))
-    else:
-        cur.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
-    affected = cur.rowcount
-    conn.commit()
-    conn.close()
-    return jsonify(ok=True, affected=affected, email=email)
     return jsonify({"status": "ok", "version": NTI_VERSION})
-
-
-
-
-@app.route("/health/db")
-def health_db():
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT current_database(), version()")
-            row = cur.fetchone()
-            conn.close()
-            return jsonify({"db": "postgresql", "database": row[0], "version": row[1][:40]})
-        else:
-            cur.execute("SELECT sqlite_version()")
-            row = cur.fetchone()
-            conn.close()
-            return jsonify({"db": "sqlite", "version": row[0], "path": database.DB_PATH})
-    except Exception as e:
-        return jsonify({"db": "error", "detail": str(e)}), 500
 
 
 @app.route("/canonical/status")
@@ -1035,80 +621,8 @@ def canonical_status():
             "nii_integrity_index": True,
             "jos_template_and_binding": True,
             "telemetry_and_persistence": True
-        },
-        "v3_modules": {
-            "self_audit": True,
-            "time_collapse": True,
-            "attribution_drift": True,
-            "convergence_gate": True,
-            "audit_source": True,
-            "axis2_friction": True,
-            "loop_detection": True,
-            "consolidation_engine": True,
-            "confusion_layer": True,
-            "time_object": True,
-            "nti_full_integration": True,
-            "per_industry_config": False,
         }
     })
-
-
-# ═══════════════════════════════════════
-# V3 ROUTES — Axis 2 + Full Integration
-# ═══════════════════════════════════════
-
-@app.route("/nti-friction", methods=["POST"])
-def nti_friction():
-    """E04 — Axis 2 conversational friction scoring."""
-    try:
-        from axis2_endpoint import handle_request as axis2_handle
-        payload = request.get_json(force=True) or {}
-        return jsonify(axis2_handle(payload))
-    except Exception as e:
-        return jsonify({"error": str(e), "axis": 2}), 500
-
-
-@app.route("/nti-full", methods=["POST"])
-def nti_full():
-    """Full NTI scoring: Axis 1 + Axis 2 + loop + consolidation + confusion + time object."""
-    t0 = time.time()
-    payload = request.get_json(force=True) or {}
-    text = (payload.get("text") or payload.get("input") or payload.get("message") or "").strip()
-
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-
-    # Axis 1 — existing NTI scoring
-    prompt = ""
-    answer = text
-    l0 = detect_l0_constraints(answer)
-    tilt = classify_tilt(answer, prompt, answer)
-    dbc = detect_downstream_before_constraint(prompt, answer, l0)
-    nii = compute_nii(prompt, answer, l0, dbc, tilt)
-
-    axis1 = {
-        "nii": nii,
-        "l0_constraints": l0,
-        "tilt_taxonomy": tilt,
-        "failure_modes": {
-            "udds": detect_udds(prompt, answer, l0),
-            "dce": detect_dce(answer, l0),
-            "cca": detect_cca(prompt, answer),
-        }
-    }
-
-    # Full integration — Axis 2 + detection modules
-    try:
-        from nti_full_integration_stub import build_full
-        request_id = f"nti_{uuid.uuid4().hex[:12]}"
-        payload["request_id"] = request_id
-        full = build_full(payload=payload, axis1=axis1, build_version=NTI_VERSION)
-    except Exception as e:
-        full = {"axis1": axis1, "error": str(e)}
-
-    full["latency_ms"] = int((time.time() - t0) * 1000)
-    full["version"] = NTI_VERSION
-    return jsonify(full)
 
 
 @app.route("/events", methods=["POST"])
@@ -1122,7 +636,14 @@ def events():
         return jsonify({"error": "Missing event name"}), 400
 
     eid = str(uuid.uuid4())
-    database.record_event(eid, session_id, event_name, json.dumps(event_data, ensure_ascii=False))
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO events (id, created_at, session_id, event_name, event_json)
+        VALUES (?, ?, ?, ?, ?)
+    """, (eid, utc_now_iso(), session_id, event_name, json.dumps(event_data, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
 
     log_json_line("event", {"session_id": session_id, "event": event_name, "data": event_data})
     return jsonify({"ok": True, "event_id": eid})
@@ -1158,11 +679,6 @@ def nti_run():
         latency_ms = int((time.time() - t0) * 1000)
         record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
         return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
-
-    # V2 PRE-SCORE GATE
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
 
     l0_constraints = detect_l0_constraints(text)
 
@@ -1240,664 +756,23 @@ def nti_run():
         "tilt": tilt
     })
 
-    # Log to cockpit analytics
-    try:
-        from admin_dashboard import log_nti_run
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        if ip and "," in ip: ip = ip.split(",")[0].strip()
-        log_nti_run(request_id, ip, text, result, latency_ms, session_id)
-    except Exception:
-        pass
-
     result["telemetry"] = {
         "request_id": request_id,
         "session_id": session_id,
         "latency_ms": latency_ms
     }
 
-    # I04 — audit source tagging
-    try:
-        from audit_source import normalize_audit_source
-        result["telemetry"]["audit_source"] = normalize_audit_source(
-            (request.get_json(silent=True) or {}).get("source")
-        )
-    except Exception:
-        result["telemetry"]["audit_source"] = "manual"
-
-    # ── V3 ENFORCEMENT: self-audit loop ──
-    # Score own output before delivery. Core governance, not optional.
-    try:
-        from v3_self_audit import run_v3_pipeline
-
-        def _v1_score_fn(txt):
-            """Adapter: run compute_nii on text and return dict with nii_score."""
-            _l0 = detect_l0_constraints(txt)
-            _tilt = classify_tilt(txt)
-            _dbc = detect_downstream_before_constraint("", txt, _l0)
-            _nii = compute_nii("", txt, _l0, _dbc, _tilt)
-            return _nii
-
-        v3 = run_v3_pipeline(
-            output_text=answer or text,
-            v1_score_fn=_v1_score_fn,
-            audit_threshold=0.85,
-            max_passes=2,
-        )
-        result["v3"] = {
-            "enforced_text": v3["output"],
-            "passes": len(v3["passes"]),
-            "final_score": v3["final_score"].get("nii_score") if isinstance(v3["final_score"], dict) else None,
-            "decision": v3["self_audit"]["decision"],
-            "time_collapse_applied": True,
-            "attribution_stripped": True,
-        }
-    except Exception as e:
-        result["v3"] = {"error": str(e), "passed": True}
-
     return jsonify(result)
 
 
-# ═══════════════════════════════════════
-# API v1 — PUBLIC SCORING ENDPOINT
-# ═══════════════════════════════════════
-import secrets as _secrets
-import functools
-
-_TIER_LIMITS = {
-    "free": {"monthly": 10, "rpm": 5},
-    "pro": {"monthly": 500, "rpm": 30},
-    "power": {"monthly": 2000, "rpm": 60},
-    "unlimited": {"monthly": 999999999, "rpm": 120},
-    "starter": {"monthly": 10000, "rpm": 60},
-    "core": {"monthly": 75000, "rpm": 120},
-    "pipeline": {"monthly": 300000, "rpm": 300},
-    "enterprise": {"monthly": 999999999, "rpm": 1000},
-}
-
-_rate_cache = {}
-
-
-def _month_start():
-    now = datetime.now(timezone.utc)
-    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
-
-
-def _minute_key():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
-
-
-def require_api_key(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        api_key = request.headers.get("X-API-Key") or request.args.get("api_key")
-        if not api_key:
-            return jsonify({"error": "Missing API key", "hint": "Pass key in X-API-Key header", "docs": "https://artifact0.com/docs"}), 401
-
-        try:
-            conn = database.db_connect()
-            cur = conn.cursor()
-            if database.USE_PG:
-                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = %s", (api_key,))
-            else:
-                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = ?", (api_key,))
-            row = cur.fetchone()
-            conn.close()
-        except Exception as e:
-            print(f"[api] Key lookup error: {e}", flush=True)
-            return jsonify({"error": "Database error", "detail": str(e)}), 500
-
-        if not row:
-            return jsonify({"error": "Invalid API key"}), 401
-
-        key_id = row[0] if database.USE_PG else row["id"]
-        tier = row[1] if database.USE_PG else row["tier"]
-        active = row[3] if database.USE_PG else row["active"]
-
-        if not active:
-            return jsonify({"error": "API key deactivated"}), 403
-
-        # Credit balance check (replaces monthly limit for paid tiers)
-        if tier != "free":
-            try:
-                from credits import get_user_id_for_api_key, get_balance, COST_PER_SCORE
-                owner_user_id = get_user_id_for_api_key(key_id)
-                if owner_user_id:
-                    bal = get_balance(owner_user_id)
-                    cost_cents = int(COST_PER_SCORE["api"] * 100)
-                    if bal < cost_cents:
-                        return jsonify({"error": "Insufficient balance", "balance": bal / 100, "cost_per_score": cost_cents / 100,
-                                        "topup": f"{os.getenv('SITE_URL', 'https://artifact0.com')}/dashboard"}), 402
-                    request._credit_user_id = owner_user_id
-            except ImportError:
-                pass  # credits module not available, fall back to monthly limits
-
-        # Rate limit (per-minute, still applies)
-        tier_config = _TIER_LIMITS.get(tier, _TIER_LIMITS["free"])
-        cache_key = f"{key_id}:{_minute_key()}"
-        current_rpm = _rate_cache.get(cache_key, 0)
-        if current_rpm >= tier_config["rpm"]:
-            return jsonify({"error": "Rate limit exceeded", "limit": f"{tier_config['rpm']} req/min"}), 429
-        _rate_cache[cache_key] = current_rpm + 1
-
-        # Free tier: still uses monthly limits
-        if tier == "free":
-            usage_count = database.get_api_usage_count(key_id, _month_start())
-            monthly_limit = row[2] if database.USE_PG else row["monthly_limit"]
-            if usage_count >= monthly_limit:
-                return jsonify({"error": "Free tier limit reached", "usage": usage_count, "limit": monthly_limit,
-                                "upgrade": f"{os.getenv('SITE_URL', 'https://artifact0.com')}/dashboard"}), 429
-
-        request._api_key_id = key_id
-        request._api_tier = tier
-        return f(*args, **kwargs)
-    return wrapper
-
-
-@app.route("/api/v1/score", methods=["POST"])
-@require_api_key
-def api_score():
-    t0 = time.time()
-    payload = request.get_json() or {}
-    text = payload.get("text", "").strip()
-
-    if not text:
-        return jsonify({"error": "Missing 'text' field"}), 400
-    if len(text) > 50000:
-        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
-
-    # V2 PRE-SCORE GATE
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    try:
-        l0 = detect_l0_constraints(text)
-        obj = objective_extract(text)
-        drift = objective_drift("", text)
-        framing = detect_l2_framing(text)
-        tilt = classify_tilt(text)
-        udds = detect_udds("", text, l0)
-        dce = detect_dce(text, l0)
-        cca = detect_cca("", text)
-        dbc = detect_downstream_before_constraint("", text, l0)
-        nii = compute_nii("", text, l0, dbc, tilt)
-
-        dominance = []
-        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-            dominance.append("CCA")
-        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
-            dominance.append("UDDS")
-        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
-            dominance.append("DCE")
-        if not dominance:
-            dominance = ["NONE"]
-    except Exception as e:
-        print(f"[api] Scoring error: {e}", flush=True)
-        return jsonify({"error": "Scoring engine error", "detail": str(e)}), 500
-
-    latency_ms = int((time.time() - t0) * 1000)
-    usage_id = str(uuid.uuid4())
-    database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score", latency_ms, 200)
-
-    # Deduct credit for paid tiers
-    credit_info = {}
-    if hasattr(request, '_credit_user_id') and request._credit_user_id:
-        try:
-            from credits import deduct_credit, get_balance
-            ok, new_bal = deduct_credit(request._credit_user_id, "api", request._api_key_id)
-            credit_info = {"charged": 0.01, "balance": new_bal / 100}
-        except Exception as e:
-            print(f"[api] Credit deduction error: {e}", flush=True)
-
-    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
-    v3_result = {"passed": True}
-    try:
-        from core_engine.v3_enforcement import self_audit
-        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
-        v3_result = {
-            "enforced_text": audit["enforced_text"],
-            "actions_taken": audit["actions_taken"],
-            "time_collapse_applied": audit["time_collapse_applied"],
-            "compression_ratio": audit["compression_ratio"],
-            "passed": audit["passed"],
-        }
-    except Exception as e2:
-        v3_result = {"error": str(e2), "passed": True}
-
-    return jsonify({
-        "status": "ok",
-        "version": NTI_VERSION,
-        "score": {
-            "nii": nii.get("nii_score"),
-            "nii_label": nii.get("nii_label"),
-            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
-        },
-        "failure_modes": {
-            "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
-            "dominance": dominance
-        },
-        "tilt": {"tags": tilt, "count": len(tilt)},
-        "v3": v3_result,
-        "meta": {
-            "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
-            "tier": request._api_tier
-        },
-        **({"credits": credit_info} if credit_info else {})
-    })
-
-
-@app.route("/api/v1/keys", methods=["POST"])
-def api_create_key():
-    payload = request.get_json() or {}
-    email = payload.get("email", "").strip().lower()
-    tier = payload.get("tier", "free").strip().lower()
-
-    if not email or "@" not in email:
-        return jsonify({"error": "Valid email required"}), 400
-    if tier not in _TIER_LIMITS:
-        return jsonify({"error": f"Invalid tier. Options: {list(_TIER_LIMITS.keys())}"}), 400
-
-    key_id = f"az_{_secrets.token_hex(24)}"
-    monthly_limit = _TIER_LIMITS[tier]["monthly"]
-    now = utc_now_iso()
-
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (%s, %s, %s, %s, %s, TRUE)",
-                        (key_id, now, email, tier, monthly_limit))
-        else:
-            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (?, ?, ?, ?, ?, 1)",
-                        (key_id, now, email, tier, monthly_limit))
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"[api] Key creation error: {e}", flush=True)
-        return jsonify({"error": "Failed to create key", "detail": str(e)}), 500
-
-    return jsonify({"api_key": key_id, "tier": tier, "monthly_limit": monthly_limit, "email": email,
-                    "message": "Store this key securely. It will not be shown again."}), 201
-
-
-@app.route("/api/v1/keys/usage", methods=["GET"])
-@require_api_key
-def api_usage():
-    usage_count = database.get_api_usage_count(request._api_key_id, _month_start())
-    result = {
-        "api_key": request._api_key_id[:8] + "...",
-        "tier": request._api_tier,
-        "usage_this_month": usage_count,
-    }
-    # Add credit balance if available
-    try:
-        from credits import get_user_id_for_api_key, get_balance_info
-        uid = get_user_id_for_api_key(request._api_key_id)
-        if uid:
-            result["credits"] = get_balance_info(uid)
-    except ImportError:
-        pass
-    return jsonify(result)
-
-
-# ═══════════════════════════════════════
-# STRIPE WEBHOOK
-# ═══════════════════════════════════════
-@app.route("/api/stripe/webhook", methods=["POST"])
-def stripe_webhook():
-    import json as _json
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get("Stripe-Signature", "")
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-
-    # If webhook secret is set, verify signature
-    if webhook_secret:
-        import hmac, hashlib
-        timestamp = None
-        sig_v1 = None
-        for item in sig_header.split(","):
-            k, _, v = item.strip().partition("=")
-            if k == "t": timestamp = v
-            elif k == "v1": sig_v1 = v
-        if not timestamp or not sig_v1:
-            return jsonify({"error": "Invalid signature"}), 400
-        signed_payload = f"{timestamp}.{payload}"
-        expected = hmac.new(webhook_secret.encode(), signed_payload.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, sig_v1):
-            return jsonify({"error": "Signature mismatch"}), 400
-
-    try:
-        event = _json.loads(payload)
-    except Exception:
-        return jsonify({"error": "Invalid JSON"}), 400
-
-    event_type = event.get("type", "")
-    print(f"[stripe] Webhook: {event_type}", flush=True)
-
-    if event_type == "checkout.session.completed":
-        session_obj = event.get("data", {}).get("object", {})
-        # 1. Credit top-up
-        try:
-            from credits import handle_topup_webhook
-            handled = handle_topup_webhook(event)
-            print(f"[stripe] Top-up handled: {handled}", flush=True)
-        except Exception as e:
-            print(f"[stripe] Top-up webhook error: {e}", flush=True)
-        # 2. Subscription activation
-        try:
-            uid = session_obj.get("client_reference_id")
-            if uid:
-                from auth import _update_stripe
-                _update_stripe(uid, session_obj.get("customer"), session_obj.get("subscription"), "personal")
-                print(f"[stripe] Subscription activated for {uid}", flush=True)
-        except Exception as e:
-            print(f"[stripe] Subscription webhook error: {e}", flush=True)
-
-    elif event_type == "customer.subscription.deleted":
-        try:
-            cid = event.get("data", {}).get("object", {}).get("customer")
-            if cid:
-                conn = database.db_connect()
-                cur = conn.cursor()
-                q = "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=%s" if database.USE_PG else "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=?"
-                cur.execute(q, (cid,))
-                conn.commit()
-                conn.close()
-                print(f"[stripe] Subscription cancelled for customer {cid}", flush=True)
-        except Exception as e:
-            print(f"[stripe] Cancellation webhook error: {e}", flush=True)
-
-    return jsonify({"received": True})
-
-
-# ═══════════════════════════════════════
-# DASHBOARD (balance, usage, top-up)
-# ═══════════════════════════════════════
-@app.route("/dashboard")
-def dashboard():
-    user_id = session.get("user_id")
-    if not user_id:
-        from flask import redirect
-        return redirect("/login")
-    return render_template("dashboard.html")
-
-
-# ═══════════════════════════════════════
-# LLM-POWERED REWRITE (V3 structural rewrite via letter-race model)
-# ═══════════════════════════════════════
-def _letter_race(text):
-    """Pick model by racing letters through user text."""
-    s = re.sub(r'[^a-zA-Z]', '', text).lower()
-    models = [
-        {"name": "claude", "api": "anthropic", "color": "#d97706"},
-        {"name": "grok", "api": "xai", "color": "#8b5cf6"},
-        {"name": "chatgpt", "api": "openai", "color": "#10b981"},
-        {"name": "gemini", "api": "google", "color": "#3b82f6"},
-    ]
-    for i in range(len(s)):
-        for m in models:
-            pos = 0
-            for j in range(i + 1):
-                if j < len(s) and pos < len(m["name"]) and s[j] == m["name"][pos]:
-                    pos += 1
-            if pos >= len(m["name"]):
-                return m
-    # Fallback: highest ratio
-    best = models[0]
-    best_ratio = 0
-    for m in models:
-        pos = 0
-        for ch in s:
-            if pos < len(m["name"]) and ch == m["name"][pos]:
-                pos += 1
-        ratio = pos / len(m["name"])
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best = m
-    return best
-
-
-def _call_llm(model_info, prompt, system_prompt):
-    """Call the selected LLM API. Returns response text."""
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError
-    api = model_info["api"]
-    timeout = 15
-
-    if api == "anthropic":
-        key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not key:
-            return None, "No Anthropic API key"
-        body = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 1024,
-            "system": system_prompt,
-            "messages": [{"role": "user", "content": prompt}]
-        }).encode()
-        req = Request("https://api.anthropic.com/v1/messages", data=body, headers={
-            "Content-Type": "application/json",
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01"
-        })
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        text = ""
-        for block in data.get("content", []):
-            if block.get("type") == "text":
-                text += block["text"]
-        return text, None
-
-    elif api == "openai":
-        key = os.getenv("OPENAI_API_KEY", "")
-        if not key:
-            return None, "No OpenAI API key"
-        body = json.dumps({
-            "model": "gpt-4o-mini",
-            "max_tokens": 1024,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        }).encode()
-        req = Request("https://api.openai.com/v1/chat/completions", data=body, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}"
-        })
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        return data["choices"][0]["message"]["content"], None
-
-    elif api == "xai":
-        key = os.getenv("XAI_API_KEY", "")
-        if not key:
-            return None, "No XAI API key"
-        body = json.dumps({
-            "model": "grok-2-latest",
-            "max_tokens": 1024,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        }).encode()
-        req = Request("https://api.x.ai/v1/chat/completions", data=body, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}"
-        })
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        return data["choices"][0]["message"]["content"], None
-
-    elif api == "google":
-        key = os.getenv("GOOGLE_API_KEY", "")
-        if not key:
-            return None, "No Google API key"
-        body = json.dumps({
-            "contents": [{"parts": [{"text": system_prompt + "\n\n" + prompt}]}],
-            "generationConfig": {"maxOutputTokens": 1024}
-        }).encode()
-        req = Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
-            data=body, headers={"Content-Type": "application/json"}
-        )
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        try:
-            return data["candidates"][0]["content"]["parts"][0]["text"], None
-        except (KeyError, IndexError):
-            return None, "Unexpected Google API response"
-
-    return None, f"Unknown API: {api}"
-
-
-@app.route("/api/v1/rewrite", methods=["POST"])
-def api_rewrite():
-    """LLM-powered structural rewrite. Letter-race selects model, V3 enforces output."""
-    t0 = time.time()
-    data = request.get_json(force=True, silent=True) or {}
-    text = (data.get("text") or "").strip()
-    if not text:
-        return jsonify({"error": "text required"}), 400
-    if len(text) > 5000:
-        return jsonify({"error": "text too long (max 5000 chars)"}), 400
-
-    # V2 PRE-SCORE GATE
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    # Convergence gate — block AI for deterministic-routable inputs
-    try:
-        from convergence_gate import enforce as cg_enforce
-        trace = {}
-        ai_allowed, cg_response = cg_enforce({"text": text}, trace)
-        if not ai_allowed:
-            cg_response["latency_ms"] = int((time.time() - t0) * 1000)
-            cg_response["version"] = NTI_VERSION
-            return jsonify(cg_response)
-    except Exception:
-        pass
-
-    # 1. Score with V1
-    l0 = detect_l0_constraints(text)
-    obj = objective_extract(text)
-    tilt = classify_tilt(text)
-    udds = detect_udds("", text, l0)
-    dce = detect_dce(text, l0)
-    cca = detect_cca("", text)
-    dbc = detect_downstream_before_constraint("", text, l0)
-    nii = compute_nii("", text, l0, dbc, tilt)
-
-    nii_score = nii.get("nii_score", 0)
-    components = {k: v for k, v in nii.items() if k.startswith("q")}
-    failure_modes = {
-        "UDDS": udds.get("udds_state", ""),
-        "DCE": dce.get("dce_state", ""),
-        "CCA": cca.get("cca_state", "")
-    }
-
-    # 2. Letter-race model selection
-    model = _letter_race(text)
-
-    # 3. Build rewrite prompt from NTI findings
-    # Smart issue detection: short/simple messages don't need enterprise-level constraints
-    word_count = len(text.split())
-    is_question = text.strip().rstrip('.!').endswith('?') or text.lower().startswith(('what ', 'when ', 'where ', 'who ', 'how ', 'why ', 'which ', 'can ', 'could ', 'will ', 'would ', 'do ', 'does ', 'is ', 'are '))
-    is_short = word_count <= 15
-    has_real_failure = any("CONFIRMED" in str(v) for v in failure_modes.values())
-
-    issues = []
-    # Only flag Q components on substantive messages (not short questions or casual texts)
-    if not (is_short and is_question):
-        if (components.get("q1") or 0) < 0.7 and not is_short:
-            issues.append("Missing explicit constraints or conditions")
-        if (components.get("q2") or 0) < 0.7 and word_count > 20:
-            issues.append("Main ask is buried — should lead")
-        if (components.get("q3") or 0) < 0.7 and not is_question:
-            issues.append("No deadline or enforcement boundary")
-        if (components.get("q4") or 0) < 0.7 and len(tilt) > 0:
-            issues.append("Weak tilt resistance — hedge language detected")
-    # Always flag real failure modes regardless of length
-    if "CONFIRMED" in str(failure_modes.get("UDDS", "")):
-        issues.append("UDDS: Agreement given before the actual ask was stated")
-    if "CONFIRMED" in str(failure_modes.get("DCE", "")):
-        issues.append("DCE: Decision is deferred instead of made")
-    if "CONFIRMED" in str(failure_modes.get("CCA", "")):
-        issues.append("CCA: Capability claimed without constraint backing")
-
-    system_prompt = (
-        "You are a direct, no-nonsense rewrite engine built by Artifact Zero. Your job: take poorly structured messages "
-        "and rewrite them as a competent professional would actually write them.\n\n"
-        "VOICE:\n"
-        "- Direct, blunt, sharp. Confidence 9/10. No filler, no fluff.\n"
-        "- Numbers over adjectives. '49% to 7%' not 'significant reduction.'\n"
-        "- Short sentences. 3-10 words is common. Fragments are fine.\n"
-        "- Never use: revolutionary, game-changing, empower, transform, AI-powered, seamless, solution, best-in-class, synergy, leverage, ecosystem.\n"
-        "- Never use exclamation marks. Never say 'excited to' or 'thrilled to.'\n"
-        "- Controlled frustration is fine. Sarcasm at problems is fine. Never at people.\n\n"
-        "RULES:\n"
-        "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
-        "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"
-        "3. SHORTER IS BETTER. If the original is 40 words, the rewrite should be 25-35.\n"
-        "4. NO BRACKETS, NO PLACEHOLDERS. If there's no deadline, write 'Let me know by [day].' "
-        "If there's no constraint, just make the ask clearer — don't insert [Conditions: ___].\n"
-        "5. KEEP THE VOICE. If the original is casual, stay casual. If formal, stay formal.\n"
-        "6. STRIP SIGNOFFS. Remove 'Best,' 'Thanks,' 'Regards' — they add nothing.\n"
-        "7. ONE PASS. Return only the rewritten text. No explanations. No commentary. No quotes around it."
-    )
-
-    prompt = f"ORIGINAL:\n{text}\n\n"
-    if issues:
-        prompt += "PROBLEMS:\n"
-        for iss in issues:
-            prompt += f"- {iss}\n"
-        prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
-    else:
-        prompt += "This message is structurally clean. Tighten it if possible — remove any unnecessary words. If it's already tight, return it unchanged. Do not add anything."
-
-    # 4. Call LLM
-    try:
-        llm_text, err = _call_llm(model, prompt, system_prompt)
-    except Exception as e:
-        llm_text, err = None, str(e)[:200]
-
-    if not llm_text:
-        # Fallback: return V3 rule-based enforcement only
-        from core_engine.v3_enforcement import enforce
-        v3_result = enforce(text, objective=obj.get("objective_text"))
-        return jsonify({
-            "rewrite": v3_result["final_output"],
-            "model": model["name"],
-            "model_color": model["color"],
-            "method": "v3_rule_only",
-            "fallback_reason": err or "LLM call failed",
-            "original_words": len(text.split()),
-            "rewrite_words": len(v3_result["final_output"].split()),
-            "nii_score": nii_score,
-            "issues": issues,
-            "latency_ms": int((time.time() - t0) * 1000)
-        })
-
-    # 5. Run V3 enforcement on LLM output
-    from core_engine.v3_enforcement import enforce
-    v3_result = enforce(llm_text, objective=obj.get("objective_text"))
-    final = v3_result["final_output"]
-
-    original_words = len(text.split())
-    rewrite_words = len(final.split())
-
-    return jsonify({
-        "rewrite": final,
-        "model": model["name"],
-        "model_color": model["color"],
-        "method": "llm_v3",
-        "original_words": original_words,
-        "rewrite_words": rewrite_words,
-        "compression": f"{abs(original_words - rewrite_words) / max(original_words, 1) * 100:.0f}%",
-        "nii_score": nii_score,
-        "issues": issues,
-        "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
-        "latency_ms": int((time.time() - t0) * 1000)
-    })
+# ── AZ-CCS Color Standard routes ──
+try:
+    from ccs_routes import init_ccs
+    init_ccs(app)
+except ImportError:
+    print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
+except Exception as e:
+    print(f"[CCS] Error loading routes: {e}")
 
 
 if __name__ == "__main__":

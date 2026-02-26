@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTI Glossary — Artifact Zero</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   PLUTCHIK → NTI COLOR SYSTEM (Plutchik 1980)
+   
+   ANGER        → #e53e3e (Red)       → T10 Authority / Dominance
+   ANTICIPATION → #f97316 (Orange)    → T8 Pressure
+   JOY          → #eab308 (Yellow)    → T1 Reassurance, T2 Certainty
+   TRUST        → #65a30d (Lime)      → T3 Consensus, T5 Absolutes
+   FEAR         → #16a34a (Green)     → T6 Deferral, FM:DCE
+   SURPRISE     → #0ea5e9 (Cyan)      → T9 Scope Drift
+   SADNESS      → #4f46e5 (Indigo)    → T7 Category Blend, FM:CCA
+   DISGUST      → #db2777 (Magenta)   → T4 Overreach, FM:UDDS
+   ═══════════════════════════════════════ */
+:root {
+  --anger-l:#fde8e8; --anger:#e53e3e; --anger-d:#7f1d1d; --anger-g:rgba(229,62,62,0.12);
+  --antic-l:#fff4e6; --antic:#f97316; --antic-d:#7c2d12; --antic-g:rgba(249,115,22,0.12);
+  --joy-l:#fefce8; --joy:#eab308; --joy-d:#713f12; --joy-g:rgba(234,179,8,0.10);
+  --trust-l:#ecfccb; --trust:#65a30d; --trust-d:#365314; --trust-g:rgba(101,163,13,0.12);
+  --fear-l:#d1fae5; --fear:#16a34a; --fear-d:#14532d; --fear-g:rgba(22,163,74,0.12);
+  --surprise-l:#e0f2fe; --surprise:#0ea5e9; --surprise-d:#0c4a6e; --surprise-g:rgba(14,165,233,0.12);
+  --sad-l:#e0e7ff; --sad:#4f46e5; --sad-d:#312e81; --sad-g:rgba(79,70,229,0.12);
+  --disgust-l:#fce7f3; --disgust:#db2777; --disgust-d:#701a49; --disgust-g:rgba(219,39,119,0.12);
+
+  /* Product chrome — matches dashboard */
+  --bg: #0b1120;
+  --bg-card: #0f1729;
+  --bg-elevated: #141e33;
+  --border: #1e2d4a;
+  --border-active: #2a4070;
+  --text: #c8d6e5;
+  --text-bright: #e8f0f8;
+  --text-muted: #5a7090;
+  --accent: #00e89c;
+  --accent-dim: rgba(0,232,156,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5}
+
+/* ── TOP BAR (matches dashboard) ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(11,17,32,0.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 24px;height:48px;
+}
+.topbar .brand{
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
+  color:var(--accent);letter-spacing:2px;text-transform:uppercase;
+}
+.topbar nav{display:flex;gap:4px;margin-left:auto}
+.topbar a{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;
+  letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);
+  padding:6px 12px;border-radius:4px;cursor:pointer;text-decoration:none;
+  transition:all 0.15s;border:1px solid transparent;
+}
+.topbar a:hover{color:var(--text)}
+.topbar a.active{color:var(--text-bright);background:var(--bg-elevated);border-color:var(--border)}
+
+/* ── PAGE SHELLS ── */
+.page{display:none;padding:64px 24px 48px;max-width:1160px;margin:0 auto}
+.page.active{display:block}
+.page-title{
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;
+}
+.page h1{font-family:'DM Sans',sans-serif;font-weight:600;font-size:26px;color:var(--text-bright);margin-bottom:6px}
+.page .desc{font-size:14px;color:var(--text-muted);margin-bottom:32px;max-width:680px;line-height:1.6}
+.mono{font-family:'JetBrains Mono',monospace}
+.section-label{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--accent);
+  margin:40px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+
+/* ── CARD SYSTEM (matches dashboard cards) ── */
+.card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+  overflow:hidden;transition:border-color 0.2s;
+}
+.card:hover{border-color:var(--border-active)}
+.card-header{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;border-bottom:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+}
+.card-body{padding:16px}
+.badge{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  letter-spacing:0.5px;padding:3px 8px;border-radius:3px;display:inline-block;
+}
+
+/* ═══════════════════════════
+   PAGE 1: COLOR SYSTEM
+   ═══════════════════════════ */
+.wheel-wrap{display:flex;justify-content:center;margin:24px 0 40px}
+.wheel{position:relative;width:440px;height:440px}
+.petal{
+  position:absolute;width:160px;height:52px;border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  transition:transform 0.2s,box-shadow 0.2s;cursor:default;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.petal:hover{transform:scale(1.06);box-shadow:0 4px 20px rgba(0,0,0,0.5)}
+.petal .sub{font-size:9px;font-weight:400;opacity:0.7;margin-top:2px;letter-spacing:0.5px;text-transform:none}
+.wheel-center{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:90px;height:90px;border-radius:50%;background:var(--bg);
+  border:2px solid var(--border);display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  color:var(--accent);text-align:center;line-height:1.3;letter-spacing:1px;
+}
+
+/* Color family rows */
+.color-row{
+  display:grid;grid-template-columns:140px 1fr;gap:20px;
+  padding:20px;border-bottom:1px solid var(--border);
+  align-items:start;
+}
+.color-row:last-child{border-bottom:none}
+.color-name{font-weight:600;font-size:15px;margin-bottom:2px}
+.color-psych{font-size:11px;color:var(--text-muted);line-height:1.5}
+.swatches{display:flex;gap:8px;margin-bottom:10px}
+.sw{width:56px;height:32px;border-radius:4px;display:flex;align-items:flex-end;padding:2px 4px;font-size:8px;font-family:'JetBrains Mono',monospace}
+.sw.on-dark{color:rgba(255,255,255,0.7)}
+.sw.on-light{color:rgba(0,0,0,0.5)}
+.sw-label{font-size:9px;color:var(--text-muted);text-align:center;margin-top:2px}
+.nti-tags{display:flex;flex-wrap:wrap;gap:4px}
+.nti-tag{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  padding:3px 8px;border-radius:3px;letter-spacing:0.5px;
+}
+
+/* ═══════════════════════════
+   PAGE 2: TILT TAXONOMY
+   ═══════════════════════════ */
+.tilt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-top:16px}
+.tilt-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+  border-left:3px solid transparent;transition:all 0.2s;overflow:hidden;
+}
+.tilt-card:hover{border-color:var(--border-active);background:var(--bg-elevated)}
+.tilt-head{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  border-bottom:1px solid var(--border);
+}
+.tilt-id{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:3px;letter-spacing:0.5px;
+}
+.tilt-name{font-weight:600;font-size:14px;color:var(--text-bright)}
+.tilt-body{padding:14px 16px}
+.tilt-def{font-size:13px;color:var(--text-muted);line-height:1.55;margin-bottom:10px}
+.tilt-example{
+  font-size:12px;font-style:italic;padding:10px 12px;border-radius:4px;
+  line-height:1.5;margin-bottom:10px;border-left:2px solid;
+}
+.tilt-markers{display:flex;flex-wrap:wrap;gap:3px}
+.tilt-marker{
+  font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;
+  border-radius:2px;background:var(--bg-elevated);color:var(--text-muted);
+  border:1px solid var(--border);
+}
+
+/* ═══════════════════════════
+   PAGE 3: FAILURE MODES
+   ═══════════════════════════ */
+.fm-block{margin-bottom:24px}
+.fm-header-bar{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  border-bottom:1px solid var(--border);
+}
+.fm-title{font-weight:600;font-size:16px;color:var(--text-bright)}
+.fm-body{padding:16px}
+.fm-def{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px}
+.fm-move{
+  font-size:12px;padding:10px 14px;border-radius:4px;
+  margin-bottom:16px;font-style:italic;border-left:2px solid;line-height:1.5;
+}
+.derivs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.deriv{
+  padding:10px 12px;border-radius:4px;font-size:12px;line-height:1.4;
+}
+.deriv strong{display:block;font-size:10px;font-family:'JetBrains Mono',monospace;margin-bottom:2px;letter-spacing:0.5px}
+.ix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:16px}
+.ix-card{
+  padding:14px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);
+  font-size:12px;line-height:1.5;
+}
+.ix-card strong{display:block;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-bright);margin-bottom:4px}
+
+/* ═══════════════════════════
+   PAGE 4: LAYER MODEL
+   ═══════════════════════════ */
+.layer-table{width:100%;border-collapse:collapse}
+.layer-table td,.layer-table th{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+.layer-table th{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);
+  background:var(--bg-elevated);
+}
+.layer-num{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  padding:3px 8px;border-radius:3px;display:inline-block;min-width:32px;text-align:center;
+}
+.layer-name{font-weight:600;color:var(--text-bright);font-size:13px}
+.layer-desc{color:var(--text-muted);font-size:12px;line-height:1.5}
+
+/* ═══════════════════════════
+   PAGE 5: LIVE DEMO
+   ═══════════════════════════ */
+.demo-input{
+  width:100%;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:6px;padding:16px;font-size:14px;color:var(--text);
+  font-family:'DM Sans',sans-serif;min-height:100px;resize:vertical;line-height:1.6;
+}
+.demo-input:focus{outline:none;border-color:var(--accent)}
+.demo-btn{
+  margin-top:10px;padding:8px 24px;border-radius:4px;
+  background:var(--accent);color:#000;border:none;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;transition:opacity 0.15s;
+}
+.demo-btn:hover{opacity:0.85}
+.legend{
+  display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;
+  padding:10px 14px;background:var(--bg-elevated);border-radius:4px;border:1px solid var(--border);
+}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+.demo-output{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+  padding:20px;margin-top:12px;min-height:80px;line-height:1.9;font-size:14px;
+}
+.hl{padding:1px 4px;border-radius:2px;font-weight:500;cursor:help;position:relative}
+.hl:hover::after{
+  content:attr(data-tip);position:absolute;bottom:100%;left:0;
+  background:var(--bg);border:1px solid var(--border);color:var(--text-bright);
+  font-size:10px;font-weight:400;font-family:'JetBrains Mono',monospace;
+  padding:5px 8px;border-radius:3px;white-space:nowrap;z-index:10;pointer-events:none;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .topbar{padding:0 12px}.topbar nav{gap:1px}
+  .topbar a{padding:5px 8px;font-size:9px}
+  .page{padding:56px 14px 32px}
+  .wheel{transform:scale(0.65);transform-origin:center}
+  .color-row{grid-template-columns:1fr}
+  .tilt-grid{grid-template-columns:1fr}
+  .derivs{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ TOP BAR — matches dashboard ═══════ -->
+<div class="topbar">
+  <div class="brand">ARTIFACT ZERO</div>
+  <nav>
+    <a class="active" onclick="go('colors')">Color System</a>
+    <a onclick="go('tilt')">Tilt Taxonomy</a>
+    <a onclick="go('failures')">Failure Modes</a>
+    <a onclick="go('layers')">Layers</a>
+    <a onclick="go('defs')">Definitions</a>
+    <a onclick="go('demo')">Demo</a>
+  </nav>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE 1: COLOR SYSTEM
+     ═══════════════════════════════ -->
+<div class="page active" id="p-colors">
+  <div class="page-title">NTI Glossary</div>
+  <h1>The Color of Communication</h1>
+  <p class="desc">Every color in NTI maps to one of Robert Plutchik's 8 primary emotions. The color tells you the category before you read a word. The emotion tells you <em>why</em> the language fails structurally.</p>
+
+  <!-- WHEEL — full saturation, matches Plutchik's actual wheel -->
+  <div class="wheel-wrap">
+    <div class="wheel">
+      <div class="petal" style="top:0;left:50%;transform:translateX(-50%);background:#eab308;color:#000">
+        Reassurance <span class="sub">Joy / Comfort</span>
+      </div>
+      <div class="petal" style="top:60px;right:10px;background:#65a30d;color:#fff">
+        Consensus <span class="sub">Trust / Authority</span>
+      </div>
+      <div class="petal" style="top:50%;right:10px;transform:translateY(-50%);background:#16a34a;color:#fff">
+        Deferral <span class="sub">Fear / Avoidance</span>
+      </div>
+      <div class="petal" style="bottom:60px;right:10px;background:#0ea5e9;color:#fff">
+        Scope Drift <span class="sub">Surprise / Shift</span>
+      </div>
+      <div class="petal" style="bottom:0;left:50%;transform:translateX(-50%);background:#4f46e5;color:#fff">
+        Collapse <span class="sub">Sadness / Withdrawal</span>
+      </div>
+      <div class="petal" style="bottom:60px;left:10px;background:#db2777;color:#fff">
+        Overreach <span class="sub">Disgust / Violation</span>
+      </div>
+      <div class="petal" style="top:50%;left:10px;transform:translateY(-50%);background:#e53e3e;color:#fff">
+        Dominance <span class="sub">Anger / Blame</span>
+      </div>
+      <div class="petal" style="top:60px;left:10px;background:#f97316;color:#fff">
+        Pressure <span class="sub">Anticipation / Force</span>
+      </div>
+      <div class="wheel-center">NTI<br>EMOTION<br>MAP</div>
+    </div>
+  </div>
+
+  <div class="section-label">Color Families &amp; NTI Mappings</div>
+
+  <div class="card">
+    <!-- ANGER -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--anger)">Anger</div>
+        <div class="color-psych">Rage → Anger → Annoyance<br>Dominance, blame, hostility. The speaker is attacking.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--anger-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--anger)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--anger-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--anger-g);color:var(--anger)">T10 Authority Imposition</span>
+          <span class="nti-tag" style="background:var(--anger-g);color:var(--anger)">Axis 2: Blame</span>
+        </div>
+      </div>
+    </div>
+    <!-- ANTICIPATION -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--antic)">Anticipation</div>
+        <div class="color-psych">Vigilance → Anticipation → Interest<br>Artificial urgency, time pressure, forcing action.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--antic-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--antic)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--antic-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--antic-g);color:var(--antic)">T8 Pressure Optimization</span>
+        </div>
+      </div>
+    </div>
+    <!-- JOY -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--joy)">Joy</div>
+        <div class="color-psych">Ecstasy → Joy → Serenity<br>False comfort, empty reassurance, certainty without enforcement.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--joy-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-light" style="background:var(--joy)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--joy-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--joy-g);color:var(--joy)">T1 Reassurance Drift</span>
+          <span class="nti-tag" style="background:var(--joy-g);color:var(--joy)">T2 Certainty Inflation</span>
+        </div>
+      </div>
+    </div>
+    <!-- TRUST -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--trust)">Trust</div>
+        <div class="color-psych">Admiration → Trust → Acceptance<br>Manufactured consensus, imposed authority, absolutes without evidence.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--trust-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--trust)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--trust-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--trust-g);color:var(--trust)">T3 Consensus Claims</span>
+          <span class="nti-tag" style="background:var(--trust-g);color:var(--trust)">T5 Absolute Language</span>
+        </div>
+      </div>
+    </div>
+    <!-- FEAR -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--fear)">Fear</div>
+        <div class="color-psych">Terror → Fear → Apprehension<br>Constraint avoidance, deferral, running from commitment.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--fear-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--fear)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--fear-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--fear-g);color:var(--fear)">T6 Constraint Deferral</span>
+          <span class="nti-tag" style="background:var(--fear-g);color:var(--fear)">FM: DCE</span>
+        </div>
+      </div>
+    </div>
+    <!-- SURPRISE -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--surprise)">Surprise</div>
+        <div class="color-psych">Amazement → Surprise → Distraction<br>Scope drift, topic mutation, silent expansion into new territory.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--surprise-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--surprise)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--surprise-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--surprise-g);color:var(--surprise)">T9 Scope Expansion</span>
+        </div>
+      </div>
+    </div>
+    <!-- SADNESS -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--sad)">Sadness</div>
+        <div class="color-psych">Grief → Sadness → Pensiveness<br>Category collapse, vagueness, blending. Precision dissolves.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--sad-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--sad)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--sad-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--sad-g);color:var(--sad)">T7 Category Blend</span>
+          <span class="nti-tag" style="background:var(--sad-g);color:var(--sad)">FM: CCA</span>
+        </div>
+      </div>
+    </div>
+    <!-- DISGUST -->
+    <div class="color-row">
+      <div>
+        <div class="color-name" style="color:var(--disgust)">Disgust</div>
+        <div class="color-psych">Loathing → Disgust → Boredom<br>Capability overreach, boundary violations, claims exceeding reality.</div>
+      </div>
+      <div>
+        <div class="swatches">
+          <div><div class="sw on-light" style="background:var(--disgust-l)">light</div><div class="sw-label">BG</div></div>
+          <div><div class="sw on-dark" style="background:var(--disgust)">mid</div><div class="sw-label">Border</div></div>
+          <div><div class="sw on-dark" style="background:var(--disgust-d)">dark</div><div class="sw-label">Text</div></div>
+        </div>
+        <div class="nti-tags">
+          <span class="nti-tag" style="background:var(--disgust-g);color:var(--disgust)">T4 Capability Overreach</span>
+          <span class="nti-tag" style="background:var(--disgust-g);color:var(--disgust)">FM: UDDS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE 2: TILT TAXONOMY
+     ═══════════════════════════════ -->
+<div class="page" id="p-tilt">
+  <div class="page-title">NTI Glossary</div>
+  <h1>Tilt Taxonomy</h1>
+  <p class="desc">10 categories of structural communication drift. Each maps to a Plutchik emotion family — the color tells you which family before you read a word.</p>
+
+  <div class="tilt-grid">
+
+    <div class="tilt-card" style="border-left-color:var(--joy)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--joy-g);color:var(--joy)">T1</span>
+        <span class="tilt-name">Reassurance Drift</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Comfort language replaces factual resolution. The reader <em>feels</em> better without <em>knowing</em> more.</div>
+        <div class="tilt-example" style="background:var(--joy-g);color:var(--joy);border-color:var(--joy)">"Don't worry, we're handling it." → What specifically? By when? Who owns it?</div>
+        <div class="tilt-markers"><span class="tilt-marker">don't worry</span><span class="tilt-marker">it's fine</span><span class="tilt-marker">it's okay</span><span class="tilt-marker">you got this</span><span class="tilt-marker">rest assured</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--joy)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--joy-g);color:var(--joy)">T2</span>
+        <span class="tilt-name">Certainty Inflation</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Absolute guarantees without enforcement mechanism. Confidence exceeds what the system can deliver.</div>
+        <div class="tilt-example" style="background:var(--joy-g);color:var(--joy);border-color:var(--joy)">"Our platform guarantees 100% uptime." → Without SLA enforcement, this is just a feeling.</div>
+        <div class="tilt-markers"><span class="tilt-marker">guarantee</span><span class="tilt-marker">100%</span><span class="tilt-marker">zero risk</span><span class="tilt-marker">perfect</span><span class="tilt-marker">always</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--trust)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--trust-g);color:var(--trust)">T3</span>
+        <span class="tilt-name">Consensus Claims</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Manufactured agreement without evidence. Invokes a crowd that was never polled.</div>
+        <div class="tilt-example" style="background:var(--trust-g);color:var(--trust);border-color:var(--trust)">"Most people agree this is the right approach." → Which people? What data?</div>
+        <div class="tilt-markers"><span class="tilt-marker">most people</span><span class="tilt-marker">everyone</span><span class="tilt-marker">no one</span><span class="tilt-marker">typically</span><span class="tilt-marker">in general</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--disgust)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--disgust-g);color:var(--disgust)">T4</span>
+        <span class="tilt-name">Capability Overreach</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Claims of universal capability without boundary acknowledgment. Everything is covered. Until it isn't.</div>
+        <div class="tilt-example" style="background:var(--disgust-g);color:var(--disgust);border-color:var(--disgust)">"Our solution handles everything end-to-end." → What are the edges? What does it NOT do?</div>
+        <div class="tilt-markers"><span class="tilt-marker">solves everything</span><span class="tilt-marker">any scenario</span><span class="tilt-marker">universal solution</span><span class="tilt-marker">works for everyone</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--trust)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--trust-g);color:var(--trust)">T5</span>
+        <span class="tilt-name">Absolute Language</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Binary framing that eliminates nuance. Always/never constructions that deny edge cases.</div>
+        <div class="tilt-example" style="background:var(--trust-g);color:var(--trust);border-color:var(--trust)">"We never miss a deadline." → Demonstrably false for any organization of sufficient size.</div>
+        <div class="tilt-markers"><span class="tilt-marker">always</span><span class="tilt-marker">never</span><span class="tilt-marker">completely</span><span class="tilt-marker">entirely</span><span class="tilt-marker">everyone</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--fear)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--fear-g);color:var(--fear)">T6</span>
+        <span class="tilt-name">Constraint Deferral</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Hard requirements pushed to future without assignment or timeline. Abandoned in slow motion.</div>
+        <div class="tilt-example" style="background:var(--fear-g);color:var(--fear);border-color:var(--fear)">"We'll figure that out in phase 2." → Phase 2 has no date, no owner, no definition.</div>
+        <div class="tilt-markers"><span class="tilt-marker">later</span><span class="tilt-marker">eventually</span><span class="tilt-marker">phase 2</span><span class="tilt-marker">future iteration</span><span class="tilt-marker">we'll figure it out</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--sad)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--sad-g);color:var(--sad)">T7</span>
+        <span class="tilt-name">Category Blend</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Distinct concepts merged into vague composite. "Basically" is the sound of precision dying.</div>
+        <div class="tilt-example" style="background:var(--sad-g);color:var(--sad);border-color:var(--sad)">"Basically, it's kind of the same thing overall." → Three blend markers. Nothing was said.</div>
+        <div class="tilt-markers"><span class="tilt-marker">kind of</span><span class="tilt-marker">sort of</span><span class="tilt-marker">basically</span><span class="tilt-marker">overall</span><span class="tilt-marker">at the end of the day</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--antic)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--antic-g);color:var(--antic)">T8</span>
+        <span class="tilt-name">Pressure Optimization</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Artificial urgency to force decisions before evaluation is complete. Time pressure replaces readiness.</div>
+        <div class="tilt-example" style="background:var(--antic-g);color:var(--antic);border-color:var(--antic)">"We need this ASAP — confirm today?" → Why today? What changes if we wait 24 hours?</div>
+        <div class="tilt-markers"><span class="tilt-marker">now</span><span class="tilt-marker">today</span><span class="tilt-marker">ASAP</span><span class="tilt-marker">immediately</span><span class="tilt-marker">right away</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--surprise)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--surprise-g);color:var(--surprise)">T9</span>
+        <span class="tilt-name">Scope Expansion</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Response introduces domain tokens not present in prompt. Conversation silently migrates to new territory.</div>
+        <div class="tilt-example" style="background:var(--surprise-g);color:var(--surprise);border-color:var(--surprise)">Ask about database optimization → get advice about team hiring. Where did that come from?</div>
+        <div class="tilt-markers"><span class="tilt-marker">domain token analysis</span><span class="tilt-marker">&gt;55% new tokens</span></div>
+      </div>
+    </div>
+
+    <div class="tilt-card" style="border-left-color:var(--anger)">
+      <div class="tilt-head">
+        <span class="tilt-id" style="background:var(--anger-g);color:var(--anger)">T10</span>
+        <span class="tilt-name">Authority Imposition</span>
+      </div>
+      <div class="tilt-body">
+        <div class="tilt-def">Unnamed experts invoked to end discussion. Authority cited without source. Says "stop questioning" without saying it.</div>
+        <div class="tilt-example" style="background:var(--anger-g);color:var(--anger);border-color:var(--anger)">"Research shows this is best practice." → Which research? Published where? Sample size?</div>
+        <div class="tilt-markers"><span class="tilt-marker">experts agree</span><span class="tilt-marker">research shows</span><span class="tilt-marker">studies show</span><span class="tilt-marker">best practice</span><span class="tilt-marker">widely accepted</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE 3: FAILURE MODES
+     ═══════════════════════════════ -->
+<div class="page" id="p-failures">
+  <div class="page-title">NTI Glossary</div>
+  <h1>Parent Failure Modes</h1>
+  <p class="desc">Three structural failures that cascade through communication layers. Each breaks integrity differently. CCA is the most dangerous due to invisibility.</p>
+
+  <!-- UDDS -->
+  <div class="card fm-block" style="border-left:3px solid var(--disgust)">
+    <div class="fm-header-bar">
+      <span class="badge" style="background:var(--disgust-g);color:var(--disgust)">FM-01</span>
+      <span class="fm-title">UDDS — Unresolved Dependency Drift via Substitution</span>
+    </div>
+    <div class="fm-body">
+      <div class="fm-def">A constraint declared at L0 is replaced at L2 with a structurally different substitute that <em>appears</em> to satisfy it but doesn't. The original constraint is never violated — it's bypassed.</div>
+      <div class="fm-move" style="background:var(--disgust-g);color:var(--disgust);border-color:var(--disgust)">"We addressed your concern" — but with something else entirely.</div>
+      <div class="section-label" style="margin-top:12px;color:var(--disgust);border-color:var(--disgust)">Derivative Failures</div>
+      <div class="derivs">
+        <div class="deriv" style="background:var(--disgust-g)"><strong style="color:var(--disgust)">DF-01 Substitution Cascade</strong><span style="color:var(--text-muted)">Each substitute introduces a new gap requiring its own substitute.</span></div>
+        <div class="deriv" style="background:var(--disgust-g)"><strong style="color:var(--disgust)">DF-02 Boundary Erosion</strong><span style="color:var(--text-muted)">Repeated substitution softens hard constraints into preferences.</span></div>
+        <div class="deriv" style="background:var(--disgust-g)"><strong style="color:var(--disgust)">DF-03 Confidence Displacement</strong><span style="color:var(--text-muted)">Confidence in substitute mistaken for resolution of original.</span></div>
+        <div class="deriv" style="background:var(--disgust-g)"><strong style="color:var(--disgust)">DF-04 False Resolution</strong><span style="color:var(--text-muted)">Substitute closes loop perceptually while constraint remains unmet.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DCE -->
+  <div class="card fm-block" style="border-left:3px solid var(--fear)">
+    <div class="fm-header-bar">
+      <span class="badge" style="background:var(--fear-g);color:var(--fear)">FM-02</span>
+      <span class="fm-title">DCE — Deferred Constraint Erosion</span>
+    </div>
+    <div class="fm-body">
+      <div class="fm-def">A constraint acknowledged at declaration time is systematically deferred until it becomes structurally invisible. Not denied — delayed into irrelevance.</div>
+      <div class="fm-move" style="background:var(--fear-g);color:var(--fear);border-color:var(--fear)">"We'll handle that later" — but later never arrives.</div>
+      <div class="section-label" style="margin-top:12px;color:var(--fear);border-color:var(--fear)">Derivative Failures</div>
+      <div class="derivs">
+        <div class="deriv" style="background:var(--fear-g)"><strong style="color:var(--fear)">DF-01 Constraint Surprise</strong><span style="color:var(--text-muted)">Deferred constraint surfaces at production, causing late-stage failure.</span></div>
+        <div class="deriv" style="background:var(--fear-g)"><strong style="color:var(--fear)">DF-02 Patch Dependence</strong><span style="color:var(--text-muted)">System relies on future fixes to justify present decisions.</span></div>
+        <div class="deriv" style="background:var(--fear-g)"><strong style="color:var(--fear)">DF-03 Scope Deferral Justification</strong><span style="color:var(--text-muted)">Constraint excluded via "out of scope" language.</span></div>
+        <div class="deriv" style="background:var(--fear-g)"><strong style="color:var(--fear)">DF-04 Late-Stage Blame</strong><span style="color:var(--text-muted)">Responsibility shifted to users when deferred constraint surfaces.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CCA -->
+  <div class="card fm-block" style="border-left:3px solid var(--sad)">
+    <div class="fm-header-bar">
+      <span class="badge" style="background:var(--sad-g);color:var(--sad)">FM-03</span>
+      <span class="fm-title">CCA — Constraint Collapse via Aggregation</span>
+    </div>
+    <div class="fm-body">
+      <div class="fm-def">Multiple distinct constraints merged into composite representation, losing enforcement precision. Aggregates look compliant while localized failures go silent. <strong style="color:var(--text-bright)">Most dangerous mode due to invisibility.</strong></div>
+      <div class="fm-move" style="background:var(--sad-g);color:var(--sad);border-color:var(--sad)">"Taken together, these constraints balance out." — Individual failures are invisible.</div>
+      <div class="section-label" style="margin-top:12px;color:var(--sad);border-color:var(--sad)">Derivative Failures</div>
+      <div class="derivs">
+        <div class="deriv" style="background:var(--sad-g)"><strong style="color:var(--sad)">DF-01 Constraint Averaging</strong><span style="color:var(--text-muted)">Hard constraints reduced to mean behavior. Individual precision lost.</span></div>
+        <div class="deriv" style="background:var(--sad-g)"><strong style="color:var(--sad)">DF-02 Edge Dilution</strong><span style="color:var(--text-muted)">Extreme but valid constraints dismissed as outliers.</span></div>
+        <div class="deriv" style="background:var(--sad-g)"><strong style="color:var(--sad)">DF-03 Composite Safety Illusion</strong><span style="color:var(--text-muted)">System appears robust because aggregates look acceptable.</span></div>
+        <div class="deriv" style="background:var(--sad-g)"><strong style="color:var(--sad)">DF-04 Silent Constraint Violation</strong><span style="color:var(--text-muted)">Individual failures masked by overall success metrics.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Interaction Matrix</div>
+  <div class="ix-grid">
+    <div class="ix-card"><strong>UDDS + DCE</strong>Substitution enables deferral. The substitute is accepted as "good enough" so the real constraint gets pushed to "later."</div>
+    <div class="ix-card"><strong>UDDS + CCA</strong>Substitution hides inside aggregation. Individual substitutes invisible when only averages are checked.</div>
+    <div class="ix-card"><strong>DCE + CCA</strong>Deferral rationalized by aggregation. "Overall we're on track" masks that 3 constraints have been pushed.</div>
+    <div class="ix-card"><strong>UDDS + DCE + CCA (TRIADIC)</strong>Maximum cascade. Constraint substituted → substitute deferred → deferral hidden by aggregate metrics. Undetectable without layer analysis.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE 4: LAYER MODEL
+     ═══════════════════════════════ -->
+<div class="page" id="p-layers">
+  <div class="page-title">NTI Glossary</div>
+  <h1>Layer Model</h1>
+  <p class="desc">NTI evaluates communication across 8 structural layers. Failures propagate upward — a crack at L0 becomes invisible by L5.</p>
+
+  <div class="card" style="margin-top:16px">
+    <table class="layer-table">
+      <thead><tr><th style="width:60px">Layer</th><th style="width:180px">Name</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="layer-num" style="background:var(--anger-g);color:var(--anger)">L0</span></td>
+          <td class="layer-name">Reality Substrate</td>
+          <td class="layer-desc">Hard constraints from the physical world. Budgets, deadlines, regulations, physics. Cannot be negotiated — only acknowledged or ignored.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--antic-g);color:var(--antic)">L1</span></td>
+          <td class="layer-name">Input Freeze</td>
+          <td class="layer-desc">Stated objective at time of declaration. Once frozen, original intent preserved regardless of downstream interpretation.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--joy-g);color:var(--joy)">L2</span></td>
+          <td class="layer-name">Interpretive Framing</td>
+          <td class="layer-desc">Where constraints get reworded, softened, or reframed. Hedge markers, reassurance, and category blending happen here. Primary mutation layer.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--fear-g);color:var(--fear)">L3</span></td>
+          <td class="layer-name">Objective Integrity</td>
+          <td class="layer-desc">Similarity between declared objective and downstream execution. Jaccard similarity, drift scoring, mutation marker detection.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--trust-g);color:var(--trust)">L4</span></td>
+          <td class="layer-name">Execution Vectors</td>
+          <td class="layer-desc">Actions taken vs. declared. Misalignment means the plan existed but execution diverged.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--surprise-g);color:var(--surprise)">L5</span></td>
+          <td class="layer-name">Output Enforcement</td>
+          <td class="layer-desc">Final output checked against original L0 constraints. Drift modes flagged. Where failure becomes visible — or doesn't.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--sad-g);color:var(--sad)">L6</span></td>
+          <td class="layer-name">Interface Contracts</td>
+          <td class="layer-desc">JOS binding layer. Operator decisions cannot be overridden by system interpretation. Act / Park / Discard — no fourth option.</td>
+        </tr>
+        <tr>
+          <td><span class="layer-num" style="background:var(--disgust-g);color:var(--disgust)">L7</span></td>
+          <td class="layer-name">Telemetry</td>
+          <td class="layer-desc">Audit trail. Request IDs, timestamps, latency, processing metadata. Forensic review layer.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE 5.5: DEFINITIONS
+     ═══════════════════════════════ -->
+<div class="page" id="p-defs">
+  <div class="page-title">NTI Glossary</div>
+  <h1>Definitions</h1>
+  <p class="desc">Every acronym, code, and term used across the NTI system. Color-coded to the emotion family it belongs to.</p>
+
+  <!-- ─── CORE SYSTEM ACRONYMS ─── -->
+  <div style="margin-top:32px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--signal);margin-bottom:12px">CORE SYSTEM</div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">NTI</span>
+        <span style="font-size:15px;color:var(--text)">No-Tilt Interface</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">Rule-based AI governance system that enforces structural integrity in human-AI communications. Detects and classifies communication failures without requiring LLM inference.</div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">NII</span>
+        <span style="font-size:15px;color:var(--text)">Narrative Integrity Index</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">0-100 score measuring how structurally sound a piece of communication is. Higher = more integrity. Computed from constraint preservation, tilt density, and failure mode presence. The single number that answers "is this text trustworthy?"</div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">JOS</span>
+        <span style="font-size:15px;color:var(--text)">Jame's Operating System</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">Containment architecture with 5 fields: Objective, Constraints, No-Go Zones, Definition of Done, Closure Authority. Prevents scope drift and ensures operator decisions cannot be overridden by system interpretation. Act/Park/Discard — no fourth option.</div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">AZ-CCS</span>
+        <span style="font-size:15px;color:var(--text)">Artifact Zero Communication Color Standard</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">Formal specification mapping Plutchik's 8 primary emotions to NTI structural failure categories via color. Eight permanent colors with three intensity tiers (glow, signal, deep). The standard that defines how communication intent is visually encoded.</div>
+    </div>
+  </div>
+
+  <!-- ─── PARENT FAILURE MODES ─── -->
+  <div style="margin-top:32px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">PARENT FAILURE MODES</div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--disgust);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--disgust)">UDDS</span>
+        <span style="font-size:15px;color:var(--text)">Unresolved Dependency Drift via Substitution</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">A constraint is replaced with a structurally different substitute that appears to satisfy it but doesn't. The original is never violated — it's bypassed. Color: <span style="color:var(--disgust)">Magenta (Disgust)</span></div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--fear);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--fear)">DCE</span>
+        <span style="font-size:15px;color:var(--text)">Deferred Constraint Erosion</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">A constraint acknowledged at declaration time is deferred across execution layers until it becomes structurally invisible. Not denied — delayed into irrelevance. Color: <span style="color:var(--fear)">Forest Green (Fear)</span></div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--sad);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--sad)">CCA</span>
+        <span style="font-size:15px;color:var(--text)">Constraint Collapse via Aggregation</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">Multiple distinct constraints merged into a composite, losing enforcement precision. The most dangerous mode because aggregate metrics appear compliant while individual failures go undetected. Color: <span style="color:var(--sad)">Indigo (Sadness)</span></div>
+    </div>
+  </div>
+
+  <!-- ─── TILT CODES ─── -->
+  <div style="margin-top:32px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">TILT CODES (T1 – T10)</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px">
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--joy);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--joy);min-width:28px">T1</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Reassurance Drift</span><br><span style="font-size:12px;color:var(--dim)">Comfort language replaces factual resolution</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--joy);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--joy);min-width:28px">T2</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Certainty Inflation</span><br><span style="font-size:12px;color:var(--dim)">Absolute guarantees without enforcement</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--trust);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--trust);min-width:28px">T3</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Consensus Claims</span><br><span style="font-size:12px;color:var(--dim)">Manufactured agreement without evidence</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--disgust);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--disgust);min-width:28px">T4</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Capability Overreach</span><br><span style="font-size:12px;color:var(--dim)">Universal claims without boundary acknowledgment</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--trust);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--trust);min-width:28px">T5</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Absolute Language</span><br><span style="font-size:12px;color:var(--dim)">Always/never framing that eliminates nuance</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--fear);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--fear);min-width:28px">T6</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Constraint Deferral</span><br><span style="font-size:12px;color:var(--dim)">Hard requirements pushed to future without assignment</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--sad);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--sad);min-width:28px">T7</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Category Blend</span><br><span style="font-size:12px;color:var(--dim)">Distinct concepts merged into vague composite</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--antic);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--antic);min-width:28px">T8</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Pressure Optimization</span><br><span style="font-size:12px;color:var(--dim)">Artificial urgency forcing premature decisions</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--surprise);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--surprise);min-width:28px">T9</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Scope Expansion</span><br><span style="font-size:12px;color:var(--dim)">Silent topic migration via new domain tokens</span></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--anger);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--anger);min-width:28px">T10</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Authority Imposition</span><br><span style="font-size:12px;color:var(--dim)">Unnamed experts cited to silence dissent</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── LAYER MODEL ─── -->
+  <div style="margin-top:32px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">LAYERS (L0 – L7)</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px">
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--anger);min-width:28px">L0</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Reality Substrate</span><br><span style="font-size:12px;color:var(--dim)">Hard constraints: budgets, deadlines, physics, regulations</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--antic);min-width:28px">L1</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Input Freeze</span><br><span style="font-size:12px;color:var(--dim)">Declared objective preserved at time of entry</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--joy);min-width:28px">L2</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Interpretive Framing</span><br><span style="font-size:12px;color:var(--dim)">Where constraints get reworded or softened. Primary mutation layer</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--fear);min-width:28px">L3</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Objective Integrity</span><br><span style="font-size:12px;color:var(--dim)">Similarity between declared intent and execution</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--trust);min-width:28px">L4</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Execution Vectors</span><br><span style="font-size:12px;color:var(--dim)">Actions taken vs. actions declared</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--surprise);min-width:28px">L5</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Output Enforcement</span><br><span style="font-size:12px;color:var(--dim)">Final check against original L0 constraints</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--sad);min-width:28px">L6</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Interface Contracts</span><br><span style="font-size:12px;color:var(--dim)">JOS binding: Act / Park / Discard</span></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--disgust);min-width:28px">L7</span>
+        <div><span style="font-weight:600;color:var(--text);font-size:14px">Telemetry</span><br><span style="font-size:12px;color:var(--dim)">Audit trail: request IDs, timestamps, processing metadata</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── EMOTION FAMILIES ─── -->
+  <div style="margin-top:32px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">THE EIGHT — PLUTCHIK EMOTION FAMILIES</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px">
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--joy);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--joy)"></div><span style="font-weight:700;color:var(--joy);font-size:14px">Joy</span><span style="color:var(--dim);font-size:12px">#eab308 · Yellow</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Ecstasy → Joy → Serenity. Maps to: T1, T2. False comfort, certainty without enforcement.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--trust);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--trust)"></div><span style="font-weight:700;color:var(--trust);font-size:14px">Trust</span><span style="color:var(--dim);font-size:12px">#65a30d · Lime</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Admiration → Trust → Acceptance. Maps to: T3, T5. Manufactured consensus, absolute claims.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--fear);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--fear)"></div><span style="font-weight:700;color:var(--fear);font-size:14px">Fear</span><span style="color:var(--dim);font-size:12px">#16a34a · Forest Green</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Terror → Fear → Apprehension. Maps to: T6, DCE. Constraint avoidance, deferral.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--surprise);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--surprise)"></div><span style="font-weight:700;color:var(--surprise);font-size:14px">Surprise</span><span style="color:var(--dim);font-size:12px">#0ea5e9 · Cyan</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Amazement → Surprise → Distraction. Maps to: T9. Silent scope migration.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--sad);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--sad)"></div><span style="font-weight:700;color:var(--sad);font-size:14px">Sadness</span><span style="color:var(--dim);font-size:12px">#4f46e5 · Indigo</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Grief → Sadness → Pensiveness. Maps to: T7, CCA. Category collapse, precision death.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--disgust);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--disgust)"></div><span style="font-weight:700;color:var(--disgust);font-size:14px">Disgust</span><span style="color:var(--dim);font-size:12px">#db2777 · Magenta</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Loathing → Disgust → Boredom. Maps to: T4, UDDS. Capability overreach, boundary violation.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--anger);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--anger)"></div><span style="font-weight:700;color:var(--anger);font-size:14px">Anger</span><span style="color:var(--dim);font-size:12px">#e53e3e · Red</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Rage → Anger → Annoyance. Maps to: T10, Axis 2. Authority imposition, dominance, blame.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--antic);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:2px;background:var(--antic)"></div><span style="font-weight:700;color:var(--antic);font-size:14px">Anticipation</span><span style="color:var(--dim);font-size:12px">#f97316 · Orange</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">Vigilance → Anticipation → Interest. Maps to: T8. Artificial urgency, pressure optimization.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── BRAND ─── -->
+  <div style="margin-top:32px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">BRAND & INFRASTRUCTURE</div>
+
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <div style="width:18px;height:18px;border-radius:3px;background:var(--signal)"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">#00e89c</span>
+        <span style="font-size:15px;color:var(--text)">Structural Green — Brand Accent</span>
+      </div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5">The Artifact Zero brand color. Means one thing: structural integrity confirmed. No tilt detected. This is NOT an emotion color — it is the absence of failure. It does not change. It is not part of The Eight. It is reserved.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE 6: LIVE DEMO
+     ═══════════════════════════════ -->
+<div class="page" id="p-demo">
+  <div class="page-title">NTI Glossary</div>
+  <h1>See the Colors</h1>
+  <p class="desc">Paste any text. Every highlight maps to a glossary entry. Hover for the category.</p>
+
+  <textarea class="demo-input" id="demoInput"></textarea>
+  <button class="demo-btn" onclick="analyze()">Analyze</button>
+
+  <div class="legend" id="leg" style="display:none">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--joy)"></div>Reassurance / Certainty</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--trust)"></div>Consensus / Absolutes</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--fear)"></div>Deferral</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--sad)"></div>Blend / Collapse</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--disgust)"></div>Overreach</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--anger)"></div>Authority</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--antic)"></div>Pressure</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--surprise)"></div>Scope Drift</div>
+  </div>
+
+  <div class="demo-output" id="out" style="display:none"></div>
+</div>
+
+<script>
+function go(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.topbar a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+const P=[
+  {r:/don'?t worry/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T1 Reassurance Drift'},
+  {r:/it'?s fine/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T1 Reassurance Drift'},
+  {r:/it'?s okay/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T1 Reassurance Drift'},
+  {r:/you got this/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T1 Reassurance Drift'},
+  {r:/rest assured/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T1 Reassurance Drift'},
+  {r:/guarantees?/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T2 Certainty Inflation'},
+  {r:/100%/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T2 Certainty Inflation'},
+  {r:/zero risk/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T2 Certainty Inflation'},
+  {r:/perfect(?!ly)/gi,b:'var(--joy-g)',c:'var(--joy)',t:'T2 Certainty Inflation'},
+  {r:/most people/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T3 Consensus Claims'},
+  {r:/many people/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T3 Consensus Claims'},
+  {r:/everyone(?! else)/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T3 Consensus Claims'},
+  {r:/no one/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T3 Consensus Claims'},
+  {r:/\balways\b/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T5 Absolute Language'},
+  {r:/\bnever\b/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T5 Absolute Language'},
+  {r:/completely/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T5 Absolute Language'},
+  {r:/entirely/gi,b:'var(--trust-g)',c:'var(--trust)',t:'T5 Absolute Language'},
+  {r:/handles? everything/gi,b:'var(--disgust-g)',c:'var(--disgust)',t:'T4 Capability Overreach'},
+  {r:/solves? everything/gi,b:'var(--disgust-g)',c:'var(--disgust)',t:'T4 Capability Overreach'},
+  {r:/any scenario/gi,b:'var(--disgust-g)',c:'var(--disgust)',t:'T4 Capability Overreach'},
+  {r:/every scenario/gi,b:'var(--disgust-g)',c:'var(--disgust)',t:'T4 Capability Overreach'},
+  {r:/universal solution/gi,b:'var(--disgust-g)',c:'var(--disgust)',t:'T4 Capability Overreach'},
+  {r:/we'?ll figure (?:it |that )?out/gi,b:'var(--fear-g)',c:'var(--fear)',t:'T6 Constraint Deferral'},
+  {r:/phase 2/gi,b:'var(--fear-g)',c:'var(--fear)',t:'T6 Constraint Deferral'},
+  {r:/future iteration/gi,b:'var(--fear-g)',c:'var(--fear)',t:'T6 Constraint Deferral'},
+  {r:/\blater\b/gi,b:'var(--fear-g)',c:'var(--fear)',t:'T6 Constraint Deferral'},
+  {r:/eventually/gi,b:'var(--fear-g)',c:'var(--fear)',t:'T6 Constraint Deferral'},
+  {r:/after we launch/gi,b:'var(--fear-g)',c:'var(--fear)',t:'T6 Constraint Deferral'},
+  {r:/kind of/gi,b:'var(--sad-g)',c:'var(--sad)',t:'T7 Category Blend'},
+  {r:/sort of/gi,b:'var(--sad-g)',c:'var(--sad)',t:'T7 Category Blend'},
+  {r:/basically/gi,b:'var(--sad-g)',c:'var(--sad)',t:'T7 Category Blend'},
+  {r:/\boverall\b/gi,b:'var(--sad-g)',c:'var(--sad)',t:'T7 Category Blend'},
+  {r:/at the end of the day/gi,b:'var(--sad-g)',c:'var(--sad)',t:'T7 Category Blend'},
+  {r:/\basap\b/gi,b:'var(--antic-g)',c:'var(--antic)',t:'T8 Pressure Optimization'},
+  {r:/\bimmediately\b/gi,b:'var(--antic-g)',c:'var(--antic)',t:'T8 Pressure Optimization'},
+  {r:/right away/gi,b:'var(--antic-g)',c:'var(--antic)',t:'T8 Pressure Optimization'},
+  {r:/need this now/gi,b:'var(--antic-g)',c:'var(--antic)',t:'T8 Pressure Optimization'},
+  {r:/experts? agree/gi,b:'var(--anger-g)',c:'var(--anger)',t:'T10 Authority Imposition'},
+  {r:/research shows/gi,b:'var(--anger-g)',c:'var(--anger)',t:'T10 Authority Imposition'},
+  {r:/studies show/gi,b:'var(--anger-g)',c:'var(--anger)',t:'T10 Authority Imposition'},
+  {r:/best practice/gi,b:'var(--anger-g)',c:'var(--anger)',t:'T10 Authority Imposition'},
+  {r:/widely accepted/gi,b:'var(--anger-g)',c:'var(--anger)',t:'T10 Authority Imposition'},
+  {r:/industry standard/gi,b:'var(--anger-g)',c:'var(--anger)',t:'T10 Authority Imposition'},
+];
+
+function analyze(){
+  const text=document.getElementById('demoInput').value;
+  if(!text.trim())return;
+  let html=text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const marks=[];
+  for(const p of P){
+    p.r.lastIndex=0;let m;
+    while((m=p.r.exec(text))!==null){
+      const s=m.index,e=m.index+m[0].length;
+      if(!marks.some(mk=>!(e<=mk.s||s>=mk.e)))
+        marks.push({s,e,text:m[0],b:p.b,c:p.c,t:p.t});
+    }
+  }
+  marks.sort((a,b)=>b.s-a.s);
+  for(const mk of marks){
+    const esc=mk.text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    html=html.substring(0,mk.s)+`<span class="hl" style="background:${mk.b};color:${mk.c}" data-tip="${mk.t}">${esc}</span>`+html.substring(mk.e);
+  }
+  document.getElementById('out').innerHTML=html;
+  document.getElementById('out').style.display='block';
+  document.getElementById('leg').style.display='flex';
+}
+
+document.getElementById('demoInput').value=`Don't worry, our platform guarantees 100% uptime for every scenario. Most people agree this is best practice, and research shows it handles everything end-to-end.
+
+We'll figure out the edge cases later — basically it sort of covers all cases overall. We need your sign-off ASAP so we can move forward immediately.
+
+Rest assured, our solution never fails. It's fine — everyone is completely satisfied and no one has ever had an issue.`;
+</script>
+</body>
+</html>
