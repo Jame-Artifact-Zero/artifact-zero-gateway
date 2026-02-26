@@ -269,7 +269,7 @@ def create_topup_session(user_id, user_email, amount_cents):
     """Create a Stripe Checkout session for credit top-up. Returns session URL."""
     if not STRIPE_SECRET_KEY:
         return None, "Stripe not configured"
-    import urllib.request, urllib.parse
+    import urllib.request, urllib.parse, urllib.error
 
     params = urllib.parse.urlencode({
         "mode": "payment",
@@ -293,7 +293,17 @@ def create_topup_session(user_id, user_email, amount_cents):
         with urllib.request.urlopen(req) as resp:
             session_data = json.loads(resp.read())
             return session_data["url"], None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"[credits] Stripe API error {e.code}: {body}", flush=True)
+        try:
+            err_data = json.loads(body)
+            msg = err_data.get("error", {}).get("message", body[:200])
+        except Exception:
+            msg = body[:200]
+        return None, f"Stripe error: {msg}"
     except Exception as e:
+        print(f"[credits] Stripe request failed: {e}", flush=True)
         return None, str(e)
 
 

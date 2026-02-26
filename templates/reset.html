@@ -36,6 +36,7 @@ h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
 <div class="links"><a href="/forgot">Request a new reset link</a></div>
 {% else %}
 <form method="POST" action="/reset">
+{{ csrf_token_input() }}
 <input type="hidden" name="token" value="{{ token }}">
 <div class="field"><label>New Password</label><input type="password" name="password" required minlength="8" autofocus placeholder="At least 8 characters"></div>
 <button type="submit" class="btn">Set password</button>

@@ -1,0 +1,271 @@
+diff --git a/app.py b/app.py
+index cba0cab..4370bdf 100644
+--- a/app.py
++++ b/app.py
+@@ -5,27 +5,12 @@ import time
+ import uuid
+ from datetime import datetime, timezone
+ from typing import Any, Dict, List, Optional
+-from pre_score_gate import pre_score_gate
+ 
+ from flask import Flask, request, jsonify, render_template, session
+ import db as database
+ 
+ app = Flask(__name__)
+-
+-# ── Session Security ──
+-_secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
+-if not _secret:
+-    _secret = uuid.uuid4().hex + uuid.uuid4().hex          # random per-boot fallback (sessions won't persist across restarts, but never guessable)
+-    print("[SECURITY] WARNING: No FLASK_SECRET_KEY or AZ_SECRET set — using random ephemeral key", flush=True)
+-app.secret_key = _secret
+-app.config["SESSION_COOKIE_SECURE"] = True                  # only send over HTTPS
+-app.config["SESSION_COOKIE_HTTPONLY"] = True                 # no JS access
+-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"               # CSRF protection for top-level nav
+-app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7        # 7 day max session
+-
+-# ── CSRF Protection ──
+-from csrf import init_csrf
+-init_csrf(app)
++app.secret_key = os.getenv("FLASK_SECRET_KEY", os.getenv("AZ_SECRET", "dev-fallback-secret-change-me"))
+ 
+ 
+ # ═══════════════════════════════════════════
+@@ -100,16 +85,13 @@ except ImportError:
+     print("[app] admin_dashboard not found, skipping", flush=True)
+ 
+ # ============================================================
+-# CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
++# CANONICAL NTI RUNTIME v2.0 (RULE-BASED, NO LLM DEPENDENCY)
+ #
+-# v3.0 includes:
+-# - 5-dimension weighted NII scoring (D1-D5, continuous 0-100)
+-# - Tilt clusters: T1-T10
++# v2.0 single monolithic revision includes:
++# - New tilt clusters: T4, T5, T9, T10
+ # - Broadened DCE markers (soft deferral)
+-# - V3 self-audit loop, time collapse, attribution drift stripping
+-# - Convergence gate, loop detection, consolidation engine
+-# - Confusion layer, axis2 friction, audit source tagging
+-# - Full enforcement priority tree (L0-L4)
++# - NII q3 penalizes: boundary absence + new structural tilt clusters
++# - No changes to layer schema, dominance order, or UDDS count logic
+ # ============================================================
+ NTI_VERSION = "canonical-nti-v3.0"
+ 
+@@ -715,33 +697,6 @@ def contact_page():
+     return render_template("contact.html")
+ 
+ 
+-@app.route("/developers")
+-def developers_page():
+-    return render_template("developers.html")
+-
+-
+-@app.route("/api/developer-apply", methods=["POST"])
+-def api_developer_apply():
+-    """Developer/vendor access request. Stores in DB, sends notification."""
+-    data = request.get_json() or {}
+-    name = (data.get("name") or "").strip()
+-    email = (data.get("email") or "").strip()
+-    message = (data.get("message") or "").strip()
+-    if not name or not email or not message:
+-        return jsonify({"error": "All fields required"}), 400
+-    try:
+-        conn = _get_db()
+-        conn.execute(
+-            "INSERT INTO contact_submissions (name, email, message, type, created_at) VALUES (?, ?, ?, ?, ?)",
+-            (name, email, message, "developer_apply", utc_now_iso())
+-        )
+-        conn.commit()
+-    except Exception:
+-        pass  # DB table may not exist yet — fail silently, log below
+-    log_json_line("developer_apply", {"name": name, "email": email, "message": message[:200]})
+-    return jsonify({"status": "ok"})
+-
+-
+ @app.route("/compose")
+ def compose_page():
+     return render_template("compose.html")
+@@ -902,31 +857,25 @@ def api_score_free():
+     if len(text) > 50000:
+         return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
+ 
+-    # V2 PRE-SCORE GATE — reject gibberish/junk before scoring
+-    gate = pre_score_gate(text)
+-    if not gate["pass"]:
+-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
+-
+     try:
+         l0 = detect_l0_constraints(text)
+         obj = objective_extract(text)
++        drift = objective_drift("", text)
++        framing = detect_l2_framing(text)
+         tilt = classify_tilt(text)
++        udds = detect_udds("", text, l0)
++        dce = detect_dce(text, l0)
++        cca = detect_cca("", text)
+         dbc = detect_downstream_before_constraint("", text, l0)
+         nii = compute_nii("", text, l0, dbc, tilt)
+ 
+-        # Failure modes already computed inside compute_nii — read from detail
+-        detail = nii.get("detail", {})
+-        udds_state = detail.get("udds", "FALSE")
+-        dce_state = detail.get("dce", "FALSE")
+-        cca_state = detail.get("cca", "FALSE")
+-
+         dominance = []
+-        if "CONFIRMED" in udds_state or "PROBABLE" in udds_state:
++        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
++            dominance.append("CCA")
++        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+             dominance.append("UDDS")
+-        if "CONFIRMED" in dce_state or "PROBABLE" in dce_state:
++        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+             dominance.append("DCE")
+-        if "CONFIRMED" in cca_state or "PROBABLE" in cca_state:
+-            dominance.append("CCA")
+         if not dominance:
+             dominance = ["NONE"]
+     except Exception as e:
+@@ -944,7 +893,7 @@ def api_score_free():
+             "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
+         },
+         "failure_modes": {
+-            "UDDS": udds_state, "DCE": dce_state, "CCA": cca_state,
++            "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
+             "dominance": dominance
+         },
+         "tilt": {"tags": tilt, "count": len(tilt)},
+@@ -957,7 +906,7 @@ def api_score_free():
+     # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
+     try:
+         from core_engine.v3_enforcement import self_audit
+-        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
++        audit = self_audit(text, objective=obj.get("objective_text") if 'obj' in dir() else None)
+         result["v3"] = {
+             "enforced_text": audit["enforced_text"],
+             "actions_taken": audit["actions_taken"],
+@@ -973,30 +922,6 @@ def api_score_free():
+ 
+ @app.route("/health")
+ def health():
+-
+-# ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
+-@app.route("/api/promote-admin", methods=["POST"])
+-def promote_admin():
+-    """One-time admin promotion. DELETE THIS ROUTE AFTER USE."""
+-    token = os.getenv("ADMIN_PROMOTE_TOKEN") or "aztempfix2026"
+-    if not token:
+-        return jsonify(error="disabled"), 404
+-    data = request.get_json(silent=True) or {}
+-    if data.get("token") != token:
+-        return jsonify(error="bad token"), 403
+-    email = data.get("email", "").strip().lower()
+-    if not email:
+-        return jsonify(error="no email"), 400
+-    conn = db.db_connect()
+-    cur = conn.cursor()
+-    if db.USE_PG:
+-        cur.execute("UPDATE users SET role='admin' WHERE email=%s", (email,))
+-    else:
+-        cur.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
+-    affected = cur.rowcount
+-    conn.commit()
+-    conn.close()
+-    return jsonify(ok=True, affected=affected, email=email)
+     return jsonify({"status": "ok", "version": NTI_VERSION})
+ 
+ 
+@@ -1159,11 +1084,6 @@ def nti_run():
+         record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
+         return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
+ 
+-    # V2 PRE-SCORE GATE
+-    gate = pre_score_gate(text)
+-    if not gate["pass"]:
+-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
+-
+     l0_constraints = detect_l0_constraints(text)
+ 
+     obj = objective_extract(prompt or text)
+@@ -1405,11 +1325,6 @@ def api_score():
+     if len(text) > 50000:
+         return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
+ 
+-    # V2 PRE-SCORE GATE
+-    gate = pre_score_gate(text)
+-    if not gate["pass"]:
+-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
+-
+     try:
+         l0 = detect_l0_constraints(text)
+         obj = objective_extract(text)
+@@ -1575,37 +1490,12 @@ def stripe_webhook():
+     print(f"[stripe] Webhook: {event_type}", flush=True)
+ 
+     if event_type == "checkout.session.completed":
+-        session_obj = event.get("data", {}).get("object", {})
+-        # 1. Credit top-up
+         try:
+             from credits import handle_topup_webhook
+             handled = handle_topup_webhook(event)
+             print(f"[stripe] Top-up handled: {handled}", flush=True)
+         except Exception as e:
+-            print(f"[stripe] Top-up webhook error: {e}", flush=True)
+-        # 2. Subscription activation
+-        try:
+-            uid = session_obj.get("client_reference_id")
+-            if uid:
+-                from auth import _update_stripe
+-                _update_stripe(uid, session_obj.get("customer"), session_obj.get("subscription"), "personal")
+-                print(f"[stripe] Subscription activated for {uid}", flush=True)
+-        except Exception as e:
+-            print(f"[stripe] Subscription webhook error: {e}", flush=True)
+-
+-    elif event_type == "customer.subscription.deleted":
+-        try:
+-            cid = event.get("data", {}).get("object", {}).get("customer")
+-            if cid:
+-                conn = database.db_connect()
+-                cur = conn.cursor()
+-                q = "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=%s" if database.USE_PG else "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=?"
+-                cur.execute(q, (cid,))
+-                conn.commit()
+-                conn.close()
+-                print(f"[stripe] Subscription cancelled for customer {cid}", flush=True)
+-        except Exception as e:
+-            print(f"[stripe] Cancellation webhook error: {e}", flush=True)
++            print(f"[stripe] Webhook error: {e}", flush=True)
+ 
+     return jsonify({"received": True})
+ 
+@@ -1760,11 +1650,6 @@ def api_rewrite():
+     if len(text) > 5000:
+         return jsonify({"error": "text too long (max 5000 chars)"}), 400
+ 
+-    # V2 PRE-SCORE GATE
+-    gate = pre_score_gate(text)
+-    if not gate["pass"]:
+-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
+-
+     # Convergence gate — block AI for deterministic-routable inputs
+     try:
+         from convergence_gate import enforce as cg_enforce
+@@ -1825,15 +1710,8 @@ def api_rewrite():
+         issues.append("CCA: Capability claimed without constraint backing")
+ 
+     system_prompt = (
+-        "You are a direct, no-nonsense rewrite engine built by Artifact Zero. Your job: take poorly structured messages "
++        "You are a direct, no-nonsense rewrite engine. Your job: take poorly structured messages "
+         "and rewrite them as a competent professional would actually write them.\n\n"
+-        "VOICE:\n"
+-        "- Direct, blunt, sharp. Confidence 9/10. No filler, no fluff.\n"
+-        "- Numbers over adjectives. '49% to 7%' not 'significant reduction.'\n"
+-        "- Short sentences. 3-10 words is common. Fragments are fine.\n"
+-        "- Never use: revolutionary, game-changing, empower, transform, AI-powered, seamless, solution, best-in-class, synergy, leverage, ecosystem.\n"
+-        "- Never use exclamation marks. Never say 'excited to' or 'thrilled to.'\n"
+-        "- Controlled frustration is fine. Sarcasm at problems is fine. Never at people.\n\n"
+         "RULES:\n"
+         "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
+         "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"

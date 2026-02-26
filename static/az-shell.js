@@ -100,6 +100,11 @@
     logo.textContent = 'ARTIFACT ZERO';
     bar.appendChild(logo);
 
+    // Check auth — redirect logo to /dashboard if logged in
+    fetch('/api/auth/status').then(r=>r.json()).then(d=>{
+      if(d.logged_in) logo.href = '/dashboard';
+    }).catch(()=>{});
+
     // Nav
     const nav = document.createElement('nav');
     NAV_RIGHT.forEach(item => {

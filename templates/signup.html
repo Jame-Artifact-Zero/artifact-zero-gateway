@@ -31,6 +31,7 @@ h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:28px}
 <h1>Create account</h1>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 <form method="POST" action="/signup">
+{{ csrf_token_input() }}
 <div class="field"><label>Name</label><input type="text" name="name" placeholder="Your name (optional)"></div>
 <div class="field"><label>Email</label><input type="email" name="email" required autofocus placeholder="you@example.com"></div>
 <div class="field"><label>Password</label><input type="password" name="password" required minlength="8" placeholder="At least 8 characters"></div>

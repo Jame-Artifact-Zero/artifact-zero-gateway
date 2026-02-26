@@ -99,6 +99,13 @@ try:
 except ImportError:
     print("[app] admin_dashboard not found, skipping", flush=True)
 
+try:
+    from ccs_routes import init_ccs
+    init_ccs(app)
+except ImportError:
+    print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
+
+
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
@@ -973,6 +980,8 @@ def api_score_free():
 
 @app.route("/health")
 def health():
+    return jsonify({"status": "ok", "version": NTI_VERSION})
+
 
 # ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
 @app.route("/api/promote-admin", methods=["POST"])
@@ -1902,4 +1911,3 @@ def api_rewrite():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")), debug=True)
-# 

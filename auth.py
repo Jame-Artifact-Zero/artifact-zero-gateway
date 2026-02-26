@@ -11,6 +11,7 @@ import secrets
 from functools import wraps
 
 from flask import Blueprint, request, jsonify, render_template, redirect, session
+from csrf import validate_csrf
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -188,6 +189,7 @@ def login_required(f):
 def signup():
     if request.method == "GET":
         return render_template("signup.html")
+    validate_csrf()
     data = request.form or request.get_json() or {}
     email = (data.get("email") or "").strip()
     pw = data.get("password") or ""
@@ -210,6 +212,7 @@ def signup():
 def login():
     if request.method == "GET":
         return render_template("login.html")
+    validate_csrf()
     data = request.form or request.get_json() or {}
     email = (data.get("email") or "").strip()
     pw = data.get("password") or ""
@@ -229,6 +232,7 @@ def logout():
 def forgot_password():
     if request.method == "GET":
         return render_template("forgot.html")
+    validate_csrf()
     data = request.form or request.get_json() or {}
     email = (data.get("email") or "").strip()
     if not email:
@@ -250,6 +254,7 @@ def reset_password():
             return render_template("reset.html", error="This reset link has expired or already been used.", expired=True)
         return render_template("reset.html", token=token)
     data = request.form or request.get_json() or {}
+    validate_csrf()
     token = data.get("token") or ""
     pw = data.get("password") or ""
     if not token:
@@ -291,24 +296,8 @@ def checkout():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@auth_bp.route("/stripe/webhook", methods=["POST"])
-def stripe_webhook():
-    try: event = json.loads(request.get_data(as_text=True))
-    except: return "Invalid JSON", 400
-    t = event.get("type","")
-    if t == "checkout.session.completed":
-        s = event["data"]["object"]
-        uid = s.get("client_reference_id")
-        if uid: _update_stripe(uid, s.get("customer"), s.get("subscription"), "personal")
-    elif t == "customer.subscription.deleted":
-        cid = event["data"]["object"].get("customer")
-        conn = database.db_connect()
-        cur = conn.cursor()
-        q = "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=%s" if database.USE_PG else "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=?"
-        cur.execute(q, (cid,))
-        conn.commit()
-        conn.close()
-    return "ok", 200
+# stripe/webhook REMOVED — all webhook traffic handled by /api/stripe/webhook in app.py
+# with HMAC signature verification. Do not add unverified webhook endpoints.
 
 # ═══════════════════════════════════════
 # STRIPE HEALTH CHECK
