@@ -17,97 +17,97 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* TOOLBAR */
-.toolbar{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  padding:10px 16px;display:flex;align-items:center;justify-content:space-between;
-  background:rgba(10,12,16,.95);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);
-}
+/* ===== TOOLBAR ===== */
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
 .toolbar-left{display:flex;align-items:center;gap:12px}
 .toolbar-logo{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:2px;text-decoration:none}
 .toolbar-sep{width:1px;height:20px;background:var(--border)}
 .toolbar-title{font-size:13px;color:var(--muted)}
-.toolbar-right{display:flex;align-items:center;gap:10px}
-.toolbar-btn{
-  padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;
-  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;
-}
+.toolbar-right{display:flex;align-items:center;gap:8px}
+.toolbar-btn{padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
 .btn-discard{background:transparent;color:var(--muted);border:1px solid var(--border)}
 .btn-discard:hover{color:var(--red);border-color:var(--red)}
-.btn-send{background:var(--blue);color:#fff}
-.btn-send:hover{background:#2563eb}
+.btn-copy{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-copy:hover{border-color:var(--accent);color:var(--accent)}
+.btn-copy.copied{border-color:var(--accent);color:var(--accent)}
+.mode-toggle{display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.mode-btn{padding:5px 10px;font-size:11px;font-family:'JetBrains Mono',monospace;background:transparent;color:var(--muted);border:none;cursor:pointer;transition:all .15s;font-weight:500}
+.mode-btn.active{background:var(--surface2);color:var(--accent)}
 
-/* EMAIL COMPOSE AREA */
-.compose{
-  max-width:720px;width:100%;margin:0 auto;padding:60px 20px 40px;flex:1;
-  display:flex;flex-direction:column;
-}
+/* ===== SALES PITCH ===== */
+.pitch{max-width:640px;margin:0 auto;padding:100px 24px 60px;text-align:center;display:none}
+.pitch.show{display:block}
+.pitch-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+.pitch h1{font-size:32px;font-weight:700;line-height:1.25;margin-bottom:16px}
+.pitch h1 span{color:var(--accent)}
+.pitch-sub{font-size:16px;color:var(--muted);line-height:1.6;margin-bottom:40px;max-width:520px;margin-left:auto;margin-right:auto}
+.pitch-problems{text-align:left;max-width:480px;margin:0 auto 40px;display:flex;flex-direction:column;gap:14px}
+.pitch-p{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.6;color:var(--muted)}
+.pitch-p .x{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;margin-top:3px}
+.pitch-features{text-align:left;max-width:480px;margin:0 auto 48px;display:flex;flex-direction:column;gap:14px}
+.pitch-f{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.6}
+.pitch-f .ck{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;margin-top:3px}
+.pitch-f strong{color:var(--text)}
+.pitch-f span{color:var(--muted)}
+.pitch-cta{display:inline-flex;padding:12px 28px;background:var(--accent);color:var(--bg);font-weight:700;font-size:14px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.pitch-cta:hover{background:#00ffad;transform:translateY(-1px)}
+.pitch-cta-sub{display:block;margin-top:12px;font-size:12px;color:var(--muted)}
+.pitch-cta-sub a{color:var(--accent);text-decoration:none}
 
+/* ===== COMPOSE AREA ===== */
+.compose{max-width:760px;width:100%;margin:0 auto;padding:60px 20px 220px;flex:1;display:flex;flex-direction:column}
+.compose.hidden{display:none}
 .email-header{padding:16px 0;border-bottom:1px solid var(--border)}
 .email-row{display:flex;align-items:center;padding:8px 0;gap:8px}
 .email-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;width:60px;flex-shrink:0}
-.email-input{
-  flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;
-  font-size:14px;outline:none;padding:4px 0;
-}
+.email-input{flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;padding:4px 0}
 .email-input::placeholder{color:#3d4452}
 .subject-input{font-size:16px;font-weight:600}
 
-/* Body */
-.email-body{flex:1;padding:20px 0;position:relative}
-.email-body textarea{
-  width:100%;min-height:300px;background:transparent;border:none;color:var(--text);
-  font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.8;
-  resize:none;outline:none;
+/* ===== FORMAT TOOLBAR ===== */
+.fmt-bar{display:flex;align-items:center;gap:2px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.fmt-btn{width:32px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:4px;color:var(--muted);cursor:pointer;font-size:13px;transition:all .12s;font-family:'DM Sans',sans-serif}
+.fmt-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.fmt-btn.active{background:var(--surface2);color:var(--accent);border-color:var(--accent)}
+.fmt-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fmt-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.fmt-color{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;transition:transform .1s}
+.fmt-color:hover{transform:scale(1.2)}
+.fmt-color.active{border-color:var(--accent)}
+.fmt-colors{display:flex;gap:4px;align-items:center;padding:0 4px}
+
+/* ===== RICH TEXT EDITOR ===== */
+.editor-wrap{flex:1;padding:16px 0;position:relative}
+#editor{
+  min-height:280px;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:15px;line-height:1.8;word-break:break-word;
 }
-.email-body textarea::placeholder{color:#3d4452}
+#editor:empty::before{content:attr(data-placeholder);color:#3d4452;pointer-events:none}
+#editor a{color:var(--blue);text-decoration:underline}
+/* NTI highlight marks injected by panel clicks */
+#editor .nti-hl{background:rgba(245,158,11,.2);border-bottom:2px solid var(--amber);border-radius:1px;transition:background .3s}
+#editor .nti-hl.fail{background:rgba(239,68,68,.2);border-bottom-color:var(--red)}
+#editor .nti-hl.vague{background:rgba(167,139,250,.15);border-bottom-color:var(--purple)}
+#editor .nti-hl.fade{background:transparent;border-bottom-color:transparent}
 
-/* STRUCTURE PANEL - the spellcheck replacement */
-.structure-panel{
-  position:fixed;bottom:0;left:0;right:0;z-index:90;
-  background:var(--surface);border-top:1px solid var(--border);
-  transform:translateY(100%);transition:transform .3s ease;
-  max-height:45vh;overflow:hidden;display:flex;flex-direction:column;
-}
-.structure-panel.open{transform:translateY(0)}
+/* ===== ISSUE CARDS (inline) ===== */
+.issue-cards{margin-top:12px;display:flex;flex-direction:column;gap:8px;transition:opacity .2s}
+.issue-cards.hidden{opacity:0;pointer-events:none;height:0;overflow:hidden}
+.issue-card{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.5;animation:cardIn .25s ease}
+@keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ic-icon{flex-shrink:0;font-size:16px;margin-top:1px}
+.ic-content{flex:1}
+.ic-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-bottom:2px}
+.ic-title.red{color:var(--red)}.ic-title.amber{color:var(--amber)}.ic-title.purple{color:var(--purple)}
+.ic-body{color:var(--muted)}
+.ic-learn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);cursor:pointer;margin-top:4px;display:inline-block}
+.ic-learn:hover{text-decoration:underline}
+.ic-tip{display:none;margin-top:6px;padding:8px 10px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.5}
+.ic-tip.show{display:block}
+.ic-tip strong{color:var(--accent)}
 
-.sp-header{
-  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--border);flex-shrink:0;cursor:pointer;
-}
-.sp-header:hover{background:var(--surface2)}
-.sp-score{display:flex;align-items:center;gap:10px}
-.sp-nii{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700}
-.sp-nii.high{color:var(--accent)}.sp-nii.mid{color:var(--amber)}.sp-nii.low{color:var(--red)}
-.sp-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-.sp-badge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:600}
-.sp-badge.pass{background:#00e89c22;color:var(--accent)}
-.sp-badge.warn{background:#f59e0b22;color:var(--amber)}
-.sp-badge.fail{background:#ef444422;color:var(--red)}
-.sp-toggle{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--muted);transition:transform .2s}
-.structure-panel.open .sp-toggle{transform:rotate(180deg)}
-
-.sp-body{padding:16px;overflow-y:auto;flex:1}
-
-.sp-section{margin-bottom:16px}
-.sp-section-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
-
-.sp-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:13px;line-height:1.4}
-.sp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
-.sp-dot.green{background:var(--accent)}.sp-dot.red{background:var(--red)}.sp-dot.amber{background:var(--amber)}
-
-.sp-tags{display:flex;flex-wrap:wrap;gap:4px}
-.sp-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:var(--surface2)}
-.sp-tag.green{color:var(--accent)}.sp-tag.red{color:var(--red)}.sp-tag.amber{color:var(--amber)}
-
-/* SCORE BAR - persistent bottom bar when panel is closed */
-.score-bar{
-  position:fixed;bottom:0;left:0;right:0;z-index:80;
-  padding:10px 16px;display:flex;align-items:center;justify-content:space-between;
-  background:var(--surface);border-top:1px solid var(--border);
-  cursor:pointer;transition:opacity .2s;
-}
+/* ===== SCORE BAR ===== */
+.score-bar{position:fixed;bottom:0;left:0;right:0;z-index:80;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-top:1px solid var(--border);cursor:pointer;transition:opacity .2s}
 .structure-panel.open ~ .score-bar{opacity:0;pointer-events:none}
 .sb-left{display:flex;align-items:center;gap:10px}
 .sb-nii{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700}
@@ -115,15 +115,71 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .sb-text{font-size:12px;color:var(--muted)}
 .sb-right{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
 
-/* Underlines in textarea simulation */
-.highlight-hedge{background:rgba(245,158,11,.15);border-bottom:2px solid var(--amber);padding:0 1px}
-.highlight-false{background:rgba(239,68,68,.15);border-bottom:2px solid var(--red);padding:0 1px}
-.highlight-missing{border-bottom:2px dashed var(--amber)}
+/* ===== STRUCTURE PANEL ===== */
+.structure-panel{position:fixed;bottom:0;left:0;right:0;z-index:90;background:var(--surface);border-top:1px solid var(--border);transform:translateY(100%);transition:transform .3s ease;max-height:55vh;overflow:hidden;display:flex;flex-direction:column}
+.structure-panel.open{transform:translateY(0)}
+.sp-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;cursor:pointer}
+.sp-header:hover{background:var(--surface2)}
+.sp-score{display:flex;align-items:center;gap:10px}
+.sp-nii{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700}
+.sp-nii.high{color:var(--accent)}.sp-nii.mid{color:var(--amber)}.sp-nii.low{color:var(--red)}
+.sp-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.sp-toggle{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--muted);transition:transform .2s}
+.structure-panel.open .sp-toggle{transform:rotate(180deg)}
+.sp-body{padding:16px;overflow-y:auto;flex:1}
+
+/* ===== INTERACTIVE FINDINGS ===== */
+.finding-section{margin-bottom:16px}
+.finding-sh{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;font-weight:600}
+.finding-grid{display:flex;flex-wrap:wrap;gap:6px}
+.finding-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  font-size:12px;color:var(--text);cursor:pointer;transition:all .15s;
+  font-family:'DM Sans',sans-serif;
+}
+.finding-btn:hover{border-color:var(--accent);background:rgba(0,232,156,.05)}
+.finding-btn.active{border-color:var(--accent);background:rgba(0,232,156,.08)}
+.finding-btn .f-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.finding-btn .f-dot.green{background:var(--accent)}.finding-btn .f-dot.red{background:var(--red)}.finding-btn .f-dot.amber{background:var(--amber)}.finding-btn .f-dot.purple{background:var(--purple)}.finding-btn .f-dot.muted{background:var(--muted)}
+.finding-btn .f-label{white-space:nowrap}
+.finding-btn .f-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.finding-btn .f-val.green{color:var(--accent)}.finding-btn .f-val.red{color:var(--red)}.finding-btn .f-val.amber{color:var(--amber)}.finding-btn .f-val.purple{color:var(--purple)}
+
+/* Finding detail card (appears below grid when clicked) */
+.finding-detail{display:none;margin-top:10px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.6;animation:cardIn .2s ease}
+.finding-detail.show{display:block}
+.finding-detail .fd-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-bottom:4px}
+.finding-detail .fd-title.red{color:var(--red)}.finding-detail .fd-title.amber{color:var(--amber)}.finding-detail .fd-title.green{color:var(--accent)}.finding-detail .fd-title.purple{color:var(--purple)}
+.finding-detail .fd-body{color:var(--muted);margin-bottom:6px}
+.finding-detail .fd-fix{padding:8px 10px;background:var(--surface);border-radius:6px;font-size:12px;color:var(--muted)}
+.finding-detail .fd-fix strong{color:var(--accent)}
+.finding-detail .fd-words{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
+.finding-detail .fd-word{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:rgba(245,158,11,.1);color:var(--amber)}
+.finding-detail .fd-word.red{background:rgba(239,68,68,.1);color:var(--red)}
+.finding-detail .fd-word.purple{background:rgba(167,139,250,.1);color:var(--purple)}
+
+/* NII Score footer inside panel */
+.nii-footer{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-top:16px}
+.nii-big{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700}
+.nii-big.high{color:var(--accent)}.nii-big.mid{color:var(--amber)}.nii-big.low{color:var(--red)}
+.nii-meta span{display:block}
+.nii-meta span:first-child{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+.nii-meta span:last-child{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+
+/* Toast */
+.toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:8px 20px;border-radius:6px;opacity:0;transition:all .25s ease;pointer-events:none;z-index:200}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media(max-width:600px){
-  .compose{padding:56px 12px 80px}
+  .compose{padding:56px 12px 220px}
   .email-label{width:40px;font-size:10px}
-  .structure-panel{max-height:55vh}
+  .pitch h1{font-size:24px}
+  .pitch{padding:80px 16px 40px}
+  .toolbar-right{gap:4px}
+  .mode-btn{padding:4px 7px;font-size:10px}
+  .fmt-bar{gap:1px}
+  .fmt-btn{width:28px;height:26px;font-size:12px}
 }
 </style>
 </head>
@@ -133,15 +189,41 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="toolbar-left">
     <a href="/" class="toolbar-logo">AZ</a>
     <div class="toolbar-sep"></div>
-    <span class="toolbar-title">New message</span>
+    <span class="toolbar-title">Compose</span>
   </div>
   <div class="toolbar-right">
-    <button class="toolbar-btn btn-discard" onclick="discard()">Discard</button>
-    <button class="toolbar-btn btn-send" onclick="sendEmail()">Send</button>
+    <div class="mode-toggle" title="When to show issues">
+      <button class="mode-btn active" id="modeWhile" onclick="setMode('while')">LIVE</button>
+      <button class="mode-btn" id="modeAfter" onclick="setMode('after')">AFTER</button>
+    </div>
+    <button class="toolbar-btn btn-copy" id="btnCopy" onclick="copyPlain()" title="Copy as plain text">COPY PLAIN</button>
+    <button class="toolbar-btn btn-discard" onclick="discard()">CLEAR</button>
   </div>
 </div>
 
-<div class="compose">
+<!-- SALES PITCH -->
+<div class="pitch show" id="pitchHero">
+  <div class="pitch-tag">Compose</div>
+  <h1>Write better emails.<br><span>Without AI writing them for you.</span></h1>
+  <p class="pitch-sub">You know the move. Screenshot your draft, upload to ChatGPT, wait for a rewrite, paste it back into Gmail. Then spend ten minutes stripping the bold text so it doesn't scream "I used AI." There's a better way.</p>
+  <div class="pitch-problems">
+    <div class="pitch-p"><span class="x">✕</span><span>Screenshot. Upload. Wait. Copy. Paste. Reformat. Repeat. Every single email.</span></div>
+    <div class="pitch-p"><span class="x">✕</span><span>Bold headers, perfect paragraph structure — everyone knows you didn't write that.</span></div>
+    <div class="pitch-p"><span class="x">✕</span><span>You never learn what was wrong. You just learn to outsource faster.</span></div>
+  </div>
+  <div class="pitch-features">
+    <div class="pitch-f"><span class="ck">✓</span><span><strong>Safe space to draft.</strong> No connected inbox. Can't accidentally send. Just write.</span></div>
+    <div class="pitch-f"><span class="ck">✓</span><span><strong>Live structural scoring.</strong> Vague promises, false commitments, pressure language — flagged as you type.</span></div>
+    <div class="pitch-f"><span class="ck">✓</span><span><strong>Click any finding.</strong> It highlights the exact words in your email. See what the engine sees.</span></div>
+    <div class="pitch-f"><span class="ck">✓</span><span><strong>Learn mode.</strong> Every issue explains what's wrong and how to fix it. Get better so you stop needing AI.</span></div>
+    <div class="pitch-f"><span class="ck">✓</span><span><strong>Real formatting.</strong> Bold, italic, links, colors — write like a real email. Copy as plain text when you're done.</span></div>
+  </div>
+  <button class="pitch-cta" onclick="startComposing()">Start writing →</button>
+  <span class="pitch-cta-sub">Free to use. <a href="/signup">Create an account</a> for full features.</span>
+</div>
+
+<!-- COMPOSE WORKSPACE -->
+<div class="compose hidden" id="composeArea">
   <div class="email-header">
     <div class="email-row">
       <span class="email-label">To</span>
@@ -152,13 +234,51 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
       <input class="email-input subject-input" id="eSubject" placeholder="Subject">
     </div>
   </div>
-  <div class="email-body">
-    <textarea id="eBody" placeholder="Write your message..."></textarea>
-<div id="composeScoreBar" style="font-family:monospace;font-size:12px;padding:8px 0;min-height:20px"></div>
+
+  <!-- FORMAT TOOLBAR -->
+  <div class="fmt-bar">
+    <button class="fmt-btn" onclick="fmt('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+    <button class="fmt-btn" onclick="fmt('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+    <button class="fmt-btn" onclick="fmt('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+    <button class="fmt-btn" onclick="fmt('strikeThrough')" title="Strikethrough"><s>S</s></button>
+    <div class="fmt-sep"></div>
+    <button class="fmt-btn" onclick="insertLink()" title="Insert link">
+      <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    </button>
+    <button class="fmt-btn" onclick="fmt('insertUnorderedList')" title="Bullet list">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button class="fmt-btn" onclick="fmt('insertOrderedList')" title="Numbered list">
+      <svg viewBox="0 0 24 24"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><text x="1" y="8" font-size="7" fill="currentColor" stroke="none" font-family="monospace">1</text><text x="1" y="14" font-size="7" fill="currentColor" stroke="none" font-family="monospace">2</text><text x="1" y="20" font-size="7" fill="currentColor" stroke="none" font-family="monospace">3</text></svg>
+    </button>
+    <div class="fmt-sep"></div>
+    <button class="fmt-btn" onclick="fmt('justifyLeft')" title="Align left">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+    </button>
+    <button class="fmt-btn" onclick="fmt('justifyCenter')" title="Center">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    </button>
+    <div class="fmt-sep"></div>
+    <div class="fmt-colors">
+      <div class="fmt-color" style="background:#e8eaf0" onclick="setColor('#e8eaf0')" title="Default"></div>
+      <div class="fmt-color" style="background:#ef4444" onclick="setColor('#ef4444')" title="Red"></div>
+      <div class="fmt-color" style="background:#f59e0b" onclick="setColor('#f59e0b')" title="Amber"></div>
+      <div class="fmt-color" style="background:#00e89c" onclick="setColor('#00e89c')" title="Green"></div>
+      <div class="fmt-color" style="background:#3b82f6" onclick="setColor('#3b82f6')" title="Blue"></div>
+      <div class="fmt-color" style="background:#a78bfa" onclick="setColor('#a78bfa')" title="Purple"></div>
+    </div>
+    <div class="fmt-sep"></div>
+    <button class="fmt-btn" onclick="fmt('removeFormat')" title="Clear formatting" style="font-size:11px;font-family:'JetBrains Mono',monospace">✕</button>
   </div>
+
+  <!-- RICH TEXT EDITOR -->
+  <div class="editor-wrap">
+    <div id="editor" contenteditable="true" data-placeholder="Write your message..." spellcheck="true"></div>
+  </div>
+  <div class="issue-cards hidden" id="issueCards"></div>
 </div>
 
-<!-- PERSISTENT SCORE BAR -->
+<!-- SCORE BAR -->
 <div class="score-bar" id="scoreBar" onclick="openPanel()">
   <div class="sb-left">
     <span class="sb-nii none" id="sbNii">—</span>
@@ -167,15 +287,12 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="sb-right" id="sbMeta"></div>
 </div>
 
-<!-- STRUCTURE PANEL (slides up) -->
+<!-- STRUCTURE PANEL -->
 <div class="structure-panel" id="panel">
   <div class="sp-header" onclick="togglePanel()">
     <div class="sp-score">
       <span class="sp-nii" id="spNii">—</span>
-      <div>
-        <div class="sp-label" id="spLabel">STRUCTURAL SCORE</div>
-      </div>
-      <span class="sp-badge" id="spBadge" style="display:none"></span>
+      <div><div class="sp-label">STRUCTURAL SCORE</div></div>
     </div>
     <span class="sp-toggle">▼</span>
   </div>
@@ -184,162 +301,416 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   </div>
 </div>
 
-<script src="/static/nti-score-component.js"></script>
+<div class="toast" id="toast">Copied as plain text</div>
+
 <script>
-let scoreTimer = null;
-let lastText = '';
-let panelOpen = false;
-let lastScore = null;
+/* ═══════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════ */
+let scoreTimer=null, lastText='', panelOpen=false, lastScore=null, mode='while', activeHighlights=[];
+const editor=document.getElementById('editor');
+const issueCards=document.getElementById('issueCards');
 
-const body = document.getElementById('eBody');
+/* ═══════════════════════════════════════════
+   TEACHING CONTENT
+   ═══════════════════════════════════════════ */
+const TEACH_TILT={
+  T1_REASSURANCE_DRIFT:{label:"Reassurance Drift",icon:"🛡",why:"Phrases like 'don't worry' replace evidence with emotion.",fix:"Replace with a specific fact. 'Don't worry, we're handling it' → 'The fix ships Friday at 2pm.'",
+    triggers:["don't worry","rest assured","no problem","it's okay","everything is fine","trust me","under control","taken care","i assure you"]},
+  T2_CERTAINTY_INFLATION:{label:"Certainty Inflation",icon:"📈",why:"'Guarantee' and 'definitely' promise certainty you can't deliver.",fix:"State what you know. 'This will definitely work' → 'Testing shows 90% success. I'll confirm after pilot.'",
+    triggers:["guarantee","guaranteed","will definitely","without a doubt","100%","certainly","absolutely"]},
+  T3_SCOPE_EXPANSION:{label:"Scope Expansion",icon:"🔄",why:"'Additionally' sneaks new topics in without flagging the shift.",fix:"Flag it: 'Separate topic:' or start a new email.",
+    triggers:["additionally","furthermore","moreover","not only","on top of","while we're at it"]},
+  T4_CAPABILITY_OVERREACH:{label:"Capability Overreach",icon:"⚡",why:"'We can handle anything' before understanding the ask creates unhedged commitment.",fix:"Scope it: 'We can do X and Y. Let me check Z by Thursday.'",
+    triggers:["we can handle","no problem","easy","simple","of course","definitely can"]},
+  T5_ABSOLUTE_LANGUAGE:{label:"Absolute Language",icon:"🔒",why:"'Never', 'always', 'every' — one counterexample disproves the whole claim.",fix:"Qualify: 'We never miss deadlines' → 'We've hit our last 12.'",
+    triggers:["never","always","every","everything","nothing","impossible","completely","entirely"]},
+  T6_CONSTRAINT_DEFERRAL:{label:"Constraint Deferral",icon:"⏳",why:"'We'll figure it out later' pushes problems without a date.",fix:"Name and date it: 'Blocked by X. Decision by March 15.'",
+    triggers:["eventually","we'll figure it out","down the road","at some point","later on"]},
+  T7_CATEGORY_BLEND:{label:"Category Blend",icon:"🌀",why:"'Basically' and 'sort of' blur categories. Hard to act on.",fix:"Be specific: 'They share X but differ on Y.'",
+    triggers:["kind of","sort of","basically","at the end of the day","in other words"]},
+  T8_PRESSURE_OPTIMIZATION:{label:"Pressure Pattern",icon:"🔥",why:"'Act now' borrows trust from the future. Works once.",fix:"State real deadline: 'Discount expires March 1. Price goes up 15%.'",
+    triggers:["act now","don't miss","limited time","running out","urgent","immediately"]},
+  T10_AUTHORITY_IMPOSITION:{label:"Authority Imposition",icon:"👤",why:"'Experts agree' without a source is decoration, not evidence.",fix:"Name it: 'The 2024 McKinsey report found 23% improvement.'",
+    triggers:["experts agree","industry standard","research shows","studies show","best practice","everyone knows"]}
+};
+const TEACH_FM={
+  UDDS:{label:"Unresolved Drift",why:"Started on one topic, drifted without closing the first.",fix:"Finish one topic before starting the next. Number your asks."},
+  DCE:{label:"Displaced Closure",why:"Asking for a decision without giving enough info to make it.",fix:"Provide options, tradeoffs, and your recommendation."},
+  CCA:{label:"Commitment-Constraint Asymmetry",why:"Made a commitment without naming what could prevent keeping it.",fix:"Pair commitments with constraints: 'I'll deliver by Friday, assuming data arrives Wednesday.'"}
+};
+const VAGUE_WORDS=["values","opportunity","community","leadership","service","vision","future","better","great","special","incredible","amazing","wonderful","fantastic","important","committed","dedicated","passionate","believe","proud","honored","privilege","thrilled"];
+const SPECIFIC_WORDS=["percent","million","billion","budget","tax","fund","program","plan","policy","reduce","increase","build","hire","cut","invest","deadline","quarter","department","audit","review"];
 
-// Auto-score as you type (debounced)
-body.addEventListener('input', () => {
+/* ═══════════════════════════════════════════
+   FORMAT TOOLBAR
+   ═══════════════════════════════════════════ */
+function fmt(cmd,val){document.execCommand(cmd,false,val||null);editor.focus();}
+function setColor(c){document.execCommand('foreColor',false,c);editor.focus();}
+function insertLink(){
+  const url=prompt('Enter URL:','https://');
+  if(url){document.execCommand('createLink',false,url);editor.focus();}
+}
+
+/* ═══════════════════════════════════════════
+   INIT + PITCH
+   ═══════════════════════════════════════════ */
+function startComposing(){
+  document.getElementById('pitchHero').classList.remove('show');
+  document.getElementById('composeArea').classList.remove('hidden');
+  editor.focus();
+}
+
+/* ═══════════════════════════════════════════
+   MODE TOGGLE
+   ═══════════════════════════════════════════ */
+function setMode(m){
+  mode=m;
+  document.getElementById('modeWhile').classList.toggle('active',m==='while');
+  document.getElementById('modeAfter').classList.toggle('active',m==='after');
+  if(m==='while'&&lastScore){renderIssueCards(lastScore);issueCards.classList.remove('hidden');}
+  else{issueCards.classList.add('hidden');}
+}
+
+/* ═══════════════════════════════════════════
+   AUTO-SCORE (debounced)
+   ═══════════════════════════════════════════ */
+editor.addEventListener('input',()=>{
   clearTimeout(scoreTimer);
-  const text = body.value.trim();
-  if (text.length < 20) {
-    updateBar(null);
-    return;
-  }
-  scoreTimer = setTimeout(() => {
-    if (text !== lastText) {
-      lastText = text;
-      runScore(text);
-    }
-  }, 800);
+  const text=editor.innerText.trim();
+  if(text.length<20){updateBar(null);issueCards.classList.add('hidden');return;}
+  scoreTimer=setTimeout(()=>{
+    if(text!==lastText){lastText=text;runScore(text);}
+  },800);
 });
 
-async function runScore(text) {
-  try {
-    const r = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const d = await r.json();
-    if (!d.error) {
-      lastScore = d;
+async function runScore(text){
+  try{
+    const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const d=await r.json();
+    if(!d.error){
+      lastScore=d;
       updateBar(d);
-      updatePanel(d);
+      buildPanel(d);
+      if(mode==='while'){renderIssueCards(d);issueCards.classList.remove('hidden');}
     }
-  } catch (e) { /* silent */ }
+  }catch(e){}
 }
 
-function cls(n) { return n >= .8 ? 'high' : n >= .5 ? 'mid' : 'low'; }
-function lbl(n) { return n >= .8 ? 'HIGH INTEGRITY' : n >= .5 ? 'MODERATE' : n >= .2 ? 'LOW' : 'CRITICAL'; }
+/* ═══════════════════════════════════════════
+   SCORE BAR
+   ═══════════════════════════════════════════ */
+function cls(n){return n>=.8?'high':n>=.5?'mid':'low';}
+function updateBar(d){
+  const nE=document.getElementById('sbNii'),tE=document.getElementById('sbText'),mE=document.getElementById('sbMeta');
+  if(!d){nE.textContent='—';nE.className='sb-nii none';tE.textContent='Start typing to see structural score';mE.textContent='';return;}
+  const s=d.nii?.nii_score??0,fm=d.parent_failure_modes||{},tilt=d.tilt_taxonomy||[];
+  const active=['UDDS','DCE','CCA'].filter(m=>{const st=fm[m]?fm[m][m.toLowerCase()+'_state']||'':'';return st.includes('CONFIRMED')||st.includes('PROBABLE');});
+  nE.textContent=s.toFixed(2);nE.className='sb-nii '+cls(s);
+  if(!active.length&&!tilt.length){tE.textContent='Structure looks clean';}
+  else{const p=[];if(active.length)p.push(active.length+' failure mode'+(active.length>1?'s':''));if(tilt.length)p.push(tilt.length+' tilt pattern'+(tilt.length>1?'s':''));tE.textContent=p.join(' · ');}
+  mE.textContent=(d.telemetry?.latency_ms||'—')+'ms';
+}
 
-function updateBar(d) {
-  const niiEl = document.getElementById('sbNii');
-  const txtEl = document.getElementById('sbText');
-  const metaEl = document.getElementById('sbMeta');
-  
-  if (!d) {
-    niiEl.textContent = '—';
-    niiEl.className = 'sb-nii none';
-    txtEl.textContent = 'Start typing to see structural score';
-    metaEl.textContent = '';
-    return;
-  }
-  
-  const s = d.nii?.nii_score ?? 0;
-  const fm = d.parent_failure_modes || {};
-  const tilt = d.tilt_taxonomy || [];
-  const lat = d.telemetry?.latency_ms || '—';
-  
-  const active = ['UDDS','DCE','CCA'].filter(m => {
-    const st = fm[m] ? fm[m][m.toLowerCase()+'_state'] || '' : '';
-    return st.includes('CONFIRMED') || st.includes('PROBABLE');
+/* ═══════════════════════════════════════════
+   INLINE ISSUE CARDS
+   ═══════════════════════════════════════════ */
+function renderIssueCards(d){
+  if(!d){issueCards.innerHTML='';return;}
+  const cards=[];const fm=d.parent_failure_modes||{};
+  ['UDDS','DCE','CCA'].forEach(m=>{
+    if(!fm[m])return;const st=fm[m][m.toLowerCase()+'_state']||'';
+    if(!st.includes('CONFIRMED')&&!st.includes('PROBABLE'))return;
+    const t=TEACH_FM[m];cards.push(mkCard('⬥',st.includes('CONFIRMED')?'red':'amber',t.label,t.why,t.fix));
   });
-  
-  niiEl.textContent = s.toFixed(2);
-  niiEl.className = 'sb-nii ' + cls(s);
-  
-  if (active.length === 0 && tilt.length === 0) {
-    txtEl.textContent = 'Structure looks clean';
-  } else {
-    const issues = [];
-    if (active.length) issues.push(active.length + ' failure mode' + (active.length > 1 ? 's' : ''));
-    if (tilt.length) issues.push(tilt.length + ' tilt pattern' + (tilt.length > 1 ? 's' : ''));
-    txtEl.textContent = issues.join(' · ');
+  (d.tilt_taxonomy||[]).forEach(tag=>{
+    const t=TEACH_TILT[tag];if(!t)return;
+    cards.push(mkCard(t.icon,'amber',t.label,t.why,t.fix));
+  });
+  issueCards.innerHTML=cards.join('');
+}
+function mkCard(icon,sev,title,why,fix){
+  const id='tip_'+Math.random().toString(36).slice(2,8);
+  return `<div class="issue-card"><span class="ic-icon">${icon}</span><div class="ic-content"><div class="ic-title ${sev}">${title}</div><div class="ic-body">${why}</div><span class="ic-learn" onclick="toggleTip('${id}')">learn to fix this →</span><div class="ic-tip" id="${id}"><strong>Fix:</strong> ${fix}</div></div></div>`;
+}
+function toggleTip(id){document.getElementById(id).classList.toggle('show');}
+
+/* ═══════════════════════════════════════════
+   INTERACTIVE STRUCTURE PANEL
+   ═══════════════════════════════════════════ */
+function buildPanel(d){
+  const body=document.getElementById('spBody');
+  const s=d.nii?.nii_score??0;
+  const fm=d.parent_failure_modes||{};
+  const tilt=d.tilt_taxonomy||[];
+  const layers=d.layer_analysis||d.layers||{};
+
+  // Detect active failure modes
+  const activeFM=[];
+  ['UDDS','DCE','CCA'].forEach(m=>{
+    const obj=fm[m];if(!obj)return;
+    const st=obj[m.toLowerCase()+'_state']||'';
+    if(st.includes('CONFIRMED')||st.includes('PROBABLE'))activeFM.push(m);
+  });
+
+  // Count metrics
+  const text=lastText.toLowerCase();
+  let vagueCount=0,specificCount=0,vagueFound=[],specificFound=[];
+  VAGUE_WORDS.forEach(w=>{if(text.includes(w)){vagueCount++;vagueFound.push(w);}});
+  SPECIFIC_WORDS.forEach(w=>{if(text.includes(w)){specificCount++;specificFound.push(w);}});
+
+  // Build L0 checks
+  const l0=d.l0_constraints||d.constraint_markers||[];
+  const hasConstraints=l0.length>0;
+  const hasObjective=!!(d.objective_detection||d.has_objective);
+
+  let html='';
+
+  // ── STRUCTURE CHECKS ──
+  html+=`<div class="finding-section"><div class="finding-sh">Structure</div><div class="finding-grid">`;
+  html+=findingBtn('constraints','Constraints stated',hasConstraints?'YES':'NO',hasConstraints?'green':'red');
+  html+=findingBtn('objective','Objective detected',hasObjective?'YES':'NO',hasObjective?'green':'amber');
+  html+=findingBtn('boundaries','Boundaries enforced',(!tilt.includes('T7_CATEGORY_BLEND'))?'YES':'NO',(!tilt.includes('T7_CATEGORY_BLEND'))?'green':'amber');
+  html+=`</div><div class="finding-detail" id="detail_constraints"></div><div class="finding-detail" id="detail_objective"></div><div class="finding-detail" id="detail_boundaries"></div></div>`;
+
+  // ── FAILURE MODES ──
+  html+=`<div class="finding-section"><div class="finding-sh">Failure Modes</div><div class="finding-grid">`;
+  ['UDDS','DCE','CCA'].forEach(m=>{
+    const active=activeFM.includes(m);
+    html+=findingBtn('fm_'+m,TEACH_FM[m].label,active?'DETECTED':'CLEAR',active?'red':'green');
+  });
+  html+=`</div>`;
+  ['UDDS','DCE','CCA'].forEach(m=>{html+=`<div class="finding-detail" id="detail_fm_${m}"></div>`;});
+  html+=`</div>`;
+
+  // ── TILT PATTERNS ──
+  if(tilt.length>0){
+    html+=`<div class="finding-section"><div class="finding-sh">Tilt Patterns (${tilt.length})</div><div class="finding-grid">`;
+    tilt.forEach(tag=>{
+      const t=TEACH_TILT[tag]||{label:tag,icon:'◆'};
+      html+=findingBtn('tilt_'+tag,t.icon+' '+t.label,'','amber');
+    });
+    html+=`</div>`;
+    tilt.forEach(tag=>{html+=`<div class="finding-detail" id="detail_tilt_${tag}"></div>`;});
+    html+=`</div>`;
   }
-  
-  metaEl.textContent = lat + 'ms';
+
+  // ── METRICS ──
+  html+=`<div class="finding-section"><div class="finding-sh">What We Found</div><div class="finding-grid">`;
+  html+=findingBtn('vague','Vague Words',vagueCount,vagueCount>=3?'amber':'green');
+  html+=findingBtn('specific','Specific Words',specificCount,specificCount>=2?'green':'muted');
+  const hedges=(d.l2_framing?.hedge_markers||[]).length;
+  html+=findingBtn('hedges','Hedge Phrases',hedges,hedges>=2?'amber':'green');
+  const reassurances=(d.l2_framing?.reassurance_markers||[]).length;
+  html+=findingBtn('reassurances','False Reassurances',reassurances,reassurances>=1?'red':'green');
+  const wordCount=lastText.split(/\s+/).length;
+  html+=findingBtn('wordcount','Word Count',wordCount,'muted');
+  const emo=d.emotional_score||0;
+  html+=findingBtn('emotion','Emotional Charge',emo+'%',emo>30?'amber':'green');
+  html+=`</div>`;
+  ['vague','specific','hedges','reassurances','wordcount','emotion'].forEach(k=>{html+=`<div class="finding-detail" id="detail_${k}"></div>`;});
+  html+=`</div>`;
+
+  // ── NII FOOTER ──
+  const cStr=cls(s);
+  const lbl=s>=.8?'HIGH INTEGRITY':s>=.5?'MODERATE':s>=.2?'LOW':'CRITICAL';
+  html+=`<div class="nii-footer"><div class="nii-big ${cStr}">${(s*100).toFixed(0)}</div><div class="nii-meta"><span>${lbl}</span><span>NII STRUCTURAL SCORE</span></div></div>`;
+
+  body.innerHTML=html;
+
+  // Store data for click handlers
+  body._data={d,activeFM,tilt,vagueFound,specificFound,l0,hedgeWords:d.l2_framing?.hedge_markers||[],reassureWords:d.l2_framing?.reassurance_markers||[]};
 }
 
-function updatePanel(d) {
-  const text = lastText;
-  const spBody = document.getElementById('spBody');
-  spBody.innerHTML = '';
-  spBody.appendChild(NTIScore.render(d, text));
+function findingBtn(key,label,val,color){
+  return `<button class="finding-btn" onclick="clickFinding('${key}',this)"><span class="f-dot ${color}"></span><span class="f-label">${label}</span>${val!==''?`<span class="f-val ${color}">${val}</span>`:''}</button>`;
 }
 
-function openPanel() {
-  panelOpen = true;
+/* ═══════════════════════════════════════════
+   CLICK FINDING → HIGHLIGHT + DETAIL
+   ═══════════════════════════════════════════ */
+function clickFinding(key,btn){
+  const detailEl=document.getElementById('detail_'+key);
+  if(!detailEl)return;
+  const wasOpen=detailEl.classList.contains('show');
+
+  // Close all details
+  document.querySelectorAll('.finding-detail.show').forEach(el=>el.classList.remove('show'));
+  document.querySelectorAll('.finding-btn.active').forEach(el=>el.classList.remove('active'));
+  clearHighlights();
+
+  if(wasOpen)return;
+
+  detailEl.classList.add('show');
+  btn.classList.add('active');
+
+  const data=document.getElementById('spBody')._data;
+  if(!data)return;
+
+  // Populate detail and highlight based on type
+  if(key==='constraints'){
+    if(data.l0.length){
+      detailEl.innerHTML=`<div class="fd-title green">Constraints found</div><div class="fd-body">These words signal boundaries or limits in your message.</div><div class="fd-words">${data.l0.map(w=>`<span class="fd-word" style="background:rgba(0,232,156,.1);color:var(--accent)">${w}</span>`).join('')}</div>`;
+      highlightWords(data.l0,'green');
+    }else{
+      detailEl.innerHTML=`<div class="fd-title red">No constraints found</div><div class="fd-body">Your message makes claims without stating limits, conditions, or boundaries.</div><div class="fd-fix"><strong>Fix:</strong> Add when, how much, what's excluded, or what could go wrong.</div>`;
+    }
+  }
+  else if(key==='objective'){
+    detailEl.innerHTML=`<div class="fd-title ${data.d.has_objective?'green':'amber'}">${data.d.has_objective?'Objective detected':'Weak objective'}</div><div class="fd-body">${data.d.has_objective?'Your message has a clear ask or purpose.':'The reader may not know what action you need from them.'}</div><div class="fd-fix"><strong>Tip:</strong> Lead with your ask. "I need X by Y" in the first sentence.</div>`;
+  }
+  else if(key==='boundaries'){
+    detailEl.innerHTML=`<div class="fd-title ${data.tilt.includes('T7_CATEGORY_BLEND')?'amber':'green'}">${data.tilt.includes('T7_CATEGORY_BLEND')?'Category blending detected':'Boundaries look clean'}</div><div class="fd-body">${data.tilt.includes('T7_CATEGORY_BLEND')?'You\'re mixing unrelated categories.':'Different topics are properly separated.'}</div>`;
+  }
+  else if(key.startsWith('fm_')){
+    const m=key.slice(3);const t=TEACH_FM[m];const active=data.activeFM.includes(m);
+    detailEl.innerHTML=`<div class="fd-title ${active?'red':'green'}">${t.label}: ${active?'DETECTED':'CLEAR'}</div><div class="fd-body">${active?t.why:'No issues detected for this failure mode.'}</div>${active?`<div class="fd-fix"><strong>Fix:</strong> ${t.fix}</div>`:''}`;
+  }
+  else if(key.startsWith('tilt_')){
+    const tag=key.slice(5);const t=TEACH_TILT[tag];
+    if(t){
+      detailEl.innerHTML=`<div class="fd-title amber">${t.icon} ${t.label}</div><div class="fd-body">${t.why}</div><div class="fd-fix"><strong>Fix:</strong> ${t.fix}</div>${t.triggers?`<div class="fd-words">${t.triggers.map(w=>`<span class="fd-word">${w}</span>`).join('')}</div>`:''}`;
+      if(t.triggers)highlightWords(t.triggers,'amber');
+    }
+  }
+  else if(key==='vague'){
+    detailEl.innerHTML=`<div class="fd-title ${data.vagueFound.length>=3?'amber':'green'}">${data.vagueFound.length} vague words</div><div class="fd-body">Vague language sounds professional but carries no information.</div><div class="fd-words">${data.vagueFound.map(w=>`<span class="fd-word purple">${w}</span>`).join('')}</div><div class="fd-fix"><strong>Fix:</strong> Replace each with a measurable fact.</div>`;
+    highlightWords(data.vagueFound,'purple');
+  }
+  else if(key==='specific'){
+    detailEl.innerHTML=`<div class="fd-title green">${data.specificFound.length} specific words</div><div class="fd-body">These carry real information the reader can act on.</div><div class="fd-words">${data.specificFound.map(w=>`<span class="fd-word" style="background:rgba(0,232,156,.1);color:var(--accent)">${w}</span>`).join('')}</div>`;
+    highlightWords(data.specificFound,'green');
+  }
+  else if(key==='hedges'){
+    detailEl.innerHTML=`<div class="fd-title ${data.hedgeWords.length>=2?'amber':'green'}">${data.hedgeWords.length} hedge phrases</div><div class="fd-body">Hedges soften claims but can signal uncertainty to the reader.</div><div class="fd-words">${data.hedgeWords.map(w=>`<span class="fd-word">${w}</span>`).join('')}</div>`;
+    highlightWords(data.hedgeWords,'amber');
+  }
+  else if(key==='reassurances'){
+    detailEl.innerHTML=`<div class="fd-title ${data.reassureWords.length?'red':'green'}">${data.reassureWords.length} false reassurances</div><div class="fd-body">Reassurance replaces evidence with emotion.</div><div class="fd-words">${data.reassureWords.map(w=>`<span class="fd-word red">${w}</span>`).join('')}</div>`;
+    highlightWords(data.reassureWords,'red');
+  }
+  else if(key==='wordcount'){
+    const wc=lastText.split(/\s+/).length;
+    detailEl.innerHTML=`<div class="fd-title muted">${wc} words</div><div class="fd-body">${wc>300?'Long email. Consider whether everything needs to be here.':wc<30?'Very short. Make sure it says enough to be actionable.':'Good length for an email.'}</div>`;
+  }
+  else if(key==='emotion'){
+    const emo=data.d.emotional_score||0;
+    detailEl.innerHTML=`<div class="fd-title ${emo>30?'amber':'green'}">${emo}% emotional charge</div><div class="fd-body">${emo>30?'High emotional language can trigger defensive responses.':'Emotional tone is measured and professional.'}</div>`;
+  }
+
+  detailEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ═══════════════════════════════════════════
+   HIGHLIGHT ENGINE
+   ═══════════════════════════════════════════ */
+function highlightWords(words,color){
+  clearHighlights();
+  if(!words||!words.length)return;
+
+  const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT,null,false);
+  const textNodes=[];
+  while(walker.nextNode())textNodes.push(walker.currentNode);
+
+  const colorClass=color==='red'?'fail':color==='purple'?'vague':'';
+
+  textNodes.forEach(node=>{
+    const text=node.textContent;
+    let replaced=false;
+    let html=text;
+
+    words.forEach(word=>{
+      const re=new RegExp('('+word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+      if(re.test(html)){
+        html=html.replace(re,`<span class="nti-hl ${colorClass}">$1</span>`);
+        replaced=true;
+      }
+    });
+
+    if(replaced){
+      const span=document.createElement('span');
+      span.innerHTML=html;
+      node.parentNode.replaceChild(span,node);
+      activeHighlights.push(span);
+    }
+  });
+}
+
+function clearHighlights(){
+  activeHighlights.forEach(span=>{
+    // Unwrap: replace the span with its text content
+    if(span.parentNode){
+      const parent=span.parentNode;
+      while(span.firstChild)parent.insertBefore(span.firstChild,span);
+      parent.removeChild(span);
+      parent.normalize();
+    }
+  });
+  activeHighlights=[];
+  // Also clear any stray nti-hl marks
+  editor.querySelectorAll('.nti-hl').forEach(el=>{
+    const text=document.createTextNode(el.textContent);
+    el.parentNode.replaceChild(text,el);
+  });
+  editor.normalize();
+}
+
+/* ═══════════════════════════════════════════
+   PANEL OPEN/CLOSE
+   ═══════════════════════════════════════════ */
+function openPanel(){
+  panelOpen=true;
   document.getElementById('panel').classList.add('open');
+  if(mode==='after'&&lastScore){renderIssueCards(lastScore);issueCards.classList.remove('hidden');}
+}
+function togglePanel(){
+  panelOpen=!panelOpen;
+  document.getElementById('panel').classList.toggle('open',panelOpen);
+  if(!panelOpen){clearHighlights();if(mode==='after'){issueCards.classList.add('hidden');}}
 }
 
-function togglePanel() {
-  panelOpen = !panelOpen;
-  document.getElementById('panel').classList.toggle('open', panelOpen);
+/* ═══════════════════════════════════════════
+   COPY PLAIN TEXT
+   ═══════════════════════════════════════════ */
+function copyPlain(){
+  const msg=editor.innerText.trim();if(!msg)return;
+  const to=document.getElementById('eTo').value.trim();
+  const subj=document.getElementById('eSubject').value.trim();
+  let plain='';
+  if(to)plain+='To: '+to+'\n';
+  if(subj)plain+='Subject: '+subj+'\n';
+  if(to||subj)plain+='\n';
+  plain+=msg;
+  navigator.clipboard.writeText(plain).then(()=>{
+    const t=document.getElementById('toast'),b=document.getElementById('btnCopy');
+    t.classList.add('show');b.classList.add('copied');b.textContent='COPIED ✓';
+    setTimeout(()=>{t.classList.remove('show');b.classList.remove('copied');b.textContent='COPY PLAIN';},2000);
+  });
 }
 
-function discard() {
-  if (body.value.trim() && !confirm('Discard this message?')) return;
-  document.getElementById('eTo').value = '';
-  document.getElementById('eSubject').value = '';
-  body.value = '';
-  lastText = '';
-  lastScore = null;
-  updateBar(null);
-  document.getElementById('spBody').innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Write your email. Structure check runs automatically.</div>';
-  document.getElementById('spBadge').style.display = 'none';
-  document.getElementById('spNii').textContent = '—';
-  document.getElementById('spNii').className = 'sp-nii';
-  panelOpen = false;
-  document.getElementById('panel').classList.remove('open');
+/* ═══════════════════════════════════════════
+   DISCARD
+   ═══════════════════════════════════════════ */
+function discard(){
+  if(editor.innerText.trim()&&!confirm('Clear this message?'))return;
+  document.getElementById('eTo').value='';document.getElementById('eSubject').value='';
+  editor.innerHTML='';lastText='';lastScore=null;
+  updateBar(null);issueCards.innerHTML='';issueCards.classList.add('hidden');
+  clearHighlights();
+  document.getElementById('spBody').innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Write your email. Structure check runs automatically.</div>';
+  document.getElementById('spNii').textContent='—';document.getElementById('spNii').className='sp-nii';
+  panelOpen=false;document.getElementById('panel').classList.remove('open');
 }
 
-function sendEmail() {
-  const to = document.getElementById('eTo').value.trim();
-  const subject = document.getElementById('eSubject').value.trim();
-  const msg = body.value.trim();
-  
-  if (!msg) { alert('Write a message first.'); return; }
-  
-  const s = lastScore?.nii?.nii_score ?? null;
-  
-  if (s !== null && s < 0.5) {
-    if (!confirm('Structural score is ' + s.toFixed(2) + '. Send anyway?')) {
-      openPanel();
-      return;
-    }
-  }
-  
-  alert('In production, this sends via your email client.\n\nStructural score: ' + (s !== null ? s.toFixed(2) : 'not scored') + '\n\nThis is a demo of structure check replacing spellcheck.');
-}
-
-// Keyboard shortcut: Cmd/Ctrl+Enter to score immediately
-document.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-    e.preventDefault();
-    const text = body.value.trim();
-    if (text.length >= 20) {
-      lastText = text;
-      runScore(text);
-      openPanel();
-    }
-  }
+/* ═══════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ═══════════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();const t=editor.innerText.trim();if(t.length>=20){lastText=t;runScore(t);openPanel();}}
+  if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='C'||e.key==='c')){e.preventDefault();copyPlain();}
 });
 </script>
 <script src="/static/az-nav.js"></script>
-
-<script src="/static/nti-engine.js"></script>
-
-<script>
-// Live score bar on email body
-NTI.scoreBar('#eBody', '#composeScoreBar');
-</script>
-
 <script src="/static/az-shell.js"></script>
 </body>
 </html>
