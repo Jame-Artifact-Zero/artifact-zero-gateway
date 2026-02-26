@@ -175,10 +175,8 @@ def log_relay_event(event_type, ip="", username="", detail=""):
 
 # ─── Auth ───
 def _is_admin():
-    if session.get("role") == "admin": return True
-    token = request.args.get("token", "")
-    if ADMIN_TOKEN and token == ADMIN_TOKEN: return True
-    return False
+    """Admin access: session role only. No URL token fallback."""
+    return session.get("role") == "admin"
 
 # ─── Cockpit API endpoints ───
 @admin.route('/az-cockpit/api/banner', methods=['POST'])
@@ -467,6 +465,7 @@ tr:hover{{background:var(--s2)}}
   <div class="tab" onclick="sT('pricing')">Pricing</div>
   <div class="tab" onclick="sT('copy')">Copy</div>
   <div class="tab" onclick="sT('admin')">Admin</div>
+  <div class="tab" onclick="sT('scraper')">Scraper</div>
 </div>
 
 <div class="tc active" id="t-banner"><div class="cp">
@@ -520,6 +519,18 @@ tr:hover{{background:var(--s2)}}
   <div class="ir"><label>Promote</label><input type="text" id="a-email" placeholder="email@example.com"><button class="btn btn-s" onclick="pA()">MAKE ADMIN</button></div>
   <p style="color:var(--m);font-size:10px;margin-top:8px">Grants admin role to an existing user.</p>
 </div></div>
+
+<div class="tc" id="t-scraper"><div class="cp">
+  <h3>Fortune 500 + VC Fund Scraper</h3>
+  <p style="color:var(--m);font-size:11px;margin-bottom:12px">Re-scrapes corporate pages and re-scores. Takes 5-15 minutes.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn" onclick="runScrape('both',50)">RESCRAPE ALL (50)</button>
+    <button class="btn btn-s" onclick="runScrape('f500',50)">F500 ONLY</button>
+    <button class="btn btn-s" onclick="runScrape('vc',30)">VC ONLY</button>
+    <button class="btn btn-s" onclick="runScrape('both',5)">TEST (5)</button>
+  </div>
+  <div id="scrape-status" style="margin-top:12px;font-family:monospace;font-size:11px;color:var(--m);min-height:24px"></div>
+</div></div>
 </div>
 
 <div class="sc"><div class="st">Traffic — Today</div>
@@ -555,6 +566,8 @@ function tK(f,k){{const p={{}};p[f]=k;fetch(aU('/az-cockpit/api/kills'),{{method
 function sP(){{fetch(aU('/az-cockpit/api/pricing'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{pack1_name:document.getElementById('p1n').value,pack1_price:document.getElementById('p1p').value,pack1_scores:document.getElementById('p1s').value,pack2_name:document.getElementById('p2n').value,pack2_price:document.getElementById('p2p').value,pack2_scores:document.getElementById('p2s').value,pack3_name:document.getElementById('p3n').value,pack3_price:document.getElementById('p3p').value,pack3_scores:document.getElementById('p3s').value,promo_code:document.getElementById('pc').value,promo_pct:document.getElementById('pp').value}})}}).then(r=>r.json()).then(()=>toast('Pricing updated'))}}
 function sC(){{fetch(aU('/az-cockpit/api/copy'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{hero_h1:document.getElementById('c-h1').value,hero_sub:document.getElementById('c-sub').value,cta_btn:document.getElementById('c-cta').value,custom_selector:document.getElementById('c-sel').value,custom_value:document.getElementById('c-val').value}})}}).then(r=>r.json()).then(()=>toast('Copy updated'))}}
 function pA(){{const em=document.getElementById('a-email').value;if(!em)return;if(!confirm('Grant admin to '+em+'?'))return;fetch(aU('/az-cockpit/api/set-admin-email'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email:em}})}}).then(r=>r.json()).then(d=>toast(d.affected?'Admin granted':'User not found'))}}
+function runScrape(target,limit){{const st=document.getElementById('scrape-status');st.textContent='Starting scrape...';st.style.color='#f59e0b';fetch(aU('/az-cockpit/api/rescrape'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{target:target,limit:limit}})}}).then(r=>r.json()).then(d=>{{if(d.error){{st.textContent=d.error;st.style.color='#ef4444';}}else{{st.textContent='Running: '+target+' (limit '+limit+')... started '+d.started;st.style.color='#00e89c';pollScrape();}}}}).catch(e=>{{st.textContent='Error: '+e;st.style.color='#ef4444';}})}}
+function pollScrape(){{const st=document.getElementById('scrape-status');const iv=setInterval(()=>{{fetch(aU('/az-cockpit/api/rescrape-status')).then(r=>r.json()).then(d=>{{if(d.running){{st.textContent='⏳ Scraping... started '+d.started;st.style.color='#f59e0b';}}else if(d.last_result){{st.textContent='✓ '+d.last_result;st.style.color='#00e89c';clearInterval(iv);}}}})}},5000)}}
 setTimeout(()=>location.reload(),60000);
 </script></body></html>'''
 
@@ -573,6 +586,45 @@ button{width:100%;padding:10px;background:#00e89c;color:#000;border:none;border-
 <p style="color:#6b7280;font-size:11px;margin-bottom:16px">Admin access required</p>
 <form method="GET"><input type="password" name="token" placeholder="Admin token" autofocus><button type="submit">Enter</button></form>
 </div></body></html>'''
+
+
+# ─── Rescrape Trigger ───
+_scrape_status = {"running": False, "last_result": None, "started": None}
+
+@admin.route('/az-cockpit/api/rescrape', methods=['POST'])
+def api_rescrape():
+    if not _is_admin():
+        return jsonify(error="unauthorized"), 403
+    if _scrape_status["running"]:
+        return jsonify(error="Scrape already running", started=_scrape_status["started"]), 409
+
+    data = request.get_json(silent=True) or {}
+    target = data.get("target", "both")  # "f500", "vc", "both"
+    limit = min(int(data.get("limit", 50)), 100)
+
+    import threading
+    def _run():
+        _scrape_status["running"] = True
+        _scrape_status["started"] = utc_now()
+        _scrape_status["last_result"] = None
+        try:
+            from f500_scraper import lambda_handler
+            result = lambda_handler({"target": target, "limit": limit}, None)
+            _scrape_status["last_result"] = result.get("body", str(result))
+        except Exception as e:
+            _scrape_status["last_result"] = f"Error: {e}"
+        finally:
+            _scrape_status["running"] = False
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return jsonify(ok=True, target=target, limit=limit, started=_scrape_status["started"])
+
+@admin.route('/az-cockpit/api/rescrape-status')
+def api_rescrape_status():
+    if not _is_admin():
+        return jsonify(error="unauthorized"), 403
+    return jsonify(**_scrape_status)
 
 
 def init_admin(app):
