@@ -959,3 +959,74 @@ def init_admin(app):
     track_request(app)
     app.register_blueprint(admin)
     print("[COCKPIT] Live at /az-cockpit")
+
+    # ── BOOTSTRAP: direct route on app, not blueprint ──
+    @app.route('/api/bootstrap', methods=['POST'])
+    def _bootstrap():
+        data = request.get_json(silent=True) or {}
+        if data.get("token") != "aztempfix2026":
+            return jsonify(error="bad token"), 403
+        results = {}
+        email = data.get("email", "").strip().lower()
+        if email:
+            try:
+                import db as database
+                conn = database.db_connect()
+                cur = conn.cursor()
+                if database.USE_PG:
+                    cur.execute("UPDATE users SET role='admin' WHERE email=%s", (email,))
+                else:
+                    cur.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
+                results["promoted"] = {"email": email, "affected": cur.rowcount}
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                results["promote_error"] = str(e)
+        if data.get("seed"):
+            try:
+                from seed_data import FORTUNE_500, VC_FUNDS
+                import requests as req
+                import db as database
+                ok_f, ok_v = 0, 0
+                all_items = [(i, "fortune500_scores", "company_name") for i in FORTUNE_500] + \
+                            [(i, "vc_fund_scores", "fund_name") for i in VC_FUNDS]
+                for item, table, name_col in all_items:
+                    try:
+                        text = item["text"]
+                        r = req.post("http://127.0.0.1:10000/nti", json={"text": text}, timeout=30)
+                        sd = r.json()
+                        if "error" in sd: continue
+                        nii_raw = 0
+                        if "nii" in sd:
+                            n = sd["nii"]
+                            nii_raw = n.get("nii_score", 0) if isinstance(n, dict) else n
+                        nii_d = round(nii_raw * 100) if isinstance(nii_raw, float) and nii_raw <= 1.0 else round(nii_raw)
+                        iss = 0
+                        fm = sd.get("parent_failure_modes") or {}
+                        for k in ["UDDS","DCE","CCA"]:
+                            v = fm.get(k)
+                            if isinstance(v, dict):
+                                st = str(v.get(f"{k.lower()}_state", ""))
+                                if "CONFIRMED" in st or "PROBABLE" in st: iss += 1
+                        tilt = sd.get("tilt_taxonomy") or []
+                        if isinstance(tilt, list): iss += len(tilt)
+                        now = utc_now()
+                        conn = database.db_connect()
+                        cur = conn.cursor()
+                        if database.USE_PG:
+                            cur.execute(f"INSERT INTO {table} (slug,{name_col},rank,url,homepage_copy,score_json,nii_score,issue_count,last_checked,last_changed) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (slug) DO UPDATE SET homepage_copy=EXCLUDED.homepage_copy,score_json=EXCLUDED.score_json,nii_score=EXCLUDED.nii_score,issue_count=EXCLUDED.issue_count,last_checked=EXCLUDED.last_checked,last_changed=EXCLUDED.last_changed",
+                                (item["slug"],item["name"],item.get("rank",0),item.get("url",""),text,json.dumps(sd),nii_d,iss,now,now))
+                        else:
+                            cur.execute(f"INSERT OR REPLACE INTO {table} (slug,{name_col},rank,url,homepage_copy,score_json,nii_score,issue_count,last_checked,last_changed) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                                (item["slug"],item["name"],item.get("rank",0),item.get("url",""),text,json.dumps(sd),nii_d,iss,now,now))
+                        conn.commit(); conn.close()
+                        if table == "fortune500_scores": ok_f += 1
+                        else: ok_v += 1
+                    except Exception as e:
+                        print(f"[SEED] Error {item.get('slug')}: {e}", flush=True)
+                results["seed"] = f"F500: {ok_f}/{len(FORTUNE_500)} | VC: {ok_v}/{len(VC_FUNDS)}"
+            except Exception as e:
+                results["seed_error"] = str(e)
+        return jsonify(ok=True, **results)
+
+    print("[BOOTSTRAP] /api/bootstrap ready")
