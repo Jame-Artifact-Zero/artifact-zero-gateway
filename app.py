@@ -11,7 +11,21 @@ from flask import Flask, request, jsonify, render_template, session
 import db as database
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.getenv("AZ_SECRET", "dev-fallback-secret-change-me"))
+
+# ── Session Security ──
+_secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
+if not _secret:
+    _secret = uuid.uuid4().hex + uuid.uuid4().hex          # random per-boot fallback (sessions won't persist across restarts, but never guessable)
+    print("[SECURITY] WARNING: No FLASK_SECRET_KEY or AZ_SECRET set — using random ephemeral key", flush=True)
+app.secret_key = _secret
+app.config["SESSION_COOKIE_SECURE"] = True                  # only send over HTTPS
+app.config["SESSION_COOKIE_HTTPONLY"] = True                 # no JS access
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"               # CSRF protection for top-level nav
+app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7        # 7 day max session
+
+# ── CSRF Protection ──
+from csrf import init_csrf
+init_csrf(app)
 
 
 # ═══════════════════════════════════════════
@@ -959,6 +973,30 @@ def api_score_free():
 
 @app.route("/health")
 def health():
+
+# ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
+@app.route("/api/promote-admin", methods=["POST"])
+def promote_admin():
+    """One-time admin promotion. Requires ADMIN_PROMOTE_TOKEN env var."""
+    token = os.getenv("ADMIN_PROMOTE_TOKEN")
+    if not token:
+        return jsonify(error="disabled"), 404
+    data = request.get_json(silent=True) or {}
+    if data.get("token") != token:
+        return jsonify(error="bad token"), 403
+    email = data.get("email", "").strip().lower()
+    if not email:
+        return jsonify(error="no email"), 400
+    conn = db.db_connect()
+    cur = conn.cursor()
+    if db.USE_PG:
+        cur.execute("UPDATE users SET role='admin' WHERE email=%s", (email,))
+    else:
+        cur.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+    return jsonify(ok=True, affected=affected, email=email)
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
 
@@ -1537,12 +1575,37 @@ def stripe_webhook():
     print(f"[stripe] Webhook: {event_type}", flush=True)
 
     if event_type == "checkout.session.completed":
+        session_obj = event.get("data", {}).get("object", {})
+        # 1. Credit top-up
         try:
             from credits import handle_topup_webhook
             handled = handle_topup_webhook(event)
             print(f"[stripe] Top-up handled: {handled}", flush=True)
         except Exception as e:
-            print(f"[stripe] Webhook error: {e}", flush=True)
+            print(f"[stripe] Top-up webhook error: {e}", flush=True)
+        # 2. Subscription activation
+        try:
+            uid = session_obj.get("client_reference_id")
+            if uid:
+                from auth import _update_stripe
+                _update_stripe(uid, session_obj.get("customer"), session_obj.get("subscription"), "personal")
+                print(f"[stripe] Subscription activated for {uid}", flush=True)
+        except Exception as e:
+            print(f"[stripe] Subscription webhook error: {e}", flush=True)
+
+    elif event_type == "customer.subscription.deleted":
+        try:
+            cid = event.get("data", {}).get("object", {}).get("customer")
+            if cid:
+                conn = database.db_connect()
+                cur = conn.cursor()
+                q = "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=%s" if database.USE_PG else "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=?"
+                cur.execute(q, (cid,))
+                conn.commit()
+                conn.close()
+                print(f"[stripe] Subscription cancelled for customer {cid}", flush=True)
+        except Exception as e:
+            print(f"[stripe] Cancellation webhook error: {e}", flush=True)
 
     return jsonify({"received": True})
 
