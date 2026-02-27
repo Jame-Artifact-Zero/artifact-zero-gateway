@@ -35,10 +35,11 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .az-topbar{position:fixed;top:0;left:0;right:0;z-index:9000;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(37,42,53,.5)}
-      .az-topbar .az-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#00e89c;text-decoration:none}
-      .az-topbar nav{display:flex;align-items:center;gap:18px}
-      .az-topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s;padding:4px 0}
+      .az-topbar{position:fixed;top:0;left:0;right:0;z-index:9000;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(37,42,53,.5)}
+      .az-topbar .az-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#00e89c;text-decoration:none;flex-shrink:0}
+      .az-topbar nav{display:flex;align-items:center;gap:18px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+      .az-topbar nav::-webkit-scrollbar{display:none}
+      .az-topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s;padding:4px 0;white-space:nowrap;flex-shrink:0}
       .az-topbar nav a:hover{color:#e8eaf0}
       .az-topbar nav a.active{color:#00e89c}
       .az-footer{border-top:1px solid #252a35;padding:14px 24px;background:#0a0c10;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px}
@@ -169,8 +170,11 @@
       // Don't override if the page already has substantial padding
       // Just ensure content doesn't hide under the fixed topbar
       const spacer = document.createElement('div');
-      spacer.style.height = '56px';
+      spacer.style.height = '64px';
       spacer.className = 'az-topbar-spacer';
+      // Extra height on mobile where topbar wraps
+      const mq = window.matchMedia('(max-width:640px)');
+      if(mq.matches) spacer.style.height = '54px';
       if(!document.querySelector('.az-topbar-spacer')){
         document.body.insertBefore(spacer, document.body.children[1]); // after topbar
       }
