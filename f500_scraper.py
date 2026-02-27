@@ -237,14 +237,16 @@ def extract_text(html):
     for container in soup.find_all(["main", "article"]):
         for p in container.find_all(["p", "blockquote", "li"]):
             t = p.get_text(separator=" ", strip=True)
-            if len(t) >= 40 and not _is_junk(t):
+            # p0003: raised min from 40 to 80 for quality paragraphs
+            if len(t) >= 80 and not _is_junk(t):
                 blocks.append(t)
 
     # Priority 2: all paragraphs
     if len(blocks) < 3:
         for p in soup.find_all(["p", "blockquote"]):
             t = p.get_text(separator=" ", strip=True)
-            if len(t) >= 40 and not _is_junk(t):
+            # p0003: raised min from 40 to 80 for quality paragraphs
+            if len(t) >= 80 and not _is_junk(t):
                 if not any(t[:50] in b for b in blocks):
                     blocks.append(t)
 
@@ -256,7 +258,8 @@ def extract_text(html):
         sib = h.find_next_sibling(["p", "div"])
         if sib:
             t = sib.get_text(separator=" ", strip=True)
-            if len(t) >= 40 and not _is_junk(t):
+            # p0003: raised min from 40 to 80 for quality paragraphs
+            if len(t) >= 80 and not _is_junk(t):
                 combo = f"{heading}. {t}"
                 if not any(t[:50] in b for b in blocks):
                     blocks.append(combo)
@@ -380,7 +383,8 @@ def process_entity(conn, table, name_col, slug, name, rank, base_url, subpages):
         return False
 
     nii_raw = get_nii(score_data)
-    nii = round(nii_raw * 100) if isinstance(nii_raw, float) and nii_raw <= 1.0 else round(nii_raw)
+    # p0003: always normalize to 0-100 scale
+    nii = round(nii_raw * 100) if isinstance(nii_raw, (int, float)) and 0 < nii_raw <= 1.0 else round(nii_raw)
     issues = count_issues(score_data)
     now = datetime.now(timezone.utc).isoformat()
 
