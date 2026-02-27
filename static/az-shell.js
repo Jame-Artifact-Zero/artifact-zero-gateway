@@ -67,7 +67,7 @@
       '.az-mobile-close:hover{color:#e8eaf0}',
 
       /* Footer — no margin-top, flex pushes it down naturally */
-      '.az-footer{border-top:1px solid #252a35;padding:14px 24px;background:#0a0c10;display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;font-size:11px;flex-shrink:0}',
+      '.az-footer{border-top:2px solid #00e89c;padding:14px 24px;background:#0a0c10;display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;font-size:11px;flex-shrink:0}',
       '.az-footer-left{color:#4b5563}',
       '.az-footer-right{display:flex;gap:16px}',
       '.az-footer-right a{color:#6b7280;text-decoration:none;font-size:11px;letter-spacing:1px;transition:color .15s}',

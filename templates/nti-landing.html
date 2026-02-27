@@ -14,10 +14,6 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 
-.topbar{
-  border-bottom:1px solid var(--border);padding:16px 24px;
-  display:flex;align-items:center;justify-content:space-between;
-}
 .topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent)}
 .topbar .version{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:4px}
 .topbar .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
@@ -95,9 +91,6 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center}
 .callout .big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--green)}
 .callout .sub{font-size:13px;color:var(--muted);margin-top:4px}
-
-.footer{text-align:center;padding:24px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
-.footer a{color:var(--accent);text-decoration:none}
 
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -327,8 +320,6 @@ function sumL3(d){
   return `Similarity: ${d.jaccard_similarity} · Drift: ${d.drift_score} · Mutation: ${d.mutation_markers_present?'YES':'NO'}`;
 }
 </script>
-<script src="/static/az-nav.js"></script>
-
 <script src="/static/az-shell.js"></script>
 </body>
 </html>
