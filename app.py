@@ -12,12 +12,6 @@ import db as database
 
 app = Flask(__name__)
 
-# ── Proxy Fix (required behind ALB/ECS) ──
-# Without this, Flask thinks all requests are HTTP, SESSION_COOKIE_SECURE
-# cookies never get sent back, and CSRF validation returns 403.
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-
 # ── Session Security ──
 _secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
 if not _secret:
@@ -802,29 +796,13 @@ def api_fortune500_list():
         conn = database.db_connect()
         cur = conn.cursor()
         if database.USE_PG:
-            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json, homepage_copy FROM fortune500_scores ORDER BY rank")
+            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
             cols = [d[0] for d in cur.description]
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
         else:
-            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json, homepage_copy FROM fortune500_scores ORDER BY rank")
+            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
             rows = [dict(r) for r in cur.fetchall()]
         conn.close()
-        # Live-rescore with CSI if homepage_copy exists
-        from corporate_score import score_corporate_text
-        for row in rows:
-            text = row.get("homepage_copy") or ""
-            if len(text) >= 50:
-                csi = score_corporate_text(text)
-                row["csi_score"] = csi["score"]
-                row["csi_label"] = csi["label"]
-                row["findings_count"] = len([f for f in csi.get("findings", []) if f["severity"] in ("high", "medium")])
-            else:
-                row["csi_score"] = row.get("nii_score", 0)
-                row["csi_label"] = "INSUFFICIENT"
-                row["findings_count"] = row.get("issue_count", 0)
-            # Remove heavy fields from list response
-            row.pop("score_json", None)
-            row.pop("homepage_copy", None)
         return jsonify({"companies": rows})
     except Exception as e:
         return jsonify({"companies": [], "note": "Scores loading. Check back soon."})
@@ -835,6 +813,7 @@ def api_fortune500_detail(slug):
     try:
         conn = database.db_connect()
         cur = conn.cursor()
+        # Check fortune500 first, then vc_fund_scores
         for table in ["fortune500_scores", "vc_fund_scores"]:
             if database.USE_PG:
                 cur.execute(f"SELECT * FROM {table} WHERE slug = %s", (slug,))
@@ -842,13 +821,10 @@ def api_fortune500_detail(slug):
                 if row:
                     cols = [d[0] for d in cur.description]
                     result = dict(zip(cols, row))
+                    # Normalize: vc table has fund_name, f500 has company_name
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
                     conn.close()
-                    text = result.get("homepage_copy") or ""
-                    if len(text) >= 50:
-                        from corporate_score import score_corporate_text
-                        result["csi"] = score_corporate_text(text)
                     return jsonify(result)
             else:
                 cur.execute(f"SELECT * FROM {table} WHERE slug = ?", (slug,))
@@ -858,10 +834,6 @@ def api_fortune500_detail(slug):
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
                     conn.close()
-                    text = result.get("homepage_copy") or ""
-                    if len(text) >= 50:
-                        from corporate_score import score_corporate_text
-                        result["csi"] = score_corporate_text(text)
                     return jsonify(result)
         conn.close()
         return jsonify({"error": "Not found"}), 404
@@ -880,27 +852,13 @@ def api_vc_funds_list():
         conn = database.db_connect()
         cur = conn.cursor()
         if database.USE_PG:
-            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked, score_json, homepage_copy FROM vc_fund_scores ORDER BY rank")
+            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
             cols = [d[0] for d in cur.description]
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
         else:
-            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked, score_json, homepage_copy FROM vc_fund_scores ORDER BY rank")
+            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
             rows = [dict(r) for r in cur.fetchall()]
         conn.close()
-        from corporate_score import score_corporate_text
-        for row in rows:
-            text = row.get("homepage_copy") or ""
-            if len(text) >= 50:
-                csi = score_corporate_text(text)
-                row["csi_score"] = csi["score"]
-                row["csi_label"] = csi["label"]
-                row["findings_count"] = len([f for f in csi.get("findings", []) if f["severity"] in ("high", "medium")])
-            else:
-                row["csi_score"] = row.get("nii_score", 0)
-                row["csi_label"] = "INSUFFICIENT"
-                row["findings_count"] = row.get("issue_count", 0)
-            row.pop("score_json", None)
-            row.pop("homepage_copy", None)
         return jsonify({"funds": rows})
     except Exception as e:
         return jsonify({"funds": [], "note": "Scores loading. Check back soon."})
@@ -927,10 +885,6 @@ def api_vc_fund_detail(slug):
                 return jsonify({"error": "Not found"}), 404
             result = dict(row)
         conn.close()
-        text = result.get("homepage_copy") or ""
-        if len(text) >= 50:
-            from corporate_score import score_corporate_text
-            result["csi"] = score_corporate_text(text)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
