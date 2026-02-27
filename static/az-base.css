@@ -60,7 +60,9 @@ html, body {
   font-family: var(--az-sans);
   -webkit-font-smoothing: antialiased;
 }
-/* DO NOT set height, min-height, overflow, or flex on html/body */
+/* Sticky footer: body is flex column, main grows to fill viewport */
+body { display: flex; flex-direction: column; min-height: 100svh; }
+.az-main { flex: 1; }
 
 /* ── NOISE TEXTURE ── */
 body::before {
