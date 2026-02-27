@@ -12,7 +12,7 @@
   --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--blue:#3b82f6;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -35,7 +35,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .mode-btn.active{background:var(--surface2);color:var(--accent)}
 
 /* ===== SALES PITCH ===== */
-.pitch{max-width:640px;margin:0 auto;padding:100px 24px 60px;text-align:center;display:none}
+.pitch{max-width:640px;margin:0 auto;padding:24px 24px 60px;text-align:center;display:none}
 .pitch.show{display:block}
 .pitch-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
 .pitch h1{font-size:32px;font-weight:700;line-height:1.25;margin-bottom:16px}
@@ -55,7 +55,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .pitch-cta-sub a{color:var(--accent);text-decoration:none}
 
 /* ===== COMPOSE AREA ===== */
-.compose{max-width:760px;width:100%;margin:0 auto;padding:60px 20px 220px;flex:1;display:flex;flex-direction:column}
+.compose{max-width:760px;width:100%;margin:0 auto;padding:24px 20px 220px;flex:1;display:flex;flex-direction:column}
 .compose.hidden{display:none}
 .email-header{padding:16px 0;border-bottom:1px solid var(--border)}
 .email-row{display:flex;align-items:center;padding:8px 0;gap:8px}
@@ -175,7 +175,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   .compose{padding:56px 12px 220px}
   .email-label{width:40px;font-size:10px}
   .pitch h1{font-size:24px}
-  .pitch{padding:80px 16px 40px}
+  .pitch{padding:24px 16px 40px}
   .toolbar-right{gap:4px}
   .mode-btn{padding:4px 7px;font-size:10px}
   .fmt-bar{gap:1px}
