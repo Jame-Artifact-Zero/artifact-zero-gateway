@@ -318,9 +318,11 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
   const rwIssues = v3Rewrite ? (v3Rewrite.issues || []) : [];
   const rwActions = v3Rewrite ? (v3Rewrite.v3_actions || []) : [];
   const rwOrigWords = v3Rewrite ? (v3Rewrite.original_words || 0) : 0;
+  const rwLlmWords = v3Rewrite ? (v3Rewrite.llm_words || 0) : 0;
   const rwNewWords = v3Rewrite ? (v3Rewrite.rewrite_words || 0) : 0;
   const rwCompression = v3Rewrite ? (v3Rewrite.compression || '0%') : '0%';
   const rwLatency = v3Rewrite ? (v3Rewrite.latency_ms || 0) : 0;
+  const rwLlmRaw = v3Rewrite ? (v3Rewrite.llm_raw || '') : '';
 
   totalCards = 8;
 
@@ -372,13 +374,13 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
       <h2>AI Response</h2>
       <div class="model-reveal">
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px">YOUR WORDS SELECTED</div>
-        <div class="model-name">${model}</div>
+        <div class="model-name">${rwModel || model}</div>
         <div class="model-reason">First model name spelled by your message characters</div>
       </div>
-      <div class="response-text" style="margin-top:16px" id="aiResponse">
-        <span style="color:var(--muted);font-style:italic">Thank you for reaching out, ${escHtml(name)}. I appreciate you taking the time to share what you're working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I'd be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!</span>
+      <div class="response-text" style="margin-top:16px">
+        <span style="color:var(--muted);font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : 'Thank you for reaching out, ' + escHtml(name) + '. I appreciate you taking the time to share what you\'re working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I\'d be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!'}</span>
       </div>
-      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization</div>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
     </div>`,
 
     // Card 6: V3 findings
@@ -401,7 +403,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
           : ''
         }
         <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
-          ${rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
+          ${rwLlmWords || rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
         </div>
       </div>
     </div>`,

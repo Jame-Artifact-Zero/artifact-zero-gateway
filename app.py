@@ -1888,11 +1888,14 @@ def api_rewrite():
 
     # 5. Run V3 enforcement on LLM output
     from core_engine.v3_enforcement import enforce
+    llm_words = len(llm_text.split())
     v3_result = enforce(llm_text, objective=obj.get("objective_text"))
     final = v3_result["final_output"]
 
     original_words = len(text.split())
     rewrite_words = len(final.split())
+    # Compression = what V3 cut from the LLM output, not from user input
+    v3_compression = abs(llm_words - rewrite_words) / max(llm_words, 1) * 100
 
     return jsonify({
         "rewrite": final,
@@ -1900,11 +1903,13 @@ def api_rewrite():
         "model_color": model["color"],
         "method": "llm_v3",
         "original_words": original_words,
+        "llm_words": llm_words,
         "rewrite_words": rewrite_words,
-        "compression": f"{abs(original_words - rewrite_words) / max(original_words, 1) * 100:.0f}%",
+        "compression": f"{v3_compression:.0f}%",
         "nii_score": nii_score,
         "issues": issues,
         "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
+        "llm_raw": llm_text,
         "latency_ms": int((time.time() - t0) * 1000)
     })
 
