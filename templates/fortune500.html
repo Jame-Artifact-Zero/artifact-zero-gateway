@@ -63,7 +63,6 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .card-issues{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 6px;border-radius:3px}
 .card-issues.has-issues{background:#7f1d1d;color:#fca5a5}
 .card-issues.clear{background:#064e3b;color:#86efac}
-.card-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
 
 /* Arrow */
 .card-arrow{color:var(--border);font-size:16px;flex-shrink:0;transition:color .15s}
@@ -117,8 +116,8 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="filter-row">
     <button class="filter-btn active" data-filter="all">ALL</button>
     <button class="filter-btn" data-filter="good">SCORE 70%+</button>
-    <button class="filter-btn" data-filter="mid">SCORE 45-69%</button>
-    <button class="filter-btn" data-filter="bad">SCORE &lt;45%</button>
+    <button class="filter-btn" data-filter="mid">SCORE 40-69%</button>
+    <button class="filter-btn" data-filter="bad">SCORE &lt;40%</button>
     <button class="filter-btn" data-filter="issues">HAS ISSUES</button>
   </div>
 </div>
@@ -149,19 +148,19 @@ async function loadScores(){
 
 function updateStats(){
   const total = allCompanies.length;
-  const scores = allCompanies.map(c => c.csi_score || c.nii_score || 0);
-  const avg = total ? (scores.reduce((s,v) => s + v, 0) / total) : 0;
-  const clear = allCompanies.filter(c => (c.findings_count || c.issue_count || 0) === 0).length;
+  const avg = total ? (allCompanies.reduce((s,c) => s + (c.nii_score||0), 0) / total) : 0;
+  const clear = allCompanies.filter(c => (c.issue_count||0) === 0).length;
   const issues = total - clear;
   document.getElementById('statTotal').textContent = total;
-  document.getElementById('statAvg').textContent = avg.toFixed(1) + '%';
+  document.getElementById('statAvg').textContent = (avg > 1 ? avg : avg*100).toFixed(0) + '%';
   document.getElementById('statClear').textContent = clear;
   document.getElementById('statIssues').textContent = issues;
 }
 
-function scoreClass(score){
-  if(score >= 70) return 'good';
-  if(score >= 45) return 'mid';
+function scoreClass(nii){
+  nii = nii > 1 ? nii : nii * 100;
+  if(nii >= 70) return 'good';
+  if(nii >= 40) return 'mid';
   return 'bad';
 }
 
@@ -172,20 +171,18 @@ function renderList(companies){
     return;
   }
   el.innerHTML = companies.map(c => {
-    const score = c.csi_score || c.nii_score || 0;
-    const cls = scoreClass(score);
-    const findings = c.findings_count || c.issue_count || 0;
-    const label = c.csi_label || '';
+    const nii = c.nii_score || 0;
+    const cls = scoreClass(nii);
+    const issues = c.issue_count || 0;
     const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString() : '';
     return `
-      <a class="company-card" href="/scored/${c.slug}" data-score="${score}" data-findings="${findings}">
+      <a class="company-card" href="/scored/${c.slug}" data-nii="${nii}" data-issues="${issues}">
         <div class="card-rank">${c.rank || '—'}</div>
-        <div class="card-score ${cls}"><span class="val">${score.toFixed(1)}</span></div>
+        <div class="card-score ${cls}"><span class="val">${(nii > 1 ? nii : nii*100).toFixed(0)}</span></div>
         <div class="card-info">
           <div class="card-name">${c.company_name}</div>
           <div class="card-detail">
-            <span class="card-label">${label}</span>
-            <span class="card-issues ${findings>0?'has-issues':'clear'}">${findings>0?findings+' finding'+(findings>1?'s':''):'CLEAR'}</span>
+            <span class="card-issues ${issues>0?'has-issues':'clear'}">${issues>0?issues+' issue'+(issues>1?'s':''):'CLEAR'}</span>
             ${checked ? '<span>'+checked+'</span>' : ''}
           </div>
         </div>
@@ -219,10 +216,10 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 function filterCompanies(list, filter){
   switch(filter){
-    case 'good': return list.filter(c => (c.csi_score||c.nii_score||0) >= 70);
-    case 'mid': return list.filter(c => {const s=c.csi_score||c.nii_score||0; return s>=45&&s<70;});
-    case 'bad': return list.filter(c => (c.csi_score||c.nii_score||0) < 45);
-    case 'issues': return list.filter(c => (c.findings_count||c.issue_count||0) > 0);
+    case 'good': return list.filter(c => (c.nii_score||0) >= 70);
+    case 'mid': return list.filter(c => (c.nii_score||0) >= 40 && (c.nii_score||0) < 70);
+    case 'bad': return list.filter(c => (c.nii_score||0) < 40);
+    case 'issues': return list.filter(c => (c.issue_count||0) > 0);
     default: return list;
   }
 }
