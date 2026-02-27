@@ -7,6 +7,7 @@ import hmac
 import hashlib
 from functools import wraps
 from flask import session, request, abort, g
+from markupsafe import Markup
 
 
 def _get_csrf_token():
@@ -18,7 +19,7 @@ def _get_csrf_token():
 
 def csrf_token_input():
     """Return an HTML hidden input with the current CSRF token."""
-    return f'<input type="hidden" name="csrf_token" value="{_get_csrf_token()}">'
+    return Markup(f'<input type="hidden" name="csrf_token" value="{_get_csrf_token()}">')
 
 
 def validate_csrf():

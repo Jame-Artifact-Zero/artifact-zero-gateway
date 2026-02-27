@@ -11,6 +11,7 @@
 import os
 import json
 import uuid
+import hmac
 import sqlite3
 import time as _time
 from datetime import datetime, timezone, timedelta
@@ -175,8 +176,16 @@ def log_relay_event(event_type, ip="", username="", detail=""):
 
 # ─── Auth ───
 def _is_admin():
-    """Admin access: session role only. No URL token fallback."""
-    return session.get("role") == "admin"
+    """Admin access: session role OR valid admin token in query param."""
+    if session.get("role") == "admin":
+        return True
+    # Fallback: check token from cockpit login form
+    token = request.args.get("token", "")
+    expected = os.getenv("AZ_ADMIN_TOKEN", "")
+    if expected and token and hmac.compare_digest(token, expected):
+        session["role"] = "admin"  # promote session so token isn't needed again
+        return True
+    return False
 
 # ─── Cockpit API endpoints ───
 @admin.route('/az-cockpit/api/banner', methods=['POST'])
