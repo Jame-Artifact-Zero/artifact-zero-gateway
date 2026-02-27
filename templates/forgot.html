@@ -37,7 +37,7 @@ h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
 <div class="success">If an account exists with that email, we sent a reset link. Check your inbox.</div>
 {% else %}
 <form method="POST" action="/forgot">
-{{ csrf_token_input() }}
+{{ csrf_token_input() | safe }}
 <div class="field"><label>Email</label><input type="email" name="email" required autofocus placeholder="you@example.com"></div>
 <button type="submit" class="btn">Send reset link</button>
 </form>
