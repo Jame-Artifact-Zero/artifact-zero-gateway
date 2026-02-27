@@ -35,7 +35,6 @@ body::before { content:''; position:fixed; inset:0; background:url("data:image/s
 
 /* LAYOUT */
 .app { display:grid; grid-template-columns:260px 1fr; grid-template-rows:48px 1fr; height:100vh; }
-.topbar { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--border); background:var(--surface); z-index:100; }
 .sidebar { grid-row:2; border-right:1px solid var(--border); background:var(--surface); overflow-y:auto; display:flex; flex-direction:column; }
 .main { grid-row:2; display:flex; flex-direction:column; overflow:hidden; }
 
@@ -910,8 +909,6 @@ if (userPath === 'new') {
     </div><div class="msg-meta">system · just now</div></div>`;
 }
 </script>
-
-<script src="/static/az-nav.js"></script>
 
 <script src="/static/az-shell.js"></script>
 </body>

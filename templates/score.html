@@ -14,10 +14,6 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 
-.topbar{
-  border-bottom:1px solid var(--border);padding:16px 24px;
-  display:flex;align-items:center;justify-content:space-between;
-}
 .topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
 .topbar nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;font-family:'JetBrains Mono',monospace}
 .topbar nav a:hover{color:var(--green)}
@@ -89,7 +85,7 @@ textarea::placeholder{color:#3d4452}
 
 .meta-row{display:flex;gap:16px;margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap}
 
-.footer{text-align:center;padding:40px;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);margin-top:60px}
+/* footer handled by az-shell.js */
 </style>
 </head>
 <body>
@@ -190,8 +186,6 @@ async function scoreText() {
   }
 }
 </script>
-
-<script src="/static/az-nav.js"></script>
 
 <script src="/static/nti-engine.js"></script>
 

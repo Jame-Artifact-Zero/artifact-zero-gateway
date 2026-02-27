@@ -21,7 +21,6 @@ html{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font
 body{min-height:100vh;padding-bottom:60px}
 
 /* TOPBAR */
-.topbar{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
 .topbar .logo{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
 .topbar .nav-links{display:flex;gap:16px;align-items:center}
 .topbar .nav-links a{font-family:var(--mono);font-size:11px;color:var(--dim);text-decoration:none;letter-spacing:1px}
@@ -117,9 +116,6 @@ body{min-height:100vh;padding-bottom:60px}
 .glossary-def{font-size:12px;color:var(--dim);line-height:1.4}
 
 /* FOOTER */
-.footer{text-align:center;padding:24px;font-family:var(--mono);font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:40px;background:var(--surface)}
-.footer a{color:var(--blue);text-decoration:none}
-
 @media(max-width:480px){
   .candidates{grid-template-columns:1fr}
   .hero h1{font-size:26px}
@@ -536,8 +532,6 @@ function renderDashboard() {
 // INIT
 renderDashboard();
 </script>
-<script src="/static/az-nav.js"></script>
-
 <script src="/static/az-shell.js"></script>
 </body>
 </html>

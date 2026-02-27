@@ -12,7 +12,6 @@
 html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
-.topbar{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)}
 .topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
 .topbar nav{display:flex;gap:18px}
 .topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
@@ -56,6 +55,28 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .sd-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .sd-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
 .sd-finding{padding:8px 10px;margin-top:6px;border-radius:6px;font-size:12px;line-height:1.6;background:rgba(0,232,156,.06);border-left:3px solid var(--accent);color:var(--text)}
+
+/* Findings cards */
+.findings-section{margin-bottom:24px}
+.finding-card{padding:12px 14px;margin-bottom:8px;border-radius:8px;border-left:3px solid}
+.finding-card.high{background:rgba(239,68,68,.08);border-color:var(--red)}
+.finding-card.medium{background:rgba(245,158,11,.08);border-color:var(--amber)}
+.finding-card.pass{background:rgba(0,232,156,.06);border-color:var(--accent)}
+.finding-dim{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+.finding-text{font-size:13px;line-height:1.6;color:var(--text)}
+.finding-evidence{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px;padding:4px 8px;background:rgba(255,255,255,.03);border-radius:4px}
+
+/* Dimension grid */
+.dim-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.dim-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.dim-header{display:flex;justify-content:space-between;align-items:center}
+.dim-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text)}
+.dim-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.dim-desc{font-size:11px;color:var(--muted);margin:4px 0 8px}
+.dim-bar-bg{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.dim-bar{height:100%;border-radius:3px;transition:width .3s}
+.dim-bar.sd-clear{background:var(--accent)}.dim-bar.sd-warn{background:var(--amber)}.dim-bar.sd-crit{background:var(--red)}
+.dim-weight{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;text-align:right}
 
 /* Share + Meta */
 .meta-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
@@ -117,84 +138,39 @@ function scoreClass(nii){
 }
 
 function render(c){
-  const nii = c.nii_score || 0;
-  const issues = c.issue_count || 0;
-  const score = c.score_json ? JSON.parse(c.score_json) : {};
+  const csi = c.csi || {};
+  const score = csi.score || c.nii_score || 0;
+  const label = csi.label || '';
+  const dims = csi.dimensions || {};
+  const detail = csi.detail || {};
+  const findings = csi.findings || [];
+  const meta = csi.meta || {};
   const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '';
 
   document.getElementById('pageTitle').textContent = c.company_name + ' Structure Check — Artifact Zero';
 
-  // Parse score data
-  const fm = score.failure_modes || {};
-  const tilt = score.tilt || {};
-  const tiltTags = Array.isArray(tilt) ? tilt : (tilt.tags || []);
-  const tiltCount = Array.isArray(tilt) ? tilt.length : (tilt.count || 0);
-  const niiData = score.score || {};
-  const components = niiData.components || {};
-  const framing = score.l2_framing || {};
-  const drift = score.drift || {};
-  const signals = score.structural_signals || {};
-
-  // Failure mode states
-  function fmState(key){
-    const v = fm[key];
-    if(!v) return 'CLEAR';
-    if(typeof v === 'string') return v.includes('FALSE') ? 'CLEAR' : v.replace(/_/g,' ');
-    const st = v[key.toLowerCase()+'_state'] || v[key+'_state'] || '';
-    return st.includes('FALSE') ? 'CLEAR' : st.replace(/_/g,' ');
-  }
-  function fmCls(key){
-    const s = fmState(key);
-    return s === 'CLEAR' ? 'sd-clear' : s.includes('PROBABLE') ? 'sd-warn' : 'sd-crit';
-  }
-
-  // Build the 15 criteria rows
-  const criteria = [
-    // NII Components
-    {cat: 'STRUCTURAL INTEGRITY (NII)', items: [
-      {label: 'Q1 — Constraint density', val: components.q1, pass: (components.q1||0) >= 0.5},
-      {label: 'Q2 — Ask architecture', val: components.q2, pass: (components.q2||0) >= 0.7},
-      {label: 'Q3 — Enforcement integrity', val: components.q3, pass: (components.q3||0) >= 0.7},
-      {label: 'Q4 — Tilt resistance', val: components.q4, pass: (components.q4||0) >= 0.7},
-    ]},
-    // Failure Modes
-    {cat: 'FAILURE MODES', items: [
-      {label: 'UDDS — Upstream drift', val: fmState('UDDS'), pass: fmState('UDDS')==='CLEAR', cls: fmCls('UDDS')},
-      {label: 'DCE — Deferred enforcement', val: fmState('DCE'), pass: fmState('DCE')==='CLEAR', cls: fmCls('DCE')},
-      {label: 'CCA — Constraint collapse', val: fmState('CCA'), pass: fmState('CCA')==='CLEAR', cls: fmCls('CCA')},
-    ]},
-    // L2 Framing
-    {cat: 'L2 — INTERPRETIVE FRAMING', items: [
-      {label: 'Hedge markers', val: (framing.hedge_markers||[]).length, pass: (framing.hedge_markers||[]).length === 0, detail: (framing.hedge_markers||[]).join(', ')},
-      {label: 'Reassurance markers', val: (framing.reassurance_markers||[]).length, pass: (framing.reassurance_markers||[]).length === 0, detail: (framing.reassurance_markers||[]).join(', ')},
-      {label: 'Category blend', val: (framing.category_blend_markers||[]).length, pass: (framing.category_blend_markers||[]).length === 0, detail: (framing.category_blend_markers||[]).join(', ')},
-    ]},
-    // Structural Signals
-    {cat: 'STRUCTURAL SIGNALS', items: [
-      {label: 'Constraints found', val: signals.constraints_found ?? '—', pass: (signals.constraints_found||0) >= 1},
-      {label: 'Downstream before constraint', val: signals.downstream_before_constraint ? 'YES' : 'NO', pass: !signals.downstream_before_constraint},
-      {label: 'Boundary absence', val: signals.boundary_absence ? 'DETECTED' : 'CLEAR', pass: !signals.boundary_absence},
-      {label: 'Narrative stabilization', val: signals.narrative_stabilization ? 'DETECTED' : 'CLEAR', pass: !signals.narrative_stabilization},
-      {label: 'Content coherence', val: drift.coherence != null ? (drift.coherence * 100).toFixed(0) + '%' : '—', pass: (drift.coherence||1) >= 0.3},
-    ]},
-  ];
-
-  // Build findings
-  const findings = [];
-  if((components.q1||0) < 0.7) findings.push('No explicit constraints — readers interpret freely.');
-  if((components.q2||0) < 0.7) findings.push('Benefits presented before constraints are established.');
-  if((components.q3||0) < 0.7) findings.push('No enforcement boundary — commitments can be deferred.');
-  if((components.q4||0) < 0.7) findings.push('Tilt patterns detected — language may distort structural integrity.');
-  if(fmState('UDDS') !== 'CLEAR') findings.push('Upstream Drift Destabilization detected.');
-  if(fmState('DCE') !== 'CLEAR') findings.push('Accountability deferred to future interaction.');
-  if(fmState('CCA') !== 'CLEAR') findings.push('Multiple claims collapsed into vague statements.');
-  if((framing.hedge_markers||[]).length > 2) findings.push('Heavy hedging weakens structural commitment.');
-  if((framing.reassurance_markers||[]).length > 1) findings.push('Reassurance language detected — may mask constraints.');
-  if(signals.boundary_absence) findings.push('Boundary enforcement absent or delayed.');
-  if(signals.narrative_stabilization) findings.push('Narrative stabilization present — language smooths over structural gaps.');
-
-  // Rank label
   const rankLabel = c.rank ? (c.fund_name ? 'VC Fund · #' : 'Fortune 500 · #') + c.rank : '';
+
+  function sc(v){ return v >= 0.7 ? 'sd-clear' : v >= 0.45 ? 'sd-warn' : 'sd-crit'; }
+  function pct(v){ return (v * 100).toFixed(1) + '%'; }
+
+  const dimLabels = {
+    d1_specificity: {name: 'D1 — Specificity Index', desc: 'Measurable claims with numbers, dates, metrics'},
+    d2_commitment: {name: 'D2 — Commitment Integrity', desc: 'Verifiable commitments vs aspirational language'},
+    d3_clarity: {name: 'D3 — Structural Clarity', desc: 'Sentence structure quality and readability'},
+    d4_hedge_density: {name: 'D4 — Hedge Density', desc: 'Absence of qualifying/hedging language'},
+    d5_tilt_exposure: {name: 'D5 — Tilt Exposure', desc: 'Resistance to NTI drift patterns'},
+    d6_empty_commitments: {name: 'D6 — Empty Commitments', desc: 'Claims backed by evidence vs hollow statements'},
+    d7_objective_anchor: {name: 'D7 — Objective Anchor', desc: 'Clear WHO, WHAT, and constraints identified'},
+    d8_accountability: {name: 'D8 — Accountability', desc: 'Measurement, reporting, timeline language'},
+    d9_redundancy: {name: 'D9 — Redundancy', desc: 'Semantic efficiency (low repetition and filler)'},
+    d10_differentiation: {name: 'D10 — Differentiation', desc: 'Unique language vs generic corporate copy'},
+  };
+
+  const weights = csi.weights || {};
+  const hiFindings = findings.filter(f => f.severity === 'high');
+  const medFindings = findings.filter(f => f.severity === 'medium');
+  const passFindings = findings.filter(f => f.severity === 'pass');
 
   let html = `
     <div class="company-header">
@@ -205,44 +181,96 @@ function render(c){
 
     <div class="score-hero">
       <div class="sh-card">
-        <div class="sh-val ${scoreClass(nii)}">${(nii > 1 ? nii : nii*100).toFixed(0)}%</div>
-        <div class="sh-label">Structure Score</div>
-      </div>
-      <div class="sh-card ${issues>0?'issues':'clear'}">
-        <div class="sh-val">${issues>0?issues:'0'}</div>
-        <div class="sh-label">${issues>0?'Issues Found':'Clean'}</div>
+        <div class="sh-val ${score>=70?'good':score>=45?'mid':'bad'}">${score.toFixed(1)}%</div>
+        <div class="sh-label">CSI Score</div>
       </div>
       <div class="sh-card">
-        <div class="sh-val" style="color:var(--blue)">${criteria.reduce((n,g)=>n+g.items.filter(i=>i.pass).length,0)}/${criteria.reduce((n,g)=>n+g.items.length,0)}</div>
-        <div class="sh-label">Criteria Passed</div>
+        <div class="sh-val" style="color:${label.includes('SOUND')?'var(--accent)':label.includes('CLEAR')?'var(--blue)':'var(--amber)'}">${label}</div>
+        <div class="sh-label">Rating</div>
+      </div>
+      <div class="sh-card ${hiFindings.length>0?'issues':'clear'}">
+        <div class="sh-val">${hiFindings.length + medFindings.length}</div>
+        <div class="sh-label">Findings</div>
+      </div>
+      <div class="sh-card">
+        <div class="sh-val" style="color:var(--blue)">${meta.sentence_count || '—'}</div>
+        <div class="sh-label">Sentences</div>
       </div>
     </div>
 
     <div class="meta-row">
-      <div class="meta-left">Last checked: <span>${checked || 'pending'}</span></div>
+      <div class="meta-left">Last checked: <span>${checked || 'pending'}</span> · <span>${meta.word_count || '?'} words analyzed</span> · <span>CSI v1.0</span></div>
       <button class="share-btn" onclick="shareCard()">&#128279; Share this scorecard</button>
     </div>
 
-    <div class="split">
-      <div class="split-header copy-h">Their Homepage Copy</div>
-      <div class="split-header score-h">Full Structure Analysis</div>
+    <!-- FINDINGS -->
+    ${findings.length > 0 ? `
+    <div class="findings-section">
+      <div class="sd-section" style="border:none;padding:0;margin:0 0 10px">FINDINGS</div>
+      ${hiFindings.map(f => `
+        <div class="finding-card high">
+          <div class="finding-dim">${f.dimension}</div>
+          <div class="finding-text">${f.finding}</div>
+          ${f.evidence ? '<div class="finding-evidence">'+f.evidence+'</div>' : ''}
+        </div>
+      `).join('')}
+      ${medFindings.map(f => `
+        <div class="finding-card medium">
+          <div class="finding-dim">${f.dimension}</div>
+          <div class="finding-text">${f.finding}</div>
+          ${f.evidence ? '<div class="finding-evidence">'+f.evidence+'</div>' : ''}
+        </div>
+      `).join('')}
+      ${passFindings.map(f => `
+        <div class="finding-card pass">
+          <div class="finding-dim">${f.dimension}</div>
+          <div class="finding-text">${f.finding}</div>
+        </div>
+      `).join('')}
+    </div>` : '<div class="finding-card pass" style="margin-bottom:20px"><div class="finding-text">No structural issues detected. This copy is clear.</div></div>'}
+
+    <!-- DIMENSION BREAKDOWN -->
+    <div class="sd-section">10-DIMENSION BREAKDOWN</div>
+    <div class="dim-grid">
+      ${Object.keys(dimLabels).map(k => {
+        const v = dims[k] || 0;
+        const w = weights[k] || 0;
+        const info = dimLabels[k];
+        const barW = Math.max(v * 100, 2);
+        const cls = sc(v);
+        return `
+        <div class="dim-row">
+          <div class="dim-header">
+            <span class="dim-name">${info.name}</span>
+            <span class="dim-val ${cls}">${pct(v)}</span>
+          </div>
+          <div class="dim-desc">${info.desc}</div>
+          <div class="dim-bar-bg"><div class="dim-bar ${cls}" style="width:${barW}%"></div></div>
+          <div class="dim-weight">Weight: ${(w*100).toFixed(0)}%</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- SPLIT VIEW: Copy + Raw Detail -->
+    <div class="split" style="margin-top:20px">
+      <div class="split-header copy-h">Their Corporate Copy</div>
+      <div class="split-header score-h">Raw Dimension Data</div>
     </div>
     <div class="split">
       <div class="split-col copy-col">${(c.homepage_copy||'Copy not yet captured.').replace(/\n/g,'<br>')}</div>
-      <div class="split-col score-col">
-        ${findings.length > 0 ? '<div class="sd-section">Findings</div>' + findings.map(f => '<div class="sd-finding">'+f+'</div>').join('') : '<div class="sd-finding" style="border-color:var(--accent)">No structural issues detected. This copy is clear.</div>'}
-
-        ${criteria.map(group => `
-          <div class="sd-section">${group.cat}</div>
-          ${group.items.map(item => {
-            const valDisplay = item.cls ? item.val : (typeof item.val === 'number' && item.val <= 1 ? (item.val * 100).toFixed(0) + '%' : item.val);
-            const cls = item.cls || (item.pass ? 'sd-clear' : 'sd-crit');
-            return `<div class="sd-row"><span class="sd-label">${item.label}</span><span class="sd-val ${cls}">${item.pass && !item.cls ? '✓' : ''} ${valDisplay}</span></div>` +
-              (item.detail && !item.pass ? `<div style="font-size:10px;color:var(--muted);padding:2px 0 4px;font-family:'JetBrains Mono',monospace">${item.detail}</div>` : '');
-          }).join('')}
-        `).join('')}
-
-        ${tiltCount > 0 ? '<div class="sd-section">Tilt Patterns</div><div class="sd-tags">' + tiltTags.map(t => '<span class="sd-tag">'+t+'</span>').join('') + '</div>' : ''}
+      <div class="split-col score-col" style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.8;color:var(--muted)">
+        ${Object.keys(detail).map(k => {
+          const d = detail[k];
+          if(!d || typeof d !== 'object') return '';
+          return '<div style="margin-bottom:12px"><div style="color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">'+k.replace(/_/g,' ')+'</div>' +
+            Object.keys(d).map(sk => {
+              let val = d[sk];
+              if(Array.isArray(val)) val = val.length > 0 ? val.slice(0,5).join(', ') : '—';
+              else if(typeof val === 'object') val = JSON.stringify(val);
+              else if(typeof val === 'number') val = val % 1 === 0 ? val : val.toFixed(3);
+              return '<div><span style="color:var(--text)">'+sk+'</span>: '+val+'</div>';
+            }).join('') + '</div>';
+        }).join('')}
       </div>
     </div>
 
@@ -268,8 +296,6 @@ function shareCard(){
 loadScorecard();
 </script>
 <script src="/static/az-mobile-audit.js" data-mode="silent"></script>
-<script src="/static/az-nav.js"></script>
-
 <script src="/static/az-shell.js"></script>
 </body>
 </html>
