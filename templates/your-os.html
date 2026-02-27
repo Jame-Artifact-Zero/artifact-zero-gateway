@@ -16,7 +16,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh}
 
 /* Topbar */
 .topbar-logo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);letter-spacing:3px;text-decoration:none}
@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* Hero */
-.hero{max-width:680px;margin:0 auto;padding:100px 32px 60px;text-align:center}
+.hero{max-width:680px;margin:0 auto;padding:24px 32px 60px;text-align:center}
 .hero-badge{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--green);border:1px solid rgba(0,232,156,.25);padding:5px 14px;border-radius:20px;margin-bottom:32px;text-transform:uppercase}
 .hero h1{font-family:var(--serif);font-size:clamp(32px,5.5vw,52px);font-weight:700;line-height:1.15;margin-bottom:24px;color:var(--text)}
 .hero h1 em{font-style:italic;color:var(--green)}
@@ -98,7 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font
 
 @media(max-width:640px){
   .doors{grid-template-columns:1fr}
-  .hero{padding:60px 20px 40px}
+  .hero{padding:24px 20px 40px}
   .builder,.enterprise-note{padding-left:20px;padding-right:20px}
   .step-card{padding:24px 20px}
 }

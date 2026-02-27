@@ -19,7 +19,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{min-height:100vh;overflow-x:hidden}
+body{min-height:100vh;min-height:100svh;overflow-x:hidden}
 
 .topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent)}
 .topbar .logo a{color:inherit;text-decoration:none}
@@ -162,7 +162,7 @@ body{min-height:100vh;overflow-x:hidden}
 .skeleton-line.w80{width:80%}.skeleton-line.w60{width:60%}.skeleton-line.w90{width:90%}.skeleton-line.w40{width:40%}
 @keyframes shimmer{0%{opacity:.4}50%{opacity:.7}100%{opacity:.4}}
 
-.empty-state{text-align:center;padding:60px 20px;font-size:14px;color:var(--muted)}
+.empty-state{text-align:center;padding:24px 20px;font-size:14px;color:var(--muted)}
 .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.3}
 
 @media(max-width:768px){
@@ -216,7 +216,7 @@ body{min-height:100vh;overflow-x:hidden}
 
 <!-- old topbar removed — az-shell.js provides unified header -->
 
-<div class="hero" style="padding-top:70px">
+<div class="hero" style="padding-top:24px">
   <h1>NTI <span>LIVE FEED</span></h1>
   <p>Real-time news from national and local outlets, run through the NTI structural analysis engine. Same information, shown two ways — side by side.</p>
   <div class="disclaimer">We don't say correct. We say different. You decide.</div>
