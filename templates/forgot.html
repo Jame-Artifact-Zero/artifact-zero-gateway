@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reset Password — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Reset Password — Artifact Zero{% endblock %}
+{% block body_class %}page-forgot{% endblock %}
+
+{% block head %}
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;min-height:100svh}
-.card{width:100%;max-width:380px;padding:40px 28px;margin:24px auto 40px}
+.card{width:100%;max-width:380px;padding:40px 28px;margin:80px auto 40px}
 .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none;display:block;text-align:center;margin-bottom:32px}
 h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
 .sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.5}
@@ -26,9 +20,11 @@ h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
 .links a{color:var(--accent);text-decoration:none}
 .links a:hover{text-decoration:underline}
 </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
 <div class="card">
+<a href="/" class="logo">ARTIFACT ZERO</a>
 <h1>Reset your password</h1>
 <p class="sub">Enter your email and we'll send you a reset link.</p>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
@@ -43,6 +39,4 @@ h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
 {% endif %}
 <div class="links"><a href="/login">Back to login</a></div>
 </div>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+{% endblock %}

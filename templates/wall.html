@@ -1,22 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Wall — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}The Wall — Artifact Zero{% endblock %}
+{% block body_class %}page-wall{% endblock %}
+
+{% block head %}
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);background:rgba(10,12,16,.85);border-bottom:1px solid var(--border)}
-.nav-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.nav-links{display:flex;gap:20px}
-.nav-links a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s}
-.nav-links a:hover{color:var(--accent)}
-.hero{max-width:700px;margin:0 auto;padding:24px 20px 32px;text-align:center}
+
+
+.hero{max-width:700px;margin:0 auto;padding:100px 20px 32px;text-align:center}
 .hero h1{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,4vw,32px);font-weight:700;margin-bottom:8px}
 .hero p{color:var(--muted);font-size:14px;line-height:1.6}
 .post-box{max-width:600px;margin:0 auto 40px;padding:0 20px}
@@ -47,13 +37,13 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .fm-tag.amber{background:rgba(245,158,11,.15);color:var(--amber)}
 .fm-tag.green{background:rgba(0,232,156,.1);color:var(--accent)}
 .tilt-mini{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface);color:var(--amber);margin-right:3px;display:inline-block;margin-top:4px}
-.empty{text-align:center;padding:24px 20px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:14px}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:14px}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-</head>
-<body>
-<!-- nav removed: az-shell.js -->
+{% endblock %}
+
+{% block content %}
 <div class="hero">
   <h1>The Wall</h1>
   <p>Say anything. The scoring engine doesn't care what you think — it measures how you said it.<br>Every comment scored live. Raw on the left. Structural analysis on the right.</p>
@@ -68,7 +58,14 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 <div class="feed" id="feed">
   <div class="empty" id="emptyState">No comments yet. Be the first to hit the wall.</div>
 </div>
+{% endblock %}
+
+{% block scripts %}
 <script src="/static/nti-score-component.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+
 <script>
 let comments=[];
 async function postComment(){const text=document.getElementById('commentInput').value.trim();if(!text)return;const name=document.getElementById('nameInput').value.trim()||'Anonymous';const btn=document.getElementById('postBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();const entry={text,name,time:new Date().toLocaleTimeString(),score:d};comments.unshift(entry);renderFeed();document.getElementById('commentInput').value='';document.getElementById('nameInput').value=''}catch(e){alert('Score failed: '+e.message)}finally{btn.disabled=false;btn.textContent='Post & Score'}}
@@ -88,13 +85,11 @@ function renderFeed(){const feed=document.getElementById('feed');document.getEle
 }
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 </script>
-<script src="/static/nti-engine.js"></script>
 
 <script>
 // Wall: score each comment server-side via NTI.score
 window.ntiScore = NTI.score;
 </script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

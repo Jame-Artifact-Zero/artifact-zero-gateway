@@ -1,22 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NTI — No-Tilt Interface | Artifact Zero Labs</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--green:#22c55e;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh}
+{% extends "base.html" %}
+{% block title %}NTI — No-Tilt Interface | Artifact Zero Labs{% endblock %}
+{% block body_class %}page-ntilanding{% endblock %}
 
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent)}
-.topbar .version{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:4px}
-.topbar .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+{% block head %}
+<style>
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 .main{max-width:960px;margin:0 auto;padding:24px 20px 60px}
@@ -60,7 +47,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .badge-amber{background:#78350f;color:#fde68a}
 .badge-green{background:#14532d;color:#86efac}
 
-.panel-body{padding:16px}
+.panel-
 
 .fm-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .fm-row:last-child{border-bottom:none}
@@ -95,10 +82,9 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 
 </div>
 
@@ -206,7 +192,9 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
   </div>
 
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 const SAMPLES = {
   a: "You were wrong earlier — not about routing — but about thinking routing was still broken. Routing is fixed. Your fetch body was sending the wrong key. That is not a routing problem. That is a payload problem. The fact that you kept debugging CORS and 404s after the route was already live means you lost the thread. The fix was one line. You spent an hour on it.",
@@ -320,6 +308,5 @@ function sumL3(d){
   return `Similarity: ${d.jaccard_similarity} · Drift: ${d.drift_score} · Mutation: ${d.mutation_markers_present?'YES':'NO'}`;
 }
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

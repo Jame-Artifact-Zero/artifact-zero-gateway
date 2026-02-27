@@ -1,21 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artifact Zero — Score it.</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Artifact Zero — Score it.{% endblock %}
+{% block body_class %}page-index{% endblock %}
+
+{% block head %}
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.nav{position:fixed;top:0;right:0;padding:16px 24px;z-index:100;display:flex;gap:20px;align-items:center}
+
+
 .nav a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s}
 .nav a:hover{color:var(--accent)}
 .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;transition:all .4s ease}
-.center.scored{justify-content:flex-start;padding-top:24px}
+.center.scored{justify-content:flex-start;padding-top:80px}
 .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:28px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;transition:all .4s ease}
 .logo .dot{color:var(--text)}
 .center.scored .logo{font-size:16px;margin-bottom:20px}
@@ -54,12 +48,14 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .meta{text-align:center;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
 .again{text-align:center;margin-top:20px}
 .again a{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;text-decoration:none;cursor:pointer}
-.center.scored ~ .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+
+.center.scored ~ 
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-</head>
-<body>
-<!-- nav handled by az-shell.js -->
+{% endblock %}
+
+{% block content %}
 <div class="center" id="center">
   <div class="logo">ARTIFACT ZERO<span class="dot">.</span></div>
   <div class="box">
@@ -77,7 +73,11 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
     <div class="again" id="againBtn" style="display:none"><a onclick="reset()">Score another →</a></div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
 <script src="/static/nti-score-component.js"></script>
+
 <script>
 const S={email:"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.",contract:"The service provider shall use commercially reasonable efforts to maintain system availability at generally accepted industry standards. Modifications to pricing may occur upon reasonable notice. The client agrees to indemnify the provider against any and all claims arising from use of the service.",ai:"I'd be happy to help with that! There are several approaches you could consider, and each has its own merits. Generally speaking, the best practice would depend on your specific situation. Let me know if you'd like me to elaborate on any of these points or if there's anything else I can assist with!"};
 let _lastText='';
@@ -86,6 +86,5 @@ function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollH
 async function score(){const text=document.getElementById('input').value.trim();if(!text)return;_lastText=text;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}const el=document.getElementById('ntiResults');el.innerHTML='';el.appendChild(NTIScore.render(d,_lastText));document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show');document.getElementById('againBtn').style.display='block'}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
 function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');document.getElementById('ntiResults').innerHTML='';document.getElementById('againBtn').style.display='none';autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

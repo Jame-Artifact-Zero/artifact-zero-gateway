@@ -1,24 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Score — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Score — Artifact Zero{% endblock %}
+{% block body_class %}page-score{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--green:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh}
-
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;font-family:'JetBrains Mono',monospace}
-.topbar nav a:hover{color:var(--green)}
-.topbar nav a.active{color:var(--green)}
-
 .main{max-width:720px;margin:0 auto;padding:40px 20px 80px}
 
 h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
@@ -85,12 +70,10 @@ textarea::placeholder{color:#3d4452}
 
 .meta-row{display:flex;gap:16px;margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap}
 
-/* footer handled by az-shell.js */
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 <div class="main">
 
 <h1>Score your text <span class="free-badge">10 free / month</span></h1>
@@ -115,8 +98,14 @@ textarea::placeholder{color:#3d4452}
 <div id="ntiResults"></div>
 
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="/static/nti-score-component.js"></script>
+
+<script src="/static/nti-engine.js"></script>
+
+
 <script>
 const input = document.getElementById('input');
 const charCount = document.getElementById('charCount');
@@ -187,7 +176,6 @@ async function scoreText() {
 }
 </script>
 
-<script src="/static/nti-engine.js"></script>
 
 <script>
 // Add rewrite capability to score page
@@ -206,6 +194,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

@@ -1,49 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Your OS — AI Control Room</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Your OS — AI Control Room{% endblock %}
+{% block body_class %}page-yourosapp{% endblock %}
+
+{% block head %}
 <style>
-:root {
-  --bg: #06080d;
-  --surface: #0c0f16;
-  --surface2: #12161f;
-  --surface3: #1a1f2c;
-  --border: #1e2436;
-  --border-bright: #2d3548;
-  --text: #e2e4ea;
-  --text-dim: #6b7280;
-  --text-muted: #4b5263;
-  --green: #00e89c;
-  --green-dim: rgba(0,232,156,.12);
-  --blue: #60a5fa;
-  --blue-dim: rgba(96,165,250,.12);
-  --purple: #a78bfa;
-  --purple-dim: rgba(167,139,250,.12);
-  --amber: #fbbf24;
-  --amber-dim: rgba(251,191,36,.12);
-  --red: #f87171;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'Outfit', sans-serif;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; }
-body { background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased; height:100vh; overflow:hidden; }
-body::before { content:''; position:fixed; inset:0; background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; }
+
 
 /* LAYOUT */
 .app { display:grid; grid-template-columns:260px 1fr; grid-template-rows:48px 1fr; height:100vh; }
+
 .sidebar { grid-row:2; border-right:1px solid var(--border); background:var(--surface); overflow-y:auto; display:flex; flex-direction:column; }
 .main { grid-row:2; display:flex; flex-direction:column; overflow:hidden; }
 
 /* TOPBAR */
-.topbar .logo { font-family:var(--mono); font-weight:800; font-size:12px; letter-spacing:3px; color:var(--green); }
-.topbar .logo span { color:var(--text-dim); font-weight:500; }
-.topbar-center { display:flex; align-items:center; gap:8px; }
-.topbar-center .os-badge { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-dim); border:1px solid rgba(251,191,36,.2); padding:2px 8px; border-radius:3px; }
-.topbar-right { display:flex; align-items:center; gap:12px; }
+
 .tier-badge { font-family:var(--mono); font-size:10px; color:var(--green); background:var(--green-dim); border:1px solid rgba(0,232,156,.2); padding:2px 8px; border-radius:3px; }
 .btn-sm { font-family:var(--mono); font-size:10px; padding:4px 10px; border:1px solid var(--border-bright); background:transparent; color:var(--text-dim); border-radius:3px; cursor:pointer; transition:all .15s; letter-spacing:1px; }
 .btn-sm:hover { border-color:var(--green); color:var(--green); }
@@ -111,7 +81,7 @@ body::before { content:''; position:fixed; inset:0; background:url("data:image/s
 .score-high { color:var(--green); background:var(--green-dim); }
 .score-mid { color:var(--amber); background:var(--amber-dim); }
 .score-low { color:var(--red); background:rgba(248,113,113,.12); }
-.compare-card .card-body { font-size:13px; line-height:1.6; flex:1; color:var(--text-dim); }
+.compare-card .card-
 .compare-card .card-footer { margin-top:12px; padding-top:8px; border-top:1px solid var(--border); font-family:var(--mono); font-size:9px; color:var(--text-muted); display:flex; justify-content:space-between; }
 .choose-btn { position:absolute; bottom:12px; right:12px; font-family:var(--mono); font-size:9px; padding:4px 8px; background:var(--green-dim); border:1px solid rgba(0,232,156,.3); color:var(--green); border-radius:3px; cursor:pointer; opacity:0; transition:opacity .15s; letter-spacing:1px; }
 .compare-card:hover .choose-btn { opacity:1; }
@@ -177,13 +147,12 @@ body::before { content:''; position:fixed; inset:0; background:url("data:image/s
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:var(--border-bright); }
 </style>
-</head>
-<body>
+{% endblock %}
 
+{% block content %}
 <div class="app">
 
 <!-- TOPBAR -->
-<!-- topbar removed: az-shell.js -->
 
   </div>
   <div class="topbar-right">
@@ -390,7 +359,9 @@ Never add disclaimers I didn't ask for</textarea>
 </div>
 
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 // ==========================================
 // STATE
@@ -910,6 +881,5 @@ if (userPath === 'new') {
 }
 </script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

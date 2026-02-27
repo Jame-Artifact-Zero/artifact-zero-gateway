@@ -1,29 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Katherine Birkbeck — NTI Candidate Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#06080c;--surface:#0d1117;--surface2:#151b25;--border:#1e2736;--border-bright:#2a3547;
-  --text:#e4e8f0;--dim:#8892a4;--muted:#5c6577;
-  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--serif:'Instrument Serif',serif;
-  --green:#00e89c;--green-dim:rgba(0,232,156,.08);
-  --red:#ff4466;--red-dim:rgba(255,68,102,.08);
-  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.08);
-  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.08);
-  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.08);
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
-body{min-height:100vh;min-height:100svh;}
+{% extends "base.html" %}
+{% block title %}Katherine Birkbeck — NTI Candidate Dashboard{% endblock %}
+{% block body_class %}page-birkbeck{% endblock %}
 
-.topbar .logo{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
-.topbar .nav-links{display:flex;gap:16px;align-items:center}
-.topbar .nav-links a{font-family:var(--mono);font-size:11px;color:var(--dim);text-decoration:none;letter-spacing:1px}
-.topbar .nav-links a:hover{color:var(--text)}
+{% block head %}
+<style>
 .live-badge{font-family:var(--mono);font-size:10px;color:var(--green);background:var(--green-dim);border:1px solid rgba(0,232,156,.2);padding:3px 10px;border-radius:3px;display:flex;align-items:center;gap:6px}
 .live-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -133,10 +113,9 @@ body{min-height:100vh;min-height:100svh;}
   .score-ring .num{font-size:32px}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 
 </div>
 
@@ -267,7 +246,9 @@ body{min-height:100vh;min-height:100svh;}
 <div class="disclaimer">
   <p>NTI analyzes structural patterns in public statements — not political positions, ideology, or character. All statements sourced from public records and campaign materials. Nonpartisan. Rule-based. Zero AI opinion.</p>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 // ══════════════════════════════════════
 // CANDIDATE DATA — Katherine Birkbeck
@@ -512,6 +493,5 @@ function copyLink(){
 // INIT
 renderAll();
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

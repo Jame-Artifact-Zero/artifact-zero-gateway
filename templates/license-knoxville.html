@@ -1,34 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NTI Market Position — Knoxville DMA</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}NTI Market Position — Knoxville DMA{% endblock %}
+{% block body_class %}page-licenseknox{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#05080e;--surface:#0a0f1a;--surface2:#0f1522;--surface3:#151d2e;
-  --text:#eaeef5;--dim:#b0b8cc;--muted:#6d7a94;
-  --gold:#c9a84c;--gold-dim:#a08838;--gold-glow:rgba(201,168,76,.12);
-  --green:#00e89c;--red:#ef4444;--cyan:#22d3ee;
-  --border:#1a2238;--border2:#253050;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;min-height:100svh;overflow-x:hidden}
 a{color:var(--gold);text-decoration:none}
 a:hover{text-decoration:underline}
 
-.topbar-brand{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--green);letter-spacing:2.5px;text-decoration:none}
-.topbar-nav{display:flex;gap:20px}
-.topbar-nav a{font-size:11px;color:var(--muted);font-weight:600;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .2s}
-.topbar-nav a:hover{color:var(--text)}
-
-.hero{text-align:center;padding:24px 32px 40px;position:relative;max-width:860px;margin:0 auto}
+.hero{text-align:center;padding:80px 32px 40px;position:relative;max-width:860px;margin:0 auto}
 .hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:1px;height:48px;background:linear-gradient(var(--border),transparent)}
 .hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:4px;font-weight:700;margin-bottom:24px}
 .hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,5.5vw,56px);font-weight:600;color:var(--text);line-height:1.15;margin-bottom:20px}
 .hero h1 em{font-style:italic;color:var(--gold)}
-.hero-body{font-size:17px;color:var(--dim);line-height:1.7;max-width:640px;margin:0 auto}
+.hero-
 
 .status-bar{max-width:860px;margin:40px auto 0;padding:0 32px}
 .status-inner{display:flex;justify-content:center;gap:48px;padding:20px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -56,7 +40,7 @@ a:hover{text-decoration:underline}
 .territory-card:hover{border-color:var(--border2)}
 .territory-card-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:2px;font-weight:700;margin-bottom:8px}
 .territory-card-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
-.territory-card-body{font-size:13px;color:var(--dim);line-height:1.6}
+.territory-card-
 
 .usecases{max-width:860px;margin:48px auto 0;padding:0 32px}
 .usecase-list{display:grid;gap:12px}
@@ -68,7 +52,7 @@ a:hover{text-decoration:underline}
 .scarcity{max-width:860px;margin:56px auto 0;padding:0 32px}
 .scarcity-inner{border:1px solid var(--gold-dim);border-radius:10px;padding:32px;background:linear-gradient(135deg,rgba(201,168,76,.04),transparent);text-align:center}
 .scarcity-headline{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--text);margin-bottom:12px}
-.scarcity-body{font-size:14px;color:var(--dim);line-height:1.6;max-width:520px;margin:0 auto}
+.scarcity-
 
 .preview{max-width:860px;margin:56px auto 0;padding:0 32px;text-align:center}
 .preview-link{
@@ -116,10 +100,9 @@ textarea.cta-input{resize:vertical;min-height:72px}
 .territory-card:nth-child(3){animation-delay:.2s}
 .territory-card:nth-child(4){animation-delay:.25s}
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 <div class="hero">
   <div class="hero-eyebrow">MARKET TERRITORY</div>
   <h1>Knoxville is <em>open.</em></h1>
@@ -243,7 +226,9 @@ textarea.cta-input{resize:vertical;min-height:72px}
     <div class="cta-note">Pricing is structured per conversation — not published. Territory terms, sublicensing rights, and integration scope are tailored to the holder. No commitment required to inquire.</div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 function handleSubmit(e) {
   e.preventDefault();
@@ -275,6 +260,5 @@ function handleSubmit(e) {
   });
 }
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

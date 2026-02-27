@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Artifact Zero{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/az-base.css">
+{% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+<header class="az-topbar">
+  <a href="/" class="az-logo">ARTIFACT ZERO</a>
+  <nav class="az-nav-desktop">
+    <a href="/safecheck"{% if request.path.startswith('/safecheck') %} class="active"{% endif %}>SAFECHECK</a>
+    <a href="/score"{% if request.path.startswith('/score') %} class="active"{% endif %}>SCORE</a>
+    <a href="/live"{% if request.path.startswith('/live') %} class="active"{% endif %}>LIVE</a>
+    <a href="/examples"{% if request.path == '/examples' %} class="active"{% endif %}>EXAMPLES</a>
+    <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
+    <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>
+    <a href="/signup" class="az-nav-auth{% if request.path == '/signup' %} active{% endif %}">SIGN UP</a>
+  </nav>
+  <button class="az-hamburger" onclick="document.getElementById('az-mobile-menu').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+</header>
+
+<div class="az-mobile-menu" id="az-mobile-menu">
+  <button class="az-mobile-close" onclick="this.parentElement.classList.remove('open')">&times;</button>
+  <a href="/safecheck"{% if request.path.startswith('/safecheck') %} class="active"{% endif %}>SAFECHECK</a>
+  <a href="/score"{% if request.path.startswith('/score') %} class="active"{% endif %}>SCORE</a>
+  <a href="/live"{% if request.path.startswith('/live') %} class="active"{% endif %}>LIVE</a>
+  <a href="/examples"{% if request.path == '/examples' %} class="active"{% endif %}>EXAMPLES</a>
+  <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
+  <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>
+  <a href="/signup" class="az-nav-auth{% if request.path == '/signup' %} active{% endif %}">SIGN UP</a>
+</div>
+
+<main class="az-main">
+{% block content %}{% endblock %}
+</main>
+
+<nav class="az-bottomnav">
+  <a href="/safecheck" class="az-bnav-item{% if request.path.startswith('/safecheck') %} active{% endif %}">SafeCheck</a>
+  <a href="/score" class="az-bnav-item{% if request.path.startswith('/score') %} active{% endif %}">Score</a>
+  <a href="/examples" class="az-bnav-item{% if request.path == '/examples' %} active{% endif %}">Examples</a>
+  <a href="/contact" class="az-bnav-item{% if request.path == '/contact' %} active{% endif %}">Contact</a>
+</nav>
+
+<footer class="az-footer">
+  <span class="az-footer-left">&copy; 2026 Artifact Zero Labs &middot; Knoxville, TN</span>
+  <span class="az-footer-right">
+    <a href="/safecheck">SafeCheck</a>
+    <a href="/docs">API</a>
+    <a href="/examples">Examples</a>
+    <a href="/contact">Contact</a>
+  </span>
+</footer>
+
+<script src="/static/az-shell-auth.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
