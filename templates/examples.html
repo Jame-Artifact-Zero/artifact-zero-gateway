@@ -1,29 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>25 Ways to Score It — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}25 Ways to Score It — Artifact Zero{% endblock %}
+{% block body_class %}page-examples{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--blue:#3b82f6;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
 
-.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);background:rgba(10,12,16,.85);border-bottom:1px solid var(--border)}
-.nav-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.nav-links{display:flex;gap:20px}
-.nav-links a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none}
-.nav-links a:hover{color:var(--accent)}
 
-.hero{max-width:700px;margin:0 auto;padding:24px 20px 40px;text-align:center}
+.hero{max-width:700px;margin:0 auto;padding:100px 20px 40px;text-align:center}
 .hero h1{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,4vw,32px);font-weight:700;margin-bottom:8px}
 .hero h1 .accent{color:var(--accent)}
 .hero p{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:24px}
@@ -74,13 +57,10 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .uc-box-label.green{color:var(--accent)}
 .uc-box p{font-size:13px;line-height:1.5;color:var(--text)}
 .uc-result{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);padding:8px 12px;background:var(--bg);border-radius:6px;margin-top:8px}
-
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- nav removed: az-shell.js -->
-
+{% block content %}
 <div class="hero">
   <h1>What do you <span class="accent">actually</span> do?</h1>
   <p>Every person on a phone or computer is doing one of three things. Here are 25 real scenarios where structural scoring changes the outcome.</p>
@@ -94,7 +74,9 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 </div>
 
 <div class="grid" id="grid"></div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 const CASES = [
   {n:1,type:"send",title:"Responding to a client complaint email",app:"Gmail / Outlook",
@@ -230,6 +212,5 @@ function filter(type) {
 
 render(CASES);
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

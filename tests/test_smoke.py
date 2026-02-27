@@ -284,12 +284,12 @@ SHELL_PAGES = [
 ]
 
 @pytest.mark.parametrize("route", SHELL_PAGES)
-def test_az_shell_loaded(client, route):
-    """Every public page loads az-shell.js."""
+def test_base_template_loaded(client, route):
+    """Every public page loads az-base.css."""
     r = client.get(route)
     if r.status_code == 200:
         html = r.data.decode()
-        assert "az-shell.js" in html, f"{route} does not load az-shell.js"
+        assert "az-base.css" in html, f"{route} does not load az-base.css"
 
 
 @pytest.mark.parametrize("route", ["/login", "/signup"])

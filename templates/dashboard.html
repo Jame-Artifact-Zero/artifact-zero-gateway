@@ -1,21 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Dashboard — Artifact Zero{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block head %}
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--accent-dim:#064e3b;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;min-height:100svh}
 .mono{font-family:'JetBrains Mono',monospace}
 
 /* Nav bar */
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;transition:color .15s}
-.topbar nav a:hover,.topbar nav a.active{color:var(--text)}
 
 /* Layout */
 .container{max-width:960px;margin:0 auto;padding:32px 24px}
@@ -94,10 +85,9 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
   .pricing-ref{flex-direction:column;gap:12px}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 <div class="container">
   <h1>Dashboard</h1>
 
@@ -144,7 +134,9 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
 </div>
 
 <div class="toast" id="toast"></div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 const $ = id => document.getElementById(id);
 
@@ -257,6 +249,5 @@ loadBalance();
 loadPacks();
 loadTransactions();
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

@@ -1,21 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Compose — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Compose — Artifact Zero{% endblock %}
+{% block body_class %}page-compose{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--blue:#3b82f6;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+
 
 /* ===== TOOLBAR ===== */
 .toolbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
@@ -35,7 +24,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .mode-btn.active{background:var(--surface2);color:var(--accent)}
 
 /* ===== SALES PITCH ===== */
-.pitch{max-width:640px;margin:0 auto;padding:24px 24px 60px;text-align:center;display:none}
+.pitch{max-width:640px;margin:0 auto;padding:100px 24px 60px;text-align:center;display:none}
 .pitch.show{display:block}
 .pitch-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
 .pitch h1{font-size:32px;font-weight:700;line-height:1.25;margin-bottom:16px}
@@ -55,7 +44,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .pitch-cta-sub a{color:var(--accent);text-decoration:none}
 
 /* ===== COMPOSE AREA ===== */
-.compose{max-width:760px;width:100%;margin:0 auto;padding:24px 20px 220px;flex:1;display:flex;flex-direction:column}
+.compose{max-width:760px;width:100%;margin:0 auto;padding:60px 20px 220px;flex:1;display:flex;flex-direction:column}
 .compose.hidden{display:none}
 .email-header{padding:16px 0;border-bottom:1px solid var(--border)}
 .email-row{display:flex;align-items:center;padding:8px 0;gap:8px}
@@ -99,7 +88,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .ic-content{flex:1}
 .ic-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-bottom:2px}
 .ic-title.red{color:var(--red)}.ic-title.amber{color:var(--amber)}.ic-title.purple{color:var(--purple)}
-.ic-body{color:var(--muted)}
+.ic-
 .ic-learn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);cursor:pointer;margin-top:4px;display:inline-block}
 .ic-learn:hover{text-decoration:underline}
 .ic-tip{display:none;margin-top:6px;padding:8px 10px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.5}
@@ -126,7 +115,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .sp-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
 .sp-toggle{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--muted);transition:transform .2s}
 .structure-panel.open .sp-toggle{transform:rotate(180deg)}
-.sp-body{padding:16px;overflow-y:auto;flex:1}
+.sp-
 
 /* ===== INTERACTIVE FINDINGS ===== */
 .finding-section{margin-bottom:16px}
@@ -151,7 +140,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .finding-detail.show{display:block}
 .finding-detail .fd-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-bottom:4px}
 .finding-detail .fd-title.red{color:var(--red)}.finding-detail .fd-title.amber{color:var(--amber)}.finding-detail .fd-title.green{color:var(--accent)}.finding-detail .fd-title.purple{color:var(--purple)}
-.finding-detail .fd-body{color:var(--muted);margin-bottom:6px}
+.finding-detail .fd-
 .finding-detail .fd-fix{padding:8px 10px;background:var(--surface);border-radius:6px;font-size:12px;color:var(--muted)}
 .finding-detail .fd-fix strong{color:var(--accent)}
 .finding-detail .fd-words{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
@@ -175,16 +164,16 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   .compose{padding:56px 12px 220px}
   .email-label{width:40px;font-size:10px}
   .pitch h1{font-size:24px}
-  .pitch{padding:24px 16px 40px}
+  .pitch{padding:80px 16px 40px}
   .toolbar-right{gap:4px}
   .mode-btn{padding:4px 7px;font-size:10px}
   .fmt-bar{gap:1px}
   .fmt-btn{width:28px;height:26px;font-size:12px}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
+{% block content %}
 <div class="toolbar">
   <div class="toolbar-left">
     <a href="/" class="toolbar-logo">AZ</a>
@@ -302,7 +291,9 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 </div>
 
 <div class="toast" id="toast">Copied as plain text</div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 /* ═══════════════════════════════════════════
    STATE
@@ -710,6 +701,5 @@ document.addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='C'||e.key==='c')){e.preventDefault();copyPlain();}
 });
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

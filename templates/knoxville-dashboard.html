@@ -1,29 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NTI Political Pulse — Knox County 2026</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}NTI Political Pulse — Knox County 2026{% endblock %}
+{% block body_class %}page-knoxville{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#080c14;--surface:#0e1320;--surface2:#141a2b;--surface3:#1a2236;
-  --text:#e8ecf4;--dim:#a0aabf;--muted:#6b7894;
-  --green:#00e89c;--red:#ef4444;--amber:#f59e0b;--cyan:#22d3ee;
-  --purple:#a78bfa;--pink:#ec4899;--blue:#3b82f6;
-  --border:#1e2940;--border2:#2a3550;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;min-height:100svh}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
 
 /* Topbar */
-.topbar-brand{display:flex;align-items:center;gap:10px}
-.topbar-brand a{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--green);letter-spacing:2px;text-decoration:none}
-.topbar-nav{display:flex;gap:16px}
-.topbar-nav a{font-size:12px;color:var(--muted);font-weight:600;text-decoration:none;letter-spacing:1px;text-transform:uppercase}
-.topbar-nav a:hover{color:var(--text)}
+
 .live-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);font-weight:600}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -113,7 +98,7 @@ a:hover{text-decoration:underline}
 .feed-item-header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .feed-item-source{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--green)}
 .feed-item-time{font-size:11px;color:var(--muted)}
-.feed-item-body{padding:14px 16px}
+.feed-item-
 .feed-item-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;cursor:pointer}
 .feed-item-title:hover{color:var(--green)}
 .feed-item-summary{font-size:13px;color:var(--dim);line-height:1.5;margin-bottom:8px}
@@ -154,6 +139,7 @@ a:hover{text-decoration:underline}
 .lens-tab .lens-tab-desc{font-size:9px;font-weight:400;opacity:.7;display:block;margin-top:2px}
 
 /* Footer */
+
 /* Loading */
 .loading-shimmer{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -166,10 +152,9 @@ a:hover{text-decoration:underline}
   .method-grid{grid-template-columns:1fr 1fr}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 
   <div class="live-badge"><span class="live-dot"></span>LIVE</div>
 </div>
@@ -270,7 +255,9 @@ a:hover{text-decoration:underline}
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 // ══════════════════════════════════════
 // CANDIDATES DATA
@@ -854,6 +841,5 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(fetchLocalFeed, 120000);
 });
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

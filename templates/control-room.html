@@ -1,15 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NTI Control Room — Artifact Zero</title>
-<link rel="icon" href="/static/favicon.png">
+{% extends "base.html" %}
+{% block title %}NTI Control Room — Artifact Zero{% endblock %}
+{% block body_class %}page-controlroom{% endblock %}
+
+{% block head %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
-:root{--bg:#08090c;--s1:#0f1117;--s2:#161a23;--s3:#1e232e;--border:#252b38;--text:#d4d8e3;--muted:#5a6275;--dim:#3a4050;--accent:#c96442;--accent2:#e07a55;--blue:#4a90d9;--green:#34d399;--red:#f87171;--amber:#fbbf24;--purple:#a78bfa}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+
 .app{display:flex;height:calc(100vh - 37px)}
 
 /* Sidebar */
@@ -51,7 +47,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .ms{flex:1;overflow-y:auto}
 .mi{max-width:700px;margin:0 auto;padding:20px 20px 140px}
 
-.wc{text-align:center;padding:24px 20px 40px}
+.wc{text-align:center;padding:80px 20px 40px}
 .wc .zl{width:56px;height:56px;border-radius:14px;background:transparent;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden}.wc .zl img{width:100%;height:100%;object-fit:contain}
 .wc h2{font-size:20px;font-weight:600;margin-bottom:8px}
 .wc p{font-size:14px;color:var(--muted);max-width:380px;margin:0 auto;line-height:1.5}
@@ -97,8 +93,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 
 @media(max-width:768px){.sb{display:none}.iw{left:0}.mi{padding:16px 14px 130px}}
 </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
 <div style="position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)">
   <a href="/" style="font-family:monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#22c55e;text-decoration:none">ARTIFACT ZERO</a>
   <nav style="display:flex;gap:16px">
@@ -156,6 +153,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <div class="px" onclick="cp()">Maybe later</div>
 </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/nti-engine.js"></script>
+
 
 <script>
 const FL=25,SL={pro:'https://buy.stripe.com/test_price_1T2Vq2CbeNJgVBp1sovVhfIh'};
@@ -275,7 +277,6 @@ document.getElementById('ak').addEventListener('change',function(){localStorage.
 if(window.self!==window.top){const n=document.querySelector('[data-shell-nav]');if(n)n.style.display='none';}
 uu();
 </script>
-<script src="/static/nti-engine.js"></script>
 
 <script>
 // V3 enforce on AI responses in control room
@@ -294,6 +295,5 @@ document.addEventListener('nti:ai-response', async (e) => {
 });
 </script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

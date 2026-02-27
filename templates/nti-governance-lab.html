@@ -1,21 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NTI Governance Lab | Artifact Zero Labs</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#08090c;--s1:#0f1116;--s2:#161a22;--s3:#1e232d;
-  --border:#252b38;--text:#d4d8e3;--muted:#5a6275;--dim:#3a4050;
-  --blue:#4a90d9;--green:#34d399;--red:#f87171;--amber:#fbbf24;
-  --purple:#a78bfa;--cyan:#22d3ee;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{min-height:100vh;min-height:100svh}
+{% extends "base.html" %}
+{% block title %}NTI Governance Lab | Artifact Zero Labs{% endblock %}
+{% block body_class %}page-ntilab{% endblock %}
 
+{% block head %}
+<style>
 .top{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:var(--s1)}
 .top .logo{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
 .top .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);background:var(--s2);padding:3px 8px;border-radius:3px;margin-left:12px}
@@ -74,7 +62,7 @@ body{min-height:100vh;min-height:100svh}
 .badge-red{background:rgba(248,113,113,.1);color:var(--red)}
 .badge-amber{background:rgba(251,191,36,.1);color:var(--amber)}
 .badge-blue{background:rgba(74,144,217,.1);color:var(--blue)}
-.section-body{padding:16px}
+.section-
 
 /* BI Chart */
 .bi-chart{height:120px;display:flex;align-items:center;gap:2px;padding:8px 0}
@@ -100,9 +88,9 @@ body{min-height:100vh;min-height:100svh}
 
 .or-divider{text-align:center;color:var(--dim);font-size:11px;margin:12px 0;text-transform:uppercase;letter-spacing:2px}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
 <!-- NAV BAR -->
 <div data-shell-nav style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #252b38;background:#0f1116;font-family:'IBM Plex Mono',monospace;font-size:11px">
   <a href="/" style="color:#34d399;font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
@@ -155,6 +143,11 @@ body{min-height:100vh;min-height:100svh}
     <div id="tResults"></div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/nti-engine.js"></script>
+
 
 <script>
 // ── TAB SWITCHING ──
@@ -441,7 +434,6 @@ function runThread() {
 }
 if(window.self!==window.top){const n=document.querySelector('[data-shell-nav]');if(n)n.style.display='none';}
 </script>
-<script src="/static/nti-engine.js"></script>
 
 <script>
 // Wire governance lab to server-side /nti instead of pure client-side
@@ -452,6 +444,5 @@ window.ntiServerScore = NTI.score;
 window.ntiRewrite = NTI.rewrite;
 </script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

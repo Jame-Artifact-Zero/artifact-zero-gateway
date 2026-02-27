@@ -1,24 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Fortune 500 Structure Check — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+{% extends "base.html" %}
+{% block title %}Fortune 500 Structure Check — Artifact Zero{% endblock %}
+{% block body_class %}page-fortune500{% endblock %}
 
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav{display:flex;gap:18px}
-.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
-.topbar nav a:hover{color:var(--text)}
+{% block head %}
+<style>
+
 
 /* Hero */
-.hero{padding:24px 20px 24px;text-align:center;max-width:700px;margin:0 auto}
+.hero{padding:90px 20px 24px;text-align:center;max-width:700px;margin:0 auto}
 .hero h1{font-size:clamp(24px,5vw,40px);font-weight:700;line-height:1.2;margin-bottom:10px}
 .hero h1 .num{color:var(--accent);font-family:'JetBrains Mono',monospace}
 .hero .sub{font-size:14px;color:var(--muted);line-height:1.6}
@@ -90,11 +79,10 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   .stat-val{font-size:18px}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
-<div style="display:flex;justify-content:center;gap:8px;padding:24px 16px 0">
+{% block content %}
+<div style="display:flex;justify-content:center;gap:8px;padding:70px 16px 0">
   <a href="/fortune500" style="padding:8px 20px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-decoration:none;background:var(--accent);color:#0a0c10;border:1px solid var(--accent);font-weight:700">FORTUNE 500</a>
   <a href="/vc-funds" style="padding:8px 20px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-decoration:none;background:var(--surface);border:1px solid var(--border);color:var(--muted)">VC FUNDS</a>
 </div>
@@ -131,6 +119,10 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <a href="/safecheck">Check your own words &rarr;</a>
 </div>
 
+<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
+{% endblock %}
+
+{% block scripts %}
 <script>
 let allCompanies = [];
 
@@ -228,7 +220,5 @@ function filterCompanies(list, filter){
 
 loadScores();
 </script>
-<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

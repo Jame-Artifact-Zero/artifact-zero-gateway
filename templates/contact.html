@@ -1,27 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Contact — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Contact — Artifact Zero{% endblock %}
+{% block body_class %}page-contact{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100svh;overflow-x:hidden}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
 
-/* NAV: handled by az-shell.js */
 
-/* CONTACT FORM — single screen, no scroll on mobile */
-.form-wrap{max-width:520px;margin:0 auto;padding:16px 20px;height:calc(100svh - 52px);height:calc(100vh - 52px);display:flex;flex-direction:column;justify-content:center;overflow:hidden}
-@supports(height:100svh){.form-wrap{height:calc(100svh - 52px)}}
+/* NAV */
+
+/* CONTACT FORM */
+.form-wrap{max-width:520px;margin:0 auto;padding:40px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
 .form-wrap.hidden{display:none}
 .form-wrap h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:6px}
 .form-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
@@ -32,7 +20,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border .2s;
 }
 .field input:focus,.field textarea:focus{border-color:var(--accent)}
-.field textarea{min-height:60px;resize:none;line-height:1.6;flex:1 1 auto}
+.field textarea{min-height:120px;resize:vertical;line-height:1.6}
 .field input::placeholder,.field textarea::placeholder{color:#3d4452}
 .send-btn{
   width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#000;
@@ -91,7 +79,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   color:var(--accent);text-transform:uppercase;letter-spacing:2px;
   margin:24px 0 16px;
 }
-.card .card-body{font-size:14px;line-height:1.7;color:var(--text)}
+.card .card-
 .card .card-body.message{
   background:var(--surface2);border-radius:8px;padding:16px;
   font-style:italic;color:var(--muted);
@@ -134,25 +122,14 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 @media(min-width:768px){
   .card{flex:0 0 calc(100% - 200px);margin:0 100px;margin-top:20px;height:calc(100% - 40px)}
 }
-@media(max-width:700px){
-  .form-wrap h1{font-size:18px;margin-bottom:4px}
-  .form-wrap .sub{font-size:12px;margin-bottom:16px}
-  .field{margin-bottom:10px}
-  .field label{font-size:10px;margin-bottom:4px}
-  .field input,.field textarea{padding:10px 12px;font-size:14px}
-  .field textarea{min-height:50px}
-  .send-btn{padding:12px;font-size:14px;margin-top:4px}
-}
 @media(min-width:1024px){
   .card{flex:0 0 600px;margin:0 20px;margin-top:20px}
   .deck-track{justify-content:flex-start;padding-left:calc(50% - 320px)}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- nav removed: az-shell.js -->
-
+{% block content %}
 <!-- CONTACT FORM -->
 <div class="form-wrap" id="formWrap">
   <h1>Contact us</h1>
@@ -190,8 +167,11 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="dots" id="dots"></div>
   <div class="swipe-hint">Swipe to reveal <span class="arrow">→</span></div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="/static/nti-score-component.js"></script>
+
 <script>
 let currentCard = 0;
 let totalCards = 8;
@@ -551,6 +531,5 @@ function closeDeck() {
   document.getElementById('sendBtn').textContent = 'Send message';
 }
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}
