@@ -17,15 +17,11 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* NAV */
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);background:rgba(10,12,16,.85);border-bottom:1px solid var(--border)}
-.nav-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.nav-links{display:flex;gap:20px}
-.nav-links a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none}
-.nav-links a:hover{color:var(--accent)}
+/* NAV: handled by az-shell.js */
 
-/* CONTACT FORM */
-.form-wrap{max-width:520px;margin:0 auto;padding:40px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
+/* CONTACT FORM — single screen, no scroll on mobile */
+.form-wrap{max-width:520px;margin:0 auto;padding:16px 20px;height:calc(100svh - 52px);height:calc(100vh - 52px);display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+@supports(height:100svh){.form-wrap{height:calc(100svh - 52px)}}
 .form-wrap.hidden{display:none}
 .form-wrap h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:6px}
 .form-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
@@ -36,7 +32,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border .2s;
 }
 .field input:focus,.field textarea:focus{border-color:var(--accent)}
-.field textarea{min-height:120px;resize:vertical;line-height:1.6}
+.field textarea{min-height:60px;resize:none;line-height:1.6;flex:1 1 auto}
 .field input::placeholder,.field textarea::placeholder{color:#3d4452}
 .send-btn{
   width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#000;
@@ -137,6 +133,15 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 
 @media(min-width:768px){
   .card{flex:0 0 calc(100% - 200px);margin:0 100px;margin-top:20px;height:calc(100% - 40px)}
+}
+@media(max-width:700px){
+  .form-wrap h1{font-size:18px;margin-bottom:4px}
+  .form-wrap .sub{font-size:12px;margin-bottom:16px}
+  .field{margin-bottom:10px}
+  .field label{font-size:10px;margin-bottom:4px}
+  .field input,.field textarea{padding:10px 12px;font-size:14px}
+  .field textarea{min-height:50px}
+  .send-btn{padding:12px;font-size:14px;margin-top:4px}
 }
 @media(min-width:1024px){
   .card{flex:0 0 600px;margin:0 20px;margin-top:20px}
