@@ -1,23 +1,25 @@
 /**
- * az-shell.js v1.0
+ * az-shell.js v2.0
  * Unified header + footer for all Artifact Zero pages.
  * Drop <script src="/static/az-shell.js"></script> in any page.
  * Auto-detects current page and highlights nav.
  * Respects pages that set window.AZ_SHELL_SKIP = true to opt out.
+ *
+ * v2.0 CHANGES:
+ * - Footer sticks to bottom via flex column body (fixes huge gap on short pages)
+ * - Mobile hamburger menu (fixes nav wrapping on small screens)
+ * - Proper topbar spacer that accounts for actual topbar height
+ * - Removes orphaned .footer/.topbar elements from page templates
  */
 (function(){
   if(window.AZ_SHELL_SKIP) return;
 
-  const path = window.location.pathname;
+  var path = window.location.pathname;
 
   // ═══════════════════════════════════════
   // NAV STRUCTURE
   // ═══════════════════════════════════════
-  const NAV_LEFT = [
-    { label: 'ARTIFACT ZERO', href: '/', isLogo: true },
-  ];
-
-  const NAV_RIGHT = [
+  var NAV_LINKS = [
     { label: 'SafeCheck', href: '/safecheck' },
     { label: 'Score',     href: '/score' },
     { label: 'Live',      href: '/live' },
@@ -30,57 +32,84 @@
   // ═══════════════════════════════════════
   // STYLES (injected once)
   // ═══════════════════════════════════════
-  const STYLE_ID = 'az-shell-styles';
+  var STYLE_ID = 'az-shell-styles';
   if(!document.getElementById(STYLE_ID)){
-    const style = document.createElement('style');
+    var style = document.createElement('style');
     style.id = STYLE_ID;
-    style.textContent = `
-      .az-topbar{position:fixed;top:0;left:0;right:0;z-index:9000;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(37,42,53,.5)}
-      .az-topbar .az-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#00e89c;text-decoration:none}
-      .az-topbar nav{display:flex;align-items:center;gap:18px}
-      .az-topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s;padding:4px 0}
-      .az-topbar nav a:hover{color:#e8eaf0}
-      .az-topbar nav a.active{color:#00e89c}
-      .az-footer{border-top:1px solid #252a35;padding:14px 24px;background:#0a0c10;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px}
-      .az-footer-left{color:#4b5563}
-      .az-footer-right{display:flex;gap:16px}
-      .az-footer-right a{color:#6b7280;text-decoration:none;font-size:11px;letter-spacing:1px;transition:color .15s}
-      .az-footer-right a:hover{color:#00e89c}
-      @media(max-width:640px){
-        .az-topbar{padding:12px 16px}
-        .az-topbar nav{gap:12px}
-        .az-topbar nav a{font-size:9px;letter-spacing:1px}
-        .az-footer{flex-direction:column;gap:8px;text-align:center;padding:12px 16px}
-        .az-footer-right{flex-wrap:wrap;justify-content:center}
-      }
-    `;
+    style.textContent = [
+      /* Body flex column — footer sticks to bottom on short pages */
+      'html{height:100%}',
+      'body{min-height:100%;display:flex;flex-direction:column}',
+      'body>.az-topbar-spacer~*:not(.az-topbar):not(.az-footer):not(.az-topbar-spacer){flex:1 0 auto}',
+      /* Catch-all: first non-shell child grows */
+      '.az-shell-content-wrap{flex:1 0 auto}',
+
+      /* Topbar */
+      '.az-topbar{position:fixed;top:0;left:0;right:0;z-index:9000;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(37,42,53,.5)}',
+      '.az-topbar .az-logo{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:#00e89c;text-decoration:none;flex-shrink:0;white-space:nowrap}',
+
+      /* Desktop nav */
+      '.az-topbar nav{display:flex;align-items:center;gap:18px}',
+      '.az-topbar nav a{font-family:"JetBrains Mono",monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s;padding:4px 0;white-space:nowrap}',
+      '.az-topbar nav a:hover{color:#e8eaf0}',
+      '.az-topbar nav a.active{color:#00e89c}',
+
+      /* Hamburger button */
+      '.az-hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:#6b7280;font-size:20px;line-height:1}',
+      '.az-hamburger:hover{color:#e8eaf0}',
+
+      /* Mobile menu overlay */
+      '.az-mobile-menu{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:8999;background:rgba(10,12,16,.98);flex-direction:column;align-items:center;justify-content:center;gap:24px}',
+      '.az-mobile-menu.open{display:flex}',
+      '.az-mobile-menu a{font-family:"JetBrains Mono",monospace;font-size:14px;color:#6b7280;text-decoration:none;letter-spacing:2px;text-transform:uppercase;transition:color .15s}',
+      '.az-mobile-menu a:hover,.az-mobile-menu a.active{color:#00e89c}',
+      '.az-mobile-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#6b7280;font-size:24px;cursor:pointer;padding:8px}',
+      '.az-mobile-close:hover{color:#e8eaf0}',
+
+      /* Footer — no margin-top, flex pushes it down naturally */
+      '.az-footer{border-top:1px solid #252a35;padding:14px 24px;background:#0a0c10;display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;font-size:11px;flex-shrink:0}',
+      '.az-footer-left{color:#4b5563}',
+      '.az-footer-right{display:flex;gap:16px}',
+      '.az-footer-right a{color:#6b7280;text-decoration:none;font-size:11px;letter-spacing:1px;transition:color .15s}',
+      '.az-footer-right a:hover{color:#00e89c}',
+
+      /* Spacer */
+      '.az-topbar-spacer{height:52px;flex-shrink:0}',
+
+      /* Mobile */
+      '@media(max-width:700px){',
+        '.az-topbar{padding:10px 16px}',
+        '.az-topbar nav{display:none}',
+        '.az-hamburger{display:block}',
+        '.az-topbar-spacer{height:48px}',
+        '.az-footer{flex-direction:column;gap:8px;text-align:center;padding:12px 16px}',
+        '.az-footer-right{flex-wrap:wrap;justify-content:center}',
+      '}',
+    ].join('\n');
     document.head.appendChild(style);
   }
 
   // ═══════════════════════════════════════
-  // DETECT & REMOVE EXISTING TOPBAR
+  // DETECT & REMOVE EXISTING TOPBAR/FOOTER
   // ═══════════════════════════════════════
   function removeExisting(){
-    // Common patterns for existing topbars/footers across all AZ pages
-    const selectors = [
-      '.topbar',           // safecheck, docs, score, dashboards, etc
-      '.nav',              // contact, examples, wall
-      '.header-bar',
-      'header.topbar',
+    var selectors = [
+      '.topbar', '.nav', '.header-bar', 'header.topbar',
       '[class*="topbar"]',
-      '.footer',           // old inline footers
     ];
-    selectors.forEach(sel => {
-      document.querySelectorAll(sel).forEach(el => {
+    selectors.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
         if(!el.classList.contains('az-topbar') && !el.classList.contains('az-footer')){
           el.remove();
         }
       });
     });
-    // Also remove inline-styled nav bars (control-room, relay, lab patterns)
-    // These have an <a> with "ARTIFACT ZERO" text inside a sidebar or top div
-    document.querySelectorAll('.sb-head, .sidebar').forEach(el => {
-      // Don't remove sidebars — just the redundant top logo/nav if present
+    // Remove orphaned .footer elements (old inline footers from templates)
+    // az-shell builds its own .az-footer
+    document.querySelectorAll('.footer').forEach(function(el){
+      if(!el.classList.contains('az-footer')){
+        el.remove();
+      }
     });
   }
 
@@ -90,28 +119,22 @@
   function buildTopbar(){
     if(document.querySelector('.az-topbar')) return;
 
-    const bar = document.createElement('div');
+    var bar = document.createElement('div');
     bar.className = 'az-topbar';
 
     // Logo
-    const logo = document.createElement('a');
+    var logo = document.createElement('a');
     logo.href = '/';
     logo.className = 'az-logo';
     logo.textContent = 'ARTIFACT ZERO';
     bar.appendChild(logo);
 
-    // Check auth — redirect logo to /dashboard if logged in
-    fetch('/api/auth/status').then(r=>r.json()).then(d=>{
-      if(d.logged_in) logo.href = '/dashboard';
-    }).catch(()=>{});
-
-    // Nav
-    const nav = document.createElement('nav');
-    NAV_RIGHT.forEach(item => {
-      const a = document.createElement('a');
+    // Desktop nav
+    var nav = document.createElement('nav');
+    NAV_LINKS.forEach(function(item){
+      var a = document.createElement('a');
       a.href = item.href;
       a.textContent = item.label.toUpperCase();
-      // Active detection
       if(path === item.href || (item.href !== '/' && path.startsWith(item.href))){
         a.className = 'active';
       }
@@ -119,8 +142,50 @@
     });
     bar.appendChild(nav);
 
-    // Insert at top of body
+    // Hamburger button (mobile only, shown via CSS)
+    var burger = document.createElement('button');
+    burger.className = 'az-hamburger';
+    burger.innerHTML = '&#9776;';
+    burger.setAttribute('aria-label', 'Menu');
+    burger.onclick = function(){ openMobileMenu(); };
+    bar.appendChild(burger);
+
+    // Auth check — swap logo href if logged in
+    fetch('/api/auth/status').then(function(r){ return r.json(); }).then(function(d){
+      if(d.logged_in) logo.href = '/dashboard';
+    }).catch(function(){});
+
     document.body.insertBefore(bar, document.body.firstChild);
+  }
+
+  // ═══════════════════════════════════════
+  // MOBILE MENU
+  // ═══════════════════════════════════════
+  function openMobileMenu(){
+    var existing = document.querySelector('.az-mobile-menu');
+    if(existing){ existing.classList.add('open'); return; }
+
+    var overlay = document.createElement('div');
+    overlay.className = 'az-mobile-menu open';
+
+    var close = document.createElement('button');
+    close.className = 'az-mobile-close';
+    close.innerHTML = '&times;';
+    close.onclick = function(){ overlay.classList.remove('open'); };
+    overlay.appendChild(close);
+
+    NAV_LINKS.forEach(function(item){
+      var a = document.createElement('a');
+      a.href = item.href;
+      a.textContent = item.label.toUpperCase();
+      if(path === item.href || (item.href !== '/' && path.startsWith(item.href))){
+        a.className = 'active';
+      }
+      a.onclick = function(){ overlay.classList.remove('open'); };
+      overlay.appendChild(a);
+    });
+
+    document.body.appendChild(overlay);
   }
 
   // ═══════════════════════════════════════
@@ -129,26 +194,23 @@
   function buildFooter(){
     if(document.querySelector('.az-footer')) return;
 
-    const footer = document.createElement('div');
+    var footer = document.createElement('div');
     footer.className = 'az-footer';
 
-    const left = document.createElement('span');
+    var left = document.createElement('span');
     left.className = 'az-footer-left';
-    left.textContent = `\u00A9 ${new Date().getFullYear()} Artifact Zero Labs \u00B7 Knoxville, TN`;
+    left.textContent = '\u00A9 ' + new Date().getFullYear() + ' Artifact Zero Labs \u00B7 Knoxville, TN';
     footer.appendChild(left);
 
-    const right = document.createElement('span');
+    var right = document.createElement('span');
     right.className = 'az-footer-right';
-    const footerLinks = [
+    [
       {label:'SafeCheck',href:'/safecheck'},
       {label:'API',href:'/docs'},
       {label:'Examples',href:'/examples'},
-      {label:'Live',href:'/live'},
       {label:'Contact',href:'/contact'},
-      {label:'Sign Up',href:'/signup'},
-    ];
-    footerLinks.forEach(link => {
-      const a = document.createElement('a');
+    ].forEach(function(link){
+      var a = document.createElement('a');
       a.href = link.href;
       a.textContent = link.label;
       right.appendChild(a);
@@ -159,34 +221,57 @@
   }
 
   // ═══════════════════════════════════════
-  // ADJUST BODY PADDING
+  // ADJUST BODY PADDING (spacer for fixed topbar)
   // ═══════════════════════════════════════
   function adjustPadding(){
-    // Add top padding to body if not already handled
-    const cs = getComputedStyle(document.body);
-    const pt = parseInt(cs.paddingTop) || 0;
-    if(pt < 50){
-      // Don't override if the page already has substantial padding
-      // Just ensure content doesn't hide under the fixed topbar
-      const spacer = document.createElement('div');
-      spacer.style.height = '56px';
-      spacer.className = 'az-topbar-spacer';
-      if(!document.querySelector('.az-topbar-spacer')){
-        document.body.insertBefore(spacer, document.body.children[1]); // after topbar
-      }
+    if(document.querySelector('.az-topbar-spacer')) return;
+    var spacer = document.createElement('div');
+    spacer.className = 'az-topbar-spacer';
+    // Insert after topbar (which is first child)
+    var topbar = document.querySelector('.az-topbar');
+    if(topbar && topbar.nextSibling){
+      document.body.insertBefore(spacer, topbar.nextSibling);
     }
+  }
+
+  // ═══════════════════════════════════════
+  // WRAP CONTENT for flex layout
+  // ═══════════════════════════════════════
+  function wrapContent(){
+    // Wrap everything between spacer and footer in a flex-grow div
+    // This ensures footer sticks to bottom on short pages
+    var spacer = document.querySelector('.az-topbar-spacer');
+    var footer = document.querySelector('.az-footer');
+    if(!spacer || !footer) return;
+    // Already wrapped?
+    if(document.querySelector('.az-shell-content-wrap')) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'az-shell-content-wrap';
+
+    // Collect all nodes between spacer and footer
+    var nodes = [];
+    var node = spacer.nextSibling;
+    while(node && node !== footer){
+      nodes.push(node);
+      node = node.nextSibling;
+    }
+    // Move them into the wrapper
+    nodes.forEach(function(n){ wrap.appendChild(n); });
+    // Insert wrapper before footer
+    document.body.insertBefore(wrap, footer);
   }
 
   // ═══════════════════════════════════════
   // COCKPIT CLIENT — reads admin controls
   // ═══════════════════════════════════════
   function loadCockpit(){
-    fetch('/api/cockpit/config').then(r=>r.json()).then(cfg=>{
+    fetch('/api/cockpit/config').then(function(r){ return r.json(); }).then(function(cfg){
       // Banner
       if(cfg.banner && cfg.banner.on && cfg.banner.text){
-        const old = document.getElementById('az-cockpit-banner');
+        var old = document.getElementById('az-cockpit-banner');
         if(old) old.remove();
-        const b = document.createElement('div');
+        var b = document.createElement('div');
         b.id = 'az-cockpit-banner';
         b.style.cssText = 'position:fixed;top:48px;left:0;right:0;z-index:9998;padding:8px 16px;text-align:center;font-family:monospace;font-size:13px;font-weight:bold;cursor:pointer;';
         b.style.color = cfg.banner.color || '#00e89c';
@@ -196,24 +281,23 @@
           b.onclick = function(){ window.location.href = cfg.banner.link; };
         }
         document.body.appendChild(b);
-        // Push content down
-        const spacers = document.querySelectorAll('.az-topbar-spacer');
+        var spacers = document.querySelectorAll('.az-topbar-spacer');
         spacers.forEach(function(s){ s.style.height = '90px'; });
       }
 
       // Modal pop-up
       if(cfg.modal && cfg.modal.on && cfg.modal.title){
-        const shown = sessionStorage.getItem('az-modal-shown');
-        const pages = (cfg.modal.pages || '*').split(',').map(function(p){ return p.trim(); });
-        const onPage = pages.includes('*') || pages.includes(window.location.pathname);
+        var shown = sessionStorage.getItem('az-modal-shown');
+        var pages = (cfg.modal.pages || '*').split(',').map(function(p){ return p.trim(); });
+        var onPage = pages.includes('*') || pages.includes(window.location.pathname);
         if(!shown && onPage){
           sessionStorage.setItem('az-modal-shown', '1');
-          const overlay = document.createElement('div');
+          var overlay = document.createElement('div');
           overlay.id = 'az-modal-overlay';
           overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
-          const box = document.createElement('div');
+          var box = document.createElement('div');
           box.style.cssText = 'background:#12151b;border:1px solid #252a35;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;position:relative;';
-          box.innerHTML = '<div style="position:absolute;top:12px;right:16px;color:#6b7280;cursor:pointer;font-size:18px" onclick="this.parentElement.parentElement.remove()">✕</div>'
+          box.innerHTML = '<div style="position:absolute;top:12px;right:16px;color:#6b7280;cursor:pointer;font-size:18px" onclick="this.parentElement.parentElement.remove()">\u2715</div>'
             + '<h2 style="color:#00e89c;font-family:monospace;font-size:16px;letter-spacing:2px;margin-bottom:12px">' + (cfg.modal.title||'') + '</h2>'
             + '<p style="color:#e8eaf0;font-size:14px;line-height:1.6;margin-bottom:20px">' + (cfg.modal.body||'') + '</p>'
             + (cfg.modal.cta ? '<a href="'+(cfg.modal.cta_link||'#')+'" style="display:inline-block;background:#00e89c;color:#000;padding:10px 24px;border-radius:6px;text-decoration:none;font-family:monospace;font-weight:bold;font-size:13px;letter-spacing:1px">' + cfg.modal.cta + '</a>' : '');
@@ -253,6 +337,7 @@
     buildTopbar();
     buildFooter();
     adjustPadding();
+    wrapContent();
     loadCockpit();
   }
 
