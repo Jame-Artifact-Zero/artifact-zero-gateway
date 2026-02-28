@@ -413,8 +413,8 @@ async function doSearch(q) {
       searchResults.innerHTML = d.results.map(r => `
         <div class="sr-item" onclick="openResult('${r.type}','${r.id}')">
           <div>
-            <div style="font-weight:500">${esc(r.title)}</div>
-            <div style="font-size:10px;color:#5a6275;margin-top:2px">${r.date ? r.date.slice(0,16) : ''}</div>
+            <div class="sh-relay-title">${esc(r.title)}</div>
+            <div class="sh-relay-date">${r.date ? r.date.slice(0,16) : ''}</div>
           </div>
           <span class="sr-type ${r.type}">${r.type}</span>
         </div>
