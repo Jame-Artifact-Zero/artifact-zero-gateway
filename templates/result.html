@@ -1,70 +1,69 @@
-<!-- =========================
-FILE: templates/result.html
-========================= -->
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Artifact Zero — Result</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @media print {
-      .no-print { display: none !important; }
-      body { background: #fff !important; color: #000 !important; }
-      .print-box { border: none !important; }
-      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    }
-  </style>
-</head>
-<body class="bg-zinc-950 text-zinc-100">
-  <div class="max-w-4xl mx-auto px-6 py-10">
-    <div class="flex items-center justify-between no-print">
-      <a href="{{ base_url }}/" class="text-sm text-zinc-400 hover:text-zinc-200">← Home</a>
-      <div class="text-xs text-zinc-500">request_id: {{ result.request_id }}</div>
-    </div>
+{% extends "base.html" %}
+{% block title %}NTI Result — Artifact Zero{% endblock %}
+{% block body_class %}page-result{% endblock %}
 
-    <h1 class="mt-6 text-3xl font-semibold">NTI Result</h1>
+{% block head %}
+<style>
+.az-result{max-width:640px;margin:60px auto 40px;padding:0 20px}
+.az-result-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.az-result-nav a{font-size:13px;color:var(--muted);text-decoration:none}
+.az-result-nav a:hover{color:var(--accent)}
+.az-result-nav .rid{font-family:var(--az-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+.az-result h1{font-size:22px;font-weight:700;margin-bottom:8px}
+.az-result-meta{font-size:13px;color:var(--muted);margin-bottom:20px}
+.az-result-meta strong{color:var(--text);font-weight:600}
+.az-email-status{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:20px}
+.az-email-ok{color:var(--accent)}
+.az-email-fail{color:var(--red)}
+.az-result-actions{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.az-btn-p{padding:10px 18px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--az-sans);transition:background .15s;text-decoration:none;display:inline-block}
+.az-btn-p:hover{background:#00d48c}
+.az-btn-g{padding:10px 18px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--az-sans);transition:all .15s;text-decoration:none;display:inline-block}
+.az-btn-g:hover{color:var(--accent);border-color:var(--accent)}
+.az-output-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.az-output-label{font-family:var(--az-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.az-output-pre{white-space:pre-wrap;font-family:var(--az-mono);font-size:13px;line-height:1.7;color:var(--text)}
+.az-result-ts{font-size:11px;color:var(--muted)}
+@media print{
+  .az-no-print{display:none}
+  body{background:#fff;color:#000}
+  .az-output-box{border:none}
+}
+</style>
+{% endblock %}
 
-    <div class="mt-3 text-sm text-zinc-400">
-      Mode: <span class="text-zinc-200">{{ result.mode }}</span> ·
-      Input length: <span class="text-zinc-200">{{ result.input_len }}</span> chars ·
-      Remaining runs: <span class="text-zinc-200">{{ result.remaining_runs }}</span>
-    </div>
+{% block content %}
+<div class="az-result">
+<div class="az-result-nav az-no-print">
+  <a href="/">&larr; Home</a>
+  <span class="rid">{{ result.request_id }}</span>
+</div>
 
-    {% if email_status %}
-      <div class="mt-4 no-print rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 text-sm">
-        Email: {% if email_status.ok %}<span class="text-emerald-300">sent</span>{% else %}<span class="text-red-300">failed</span>{% endif %}
-        <span class="text-zinc-400">({{ email_status.message }})</span>
-      </div>
-    {% endif %}
+<h1>NTI Result</h1>
+<div class="az-result-meta">
+  Mode: <strong>{{ result.mode }}</strong> &middot;
+  Input: <strong>{{ result.input_len }}</strong> chars &middot;
+  Remaining: <strong>{{ result.remaining_runs }}</strong>
+</div>
 
-    <div class="mt-6 no-print flex flex-wrap gap-2">
-      <button onclick="window.print()"
-              class="rounded-xl bg-white text-zinc-900 font-semibold px-4 py-2 hover:bg-zinc-200 transition">
-        Print / Save PDF
-      </button>
-      <button onclick="navigator.clipboard.writeText(document.getElementById('out').innerText)"
-              class="rounded-xl bg-zinc-800 text-zinc-100 px-4 py-2 hover:bg-zinc-700 transition">
-        Copy output
-      </button>
-      <a href="{{ base_url }}/?ref=" class="rounded-xl bg-zinc-800 text-zinc-100 px-4 py-2 hover:bg-zinc-700 transition">
-        Share link
-      </a>
-      <a href="{{ base_url }}/" class="rounded-xl bg-emerald-400 text-zinc-950 font-semibold px-4 py-2 hover:bg-emerald-300 transition">
-        Run another
-      </a>
-    </div>
+{% if email_status %}
+<div class="az-email-status az-no-print">
+  Email: {% if email_status.ok %}<span class="az-email-ok">sent</span>{% else %}<span class="az-email-fail">failed</span>{% endif %}
+  <span>({{ email_status.message }})</span>
+</div>
+{% endif %}
 
-    <div class="mt-6 print-box rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6">
-      <div class="text-sm text-zinc-400">Output</div>
-      <pre id="out" class="mt-3 whitespace-pre-wrap text-sm leading-relaxed mono">{{ result.nti_output }}</pre>
-    </div>
+<div class="az-result-actions az-no-print">
+  <button class="az-btn-g" onclick="window.print()">Print / Save PDF</button>
+  <button class="az-btn-g" onclick="navigator.clipboard.writeText(document.getElementById('out').innerText)">Copy output</button>
+  <a href="/" class="az-btn-p">Run another</a>
+</div>
 
-    <div class="mt-8 text-xs text-zinc-600">
-      Timestamp: {{ result.ts }}
-    </div>
-  </div>
-<script src="/static/az-nav.js"></script>
-</body>
-</html>
+<div class="az-output-box">
+  <div class="az-output-label">Output</div>
+  <pre id="out" class="az-output-pre">{{ result.nti_output }}</pre>
+</div>
+
+<div class="az-result-ts">{{ result.ts }}</div>
+</div>
+{% endblock %}
