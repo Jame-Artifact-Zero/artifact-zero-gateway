@@ -810,7 +810,8 @@ def lambda_handler(event, context):
     results = []
 
     if target in ("f500", "both"):
-        companies = COMPANIES[:min(limit, len(COMPANIES))]
+        start = event.get('start', 1)
+        companies = [(s,n,r,u,sub) for s,n,r,u,sub in COMPANIES if r >= start][:limit]
         ok = 0
         for slug, name, rank, url, subs in companies:
             try:
@@ -872,5 +873,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Artifact Zero F500 Scraper v3")
     p.add_argument("--limit", type=int, default=5)
     p.add_argument("--target", choices=["f500", "vc", "both"], default="both")
+    p.add_argument("--start", type=int, default=1, help="Start at rank")
     a = p.parse_args()
-    print(lambda_handler({"target": a.target, "limit": a.limit}, None))
+    print(lambda_handler({"target": a.target, "limit": a.limit, "start": a.start}, None))
