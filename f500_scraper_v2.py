@@ -26,6 +26,14 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
+# Suppress XML-parsed-as-HTML warning for sitemap parsing
+import warnings
+try:
+    from bs4 import XMLParsedAsHTMLWarning
+    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+except ImportError:
+    pass
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("scraper")
 
@@ -122,11 +130,12 @@ def ensure_tables(conn):
     )
     """)
 
-    # Add scored_at and score_version columns if missing
+    # Add missing columns to existing tables
     for table in ["fortune500_scores", "vc_fund_scores"]:
         for col, ctype, default in [
             ("scored_at", "TEXT", None),
             ("score_version", "TEXT", "'unscored'"),
+            ("pages_scraped", "TEXT", "'[]'"),
         ]:
             try:
                 dflt = f" DEFAULT {default}" if default else ""
