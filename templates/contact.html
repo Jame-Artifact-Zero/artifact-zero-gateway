@@ -4,534 +4,86 @@
 
 {% block head %}
 <style>
-
-
-/* NAV */
-
-/* CONTACT FORM */
-.form-wrap{max-width:520px;margin:0 auto;padding:40px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
-.form-wrap.hidden{display:none}
-.form-wrap h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:6px}
-.form-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
+.form-wrap{max-width:520px;margin:0 auto;padding:100px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
+.form-wrap h1{font-family:var(--az-mono);font-size:22px;font-weight:700;margin-bottom:6px}
+.form-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:28px;line-height:1.5}
 .field{margin-bottom:16px}
-.field label{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-.field input,.field textarea{
-  width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border .2s;
-}
+.field label{display:block;font-family:var(--az-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.field input,.field textarea{width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--az-sans);font-size:15px;outline:none;transition:border .2s}
 .field input:focus,.field textarea:focus{border-color:var(--accent)}
 .field textarea{min-height:120px;resize:vertical;line-height:1.6}
 .field input::placeholder,.field textarea::placeholder{color:#3d4452}
-.send-btn{
-  width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#000;
-  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:8px;
-}
+.send-btn{width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#000;font-family:var(--az-sans);font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:8px}
 .send-btn:hover{background:#00d48c}
 .send-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
 
-/* CARD DECK */
-.deck-wrap{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:150;background:var(--bg)}
-.deck-wrap.active{display:flex;flex-direction:column}
+/* V3 panel */
+.v3-panel{display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.v3-panel.show{display:block;animation:slideUp .25s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.v3-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.v3-title{font-family:var(--az-mono);font-size:11px;letter-spacing:1.5px;color:var(--accent)}
+.v3-stats{font-family:var(--az-mono);font-size:10px;color:var(--muted)}
+.v3-action{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:12px}
+.v3-action-type{font-family:var(--az-mono);font-size:10px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;min-width:80px}
+.v3-action-detail{color:var(--muted);flex:1;line-height:1.4}
+.v3-cleaned{padding:16px;font-size:14px;line-height:1.7;color:var(--text)}
+.v3-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.v3-btn{flex:1;padding:10px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--az-sans);text-align:center;transition:all .15s}
+.v3-use{background:var(--accent);color:#0a0c10}.v3-use:hover{background:#00d48c}
+.v3-keep{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}.v3-keep:hover{color:var(--accent);border-color:var(--accent)}
 
-.deck-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
-.deck-counter{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
-.deck-close{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none}
-.deck-close:hover{color:var(--accent)}
-
-.deck-banner{
-  text-align:center;padding:12px 20px;flex-shrink:0;
-  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
-  color:var(--accent);letter-spacing:1px;
-  animation:bannerIn .6s ease;
-}
-@keyframes bannerIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-
-.deck-viewport{flex:1;position:relative;overflow:hidden;touch-action:pan-y}
-
-.deck-track{
-  display:flex;height:100%;transition:transform .35s cubic-bezier(.25,.46,.45,.94);
-  will-change:transform;
-}
-
-.card{
-  flex:0 0 calc(100% - 40px);margin:0 20px;height:calc(100% - 40px);margin-top:20px;
-  background:var(--surface);border:1px solid var(--border);border-radius:16px;
-  overflow-y:auto;padding:24px;position:relative;
-  box-shadow:0 4px 24px rgba(0,0,0,.3);
-}
-
-/* Card corner number */
-.card-num{
-  position:absolute;top:12px;left:16px;
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);
-  opacity:.5;
-}
-.card-suit{
-  position:absolute;top:12px;right:16px;
-  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);
-  opacity:.5;
-}
-
-.card h2{
-  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
-  color:var(--accent);text-transform:uppercase;letter-spacing:2px;
-  margin:24px 0 16px;
-}
-.card .card-
-.card .card-body.message{
-  background:var(--surface2);border-radius:8px;padding:16px;
-  font-style:italic;color:var(--muted);
-}
-
-/* Score display on cards */
-.card-score{text-align:center;padding:20px 0}
-.card-score .big{font-family:'JetBrains Mono',monospace;font-size:56px;font-weight:700}
-.card-score .big.high{color:var(--accent)}.card-score .big.mid{color:var(--amber)}.card-score .big.low{color:var(--red)}
-.card-score .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px}
-
-.fm-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
-.fm-row:last-child{border-bottom:none}
-.tag{font-family:'JetBrains Mono',monospace;font-size:11px;display:inline-block;padding:3px 8px;border-radius:4px;margin:2px}
-.tag.green{background:#00e89c22;color:var(--accent)}
-.tag.red{background:#ef444422;color:var(--red)}
-.tag.amber{background:#f59e0b22;color:var(--amber)}
-.tag.purple{background:#a78bfa22;color:var(--purple)}
-
-.model-reveal{text-align:center;padding:16px 0}
-.model-reveal .model-name{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--accent)}
-.model-reveal .model-reason{font-size:12px;color:var(--muted);margin-top:4px}
-
-.response-text{background:var(--surface2);border-radius:8px;padding:16px;line-height:1.7;font-size:14px}
-.strikethrough{text-decoration:line-through;color:var(--red);opacity:.6}
-.inserted{color:var(--accent);font-weight:600}
-
-/* Swipe hint */
-.swipe-hint{
-  text-align:center;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
-  flex-shrink:0;
-}
-.swipe-hint .arrow{color:var(--accent);font-size:14px}
-
-/* Dots */
-.dots{display:flex;justify-content:center;gap:6px;padding:10px;flex-shrink:0}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .2s}
-.dot.active{background:var(--accent);width:20px;border-radius:4px}
-
-@media(min-width:768px){
-  .card{flex:0 0 calc(100% - 200px);margin:0 100px;margin-top:20px;height:calc(100% - 40px)}
-}
-@media(min-width:1024px){
-  .card{flex:0 0 600px;margin:0 20px;margin-top:20px}
-  .deck-track{justify-content:flex-start;padding-left:calc(50% - 320px)}
-}
+.sent-wrap{display:none;max-width:520px;margin:0 auto;padding:100px 20px;text-align:center}
+.sent-wrap.show{display:block;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- CONTACT FORM -->
 <div class="form-wrap" id="formWrap">
-  <h1>Contact us</h1>
-  <p class="sub">Tell us what you're working on. We'll show you what we see.</p>
-  <div class="field">
-    <label>First Name</label>
-    <input type="text" id="ffirst" placeholder="First name" required>
-  </div>
-  <div class="field">
-    <label>Last Name</label>
-    <input type="text" id="flast" placeholder="Last name" required>
-  </div>
-  <div class="field">
-    <label>Email</label>
-    <input type="email" id="femail" placeholder="you@company.com" required>
-  </div>
-  <div class="field">
-    <label>Message</label>
-    <textarea id="fmessage" placeholder="What are you working on? What problem are you trying to solve?"></textarea>
-  </div>
-  <button class="send-btn" id="sendBtn" onclick="send()">Send message</button>
-  <div id="formErr" style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px"></div>
+  <h1>Say something</h1>
+  <div class="sub">Your message runs through V3 structural enforcement before we read it. You'll see what it catches.</div>
+  <div class="field"><label>Name</label><input type="text" id="nameField" placeholder="Your name" autocomplete="name"></div>
+  <div class="field"><label>Email</label><input type="email" id="emailField" placeholder="you@company.com" autocomplete="email"></div>
+  <div class="field"><label>Message</label><textarea id="msgField" placeholder="What's on your mind?"></textarea></div>
+  <div class="v3-panel" id="v3Panel"></div>
+  <button class="send-btn" id="sendBtn" onclick="handleSend()">Send</button>
 </div>
-
-<!-- CARD DECK -->
-<div class="deck-wrap" id="deck">
-  <div class="deck-header">
-    <span class="deck-counter" id="deckCounter">1 / 7</span>
-    <a class="deck-close" onclick="closeDeck()">✕ Close</a>
-  </div>
-  <div class="deck-banner" id="deckBanner"></div>
-  <div class="deck-viewport" id="viewport">
-    <div class="deck-track" id="track"></div>
-  </div>
-  <div class="dots" id="dots"></div>
-  <div class="swipe-hint">Swipe to reveal <span class="arrow">→</span></div>
+<div class="sent-wrap" id="sentWrap">
+  <div style="font-size:48px;opacity:.5;margin-bottom:12px">&#9989;</div>
+  <div style="font-family:var(--az-mono);font-size:18px;color:var(--accent);letter-spacing:2px;margin-bottom:8px">SENT</div>
+  <div style="font-size:14px;color:var(--muted);line-height:1.6">Your message was delivered. If you left an email, we'll get back to you.</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/nti-score-component.js"></script>
-
 <script>
-let currentCard = 0;
-let totalCards = 8;
-let startX = 0;
-let currentX = 0;
-let isDragging = false;
-
-// LLM race
-function pickModel(text) {
-  const s = text.replace(/[^a-zA-Z]/g, '').toLowerCase();
-  const models = [
-    { name: 'Claude', letters: 'claude' },
-    { name: 'Grok', letters: 'grok' },
-    { name: 'ChatGPT', letters: 'chatgpt' },
-    { name: 'Gemini', letters: 'gemini' }
-  ];
-  
-  let results = models.map(m => {
-    let pos = 0;
-    for (let i = 0; i < s.length && pos < m.letters.length; i++) {
-      if (s[i] === m.letters[pos]) pos++;
-    }
-    return { name: m.name, found: pos, needed: m.letters.length, complete: pos >= m.letters.length };
-  });
-  
-  // Find first complete
-  for (let i = 0; i < s.length; i++) {
-    let winners = models.map(m => {
-      let pos = 0;
-      for (let j = 0; j <= i && pos < m.letters.length; j++) {
-        if (s[j] === m.letters[pos]) pos++;
-      }
-      return { name: m.name, complete: pos >= m.letters.length, pos: pos };
-    }).filter(r => r.complete);
-    
-    if (winners.length > 0) {
-      return winners[0].name;
-    }
+let v3Result=null,v3Applied=false;
+async function handleSend(){
+  const name=document.getElementById('nameField').value.trim(),email=document.getElementById('emailField').value.trim(),msg=document.getElementById('msgField').value.trim(),btn=document.getElementById('sendBtn');
+  if(!name||!email||!msg){btn.textContent='All fields required';setTimeout(()=>{btn.textContent='Send'},2000);return}
+  if(!v3Result&&msg.length>20){
+    btn.disabled=true;btn.textContent='Running V3…';
+    try{const res=await fetch('/api/v1/contact-enforce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});const data=await res.json();v3Result=data;
+      if(data.changed&&data.action_count>0){renderV3(data);btn.textContent='Send original';btn.disabled=false;return}
+    }catch(e){}
   }
-  
-  // None completed — pick the one with most progress
-  let best = results.reduce((a, b) => (a.found / a.needed) > (b.found / b.needed) ? a : b);
-  return best.name;
+  const messageToSend=v3Applied?v3Result.cleaned:msg;
+  btn.disabled=true;btn.textContent='Sending…';
+  try{const res=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,message:messageToSend})});const data=await res.json();
+    if(data.status==='ok'||res.ok){document.getElementById('formWrap').style.display='none';document.getElementById('sentWrap').classList.add('show')}
+    else{btn.textContent=data.error||'Error';btn.disabled=false}
+  }catch(e){btn.textContent='Network error';btn.disabled=false}
 }
-
-function scoreClass(n) { return n >= .8 ? 'high' : n >= .5 ? 'mid' : 'low'; }
-function scoreLabel(n) { return n >= .8 ? 'HIGH INTEGRITY' : n >= .5 ? 'MODERATE' : n >= .2 ? 'LOW INTEGRITY' : 'CRITICAL'; }
-function fmColor(s) { return s.includes('CONFIRMED') ? 'red' : s.includes('PROBABLE') ? 'amber' : 'green'; }
-function fmLabel(s) { return s.includes('CONFIRMED') ? 'DETECTED' : s.includes('PROBABLE') ? 'PROBABLE' : 'CLEAR'; }
-
-async function send() {
-  const first = document.getElementById('ffirst').value.trim();
-  const last = document.getElementById('flast').value.trim();
-  const email = document.getElementById('femail').value.trim();
-  const message = document.getElementById('fmessage').value.trim();
-  const err = document.getElementById('formErr');
-  err.textContent = '';
-
-  if (!first) { err.textContent = 'First name required.'; return; }
-  if (!last) { err.textContent = 'Last name required.'; return; }
-  if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { err.textContent = 'Valid email required.'; return; }
-  if (!message) { err.textContent = 'Message required.'; return; }
-
-  const name = first + ' ' + last;
-  const btn = document.getElementById('sendBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Processing your message...';
-
-  try {
-    // V2 PRE-SCORE GATE — score via /nti first
-    const res = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: message })
-    });
-    const score = await res.json();
-
-    // V2 gate: if the API rejected it as gibberish, don't proceed
-    if (score.status === 'rejected' || score.gate) {
-      err.textContent = score.error || 'That does not look like a real message. Try again with a real business inquiry.';
-      btn.disabled = false;
-      btn.textContent = 'Send message';
-      return;
-    }
-
-    // Pick model
-    const model = pickModel(message);
-
-    // Fire V3 rewrite in parallel
-    let v3Rewrite = null;
-    try {
-      const rwRes = await fetch('/api/v1/rewrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: message })
-      });
-      v3Rewrite = await rwRes.json();
-    } catch(e) { /* rewrite failed, continue without */ }
-
-    // Build cards
-    buildDeck(name, email, message, score, model, v3Rewrite);
-
-    // Store the contact submission
-    fetch('/api/developer-apply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, message, type: 'contact_form' })
-    }).catch(() => {});
-
-    // Switch to deck
-    document.getElementById('formWrap').classList.add('hidden');
-    document.getElementById('deckBanner').textContent = name + ', this is happening. These are your words.';
-    document.getElementById('deck').classList.add('active');
-    initSwipe();
-    updateDots();
-
-  } catch (e) {
-    err.textContent = 'Error: ' + e.message;
-    btn.disabled = false;
-    btn.textContent = 'Send message';
-  }
+function renderV3(data){
+  const panel=document.getElementById('v3Panel');let h='<div class="v3-header"><span class="v3-title">V3 ENFORCEMENT</span><span class="v3-stats">'+data.action_count+' change'+(data.action_count!==1?'s':'')+' · '+data.elapsed_ms+'ms</span></div>';
+  const labels={filler_removal:'Filler',hedge_removal:'Hedge',smooth_opener_strip:'Opener',time_collapse:'Planning',redundancy_compression:'Duplicate',escalation_strip:'Escalation',dominance_neutralization:'Dominance',defensive_neutralization:'Defensive'};
+  data.actions.forEach(a=>{h+='<div class="v3-action"><span class="v3-action-type">'+(labels[a.check]||a.check)+'</span><span class="v3-action-detail">'+esc(a.detail)+'</span></div>'});
+  h+='<div class="v3-cleaned">'+esc(data.cleaned)+'</div><div class="v3-footer"><button class="v3-btn v3-use" onclick="useV3()">Use cleaned version</button><button class="v3-btn v3-keep" onclick="keepOriginal()">Keep my original</button></div>';
+  panel.innerHTML=h;panel.className='v3-panel show';
 }
-
-function buildDeck(name, email, message, score, model, v3Rewrite) {
-  const nii = score.nii || {};
-  const s = nii.nii_score ?? 0;
-  const fm = score.parent_failure_modes || {};
-  const tilt = score.tilt_taxonomy || [];
-  const matrix = score.interaction_matrix || {};
-  const dom = matrix.dominance_detected || ['NONE'];
-  const lat = score.telemetry?.latency_ms || '—';
-
-  // V2 flags (from V1 data)
-  const v2flags = [];
-  if (!message.match(/\b(need|want|require|looking for|interested in)\b/i)) v2flags.push('MISSING_OBJECTIVE');
-  if (message.match(/\b(maybe|possibly|perhaps|might|could)\b/gi)?.length > 1) v2flags.push('HEDGE_DENSITY');
-  if (!message.match(/\b(by|before|within|deadline|timeline|date)\b/i)) v2flags.push('NO_TIMELINE_CONSTRAINT');
-  if (message.length < 50) v2flags.push('LOW_SPECIFICITY');
-
-  // V3 rewrite data
-  const rwText = v3Rewrite ? (v3Rewrite.rewrite || '') : '';
-  const rwModel = v3Rewrite ? (v3Rewrite.model || 'Claude') : '';
-  const rwModelColor = v3Rewrite ? (v3Rewrite.model_color || '#00e89c') : '#00e89c';
-  const rwIssues = v3Rewrite ? (v3Rewrite.issues || []) : [];
-  const rwActions = v3Rewrite ? (v3Rewrite.v3_actions || []) : [];
-  const rwOrigWords = v3Rewrite ? (v3Rewrite.original_words || 0) : 0;
-  const rwLlmWords = v3Rewrite ? (v3Rewrite.llm_words || 0) : 0;
-  const rwNewWords = v3Rewrite ? (v3Rewrite.rewrite_words || 0) : 0;
-  const rwCompression = v3Rewrite ? (v3Rewrite.compression || '0%') : '0%';
-  const rwLatency = v3Rewrite ? (v3Rewrite.latency_ms || 0) : 0;
-  const rwLlmRaw = v3Rewrite ? (v3Rewrite.llm_raw || '') : '';
-
-  totalCards = 8;
-
-  const cards = [
-    // Card 1: Your message
-    `<div class="card">
-      <span class="card-num">1</span><span class="card-suit">♠</span>
-      <h2>Your Message</h2>
-      <div class="card-body message">"${escHtml(message)}"</div>
-      <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
-        ${message.split(/\s+/).length} words · ${message.length} characters · from ${escHtml(name)}
-      </div>
-    </div>`,
-
-    // Card 2: V1 Score (shared component)
-    `<div class="card">
-      <span class="card-num">2</span><span class="card-suit">♦</span>
-      <h2>V1 — Structural Score</h2>
-      <div id="card2_nti"></div>
-    </div>`,
-
-    // Card 3: V2 Audit
-    `<div class="card">
-      <span class="card-num">3</span><span class="card-suit">♣</span>
-      <h2>V2 — Inbound Audit</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">Before we read your message, V2 scanned it for structural completeness.</p>
-        ${v2flags.length === 0
-          ? '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ Message passed structural gate</div>'
-          : v2flags.map(f => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag amber">${f}</span></div>`).join('')
-        }
-        ${v2flags.length > 0 ? '<p style="color:var(--muted);margin-top:16px;font-size:13px">These flags would trigger a revision prompt before routing to an AI agent in a production NTI pipeline.</p>' : ''}
-      </div>
-    </div>`,
-
-    // Card 4: What the AI sees
-    `<div class="card">
-      <span class="card-num">4</span><span class="card-suit">♥</span>
-      <h2>What the AI Receives</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">After V2 processing, this is the structurally cleaned input that reaches the AI model.</p>
-        <div class="response-text">${escHtml(message)}${v2flags.length > 0 ? '<br><br><span style="color:var(--accent);font-size:12px">[V2 appended: Structural flags — '+v2flags.join(', ')+'. Respond with specificity.]</span>' : ''}</div>
-      </div>
-    </div>`,
-
-    // Card 5: Model selection + AI response
-    `<div class="card">
-      <span class="card-num">5</span><span class="card-suit">♠</span>
-      <h2>AI Response</h2>
-      <div class="model-reveal">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">YOUR WORDS SELECTED</div>
-        <div class="model-name">${rwModel || model}</div>
-        <div class="model-reason">First model name spelled by your message characters</div>
-      </div>
-      <div class="response-text" style="margin-top:16px">
-        <span style="color:var(--muted);font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : 'Thank you for reaching out, ' + escHtml(name) + '. I appreciate you taking the time to share what you\'re working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I\'d be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!'}</span>
-      </div>
-      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
-    </div>`,
-
-    // Card 6: V3 findings
-    `<div class="card">
-      <span class="card-num">6</span><span class="card-suit">♦</span>
-      <h2>V3 — Stabilization Findings</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">V3 analyzed ${rwModel ? 'the ' + rwModel + ' response' : 'the AI response'} and found:</p>
-        ${rwIssues.length > 0
-          ? rwIssues.map(i => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag red">FLAGGED</span> <span style="font-size:13px">${escHtml(i)}</span></div>`).join('')
-          : '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ No structural issues detected</div>'
-        }
-        ${rwActions.length > 0
-          ? '<div style="margin-top:12px">' + rwActions.map(a => {
-              const detail = typeof a === 'string' ? a : (a.detail || a.check + ': ' + a.action);
-              const actionType = typeof a === 'object' ? a.action : 'applied';
-              const tagCls = actionType === 'removed' ? 'red' : actionType === 'flagged' ? 'amber' : 'green';
-              return '<div style="padding:6px 0;border-bottom:1px solid var(--border)"><span class="tag ' + tagCls + '">' + (actionType || 'APPLIED').toUpperCase() + '</span> <span style="font-size:12px">' + escHtml(detail) + '</span></div>';
-            }).join('') + '</div>'
-          : ''
-        }
-        <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
-          ${rwLlmWords || rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
-        </div>
-      </div>
-    </div>`,
-
-    // Card 7: V3 FINAL OUTPUT — the actual rewritten message
-    `<div class="card">
-      <span class="card-num">7</span><span class="card-suit">♣</span>
-      <h2>V3 — Final Output</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">After V3 governance, this is what gets delivered. No filler. No false commitments. Structurally clean.</p>
-        <div class="response-text" style="color:var(--accent);font-size:15px;line-height:1.6;padding:16px;background:rgba(0,232,156,.04);border:1px solid rgba(0,232,156,.15);border-radius:8px">
-          ${rwText ? escHtml(rwText) : '<span style="color:var(--muted)">V3 rewrite unavailable — try again with a longer message.</span>'}
-        </div>
-        <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">
-          Model: ${rwModel || '—'} · Enforced by NTI V3 · ${rwLatency}ms
-        </div>
-      </div>
-    </div>`,
-
-    // Card 8: Confirmation + next steps
-    `<div class="card">
-      <span class="card-num">8</span><span class="card-suit">♥</span>
-      <h2>We got it.</h2>
-      <div class="card-body">
-        <p style="color:var(--text);margin-bottom:16px;font-size:15px">
-          ${escHtml(name)}, your message hit HQ. That was the full NTI pipeline on your own words — eight cards, three engines, zero LLM in the scoring.
-        </p>
-        <p style="color:var(--muted);margin-bottom:24px;font-size:13px">
-          V1 scored it. V2 audited the inbound. V3 stabilized the response. That's what every message gets — emails, contracts, AI outputs, all of it.
-        </p>
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-          <a href="/score" style="padding:10px 20px;background:var(--accent);color:#000;font-weight:700;border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">Score something →</a>
-          <a href="/docs" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">API docs →</a>
-          <a href="/developers" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">Developer access →</a>
-        </div>
-      </div>
-    </div>`
-  ];
-
-  document.getElementById('track').innerHTML = cards.join('');
-
-  // Mount NTI component into Card 2
-  const card2 = document.getElementById('card2_nti');
-  if (card2) card2.appendChild(NTIScore.render(score, message));
-
-  // Build dots
-  let dotsHtml = '';
-  for (let i = 0; i < totalCards; i++) {
-    dotsHtml += `<div class="dot ${i === 0 ? 'active' : ''}" onclick="goTo(${i})"></div>`;
-  }
-  document.getElementById('dots').innerHTML = dotsHtml;
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function goTo(i) {
-  currentCard = Math.max(0, Math.min(i, totalCards - 1));
-  updatePosition();
-  updateDots();
-}
-
-function updatePosition(offset) {
-  const vw = document.getElementById('viewport').offsetWidth;
-  const cardWidth = vw - 40; // card width with margins
-  const x = -(currentCard * vw) + (offset || 0);
-  document.getElementById('track').style.transform = `translateX(${x}px)`;
-}
-
-function updateDots() {
-  document.querySelectorAll('.dot').forEach((d, i) => {
-    d.classList.toggle('active', i === currentCard);
-  });
-  document.getElementById('deckCounter').textContent = `${currentCard + 1} / ${totalCards}`;
-}
-
-function initSwipe() {
-  const vp = document.getElementById('viewport');
-  
-  vp.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    isDragging = true;
-    document.getElementById('track').style.transition = 'none';
-  }, { passive: true });
-  
-  vp.addEventListener('touchmove', e => {
-    if (!isDragging) return;
-    currentX = e.touches[0].clientX - startX;
-    updatePosition(currentX);
-  }, { passive: true });
-  
-  vp.addEventListener('touchend', () => {
-    if (!isDragging) return;
-    isDragging = false;
-    document.getElementById('track').style.transition = 'transform .35s cubic-bezier(.25,.46,.45,.94)';
-    
-    if (currentX < -50 && currentCard < totalCards - 1) {
-      currentCard++;
-    } else if (currentX > 50 && currentCard > 0) {
-      currentCard--;
-    }
-    currentX = 0;
-    updatePosition();
-    updateDots();
-  });
-  
-  // Desktop: arrow keys
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' && currentCard < totalCards - 1) { currentCard++; updatePosition(); updateDots(); }
-    if (e.key === 'ArrowLeft' && currentCard > 0) { currentCard--; updatePosition(); updateDots(); }
-  });
-  
-  // Desktop: click sides
-  vp.addEventListener('click', e => {
-    const rect = vp.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x > rect.width * 0.7 && currentCard < totalCards - 1) { currentCard++; updatePosition(); updateDots(); }
-    else if (x < rect.width * 0.3 && currentCard > 0) { currentCard--; updatePosition(); updateDots(); }
-  });
-}
-
-function closeDeck() {
-  document.getElementById('deck').classList.remove('active');
-  document.getElementById('formWrap').classList.remove('hidden');
-  document.getElementById('sendBtn').disabled = false;
-  document.getElementById('sendBtn').textContent = 'Send message';
-}
+function useV3(){if(!v3Result)return;document.getElementById('msgField').value=v3Result.cleaned;v3Applied=true;document.getElementById('v3Panel').className='v3-panel';document.getElementById('sendBtn').textContent='Send';handleSend()}
+function keepOriginal(){v3Applied=false;document.getElementById('v3Panel').className='v3-panel';document.getElementById('sendBtn').textContent='Send';handleSend()}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 </script>
-
 {% endblock %}

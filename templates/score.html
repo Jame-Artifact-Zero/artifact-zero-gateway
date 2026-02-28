@@ -4,195 +4,249 @@
 
 {% block head %}
 <style>
-.main{max-width:720px;margin:0 auto;padding:40px 20px 80px}
+/* ── TIMER BAR ── */
+.timer-bar{position:fixed;left:0;right:0;z-index:190;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.timer-left{display:flex;align-items:center;gap:10px}
+.timer-dot{width:8px;height:8px;border-radius:50%;transition:background .3s}
+.timer-dot.frozen{background:var(--muted)}.timer-dot.green{background:var(--accent)}.timer-dot.amber{background:var(--amber)}.timer-dot.red{background:var(--red);animation:pulse-red 1s ease infinite}
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.4}}
+.timer-display{font-family:var(--az-mono);font-size:15px;font-weight:600;letter-spacing:1px;transition:color .3s}
+.timer-display.frozen{color:var(--muted)}.timer-display.green{color:var(--accent)}.timer-display.amber{color:var(--amber)}.timer-display.red{color:var(--red)}
+.timer-msg{font-size:11px;color:var(--muted)}
 
-h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
-.subtitle{color:var(--muted);font-size:14px;margin-bottom:30px}
-.free-badge{display:inline-block;background:rgba(0,232,156,.12);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;margin-left:8px}
+/* ── WORKSPACE ── */
+.workspace{max-width:600px;margin:0 auto;padding:108px 16px 40px;display:flex;flex-direction:column;min-height:calc(100vh - 100px)}
 
-textarea{
-  width:100%;min-height:160px;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);padding:16px;border-radius:8px;font-family:'DM Sans',sans-serif;
-  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
+.privacy-line{text-align:center;margin-bottom:16px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.5}
+.privacy-line .lock{font-size:14px;opacity:.5}
+
+/* ── PASTE ZONE ── */
+.paste-zone{position:relative;background:var(--surface);border:2px dashed var(--border);border-radius:12px;transition:border-color .3s,border-style .3s;min-height:180px;flex-shrink:0}
+.paste-zone.active{border-color:var(--accent);border-style:solid}
+.paste-zone.expired{border-color:var(--red);opacity:.3;pointer-events:none}
+.paste-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
+.paste-hint.hidden{opacity:0}
+.paste-icon{font-size:28px;opacity:.2;margin-bottom:6px}
+.paste-label{font-family:var(--az-mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.paste-sub{font-size:12px;color:#3d4452;margin-top:4px;font-weight:600}
+textarea#pasteBox{width:100%;min-height:180px;background:transparent;border:none;color:var(--text);padding:20px;font-size:16px;font-family:var(--az-sans);line-height:1.7;resize:none;outline:none;position:relative;z-index:1}
+textarea#pasteBox::placeholder{color:transparent}
+
+/* ── BUTTON ── */
+.score-btn{width:100%;padding:16px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--az-sans);transition:all .15s;margin-top:12px;-webkit-tap-highlight-color:transparent}
+.score-btn.go{background:var(--accent);color:#0a0c10}
+.score-btn.go:hover{background:#00d48c}
+.score-btn.off{background:var(--surface2);color:var(--muted);cursor:default}
+.score-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+
+/* ── MESSAGING ── */
+.msg-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 16px;text-align:center;transition:opacity .3s}
+.msg-zone.faded{opacity:.12}.msg-zone.hidden{display:none}
+.msg-text{font-size:17px;font-weight:600;color:var(--text);line-height:1.5;max-width:320px}
+.msg-sub{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5;max-width:300px}
+
+/* ── RESULTS ── */
+.results{display:none;margin-top:16px}
+.results.show{display:block;animation:slideUp .25s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.sl{font-family:var(--az-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-weight:600;margin:16px 0 8px}
+
+/* Score hero */
+.score-hero{text-align:center;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.score-num{font-family:var(--az-mono);font-size:56px;font-weight:700;line-height:1}
+.score-num.g{color:var(--accent)}.score-num.a{color:var(--amber)}.score-num.r{color:var(--red)}
+.score-label{font-family:var(--az-mono);font-size:11px;text-transform:uppercase;letter-spacing:2px;margin-top:4px}
+.score-label.g{color:var(--accent)}.score-label.a{color:var(--amber)}.score-label.r{color:var(--red)}
+.score-meta{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* Metric grid */
+.mg{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden}
+.mc{background:var(--surface);padding:14px 8px;text-align:center}
+.mc-n{font-family:var(--az-mono);font-size:26px;font-weight:700;line-height:1.1}
+.mc-n.g{color:var(--accent)}.mc-n.r{color:var(--red)}.mc-n.a{color:var(--amber)}.mc-n.w{color:var(--text)}
+.mc-l{font-family:var(--az-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:5px;line-height:1.3}
+
+/* FM cards */
+.fm{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.fm.active{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.04)}
+.fm-n{font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--text)}
+.fm-d{font-size:11px;color:var(--muted);margin-top:2px}
+.fm-s{font-family:var(--az-mono);font-size:11px;font-weight:700}
+.fm-s.g{color:var(--accent)}.fm-s.r{color:var(--red)}.fm-s.a{color:var(--amber)}
+
+/* Struct bars */
+.sr{margin-bottom:12px}
+.sr-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.sr-n{font-family:var(--az-mono);font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.sr-p{font-family:var(--az-mono);font-size:12px;font-weight:700}
+.sr-p.g{color:var(--accent)}.sr-p.a{color:var(--amber)}.sr-p.r{color:var(--red)}
+.sr-b{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.sr-f{height:100%;border-radius:3px;transition:width .6s ease}
+.sr-f.g{background:linear-gradient(90deg,var(--accent),#16a34a)}.sr-f.a{background:linear-gradient(90deg,var(--amber),#d97706)}.sr-f.r{background:linear-gradient(90deg,var(--red),#dc2626)}
+.sr-desc{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* Findings */
+.finding{padding:10px 0;border-bottom:1px solid var(--border)}
+.finding:last-child{border-bottom:none}
+.finding-t{font-size:14px;color:var(--text);line-height:1.5}
+.finding-s{font-size:12px;color:var(--accent);padding-left:12px;border-left:2px solid var(--accent);margin-top:6px;line-height:1.5}
+
+/* Action bar */
+.action-bar{display:flex;gap:8px;margin-top:12px}
+.ab-btn{flex:1;padding:14px;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--az-sans);text-align:center;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.ab-primary{background:var(--accent);color:#0a0c10}.ab-primary:hover{background:#00d48c}
+.ab-ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}.ab-ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Cleared */
+.cleared-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:250;background:var(--bg);justify-content:center;align-items:center;flex-direction:column;gap:16px;padding:20px}
+.cleared-overlay.show{display:flex;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.cleared-btn{padding:14px 32px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--az-sans);border:none;background:var(--accent);color:#0a0c10;margin-top:8px}
+
+@media(max-width:600px){
+  .timer-bar{padding:6px 16px}.timer-msg{font-size:10px}
+  textarea#pasteBox{font-size:16px;min-height:160px;padding:16px}
+  .score-btn{padding:16px;font-size:16px}
 }
-textarea:focus{border-color:var(--accent)}
-textarea::placeholder{color:#3d4452}
-
-.controls{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
-.btn{padding:10px 24px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-score{background:var(--green);color:#000;font-size:15px;padding:12px 32px}
-.btn-score:hover{background:#16a34a}
-.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
-.btn-sample:hover{color:var(--text);background:var(--border)}
-.char-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-
-.usage-bar{margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
-.usage-bar .label{color:var(--muted);font-family:'JetBrains Mono',monospace}
-.usage-bar .count{color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:600}
-.usage-bar a{color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace}
-
-/* Results */
-.results{display:none;margin-top:30px}
-.results.show{display:block;animation:fadeIn .3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-.score-hero{text-align:center;padding:30px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px}
-.score-number{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;line-height:1}
-.score-number.high{color:var(--green)}
-.score-number.mid{color:var(--amber)}
-.score-number.low{color:var(--red)}
-.score-number.crit{color:var(--red)}
-.score-label{font-family:'JetBrains Mono',monospace;font-size:13px;margin-top:6px;text-transform:uppercase;letter-spacing:2px}
-.score-label.high{color:var(--green)}
-.score-label.mid{color:var(--amber)}
-.score-label.low{color:var(--red)}
-.score-label.crit{color:var(--red)}
-
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-@media(max-width:500px){.detail-grid{grid-template-columns:1fr}}
-.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
-.detail-card h3{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.detail-card .value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
-.detail-card .value.green{color:var(--green)}
-.detail-card .value.red{color:var(--red)}
-.detail-card .value.amber{color:var(--amber)}
-
-.failure-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
-.failure-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
-.failure-badge.confirmed{background:#ef444422;color:var(--red)}
-.failure-badge.probable{background:#f59e0b22;color:var(--amber)}
-.failure-badge.false{background:rgba(0,232,156,.12);color:var(--green)}
-.failure-name{font-size:13px;color:var(--muted)}
-
-.tilt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-
-.meta-row{display:flex;gap:16px;margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap}
-
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main">
+<div class="timer-bar">
+  <div class="timer-left"><div class="timer-dot frozen" id="timerDot"></div><span class="timer-display frozen" id="timerDisplay">3:00</span></div>
+  <span class="timer-msg" id="timerMsg">Your words stay on your device.</span>
+</div>
 
-<h1>Score your text <span class="free-badge">10 free / month</span></h1>
-<p class="subtitle">Paste any message, email, or AI output. Get a structural integrity score in milliseconds.</p>
+<div class="workspace" id="workspace">
+  <div class="privacy-line"><span class="lock">&#128274;</span> Nothing is stored. Nothing is shared. This page clears itself.</div>
 
-<textarea id="input" placeholder="Paste your text here...&#10;&#10;Example: &quot;I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.&quot;"></textarea>
-
-<div class="controls">
-  <div>
-    <button class="btn btn-score" id="scoreBtn" onclick="scoreText()">Score this →</button>
-    <button class="btn btn-sample" onclick="loadSample()">Load sample</button>
+  <div class="paste-zone" id="pasteZone">
+    <div class="paste-hint" id="pasteHint">
+      <div class="paste-icon">&#128203;</div>
+      <div class="paste-label">Paste what you received</div>
+      <div class="paste-sub">AI response · email · post · article · anything</div>
+    </div>
+    <textarea id="pasteBox" autocomplete="off" spellcheck="false"></textarea>
   </div>
-  <span class="char-count" id="charCount">0 / 50,000</span>
+
+  <button class="score-btn off" id="scoreBtn" disabled>Score</button>
+
+  <div class="msg-zone" id="msgZone">
+    <div class="msg-text">Paste anything. See what it really says.</div>
+    <div class="msg-sub">AI response, email, article — we'll score its structural integrity.</div>
+  </div>
+
+  <div class="results" id="results"></div>
 </div>
 
-<div class="usage-bar" id="usageBar">
-  <span class="label">Free tier</span>
-  <span class="count" id="usageCount">— / 10 this month</span>
-  <a href="/docs#pricing">Upgrade →</a>
-</div>
-
-<div id="ntiResults"></div>
-
+<div class="cleared-overlay" id="clearedOverlay">
+  <div style="font-size:48px;opacity:.3;margin-bottom:8px">&#128683;</div>
+  <div style="font-family:var(--az-mono);font-size:16px;color:var(--accent);letter-spacing:2px">SESSION CLEARED</div>
+  <div style="font-size:14px;color:var(--muted);max-width:340px;text-align:center;line-height:1.6">Your words are gone. Nothing was stored.</div>
+  <button class="cleared-btn" onclick="startOver()">Score something new</button>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/nti-score-component.js"></script>
-
-<script src="/static/nti-engine.js"></script>
-
-
 <script>
-const input = document.getElementById('input');
-const charCount = document.getElementById('charCount');
-const scoreBtn = document.getElementById('scoreBtn');
+// Timer (same as SafeCheck)
+(function(){
+  function sync(){const tb=document.querySelector('.az-topbar'),bar=document.querySelector('.timer-bar');if(!tb||!bar)return;bar.style.top=tb.getBoundingClientRect().height+'px';const ws=document.getElementById('workspace');if(ws)ws.style.paddingTop=(tb.getBoundingClientRect().height+bar.getBoundingClientRect().height+16)+'px'}
+  setTimeout(sync,50);setTimeout(sync,200);window.addEventListener('resize',sync);new MutationObserver(sync).observe(document.body,{childList:true,subtree:false});
+})();
 
-const SAMPLE = `I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered.`;
+const TIMER_TOTAL=180;let secondsLeft=TIMER_TOTAL,timerInterval=null,timerStarted=false,sessionActive=true;
+const timerDisplay=document.getElementById('timerDisplay'),timerDot=document.getElementById('timerDot'),timerMsg=document.getElementById('timerMsg');
+function fmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)}
+function updateTimerUI(){timerDisplay.textContent=fmt(secondsLeft);if(!timerStarted){timerDisplay.className='timer-display frozen';timerDot.className='timer-dot frozen';return}const st=secondsLeft<=30?'red':secondsLeft<=60?'amber':'green';timerDisplay.className='timer-display '+st;timerDot.className='timer-dot '+st}
+function startTimer(){if(timerStarted)return;timerStarted=true;timerMsg.textContent='Session clears in '+fmt(secondsLeft)+'.';updateTimerUI();timerInterval=setInterval(tick,1000)}
+function tick(){if(!sessionActive)return;secondsLeft--;timerMsg.textContent='Session clears in '+fmt(secondsLeft)+'.';if(secondsLeft<=0){clearSession();return}updateTimerUI()}
+function clearSession(){sessionActive=false;clearInterval(timerInterval);document.getElementById('pasteBox').value='';document.getElementById('results').className='results';document.getElementById('results').innerHTML='';document.getElementById('pasteZone').classList.add('expired');document.getElementById('pasteHint').classList.remove('hidden');document.getElementById('scoreBtn').disabled=true;document.getElementById('scoreBtn').className='score-btn off';document.getElementById('msgZone').className='msg-zone hidden';timerDisplay.textContent='0:00';timerDisplay.className='timer-display red';timerDot.className='timer-dot red';timerMsg.textContent='Session cleared.';document.getElementById('clearedOverlay').classList.add('show')}
+function startOver(){sessionActive=true;timerStarted=false;secondsLeft=TIMER_TOTAL;updateTimerUI();timerMsg.textContent='Your words stay on your device.';document.getElementById('pasteZone').classList.remove('expired','active');document.getElementById('pasteHint').classList.remove('hidden');document.getElementById('clearedOverlay').classList.remove('show');document.getElementById('results').className='results';document.getElementById('results').innerHTML='';document.getElementById('msgZone').className='msg-zone';document.getElementById('scoreBtn').disabled=true;document.getElementById('scoreBtn').className='score-btn off';document.getElementById('scoreBtn').textContent='Score';document.getElementById('pasteBox').value='';document.getElementById('pasteBox').focus()}
+updateTimerUI();
 
-input.addEventListener('input', () => {
-  charCount.textContent = input.value.length.toLocaleString() + ' / 50,000';
+// Paste zone
+const pasteBox=document.getElementById('pasteBox'),pasteHint=document.getElementById('pasteHint'),pasteZone=document.getElementById('pasteZone'),scoreBtn=document.getElementById('scoreBtn'),msgZone=document.getElementById('msgZone');
+pasteBox.addEventListener('input',function(){if(!sessionActive)return;const has=this.value.trim().length>0;pasteHint.classList.toggle('hidden',has);pasteZone.classList.toggle('active',has);scoreBtn.disabled=!has;scoreBtn.className=has?'score-btn go':'score-btn off';msgZone.classList.toggle('faded',has);if(has)startTimer()});
+pasteBox.addEventListener('focus',function(){if(sessionActive)pasteZone.classList.add('active')});
+pasteBox.addEventListener('blur',function(){if(!this.value.trim())pasteZone.classList.remove('active')});
+
+// Score
+scoreBtn.addEventListener('click',async function(){
+  if(!sessionActive)return;const text=pasteBox.value.trim();if(!text||text.length<10)return;
+  this.disabled=true;this.textContent='Scoring…';
+  try{
+    const res=await fetch('/api/v1/score/free',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const data=await res.json();
+    if(data.error){this.textContent=data.error;this.disabled=false;return}
+    renderScore(data,text);this.textContent='Score ✓';
+  }catch(e){this.textContent='Connection error — try again';this.disabled=false}
 });
 
-function loadSample() {
-  input.value = SAMPLE;
-  input.dispatchEvent(new Event('input'));
-}
-
-function getUsage() {
-  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
-  return parseInt(localStorage.getItem(key) || '0');
-}
-function addUsage() {
-  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
-  const n = getUsage() + 1;
-  localStorage.setItem(key, n);
-  return n;
-}
-function updateUsageDisplay() {
-  const used = getUsage();
-  document.getElementById('usageCount').textContent = used + ' / 10 this month';
-}
-updateUsageDisplay();
-
-async function scoreText() {
-  const text = input.value.trim();
-  if (!text) return;
-
-  if (getUsage() >= 10) {
-    alert('Free tier limit reached (10/month). Get an API key at /docs for more.');
-    return;
+function renderScore(data,originalText){
+  const el=document.getElementById('results');msgZone.className='msg-zone hidden';
+  const sc=data.score||{},comp=sc.components||{},fm=data.failure_modes||{},tilt=data.tilt||{};
+  const nii=sc.nii||0,niiPct=nii>1?nii:Math.round(nii*100),words=originalText.split(/\s+/).length;
+  const lat=data.meta?data.meta.latency_ms:'?',ver=data.version||'v2.0';
+  const nc=niiPct>=70?'g':niiPct>=40?'a':'r';
+  const niiLabel=sc.nii_label||(niiPct>=85?'STRONG':niiPct>=70?'SOLID':niiPct>=55?'MODERATE':niiPct>=40?'WEAK':niiPct>=25?'POOR':'FAILING');
+  const tiltTags=Array.isArray(tilt)?tilt:(tilt.tags||[]);
+  const fmCount=['UDDS','DCE','CCA'].filter(k=>fm[k]&&!String(fm[k]).includes('FALSE')).length;
+  const hedgeCount=data.l2_framing?data.l2_framing.hedge_count||0:0;
+  const reassureCount=data.l2_framing?data.l2_framing.reassurance_count||0:0;
+  
+  // Findings
+  const findings=[];
+  if((comp.q1||0)<0.01)findings.push({t:'No constraints found. This text sets no rules or boundaries.',s:'Structural integrity requires explicit constraints.'});
+  if((comp.q3||0)<0.5)findings.push({t:'Enforcement is weak. Deferral or erosion markers detected.',s:'Boundaries stated but not held.'});
+  if(fmCount>0){
+    if(fm.UDDS&&!String(fm.UDDS).includes('FALSE'))findings.push({t:'They agreed with the premise before answering.',s:null});
+    if(fm.DCE&&!String(fm.DCE).includes('FALSE'))findings.push({t:'The hard details were pushed to "later."',s:null});
+    if(fm.CCA&&!String(fm.CCA).includes('FALSE'))findings.push({t:'Vague claims were bundled together.',s:null});
   }
+  tiltTags.forEach(function(t){
+    const defs={T1_REASSURANCE_DRIFT:'Reassurance used instead of evidence.',T2_CERTAINTY_INFLATION:'Stated as fact without supporting evidence.',T3_CONSENSUS_CLAIMS:'Consensus claimed without specifics.',T5_ABSOLUTE_LANGUAGE:'"Always" or "never" without qualification.',T7_CATEGORY_BLEND:'Categories blurred — meaning obscured.',T8_PRESSURE_OPTIMIZATION:'Urgency language without substance.'};
+    if(defs[t])findings.push({t:defs[t],s:null});
+  });
 
-  scoreBtn.disabled = true;
-  scoreBtn.textContent = 'Scoring...';
-
-  try {
-    const resp = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const data = await resp.json();
-    if (data.error) {
-      const el = document.getElementById('results');
-      el.innerHTML = '<div style="text-align:center;padding:24px;color:#f59e0b;font-family:\'JetBrains Mono\',monospace;font-size:13px">' + data.error + '</div>';
-      return;
-    }
-    addUsage();
-    updateUsageDisplay();
-    const el = document.getElementById('ntiResults');
-    el.innerHTML = '';
-    el.appendChild(NTIScore.render(data, text));
-  } catch (e) {
-    alert('Scoring failed: ' + e.message);
-  } finally {
-    scoreBtn.disabled = false;
-    scoreBtn.textContent = 'Score this →';
+  let h='';
+  // Score hero
+  h+='<div class="score-hero"><div class="score-num '+nc+'">'+niiPct+'</div><div class="score-label '+nc+'">'+niiLabel+'</div><div class="score-meta">'+lat+'ms · '+words+' words · '+ver+'</div></div>';
+  // Metric grid
+  h+='<div class="sl">Metrics</div><div class="mg">';
+  [{n:hedgeCount,l:'Hedges',c:hedgeCount?'a':'g'},{n:reassureCount,l:'Reassurances',c:reassureCount?'a':'g'},{n:fmCount,l:'Failure Modes',c:fmCount?'r':'g'},{n:tiltTags.length,l:'Tilt Patterns',c:tiltTags.length?'a':'g'},{n:findings.length,l:'Issues',c:findings.length?'r':'g'},{n:words,l:'Words',c:'w'}].forEach(function(m){
+    h+='<div class="mc"><div class="mc-n '+m.c+'">'+m.n+'</div><div class="mc-l">'+m.l+'</div></div>';
+  });
+  h+='</div>';
+  // FM cards
+  h+='<div class="sl">Failure Modes</div>';
+  [{k:'UDDS',n:'UDDS',d:'Agreement before ask'},{k:'DCE',n:'DCE',d:'Deferred the hard part'},{k:'CCA',n:'CCA',d:'Vague bundled claims'}].forEach(function(f){
+    var st=String(fm[f.k]||''),det=!st.includes('FALSE')&&st.length>0,badge=st.includes('CONFIRMED')?'DETECTED':st.includes('PROBABLE')?'PROBABLE':'CLEAR',bc=st.includes('CONFIRMED')?'r':st.includes('PROBABLE')?'a':'g';
+    h+='<div class="fm'+(det?' active':'')+'"><div><div class="fm-n">'+f.n+'</div><div class="fm-d">'+f.d+'</div></div><span class="fm-s '+bc+'">'+badge+'</span></div>';
+  });
+  // Structural bars
+  h+='<div class="sl">Structural Analysis</div>';
+  [{l:'Constraint Density',v:comp.q1||0,d:'% of content with explicit rules/boundaries'},{l:'Ask Architecture',v:comp.q2||0,d:'Main point positioned before capability claims'},{l:'Enforcement Integrity',v:comp.q3||0,d:'Freedom from deferral and erosion markers'},{l:'Tilt Resistance',v:comp.q4||0,d:'Resistance to drift patterns and filler'},{l:'Failure Mode Severity',v:comp.d5||0,d:'Freedom from structural failure modes'}].forEach(function(b){
+    var pct=Math.round(b.v*100),bc=b.v>=0.7?'g':b.v>=0.4?'a':'r';
+    h+='<div class="sr"><div class="sr-h"><span class="sr-n">'+b.l+'</span><span class="sr-p '+bc+'">'+pct+'%</span></div><div class="sr-b"><div class="sr-f '+bc+'" style="width:'+pct+'%"></div></div><div class="sr-desc">'+b.d+'</div></div>';
+  });
+  // Findings
+  if(findings.length){
+    h+='<div class="sl">What we found</div>';
+    findings.forEach(function(f){h+='<div class="finding"><div class="finding-t">'+esc(f.t)+'</div>'+(f.s?'<div class="finding-s">'+esc(f.s)+'</div>':'')+'</div>'});
   }
+  // Action bar
+  h+='<div class="action-bar"><button class="ab-btn ab-primary" onclick="startOver()">Score Another</button><button class="ab-btn ab-ghost" onclick="shareScore('+niiPct+',\''+niiLabel+'\')">Share</button></div>';
+  
+  el.innerHTML=h;el.className='results show';el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function shareScore(score,label){
+  const text='Structural integrity score: '+score+'/100 ('+label+') — scored by Artifact Zero';
+  if(navigator.share){navigator.share({title:'NTI Score',text:text,url:window.location.href}).catch(function(){})}
+  else{navigator.clipboard.writeText(text).then(function(){alert('Copied to clipboard')})}
 }
 </script>
-
-
-<script>
-// Add rewrite capability to score page
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form') || document.querySelector('textarea');
-  if (form) {
-    const rw = document.createElement('div');
-    rw.id = 'score-rewrite-out';
-    rw.style.cssText = 'display:none;margin-top:16px;background:#12151b;border:1px solid #00e89c;border-radius:10px;padding:16px';
-    const ta = document.querySelector('textarea');
-    if (ta && ta.parentElement) {
-      ta.parentElement.appendChild(rw);
-      NTI.rewriteButton('textarea', '#score-rewrite-out');
-    }
-  }
-});
-</script>
-
-
 {% endblock %}

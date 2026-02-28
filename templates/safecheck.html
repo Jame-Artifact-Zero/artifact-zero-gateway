@@ -4,118 +4,99 @@
 
 {% block head %}
 <style>
-
-
-/* ── TOPBAR ── */
-
 /* ── TIMER BAR ── */
 .timer-bar{position:fixed;left:0;right:0;z-index:190;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
 .timer-left{display:flex;align-items:center;gap:10px}
 .timer-dot{width:8px;height:8px;border-radius:50%;transition:background .3s}
-.timer-dot.frozen{background:var(--muted)}
-.timer-dot.green{background:var(--accent)}
-.timer-dot.amber{background:var(--amber)}
-.timer-dot.red{background:var(--red);animation:pulse-red 1s ease infinite}
+.timer-dot.frozen{background:var(--muted)}.timer-dot.green{background:var(--accent)}.timer-dot.amber{background:var(--amber)}.timer-dot.red{background:var(--red);animation:pulse-red 1s ease infinite}
 @keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.4}}
-.timer-display{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;letter-spacing:1px;transition:color .3s}
-.timer-display.frozen{color:var(--muted)}
-.timer-display.green{color:var(--accent)}
-.timer-display.amber{color:var(--amber)}
-.timer-display.red{color:var(--red)}
+.timer-display{font-family:var(--az-mono);font-size:15px;font-weight:600;letter-spacing:1px;transition:color .3s}
+.timer-display.frozen{color:var(--muted)}.timer-display.green{color:var(--accent)}.timer-display.amber{color:var(--amber)}.timer-display.red{color:var(--red)}
 .timer-msg{font-size:11px;color:var(--muted)}
 
 /* ── WORKSPACE ── */
-.workspace{max-width:600px;margin:0 auto;padding:108px 16px 40px}
+.workspace{max-width:600px;margin:0 auto;padding:108px 16px 40px;display:flex;flex-direction:column;min-height:calc(100vh - 100px)}
 
-/* Privacy line */
-.privacy-line{text-align:center;margin-bottom:20px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.5}
+/* Privacy */
+.privacy-line{text-align:center;margin-bottom:16px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.5}
 .privacy-line .lock{font-size:14px;opacity:.5}
 
-/* ── PASTE ZONE ── */
-.paste-zone{position:relative;background:var(--surface);border:2px dashed var(--border);border-radius:12px;transition:border-color .3s,border-style .3s;min-height:220px}
+/* ── PASTE ZONE (fixed position) ── */
+.paste-zone{position:relative;background:var(--surface);border:2px dashed var(--border);border-radius:12px;transition:border-color .3s,border-style .3s;min-height:200px;flex-shrink:0}
 .paste-zone.active{border-color:var(--accent);border-style:solid}
 .paste-zone.expired{border-color:var(--red);opacity:.3;pointer-events:none}
 .paste-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity .3s}
 .paste-hint.hidden{opacity:0}
-.paste-icon{font-size:32px;opacity:.2;margin-bottom:8px}
-.paste-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:1px}
-.paste-sub{font-size:11px;color:var(--border);margin-top:4px}
-textarea#pasteBox{width:100%;min-height:220px;background:transparent;border:none;color:var(--text);padding:20px;font-size:16px;font-family:'DM Sans',sans-serif;line-height:1.7;resize:none;outline:none;position:relative;z-index:1}
+.paste-icon{font-size:28px;opacity:.2;margin-bottom:6px}
+.paste-label{font-family:var(--az-mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.paste-sub{font-size:12px;color:#3d4452;margin-top:4px;font-weight:600}
+textarea#pasteBox{width:100%;min-height:200px;background:transparent;border:none;color:var(--text);padding:20px;font-size:16px;font-family:var(--az-sans);line-height:1.7;resize:none;outline:none;position:relative;z-index:1}
 textarea#pasteBox::placeholder{color:transparent}
 
 /* ── SAFECHECK BUTTON ── */
-.check-row{padding:12px 16px;display:flex;align-items:center;justify-content:center}
-.check-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;-webkit-tap-highlight-color:transparent}
-.check-btn:hover{background:#00d48c}
+.check-btn{width:100%;padding:16px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--az-sans);transition:all .15s;margin-top:12px;-webkit-tap-highlight-color:transparent}
+.check-btn.go{background:var(--accent);color:#0a0c10}
+.check-btn.go:hover{background:#00d48c}
+.check-btn.off{background:var(--surface2);color:var(--muted);cursor:default}
 .check-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
 
-/* ── RESULTS ── */
-.results{display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.results.show{display:block;animation:slideUp .25s ease}
+/* ── MESSAGING ZONE ── */
+.msg-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 16px;text-align:center;transition:opacity .3s}
+.msg-zone.faded{opacity:.12}
+.msg-zone.hidden{display:none}
+.msg-text{font-size:17px;font-weight:600;color:var(--text);line-height:1.5;max-width:320px}
+.msg-text .hl{color:var(--accent)}
+.msg-sub{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5;max-width:300px}
+
+/* ── OBSERVATION CARDS ── */
+.obs-section{display:none;margin-top:16px}
+.obs-section.show{display:block;animation:slideUp .25s ease}
 @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-.results-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.results-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;color:var(--accent)}
-.results-count{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
-.results-count.clear{color:var(--accent)}
-.results-count.warn{color:var(--amber)}
-.results-count.crit{color:var(--red)}
+.obs-label{font-family:var(--az-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:10px}
 
-.finding{padding:14px 16px;border-bottom:1px solid var(--border);line-height:1.6}
-.finding:last-child{border-bottom:none}
-.finding-issue{font-size:14px;color:var(--text);margin-bottom:6px}
-.finding-fix{font-size:12px;color:var(--accent);padding-left:12px;border-left:2px solid var(--accent)}
+.obs-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.obs-text{flex:1;font-size:14px;line-height:1.5;color:var(--text)}
+.obs-text .marker{color:var(--amber);font-weight:600}
+.obs-action{flex-shrink:0;padding:9px 16px;background:var(--accent-dim,rgba(0,232,156,.12));color:var(--accent);border:1px solid rgba(0,232,156,.2);border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;cursor:default}
 
-.checklist{padding:12px 16px}
-.check-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
-.check-icon{font-size:16px;width:20px;text-align:center}
-.check-icon.pass{color:var(--accent)}
-.check-icon.fail{color:var(--red)}
-.check-label{color:var(--muted)}
+/* Suggestion text below some cards */
+.obs-suggestion{font-size:12px;color:var(--accent);padding:0 16px 8px 28px;margin-top:-4px;line-height:1.5}
 
-/* ── FIX IT BUTTON ── */
-.fix-row{padding:12px 16px;border-top:1px solid var(--border)}
-.fix-btn{width:100%;padding:14px;background:var(--surface2);color:var(--accent);border:1px solid var(--accent);border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.fix-btn:hover{background:rgba(0,232,156,.1)}
+/* Clean card (no issues) */
+.obs-clean{background:rgba(0,232,156,.06);border:1px solid rgba(0,232,156,.15);border-radius:10px;padding:16px 20px;text-align:center;font-size:15px;color:var(--accent);line-height:1.5}
 
-/* ── REWRITE PANEL ── */
-.rewrite{display:none;margin-top:16px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;overflow:hidden}
-.rewrite.show{display:block;animation:slideUp .25s ease}
-.rewrite-header{padding:14px 16px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;color:var(--accent)}
-.rewrite-
-.copy-row{padding:12px 16px;border-top:1px solid var(--border)}
-.copy-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
-.copy-btn:hover{background:#00d48c}
-.copy-btn.copied{background:#064e3b;color:var(--accent)}
+/* ── ACTION BAR ── */
+.action-bar{display:flex;gap:8px;margin-top:12px}
+.ab-btn{flex:1;padding:14px;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--az-sans);text-align:center;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.ab-copy{background:var(--accent);color:#0a0c10}
+.ab-copy:hover{background:#00d48c}
+.ab-copy.copied{background:#064e3b;color:var(--accent)}
+.ab-reset{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.ab-reset:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ── CLEARED OVERLAY ── */
 .cleared-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:250;background:var(--bg);justify-content:center;align-items:center;flex-direction:column;gap:16px;padding:20px}
 .cleared-overlay.show{display:flex;animation:fadeIn .4s ease}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .cleared-icon{font-size:48px;opacity:.3;margin-bottom:8px}
-.cleared-title{font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--accent);letter-spacing:2px}
+.cleared-title{font-family:var(--az-mono);font-size:16px;color:var(--accent);letter-spacing:2px}
 .cleared-sub{font-size:14px;color:var(--muted);max-width:340px;text-align:center;line-height:1.6}
-.cleared-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
-.cleared-actions a,.cleared-actions button{padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;border:none;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.start-over{background:var(--accent);color:#0a0c10}
-.start-over:hover{background:#00d48c}
-.go-deeper{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
-.go-deeper:hover{border-color:var(--accent);color:var(--accent)}
+.cleared-btn{padding:14px 32px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--az-sans);border:none;background:var(--accent);color:#0a0c10;margin-top:8px}
 
 /* ── MOBILE ── */
 @media(max-width:600px){
-
   .timer-bar{padding:6px 16px}
   .timer-msg{font-size:10px}
   textarea#pasteBox{font-size:16px;min-height:180px;padding:16px}
-  .check-btn,.fix-btn,.copy-btn{padding:16px;font-size:16px}
-  .finding-issue{font-size:13px}
+  .check-btn{padding:16px;font-size:16px}
+  .obs-card{padding:12px 14px;gap:10px}
+  .obs-action{padding:8px 12px;font-size:11px}
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- TOPBAR -->
 <!-- TIMER BAR -->
 <div class="timer-bar">
   <div class="timer-left">
@@ -133,26 +114,34 @@ textarea#pasteBox::placeholder{color:transparent}
     Nothing is stored. Nothing is shared. This page clears itself.
   </div>
 
-  <!-- PASTE ZONE -->
+  <!-- PASTE ZONE (never moves) -->
   <div class="paste-zone" id="pasteZone">
     <div class="paste-hint" id="pasteHint">
       <div class="paste-icon">&#128203;</div>
-      <div class="paste-label">PASTE WHAT YOU WROTE</div>
-      <div class="paste-sub">email · text · post · anything</div>
+      <div class="paste-label">Write what you want to say</div>
+      <div class="paste-sub">email · text · reply · anything</div>
     </div>
     <textarea id="pasteBox" autocomplete="off" spellcheck="false"></textarea>
   </div>
 
   <!-- SAFECHECK BUTTON -->
-  <div class="check-row">
-    <button class="check-btn" id="checkBtn" disabled>SafeCheck</button>
+  <button class="check-btn off" id="checkBtn" disabled>SafeCheck</button>
+
+  <!-- MESSAGING ZONE (visible when empty, fades when typing, hidden when results show) -->
+  <div class="msg-zone" id="msgZone">
+    <div class="msg-text" id="msgText">I used to tell my wife <span class="hl">"calm down."</span> It never once accomplished what I wanted it to accomplish. Not once. So I stopped.</div>
+    <div class="msg-sub" id="msgSub">Type what you'd actually send. We'll show you what they'll hear.</div>
   </div>
 
-  <!-- RESULTS -->
-  <div class="results" id="results"></div>
-
-  <!-- REWRITE -->
-  <div class="rewrite" id="rewrite"></div>
+  <!-- OBSERVATION CARDS (hidden until results) -->
+  <div class="obs-section" id="obsSection">
+    <div class="obs-label">What we noticed</div>
+    <div id="obsCards"></div>
+    <div class="action-bar" id="actionBar">
+      <button class="ab-btn ab-copy" id="copyBtn" onclick="copyText()">&#128203; Copy</button>
+      <button class="ab-btn ab-reset" onclick="startOver()">&#8617; Start over</button>
+    </div>
+  </div>
 
 </div>
 
@@ -161,489 +150,180 @@ textarea#pasteBox::placeholder{color:transparent}
   <div class="cleared-icon">&#128683;</div>
   <div class="cleared-title">SESSION CLEARED</div>
   <div class="cleared-sub">Your words are gone. Nothing was stored. Nothing was saved.</div>
-  <div class="cleared-actions">
-    <button class="start-over" onclick="startOver()">Paste something new</button>
-    <a class="go-deeper" href="/relay">Get full tools &#8594;</a>
-  </div>
+  <button class="cleared-btn" onclick="startOver()">Paste something new</button>
 </div>
-
-<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
 {% endblock %}
 
 {% block scripts %}
 <script>
 // ═══════════════════════════════════════════
-// POSITION TIMER BAR below topbar dynamically
+// POSITION TIMER BAR below topbar
 // ═══════════════════════════════════════════
-(function positionTimerBar(){
+(function(){
   function sync(){
-    const tb = document.querySelector('.az-topbar') || document.querySelector('.topbar');
-    const bar = document.querySelector('.timer-bar');
-    if(!tb || !bar) return;
-    const h = tb.getBoundingClientRect().height;
-    bar.style.top = h + 'px';
-    // also adjust workspace padding
-    const ws = document.getElementById('workspace');
-    if(ws) ws.style.paddingTop = (h + bar.getBoundingClientRect().height + 16) + 'px';
+    const tb=document.querySelector('.az-topbar');
+    const bar=document.querySelector('.timer-bar');
+    if(!tb||!bar)return;
+    const h=tb.getBoundingClientRect().height;
+    bar.style.top=h+'px';
+    const ws=document.getElementById('workspace');
+    if(ws)ws.style.paddingTop=(h+bar.getBoundingClientRect().height+16)+'px';
   }
-  // Run after shell injects (slight delay) + on resize
-  setTimeout(sync, 50);
-  setTimeout(sync, 200);
-  window.addEventListener('resize', sync);
-  // MutationObserver to catch shell injection
-  const obs = new MutationObserver(()=>{ sync(); });
-  obs.observe(document.body, {childList:true, subtree:false});
+  setTimeout(sync,50);setTimeout(sync,200);
+  window.addEventListener('resize',sync);
+  new MutationObserver(sync).observe(document.body,{childList:true,subtree:false});
 })();
 
 // ═══════════════════════════════════════════
-// TIMER — visible at 3:00, frozen until first input
+// TIMER
 // ═══════════════════════════════════════════
-const TIMER_TOTAL = 180;
-let secondsLeft = TIMER_TOTAL;
-let timerInterval = null;
-let timerStarted = false;
-let sessionActive = true;
+const TIMER_TOTAL=180;
+let secondsLeft=TIMER_TOTAL,timerInterval=null,timerStarted=false,sessionActive=true;
+const timerDisplay=document.getElementById('timerDisplay'),timerDot=document.getElementById('timerDot'),timerMsg=document.getElementById('timerMsg');
 
-const timerDisplay = document.getElementById('timerDisplay');
-const timerDot = document.getElementById('timerDot');
-const timerMsg = document.getElementById('timerMsg');
-
-function formatTime(s){
-  const m = Math.floor(s/60);
-  const sec = s%60;
-  return m + ':' + (sec<10?'0':'') + sec;
-}
-
+function fmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)}
 function updateTimerUI(){
-  timerDisplay.textContent = formatTime(secondsLeft);
-  if(!timerStarted){
-    timerDisplay.className = 'timer-display frozen';
-    timerDot.className = 'timer-dot frozen';
-    return;
-  }
-  let state = 'green';
-  if(secondsLeft <= 30) state = 'red';
-  else if(secondsLeft <= 60) state = 'amber';
-  timerDisplay.className = 'timer-display ' + state;
-  timerDot.className = 'timer-dot ' + state;
+  timerDisplay.textContent=fmt(secondsLeft);
+  if(!timerStarted){timerDisplay.className='timer-display frozen';timerDot.className='timer-dot frozen';return}
+  const st=secondsLeft<=30?'red':secondsLeft<=60?'amber':'green';
+  timerDisplay.className='timer-display '+st;timerDot.className='timer-dot '+st;
 }
-
 function startTimer(){
-  if(timerStarted) return;
-  timerStarted = true;
-  timerMsg.textContent = 'Session clears in ' + formatTime(secondsLeft) + '.';
-  updateTimerUI();
-  timerInterval = setInterval(tick, 1000);
+  if(timerStarted)return;timerStarted=true;
+  timerMsg.textContent='Session clears in '+fmt(secondsLeft)+'.';
+  updateTimerUI();timerInterval=setInterval(tick,1000);
 }
-
 function tick(){
-  if(!sessionActive) return;
-  secondsLeft--;
-  timerMsg.textContent = 'Session clears in ' + formatTime(secondsLeft) + '.';
-  if(secondsLeft <= 0){
-    clearSession();
-    return;
-  }
-  updateTimerUI();
+  if(!sessionActive)return;secondsLeft--;
+  timerMsg.textContent='Session clears in '+fmt(secondsLeft)+'.';
+  if(secondsLeft<=0){clearSession();return}updateTimerUI();
 }
-
 function clearSession(){
-  sessionActive = false;
-  clearInterval(timerInterval);
-  document.getElementById('pasteBox').value = '';
-  document.getElementById('results').className = 'results';
-  document.getElementById('results').innerHTML = '';
-  document.getElementById('rewrite').className = 'rewrite';
-  document.getElementById('rewrite').innerHTML = '';
+  sessionActive=false;clearInterval(timerInterval);
+  document.getElementById('pasteBox').value='';
+  document.getElementById('obsSection').className='obs-section';
+  document.getElementById('obsCards').innerHTML='';
   document.getElementById('pasteZone').classList.add('expired');
   document.getElementById('pasteHint').classList.remove('hidden');
-  document.getElementById('checkBtn').disabled = true;
-  timerDisplay.textContent = '0:00';
-  timerDisplay.className = 'timer-display red';
-  timerDot.className = 'timer-dot red';
-  timerMsg.textContent = 'Session cleared.';
+  document.getElementById('checkBtn').disabled=true;
+  document.getElementById('checkBtn').className='check-btn off';
+  document.getElementById('msgZone').className='msg-zone hidden';
+  timerDisplay.textContent='0:00';timerDisplay.className='timer-display red';
+  timerDot.className='timer-dot red';timerMsg.textContent='Session cleared.';
   document.getElementById('clearedOverlay').classList.add('show');
 }
-
 function startOver(){
-  sessionActive = true;
-  timerStarted = false;
-  secondsLeft = TIMER_TOTAL;
-  updateTimerUI();
-  timerMsg.textContent = 'Your words stay on your device.';
-  document.getElementById('pasteZone').classList.remove('expired');
+  sessionActive=true;timerStarted=false;secondsLeft=TIMER_TOTAL;updateTimerUI();
+  timerMsg.textContent='Your words stay on your device.';
+  document.getElementById('pasteZone').classList.remove('expired','active');
   document.getElementById('pasteHint').classList.remove('hidden');
   document.getElementById('clearedOverlay').classList.remove('show');
-  document.getElementById('results').className = 'results';
-  document.getElementById('results').innerHTML = '';
-  document.getElementById('rewrite').className = 'rewrite';
-  document.getElementById('rewrite').innerHTML = '';
-  document.getElementById('checkBtn').disabled = true;
-  document.getElementById('pasteBox').value = '';
+  document.getElementById('obsSection').className='obs-section';
+  document.getElementById('obsCards').innerHTML='';
+  document.getElementById('msgZone').className='msg-zone';
+  document.getElementById('checkBtn').disabled=true;
+  document.getElementById('checkBtn').className='check-btn off';
+  document.getElementById('checkBtn').textContent='SafeCheck';
+  document.getElementById('pasteBox').value='';
   document.getElementById('pasteBox').focus();
 }
-
 updateTimerUI();
 
 // ═══════════════════════════════════════════
-// PASTE ZONE — first character starts timer
+// PASTE ZONE
 // ═══════════════════════════════════════════
-const pasteBox = document.getElementById('pasteBox');
-const pasteHint = document.getElementById('pasteHint');
-const pasteZone = document.getElementById('pasteZone');
-const checkBtn = document.getElementById('checkBtn');
+const pasteBox=document.getElementById('pasteBox'),pasteHint=document.getElementById('pasteHint'),
+      pasteZone=document.getElementById('pasteZone'),checkBtn=document.getElementById('checkBtn'),
+      msgZone=document.getElementById('msgZone');
 
-pasteBox.addEventListener('input', function(){
-  if(!sessionActive) return;
-  const hasText = this.value.trim().length > 0;
-  pasteHint.classList.toggle('hidden', hasText);
-  pasteZone.classList.toggle('active', hasText);
-  checkBtn.disabled = !hasText;
-  // First character starts the timer
-  if(hasText) startTimer();
+pasteBox.addEventListener('input',function(){
+  if(!sessionActive)return;
+  const has=this.value.trim().length>0;
+  pasteHint.classList.toggle('hidden',has);
+  pasteZone.classList.toggle('active',has);
+  checkBtn.disabled=!has;
+  checkBtn.className=has?'check-btn go':'check-btn off';
+  // Fade messaging when typing
+  msgZone.classList.toggle('faded',has);
+  if(has)startTimer();
 });
-
-pasteBox.addEventListener('focus', function(){
-  if(!sessionActive) return;
-  pasteZone.classList.add('active');
-});
-
-pasteBox.addEventListener('blur', function(){
-  if(!this.value.trim()) pasteZone.classList.remove('active');
-});
+pasteBox.addEventListener('focus',function(){if(sessionActive)pasteZone.classList.add('active')});
+pasteBox.addEventListener('blur',function(){if(!this.value.trim())pasteZone.classList.remove('active')});
 
 // ═══════════════════════════════════════════
-// SAFECHECK — score on button press
+// SAFECHECK — hit API, render observation cards
 // ═══════════════════════════════════════════
-let lastScore = null;
-
-checkBtn.addEventListener('click', async function(){
-  if(!sessionActive) return;
-  const text = pasteBox.value.trim();
-  if(!text || text.length < 10) return;
-
-  this.disabled = true;
-  this.textContent = 'Checking...';
-
-  try {
-    const res = await fetch('/api/v1/score/free', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({text})
+checkBtn.addEventListener('click',async function(){
+  if(!sessionActive)return;
+  const text=pasteBox.value.trim();
+  if(!text||text.length<10)return;
+  this.disabled=true;this.textContent='Checking…';
+  try{
+    const res=await fetch('/api/v1/safecheck',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})
     });
-    const data = await res.json();
+    const data=await res.json();
     if(data.error){
-      // Show gate rejection or other error to user
-      const errDiv = document.getElementById('results');
-      errDiv.className = 'results show';
-      errDiv.innerHTML = '<div style="text-align:center;padding:24px;color:var(--amber);font-family:\'JetBrains Mono\',monospace;font-size:13px">' + (data.error || 'Scoring error') + '</div>';
-      this.textContent = 'SafeCheck';
-      this.disabled = false;
-      return;
+      this.textContent=data.error;this.disabled=false;return;
     }
-    lastScore = data;
-    renderResults(data, text);
-    this.textContent = 'SafeCheck ✓';
-  } catch(e){
-    this.textContent = 'Connection error — try again';
-    this.disabled = false;
+    renderObservations(data);
+    this.textContent='SafeCheck ✓';
+  }catch(e){
+    this.textContent='Connection error — try again';this.disabled=false;
   }
 });
 
-function renderResults(data, originalText){
-  const el = document.getElementById('results');
-  const sc = data.score || {};
-  const comp = sc.components || {};
-  const fm = data.failure_modes || {};
-  const tilt = data.tilt || {};
-  const v3 = data.v3 || {};
-  const nii = sc.nii || 0;
-  const niiPct = (nii > 1) ? nii : Math.round(nii * 100);  // handle both 0-100 and 0.0-1.0
-  const words = originalText.split(/\s+/).length;
-  const hedges = data.hedge_phrases || [];
-  const reassurances = data.reassurance_phrases || [];
-  const lat = data.latency_ms || '?';
+function renderObservations(data){
+  const cards=data.observations||[];
+  const el=document.getElementById('obsCards');
+  el.innerHTML='';
 
-  // Stat colors
-  const niiColor = niiPct >= 70 ? '#00e89c' : niiPct >= 40 ? '#f59e0b' : '#ef4444';
-  const niiLabel = sc.nii_label || (niiPct >= 85 ? 'STRONG' : niiPct >= 70 ? 'SOLID' : niiPct >= 55 ? 'MODERATE' : niiPct >= 40 ? 'WEAK' : niiPct >= 25 ? 'POOR' : 'FAILING');
+  // Hide messaging
+  msgZone.className='msg-zone hidden';
 
-  // Build findings
-  const findings = [];
-  if((comp.q1||0) < 0.7) findings.push({
-    issue: "You didn't set any rules. The person reading this can interpret it however they want.",
-    fix: "Add what you need specifically. Dates, amounts, or conditions."
-  });
-  if((comp.q2||0) < 0.7) findings.push({
-    issue: "Your main point is buried. They might stop reading before they get to it.",
-    fix: "Move your ask to the first sentence."
-  });
-  if((comp.q3||0) < 0.7) findings.push({
-    issue: "There's no deadline or boundary. This can be ignored or pushed off.",
-    fix: 'Add when you need it by. "By Friday" or "before the meeting."'
-  });
-  if((comp.q4||0) < 0.7) findings.push({
-    issue: "Your message drifts from its own point. Filler, hedges, or tangents are pulling it off course.",
-    fix: "Cut anything that doesn't directly support your ask."
-  });
-  if(fm.UDDS && !String(fm.UDDS).includes('FALSE')) findings.push({
-    issue: "You agreed to something before saying what you actually need.",
-    fix: "State what you need first. Then offer flexibility."
-  });
-  if(fm.DCE && !String(fm.DCE).includes('FALSE')) findings.push({
-    issue: "You pushed the real decision to a future conversation.",
-    fix: "Make the ask now. Don't defer."
-  });
-  if(fm.CCA && !String(fm.CCA).includes('FALSE')) findings.push({
-    issue: "You combined multiple things into one vague statement.",
-    fix: "Separate your points. One sentence per ask."
-  });
-
-  const totalIssues = findings.length;
-
-  // Tilt tags
-  const tiltTags = Array.isArray(tilt) ? tilt : (tilt.tags || []);
-
-  let h = '';
-
-  // ── SCORE HERO ──
-  h += `<div style="padding:24px 16px;text-align:center;border-bottom:1px solid var(--border)">
-    <div style="font-size:56px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${niiColor};line-height:1">${niiPct}</div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;color:${niiColor};margin-top:4px">${niiLabel}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:8px">${lat}ms · ${words} words · v3.0</div>
-  </div>`;
-
-  // ── STAT BOXES (2x3 grid) ──
-  const hedgeCount = hedges.length || (data.l2_framing ? data.l2_framing.hedge_count || 0 : 0);
-  const reassureCount = reassurances.length || (data.l2_framing ? data.l2_framing.reassurance_count || 0 : 0);
-  const tiltCount = tiltTags.length;
-  const fmCount = ['UDDS','DCE','CCA'].filter(k => fm[k] && !String(fm[k]).includes('FALSE')).length;
-
-  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)">';
-  const stats = [
-    { n: hedgeCount, label: 'HEDGES', color: hedgeCount > 0 ? '#f59e0b' : '#00e89c', items: hedges.slice(0,2) },
-    { n: reassureCount, label: 'REASSURANCES', color: reassureCount > 0 ? '#f59e0b' : '#00e89c', items: reassurances.slice(0,2) },
-    { n: fmCount, label: 'FAILURE MODES', color: fmCount > 0 ? '#ef4444' : '#00e89c', items: [] },
-    { n: tiltCount, label: 'TILT PATTERNS', color: tiltCount > 0 ? '#f59e0b' : '#00e89c', items: [] },
-    { n: totalIssues, label: 'ISSUES', color: totalIssues > 0 ? '#ef4444' : '#00e89c', items: [] },
-    { n: words, label: 'WORDS', color: '#3b82f6', items: [] },
-  ];
-  stats.forEach(s => {
-    h += `<div style="background:var(--surface);padding:16px;text-align:center">
-      <div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${s.color}">${s.n}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-top:4px">${s.label}</div>
-      ${s.items.length ? '<div style="margin-top:6px">' + s.items.map(i => '<span style="font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;padding:2px 6px;border-radius:4px;margin:2px">' + esc(i) + '</span>').join('') + '</div>' : ''}
-    </div>`;
-  });
-  h += '</div>';
-
-  // ── FAILURE MODES ──
-  if(fmCount > 0 || true) {
-    h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
-    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">FAILURE MODES</div>';
-    ['UDDS','DCE','CCA'].forEach(mode => {
-      const state = String(fm[mode] || '');
-      const detected = !state.includes('FALSE') && state.length > 0;
-      const probable = state.includes('PROBABLE');
-      const labels = {UDDS:'Upstream Downstream', DCE:'Deferred Constraint', CCA:'Collapsed Constraint'};
-      const descs = {UDDS:'Agreement before ask', DCE:'Deferred the hard part', CCA:'Vague bundled claims'};
-      let badge, badgeColor;
-      if(state.includes('CONFIRMED')){ badge='DETECTED'; badgeColor='#ef4444'; }
-      else if(probable){ badge='PROBABLE'; badgeColor='#f59e0b'; }
-      else { badge='CLEAR'; badgeColor='#00e89c'; }
-      h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${detected?'rgba(239,68,68,.06)':'var(--surface)'};border:1px solid ${detected?'rgba(239,68,68,.2)':'var(--border)'};border-radius:8px;margin-bottom:6px">
-        <div><div style="font-weight:600;font-size:13px;color:var(--text)">${mode}</div><div style="font-size:11px;color:var(--muted)">${descs[mode]}</div></div>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:${badgeColor}">${badge}</span>
-      </div>`;
-    });
-    h += '</div>';
-  }
-
-  // ── TILT PATTERNS ──
-  if(tiltTags.length > 0){
-    h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
-    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">COMMUNICATION HABITS DETECTED</div>';
-    const tiltDefs = {
-      T1_REASSURANCE_DRIFT:{label:'Reassurance Drift',desc:'Reassurance used instead of evidence',icon:'🛡'},
-      T2_CERTAINTY_INFLATION:{label:'Certainty Inflation',desc:'Claims certainty without proof',icon:'📈'},
-      T3_SCOPE_EXPANSION:{label:'Scope Expansion',desc:'Widens topic without acknowledging it',icon:'🔄'},
-      T4_CAPABILITY_OVERREACH:{label:'Capability Overreach',desc:'Promises beyond deliverable',icon:'⚡'},
-      T5_ABSOLUTE_LANGUAGE:{label:'Absolute Language',desc:'Uses never/always/every without evidence',icon:'🔒'},
-      T6_CONSTRAINT_DEFERRAL:{label:'Constraint Deferral',desc:'Pushes limits to later',icon:'⏳'},
-      T7_CATEGORY_BLEND:{label:'Category Blend',desc:'Mixes unrelated things',icon:'🌀'},
-      T8_PRESSURE_OPTIMIZATION:{label:'Pressure Pattern',desc:'Urgency without substance',icon:'🔥'},
-    };
-    tiltTags.forEach(t => {
-      const d = tiltDefs[t] || {label:t.replace(/_/g,' '),desc:'',icon:'⚠'};
-      h += `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="this.querySelector('.td').style.display=this.querySelector('.td').style.display==='none'?'block':'none'">
-        <span style="font-size:18px">${d.icon}</span>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px;color:#f59e0b">${d.label}</div><div style="font-size:11px;color:var(--muted)">${d.desc}</div></div>
-        <span style="color:var(--muted);font-size:14px">›</span>
-      </div>`;
-    });
-    h += '</div>';
-  }
-
-  // ── Q COMPONENT BARS ──
-  h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
-  h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">STRUCTURAL ANALYSIS</div>';
-  const bars = [
-    {label:'CONSTRAINT DENSITY', val:comp.q1||0, desc:'% of content with explicit rules/boundaries'},
-    {label:'ASK ARCHITECTURE', val:comp.q2||0, desc:'Main point positioned before capability claims'},
-    {label:'ENFORCEMENT INTEGRITY', val:comp.q3||0, desc:'Freedom from deferral and erosion markers'},
-    {label:'TILT RESISTANCE', val:comp.q4||0, desc:'Resistance to drift patterns and filler'},
-    {label:'FAILURE MODE SEVERITY', val:sc.components?.d5||data.score?.components?.d5||0, desc:'Freedom from structural failure modes (UDDS/DCE/CCA)'},
-    {label:'TILT RESISTANCE', val:comp.q4||0, desc:'Resistance to drift patterns'},
-  ];
-  bars.forEach(b => {
-    const pct = Math.round(b.val * 100);
-    const col = b.val >= 0.7 ? '#00e89c' : b.val >= 0.4 ? '#f59e0b' : '#ef4444';
-    h += `<div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted)">${b.label}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:${col}">${pct}%</span>
-      </div>
-      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .6s ease"></div>
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px">${b.desc}</div>
-    </div>`;
-  });
-  h += '</div>';
-
-  // ── FINDINGS (plain language) ──
-  if(findings.length > 0){
-    h += '<div style="padding:14px 16px;border-top:1px solid var(--border)">';
-    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">WHAT TO FIX</div>';
-    findings.forEach(f => {
-      h += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:14px;color:var(--text);line-height:1.5">${f.issue}</div>
-        <div style="font-size:12px;color:var(--accent);padding-left:12px;border-left:2px solid var(--accent);margin-top:6px">${f.fix}</div>
-      </div>`;
-    });
-    h += '</div>';
-  }
-
-  // ── REWRITE BUTTON ──
-  h += '<div class="fix-row"><button class="fix-btn" id="fixBtn" onclick="fixIt()">Rewrite with V3</button></div>';
-
-  el.innerHTML = h;
-  el.className = 'results show';
-  el.scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// ═══════════════════════════════════════════
-// LLM LETTER RACE — deterministic model pick from text
-// Same logic as contact page cards
-// ═══════════════════════════════════════════
-function pickModel(text) {
-  const s = text.replace(/[^a-zA-Z]/g, '').toLowerCase();
-  const models = [
-    { name: 'Claude', letters: 'claude', color: '#d97706' },
-    { name: 'Grok', letters: 'grok', color: '#8b5cf6' },
-    { name: 'ChatGPT', letters: 'chatgpt', color: '#10b981' },
-    { name: 'Gemini', letters: 'gemini', color: '#3b82f6' }
-  ];
-  for (let i = 0; i < s.length; i++) {
-    let winners = models.map(m => {
-      let pos = 0;
-      for (let j = 0; j <= i && pos < m.letters.length; j++) {
-        if (s[j] === m.letters[pos]) pos++;
+  if(cards.length===0||(cards.length===1&&cards[0].priority===0)){
+    // Clean — no issues
+    el.innerHTML='<div class="obs-clean">Your message is structurally clear. It says what it means.</div>';
+  } else {
+    cards.forEach(function(c){
+      if(c.priority===0)return;
+      let h='<div class="obs-card"><div class="obs-text">';
+      // Highlight the marker word in the observation text if present
+      if(c.marker&&c.text.includes('"')){
+        h+=esc(c.text).replace(/&quot;([^&]+)&quot;/g,'<span class="marker">"$1"</span>');
+      } else {
+        h+=esc(c.text);
       }
-      return { ...m, complete: pos >= m.letters.length, pos };
-    }).filter(r => r.complete);
-    if (winners.length > 0) return winners[0];
-  }
-  let results = models.map(m => {
-    let pos = 0;
-    for (let i = 0; i < s.length && pos < m.letters.length; i++) {
-      if (s[i] === m.letters[pos]) pos++;
-    }
-    return { ...m, ratio: pos / m.letters.length };
-  });
-  return results.reduce((a, b) => a.ratio > b.ratio ? a : b);
-}
-
-// ═══════════════════════════════════════════
-// FIX IT — LLM-powered V3 structural rewrite via /api/v1/rewrite
-// ═══════════════════════════════════════════
-async function fixIt(){
-  if(!sessionActive || !lastScore) return;
-  const text = pasteBox.value.trim();
-  if(!text) return;
-  const btn = document.getElementById('fixBtn');
-  btn.disabled = true;
-
-  // Letter race animation (client-side for instant UX)
-  const model = pickModel(text);
-  btn.innerHTML = '<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px">SELECTING MODEL...</span>';
-  await new Promise(r => setTimeout(r, 400));
-  btn.innerHTML = `<span style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px;color:${model.color||'var(--accent)'}">${model.name.toUpperCase()}</span> <span style="font-size:12px;color:var(--muted)">rewriting...</span>`;
-
-  try {
-    const resp = await fetch('/api/v1/rewrite', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text})
+      h+='</div>';
+      if(c.action){
+        h+='<div class="obs-action">'+esc(c.action)+'</div>';
+      }
+      h+='</div>';
+      if(c.suggestion){
+        h+='<div class="obs-suggestion">'+esc(c.suggestion)+'</div>';
+      }
+      el.innerHTML+=h;
     });
-    const data = await resp.json();
-    if(!resp.ok || data.error){
-      btn.innerHTML = `<span style="color:#ef4444">Error: ${data.error || 'rewrite failed'}</span>`;
-      btn.disabled = false;
-      return;
-    }
-
-    const annotations = [];
-    if(data.issues) data.issues.forEach(iss => annotations.push(iss));
-    if(data.method === 'v3_rule_only') annotations.push('⚠ LLM unavailable — V3 rule-based rewrite used');
-    if(data.v3_actions && data.v3_actions.length > 0) {
-      const actionStrs = data.v3_actions.map(a => typeof a === 'string' ? a : (a.detail || `${a.check}: ${a.action}`));
-      annotations.push(`V3 applied: ${actionStrs.join(', ')}`);
-    }
-
-    const srvModel = {name: data.model, color: data.model_color || model.color};
-    renderRewrite(data.rewrite, srvModel, data.original_words, data.rewrite_words, parseInt(data.compression)||0, annotations);
-    btn.innerHTML = `<span style="color:${data.model_color||model.color}">${data.model}</span> — Rewritten ✓ <span style="font-size:11px;color:var(--muted)">${data.latency_ms}ms</span>`;
-  } catch(e) {
-    btn.innerHTML = `<span style="color:#ef4444">Network error</span>`;
-    btn.disabled = false;
-  }
-}
-
-function renderRewrite(text, model, origWords, newWords, pct, annotations){
-  const el = document.getElementById('rewrite');
-  let statsText = origWords === newWords ? `${model.name} · restructured` : `${model.name} · ${origWords}→${newWords} words · ${pct}% ${newWords < origWords ? 'tighter' : 'expanded'}`;
-  
-  let annotHtml = '';
-  if(annotations && annotations.length > 0){
-    annotHtml = '<div style="padding:10px 16px;border-top:1px solid var(--border);font-family:var(--mono,monospace);font-size:11px;color:var(--muted);line-height:1.8">' +
-      annotations.map(a => `<div>${a}</div>`).join('') + '</div>';
   }
 
-  el.innerHTML = `
-    <div class="rewrite-header" style="display:flex;justify-content:space-between;align-items:center">
-      <span>V3 STRUCTURAL REWRITE</span>
-      <span style="color:${model.color||'var(--accent)'};font-size:12px">${statsText}</span>
-    </div>
-    <div class="rewrite-body">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\[([^\]]+)\]/g, '<span style="color:var(--amber);font-style:italic">[$1]</span>')}</div>
-    ${annotHtml}
-    <div class="copy-row"><button class="copy-btn" id="copyBtn" onclick="copyRewrite()">Copy to clipboard</button></div>
-  `;
-  el.className = 'rewrite show';
-  el.scrollIntoView({behavior:'smooth', block:'start'});
+  document.getElementById('obsSection').className='obs-section show';
+  document.getElementById('obsSection').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function copyRewrite(){
-  const text = document.querySelector('.rewrite-body').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copyBtn');
-    btn.textContent = 'Copied ✓';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Copy to clipboard'; btn.classList.remove('copied'); }, 2000);
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ═══════════════════════════════════════════
+// COPY — copies the text from the paste box
+// ═══════════════════════════════════════════
+function copyText(){
+  const text=pasteBox.value.trim();
+  if(!text)return;
+  navigator.clipboard.writeText(text).then(function(){
+    const btn=document.getElementById('copyBtn');
+    btn.innerHTML='Copied ✓';btn.classList.add('copied');
+    setTimeout(function(){btn.innerHTML='&#128203; Copy';btn.classList.remove('copied')},2000);
   });
 }
 </script>
-
 {% endblock %}
