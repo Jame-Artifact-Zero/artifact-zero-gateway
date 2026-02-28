@@ -4,42 +4,39 @@
 
 {% block head %}
 <style>
-
-
-.main{max-width:860px;margin:0 auto;padding:40px 20px 80px}
-h1{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:8px}
-.subtitle{color:var(--muted);font-size:15px;margin-bottom:40px}
-h2{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600;color:var(--accent);margin:40px 0 16px;padding-top:20px;border-top:1px solid var(--border)}
-h2:first-of-type{border-top:none;margin-top:0}
-h3{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--accent);margin:24px 0 8px}
-p{line-height:1.7;margin-bottom:12px;font-size:15px}
-.endpoint{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin:16px 0}
-.method{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;margin-right:10px}
-.method.post{background:rgba(0,232,156,.1);color:var(--accent)}
-.method.get{background:rgba(0,232,156,.05);color:var(--accent)}
-.path{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600}
-pre{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;overflow-x:auto;margin:10px 0}
-code{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:3px;font-size:13px}
-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
-th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
-td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:13px}
-.note{background:var(--surface);border-left:3px solid var(--accent);padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;font-size:14px}
-.tier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
-.tier-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
-.tier-card h4{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);margin-bottom:4px}
-.tier-card .price{font-size:20px;font-weight:700;margin-bottom:4px}
-.tier-card .detail{font-size:12px;color:var(--muted)}
-.tier-card .engine{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-top:6px;padding:2px 6px;background:rgba(0,232,156,.08);border-radius:3px;display:inline-block}
+.az-docs{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+.az-docs h1{font-family:var(--az-mono);font-size:28px;font-weight:700;margin-bottom:8px}
+.az-docs-sub{color:var(--muted);font-size:15px;margin-bottom:40px}
+.az-docs h2{font-family:var(--az-mono);font-size:18px;font-weight:600;color:var(--accent);margin:40px 0 16px;padding-top:20px;border-top:1px solid var(--border)}
+.az-docs h2:first-of-type{border-top:none;margin-top:0}
+.az-docs h3{font-family:var(--az-mono);font-size:14px;font-weight:600;color:var(--accent);margin:24px 0 8px}
+.az-docs p{line-height:1.7;margin-bottom:12px;font-size:15px}
+.az-endpoint{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin:16px 0}
+.az-endpoint-desc{margin-top:12px}
+.az-method{display:inline-block;font-family:var(--az-mono);font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;margin-right:10px;background:rgba(0,232,156,.1);color:var(--accent)}
+.az-path{font-family:var(--az-mono);font-size:15px;font-weight:600}
+.az-docs pre{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;font-family:var(--az-mono);font-size:13px;line-height:1.6;overflow-x:auto;margin:10px 0}
+.az-docs code{font-family:var(--az-mono);background:var(--surface2);padding:2px 6px;border-radius:3px;font-size:13px}
+.az-docs table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+.az-docs th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);font-family:var(--az-mono);font-size:12px;font-weight:600}
+.az-docs td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--az-mono);font-size:13px}
+.az-note{background:var(--surface);border-left:3px solid var(--accent);padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;font-size:14px}
+.az-tier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
+.az-tier-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+.az-tier-card h4{font-family:var(--az-mono);font-size:13px;color:var(--accent);margin-bottom:4px}
+.az-tier-price{font-size:20px;font-weight:700;margin-bottom:4px}
+.az-tier-detail{font-size:12px;color:var(--muted)}
+.az-tier-engine{font-family:var(--az-mono);font-size:10px;color:var(--accent);margin-top:6px;padding:2px 6px;background:rgba(0,232,156,.08);border-radius:3px;display:inline-block}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main">
+<div class="az-docs">
 <h1>API Documentation</h1>
-<p class="subtitle">Score any text for structural integrity. One endpoint. One API key. Millisecond response.</p>
+<p class="az-docs-sub">Score any text for structural integrity. One endpoint. One API key. Millisecond response.</p>
 
 <h2>What "Score" Means</h2>
-<div class="note"><strong>Score = V1 Only.</strong> The /score and /api/v1/score endpoints run V1 structural analysis: NII score, failure modes (UDDS/DCE/CCA), tilt patterns, dominance, and layer analysis. This is a diagnostic instrument — it tells you what's wrong. V2 (inbound stabilization) and V3 (output stabilization) are separate engines available at higher tiers. V1 scores. V2 and V3 fix.</div>
+<div class="az-note"><strong>Score = V1 Only.</strong> The /score and /api/v1/score endpoints run V1 structural analysis: NII score, failure modes (UDDS/DCE/CCA), tilt patterns, dominance, and layer analysis. This is a diagnostic instrument — it tells you what's wrong. V2 (inbound stabilization) and V3 (output stabilization) are separate engines available at higher tiers. V1 scores. V2 and V3 fix.</div>
 
 <h2>Base URL</h2>
 <pre>https://artifact0.com/api/v1</pre>
@@ -53,10 +50,10 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains
 
 <h2>Endpoints</h2>
 
-<div class="endpoint">
-  <span class="method post">POST</span>
-  <span class="path">/api/v1/score</span>
-  <p style="margin-top:12px">Score text for structural integrity. Returns NII score, failure modes, tilt patterns, and framing analysis.</p>
+<div class="az-endpoint">
+  <span class="az-method">POST</span>
+  <span class="az-path">/api/v1/score</span>
+  <p class="az-endpoint-desc">Score text for structural integrity. Returns NII score, failure modes, tilt patterns, and framing analysis.</p>
   <h3>Request Body</h3>
   <table>
     <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
@@ -91,10 +88,10 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains
 }</pre>
 </div>
 
-<div class="endpoint">
-  <span class="method post">POST</span>
-  <span class="path">/api/v1/keys</span>
-  <p style="margin-top:12px">Create a new API key. No authentication required.</p>
+<div class="az-endpoint">
+  <span class="az-method">POST</span>
+  <span class="az-path">/api/v1/keys</span>
+  <p class="az-endpoint-desc">Create a new API key. No authentication required.</p>
   <h3>Request Body</h3>
   <table>
     <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
@@ -108,13 +105,13 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains
   "email": "you@company.com",
   "message": "Store this key securely. It will not be shown again."
 }</pre>
-  <div class="note"><strong>Important:</strong> Your API key is shown only once. Store it immediately.</div>
+  <div class="az-note"><strong>Important:</strong> Your API key is shown only once. Store it immediately.</div>
 </div>
 
-<div class="endpoint">
-  <span class="method get">GET</span>
-  <span class="path">/api/v1/keys/usage</span>
-  <p style="margin-top:12px">Check your current usage for the billing period.</p>
+<div class="az-endpoint">
+  <span class="az-method">GET</span>
+  <span class="az-path">/api/v1/keys/usage</span>
+  <p class="az-endpoint-desc">Check your current usage for the billing period.</p>
   <h3>Response</h3>
   <pre>{
   "api_key": "az_a1b2c...",
@@ -156,65 +153,65 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains
 </table>
 
 <h2>Pricing</h2>
-<div class="note"><strong>Pay per score. Not per seat. No minimums.</strong> COGS: $0.0007/score. Zero LLM in the scoring engine. 97-99% gross margins at any tier.</div>
+<div class="az-note"><strong>Pay per score. Not per seat. No minimums.</strong> COGS: $0.0007/score. Zero LLM in the scoring engine. 97-99% gross margins at any tier.</div>
 
 <h3>V1 — Score (Diagnostic)</h3>
-<div class="tier-grid">
-  <div class="tier-card">
+<div class="az-tier-grid">
+  <div class="az-tier-card">
     <h4>Homepage</h4>
-    <div class="price">Free</div>
-    <div class="detail">Unlimited on artifact0.com. No login. No API key.</div>
-    <div class="engine">V1 SCORE</div>
+    <div class="az-tier-price">Free</div>
+    <div class="az-tier-detail">Unlimited on artifact0.com. No login. No API key.</div>
+    <div class="az-tier-engine">V1 SCORE</div>
   </div>
-  <div class="tier-card">
+  <div class="az-tier-card">
     <h4>Score API</h4>
-    <div class="price">$0.01</div>
-    <div class="detail">Per score. JSON in, JSON out. Developer integration.</div>
-    <div class="engine">V1 SCORE</div>
+    <div class="az-tier-price">$0.01</div>
+    <div class="az-tier-detail">Per score. JSON in, JSON out. Developer integration.</div>
+    <div class="az-tier-engine">V1 SCORE</div>
   </div>
-  <div class="tier-card">
+  <div class="az-tier-card">
     <h4>Personal Dashboard</h4>
-    <div class="price">$0.04</div>
-    <div class="detail">Per score. Compose, history, billing UI.</div>
-    <div class="engine">V1 SCORE</div>
+    <div class="az-tier-price">$0.04</div>
+    <div class="az-tier-detail">Per score. Compose, history, billing UI.</div>
+    <div class="az-tier-engine">V1 SCORE</div>
   </div>
 </div>
 
 <h3>V3 — Stabilization (Fix)</h3>
-<div class="tier-grid">
-  <div class="tier-card">
+<div class="az-tier-grid">
+  <div class="az-tier-card">
     <h4>V3 Personal</h4>
-    <div class="price">$19/mo</div>
-    <div class="detail">500 stabilizations/month. Strip hedges, anchor to objective.</div>
-    <div class="engine">V3 OUTPUT</div>
+    <div class="az-tier-price">$19/mo</div>
+    <div class="az-tier-detail">500 stabilizations/month. Strip hedges, anchor to objective.</div>
+    <div class="az-tier-engine">V3 OUTPUT</div>
   </div>
-  <div class="tier-card">
+  <div class="az-tier-card">
     <h4>Relay Pro</h4>
-    <div class="price">$500/yr</div>
-    <div class="detail">Governance protocol builder. Cross-model enforcement.</div>
-    <div class="engine">V1 + V3</div>
+    <div class="az-tier-price">$500/yr</div>
+    <div class="az-tier-detail">Governance protocol builder. Cross-model enforcement.</div>
+    <div class="az-tier-engine">V1 + V3</div>
   </div>
 </div>
 
 <h3>V2 + V3 Pipeline — Enterprise (Govern)</h3>
-<div class="tier-grid">
-  <div class="tier-card">
+<div class="az-tier-grid">
+  <div class="az-tier-card">
     <h4>Core Plus Pipeline</h4>
-    <div class="price">$2,500/mo</div>
-    <div class="detail">H→V2→AI→V3→H. Full governance. Custom thresholds.</div>
-    <div class="engine">V1 + V2 + V3 CORE PLUS</div>
+    <div class="az-tier-price">$2,500/mo</div>
+    <div class="az-tier-detail">H→V2→AI→V3→H. Full governance. Custom thresholds.</div>
+    <div class="az-tier-engine">V1 + V2 + V3 CORE PLUS</div>
   </div>
-  <div class="tier-card">
+  <div class="az-tier-card">
     <h4>Enterprise</h4>
-    <div class="price">$30K+/yr</div>
-    <div class="detail">BAA, SOC 2, SLA, dedicated support. Bring your own AWS.</div>
-    <div class="engine">V1 + V2 + V3 CORE PLUS</div>
+    <div class="az-tier-price">$30K+/yr</div>
+    <div class="az-tier-detail">BAA, SOC 2, SLA, dedicated support. Bring your own AWS.</div>
+    <div class="az-tier-engine">V1 + V2 + V3 CORE PLUS</div>
   </div>
-  <div class="tier-card">
+  <div class="az-tier-card">
     <h4>Territory License</h4>
-    <div class="price">$18K+/yr</div>
-    <div class="detail">Geographic/political dashboard. Live feed scoring.</div>
-    <div class="engine">V1 + V2 + V3</div>
+    <div class="az-tier-price">$18K+/yr</div>
+    <div class="az-tier-detail">Geographic/political dashboard. Live feed scoring.</div>
+    <div class="az-tier-engine">V1 + V2 + V3</div>
   </div>
 </div>
 
@@ -258,7 +255,7 @@ curl -X POST https://artifact0.com/api/v1/score \
 curl -X GET https://artifact0.com/api/v1/keys/usage \
   -H "X-API-Key: az_your_key_here"</pre>
 
-<div class="note"><strong>Zero LLM dependency.</strong> Every score is computed by rule-based structural analysis. No AI models in the engine. Deterministic, transparent, auditable. Average response time: 3ms.</div>
+<div class="az-note"><strong>Zero LLM dependency.</strong> Every score is computed by rule-based structural analysis. No AI models in the engine. Deterministic, transparent, auditable. Average response time: 3ms.</div>
 
 </div>
 {% endblock %}
