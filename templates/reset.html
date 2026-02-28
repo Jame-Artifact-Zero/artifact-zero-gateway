@@ -4,39 +4,39 @@
 
 {% block head %}
 <style>
-.card{width:100%;max-width:380px;padding:40px 28px;margin:80px auto 40px}
-.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none;display:block;text-align:center;margin-bottom:32px}
-h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
-.sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.5}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
-.field input{width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
-.field input:focus{border-color:var(--accent)}
-.btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;transition:background .15s}
-.btn:hover{background:#00d48c}
-.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center}
-.links{text-align:center;margin-top:20px;font-size:13px}
-.links a{color:var(--accent);text-decoration:none}
-.links a:hover{text-decoration:underline}
+.az-card{width:100%;max-width:380px;padding:40px 28px;margin:80px auto 40px}
+.az-card-logo{font-family:var(--az-mono);font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none;display:block;text-align:center;margin-bottom:32px}
+.az-card h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
+.az-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.5}
+.az-field{margin-bottom:16px}
+.az-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-family:var(--az-mono);letter-spacing:1px;text-transform:uppercase}
+.az-field input{width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:var(--az-sans);outline:none;transition:border-color .15s}
+.az-field input:focus{border-color:var(--accent)}
+.az-btn{width:100%;padding:14px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--az-sans);margin-top:8px;transition:background .15s}
+.az-btn:hover{background:#00d48c}
+.az-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center}
+.az-links{text-align:center;margin-top:20px;font-size:13px}
+.az-links a{color:var(--accent);text-decoration:none}
+.az-links a:hover{text-decoration:underline}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-<a href="/" class="logo">ARTIFACT ZERO</a>
+<div class="az-card">
+<a href="/" class="az-card-logo">ARTIFACT ZERO</a>
 <h1>Set new password</h1>
-<p class="sub">Choose a new password for your account.</p>
-{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<p class="az-sub">Choose a new password for your account.</p>
+{% if error %}<div class="az-error">{{ error }}</div>{% endif %}
 {% if expired %}
-<div class="links"><a href="/forgot">Request a new reset link</a></div>
+<div class="az-links"><a href="/forgot">Request a new reset link</a></div>
 {% else %}
 <form method="POST" action="/reset">
 {{ csrf_token_input() | safe }}
 <input type="hidden" name="token" value="{{ token }}">
-<div class="field"><label>New Password</label><input type="password" name="password" required minlength="8" autofocus placeholder="At least 8 characters"></div>
-<button type="submit" class="btn">Set password</button>
+<div class="az-field"><label>New Password</label><input type="password" name="password" required minlength="8" autofocus placeholder="At least 8 characters"></div>
+<button type="submit" class="az-btn">Set password</button>
 </form>
 {% endif %}
-<div class="links"><a href="/login">Back to login</a></div>
+<div class="az-links"><a href="/login">Back to login</a></div>
 </div>
 {% endblock %}
