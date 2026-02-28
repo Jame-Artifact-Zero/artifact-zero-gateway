@@ -6,20 +6,54 @@
 <style>
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
+/* Product showcase */
+.showcase{margin-bottom:40px}
+.showcase-header{text-align:center;margin-bottom:24px}
+.showcase-eyebrow{font-family:var(--az-mono);font-size:11px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.showcase-title{font-size:28px;font-weight:700;line-height:1.3}
+.showcase-desc{font-size:14px;color:var(--muted);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.showcase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.showcase-card{text-decoration:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;transition:border .2s;display:block}
+.showcase-card:hover{border-color:var(--accent)}
+.showcase-card-icon{font-family:var(--az-mono);font-size:13px;font-weight:700;margin-bottom:6px}
+.showcase-card-icon.green{color:var(--green)}
+.showcase-card-icon.accent{color:var(--accent)}
+.showcase-card-icon.purple{color:var(--purple)}
+.showcase-card-icon.amber{color:var(--amber)}
+.showcase-card-title{font-size:13px;color:var(--text);margin-bottom:4px}
+.showcase-card-desc{font-size:11px;color:var(--muted)}
+.showcase-card-cta{font-family:var(--az-mono);font-size:10px;margin-top:8px}
+.showcase-card-cta.green{color:var(--green)}
+.showcase-card-cta.accent{color:var(--accent)}
+.showcase-card-cta.purple{color:var(--purple)}
+.showcase-card-cta.amber{color:var(--amber)}
+.showcase-stat{text-align:center}
+.showcase-stat-box{display:inline-block;background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:16px 32px}
+.showcase-stat-num{font-family:var(--az-mono);font-size:28px;font-weight:700;color:var(--green)}
+.showcase-stat-desc{font-size:13px;color:var(--muted);margin-left:12px}
+.audit-divider{border-top:1px solid var(--border);padding-top:32px;margin-bottom:8px}
+.audit-label{font-family:var(--az-mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+.run-again{margin-top:20px}
+.tilt-none{color:var(--muted);font-size:13px}
+.dominance-note{font-size:12px;color:var(--muted);margin-bottom:12px}
+.matrix-row-mt{margin-top:8px}
+.layer-table td.td-wrap{word-break:break-word}
+
+
 .main{max-width:960px;margin:0 auto;padding:24px 20px 60px}
 
 .input-section{margin-bottom:24px}
 .input-section label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px}
 .input-section textarea{
   width:100%;min-height:120px;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);padding:14px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  color:var(--text);padding:14px;border-radius:8px;font-family:var(--az-sans);
   font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
 }
 .input-section textarea:focus{border-color:var(--accent)}
 .input-section textarea::placeholder{color:#3d4452}
 
 .btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.btn{padding:10px 20px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn{padding:10px 20px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--az-sans);transition:all .15s}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:hover{background:#2563eb}
 .btn-primary:disabled{background:var(--surface2);color:var(--muted);cursor:default}
@@ -32,7 +66,7 @@
 
 .hero-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
 .score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
-.score-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:4px}
+.score-card .sc-value{font-family:var(--az-mono);font-size:28px;font-weight:700;margin-bottom:4px}
 .score-card .sc-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .score-card.critical .sc-value{color:var(--red)}
 .score-card.warning .sc-value{color:var(--amber)}
@@ -41,8 +75,8 @@
 
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden}
 .panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
-.panel-header h3{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent)}
-.panel-header .badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
+.panel-header h3{font-family:var(--az-mono);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent)}
+.panel-header .badge{font-family:var(--az-mono);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
 .badge-red{background:#7f1d1d;color:#fca5a5}
 .badge-amber{background:#78350f;color:#fde68a}
 .badge-green{background:#14532d;color:#86efac}
@@ -53,30 +87,30 @@
 .fm-row:last-child{border-bottom:none}
 .fm-name{font-weight:600;font-size:14px}
 .fm-full{font-size:11px;color:var(--muted);margin-top:2px}
-.fm-status{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px}
+.fm-status{font-family:var(--az-mono);font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px}
 .fm-confirmed{background:#7f1d1d;color:#fca5a5}
 .fm-probable{background:#78350f;color:#fde68a}
 .fm-false{background:#14532d;color:#86efac}
 
 .tilt-tags{display:flex;flex-wrap:wrap;gap:6px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;background:var(--surface2);color:var(--amber)}
+.tilt-tag{font-family:var(--az-mono);font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;background:var(--surface2);color:var(--amber)}
 
 .layer-table{width:100%;border-collapse:collapse;font-size:13px}
 .layer-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
 .layer-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-.layer-table td:first-child{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);white-space:nowrap;width:60px}
+.layer-table td:first-child{font-family:var(--az-mono);font-weight:600;color:var(--accent);white-space:nowrap;width:60px}
 
 .matrix-row{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
 .matrix-row:last-child{border-bottom:none}
-.matrix-pair{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--purple);font-size:12px}
+.matrix-pair{font-family:var(--az-mono);font-weight:600;color:var(--purple);font-size:12px}
 .matrix-note{color:var(--muted);margin-top:2px}
 
 .raw-toggle{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:12px;display:inline-block}
-.raw-json{display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
+.raw-json{display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:var(--az-mono);font-size:11px;line-height:1.5;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--muted)}
 .raw-json.show{display:block}
 
 .callout{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center}
-.callout .big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--green)}
+.callout .big{font-family:var(--az-mono);font-size:36px;font-weight:700;color:var(--green)}
 .callout .sub{font-size:13px;color:var(--muted);margin-top:4px}
 
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
@@ -91,50 +125,50 @@
 <div class="main">
 
   <!-- Product Showcase -->
-  <div style="margin-bottom:40px">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Conversational Governance</div>
-      <div style="font-size:28px;font-weight:700;line-height:1.3">AI says whatever it wants.<br>We fix that.</div>
-      <div style="font-size:14px;color:var(--muted);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto">Rule-based enforcement layer between humans and AI. No LLM dependency. Deterministic. Auditable. False commitment rates dropped from 49% to 7%.</div>
+  <div class="showcase">
+    <div class="showcase-header">
+      <div class="showcase-eyebrow">Conversational Governance</div>
+      <div class="showcase-title">AI says whatever it wants.<br>We fix that.</div>
+      <div class="showcase-desc">Rule-based enforcement layer between humans and AI. No LLM dependency. Deterministic. Auditable. False commitment rates dropped from 49% to 7%.</div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
-      <a href="/relay" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;transition:border .2s;display:block">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--green);margin-bottom:6px">⚡ RELAY</div>
-        <div style="font-size:13px;color:var(--text);margin-bottom:4px">Govern any AI</div>
-        <div style="font-size:11px;color:var(--muted)">Paste a protocol into ChatGPT, Claude, Gemini, or Grok. Score responses. Correct drift. Your rules never leave our server.</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);margin-top:8px">FREE · 50 TURNS →</div>
+    <div class="showcase-grid">
+      <a href="/relay" class="showcase-card">
+        <div class="showcase-card-icon green">⚡ RELAY</div>
+        <div class="showcase-card-title">Govern any AI</div>
+        <div class="showcase-card-desc">Paste a protocol into ChatGPT, Claude, Gemini, or Grok. Score responses. Correct drift. Your rules never leave our server.</div>
+        <div class="showcase-card-cta green">FREE · 50 TURNS →</div>
       </a>
-      <a href="/chat" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;transition:border .2s;display:block">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">◉ CONTROL ROOM</div>
-        <div style="font-size:13px;color:var(--text);margin-bottom:4px">Chat with governance</div>
-        <div style="font-size:11px;color:var(--muted)">AI interface with NTI enforcement built in. Every response scored, stabilized, and traced before it reaches you.</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-top:8px">LIVE →</div>
+      <a href="/chat" class="showcase-card">
+        <div class="showcase-card-icon accent">◉ CONTROL ROOM</div>
+        <div class="showcase-card-title">Chat with governance</div>
+        <div class="showcase-card-desc">AI interface with NTI enforcement built in. Every response scored, stabilized, and traced before it reaches you.</div>
+        <div class="showcase-card-cta accent">LIVE →</div>
       </a>
-      <a href="/lab" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;transition:border .2s;display:block">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);margin-bottom:6px">⧉ LAB</div>
-        <div style="font-size:13px;color:var(--text);margin-bottom:4px">Test & analyze</div>
-        <div style="font-size:11px;color:var(--muted)">Upload documents, run structural analysis, compare AI outputs. The full NTI testing environment.</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--purple);margin-top:8px">LIVE →</div>
+      <a href="/lab" class="showcase-card">
+        <div class="showcase-card-icon purple">⧉ LAB</div>
+        <div class="showcase-card-title">Test & analyze</div>
+        <div class="showcase-card-desc">Upload documents, run structural analysis, compare AI outputs. The full NTI testing environment.</div>
+        <div class="showcase-card-cta purple">LIVE →</div>
       </a>
-      <a href="/live" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;transition:border .2s;display:block">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--amber);margin-bottom:6px">◎ LIVE FEED</div>
-        <div style="font-size:13px;color:var(--text);margin-bottom:4px">Real-time scoring</div>
-        <div style="font-size:11px;color:var(--muted)">News headlines scored for structural integrity across 13 sources. See NTI running 24/7 on real content.</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);margin-top:8px">LIVE →</div>
+      <a href="/live" class="showcase-card">
+        <div class="showcase-card-icon amber">◎ LIVE FEED</div>
+        <div class="showcase-card-title">Real-time scoring</div>
+        <div class="showcase-card-desc">News headlines scored for structural integrity across 13 sources. See NTI running 24/7 on real content.</div>
+        <div class="showcase-card-cta amber">LIVE →</div>
       </a>
     </div>
 
-    <div style="text-align:center">
-      <div style="display:inline-block;background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid #312e81;border-radius:8px;padding:16px 32px">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--green)">63–65%</span>
-        <span style="font-size:13px;color:var(--muted);margin-left:12px">token cost reduction · validated · rule-based · zero inference cost</span>
+    <div class="showcase-stat">
+      <div class="showcase-stat-box">
+        <span class="showcase-stat-num">63–65%</span>
+        <span class="showcase-stat-desc">token cost reduction · validated · rule-based · zero inference cost</span>
       </div>
     </div>
   </div>
 
-  <div style="border-top:1px solid var(--border);padding-top:32px;margin-bottom:8px">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">↓ TRY THE AUDIT ENGINE</div>
+  <div class="audit-divider">
+    <div class="audit-label">↓ TRY THE AUDIT ENGINE</div>
   </div>
 
   <div class="input-section">
@@ -186,7 +220,7 @@
     <span class="raw-toggle" onclick="toggleRaw()">View raw JSON response</span>
     <div class="raw-json" id="rawJson"></div>
 
-    <div style="margin-top:20px">
+    <div class="run-again">
       <button class="btn btn-primary" onclick="reset()">Run Another Audit</button>
     </div>
   </div>
@@ -271,13 +305,13 @@ function renderResults(data){
   document.getElementById('tiltBadge').textContent = tilt.length>0?tilt.length+' ACTIVE':'NONE';
   document.getElementById('tiltBody').innerHTML = tilt.length>0 ?
     '<div class="tilt-tags">'+tilt.map(t=>`<span class="tilt-tag">${t}</span>`).join('')+'</div>' :
-    '<span style="color:var(--muted);font-size:13px">No tilt categories detected.</span>';
+    '<span class="tilt-none">No tilt categories detected.</span>';
 
   document.getElementById('matrixBadge').className = 'badge '+(dominance[0]!=='NONE'?'badge-red':'badge-green');
   document.getElementById('matrixBadge').textContent = dominance.join(' + ');
-  let mh = '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Dominance order: CCA > UDDS > DCE (canonical)</div>';
+  let mh = '<div class="dominance-note">Dominance order: CCA > UDDS > DCE (canonical)</div>';
   (matrix.pairwise||[]).forEach(p=>{ mh+=`<div class="matrix-row"><div class="matrix-pair">${p.pair}</div><div class="matrix-note">${p.note}</div></div>`; });
-  if(matrix.triadic) mh+=`<div class="matrix-row" style="margin-top:8px"><div class="matrix-pair">${matrix.triadic.combo} (TRIADIC)</div><div class="matrix-note">${matrix.triadic.note}</div></div>`;
+  if(matrix.triadic) mh+=`<div class="matrix-row matrix-row-mt"><div class="matrix-pair">${matrix.triadic.combo} (TRIADIC)</div><div class="matrix-note">${matrix.triadic.note}</div></div>`;
   document.getElementById('matrixBody').innerHTML = mh;
 
   const lr = [
@@ -290,7 +324,7 @@ function renderResults(data){
     ['L6','Interface Contracts','JOS binding available'],
     ['L7','Telemetry',`${data.telemetry?.request_id?.substring(0,8)||'—'}… | ${latency}ms`],
   ];
-  document.getElementById('layerBody').innerHTML = `<table class="layer-table"><thead><tr><th>Layer</th><th>Name</th><th>Output</th></tr></thead><tbody>${lr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td style="word-break:break-word">${r[2]}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('layerBody').innerHTML = `<table class="layer-table"><thead><tr><th>Layer</th><th>Name</th><th>Output</th></tr></thead><tbody>${lr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="td-wrap">${r[2]}</td></tr>`).join('')}</tbody></table>`;
 
   document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
 }
