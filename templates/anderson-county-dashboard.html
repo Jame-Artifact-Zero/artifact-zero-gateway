@@ -96,6 +96,20 @@
 
 /* FOOTER */
 
+
+/* Method & shared helpers */
+.method-desc{font-size:13px;color:var(--dim);line-height:1.6}
+.method-item-name.color-red{color:var(--red)}
+.method-item-name.color-green{color:var(--green)}
+.method-item-name.color-amber{color:var(--amber)}
+.method-item-name.color-purple{color:var(--purple)}
+.method-item-name.color-blue{color:var(--blue)}
+/* JS score helpers */
+.score-meta-best{color:var(--green)}
+.score-meta-worst{color:var(--red)}
+.score-meta-tilt{color:var(--amber)}
+.compare-legend{font-family:var(--mono);font-size:11px;color:var(--dim)}
+
 @media(max-width:480px){
   .candidates{grid-template-columns:1fr}
   .hero h1{font-size:26px}
@@ -134,35 +148,35 @@
 <div class="methodology">
   <div class="method-card">
     <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
-    <p style="font-size:13px;color:var(--dim);line-height:1.6">Every public statement is scored 0–100 by analyzing six structural dimensions. No AI opinion. No sentiment analysis. Pure structural measurement of what was said and how it was said.</p>
+    <p class="method-desc">Every public statement is scored 0–100 by analyzing six structural dimensions. No AI opinion. No sentiment analysis. Pure structural measurement of what was said and how it was said.</p>
     <div class="method-grid">
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--red)">VAGUENESS</div>
+        <div class="method-item-name color-red">VAGUENESS</div>
         <div class="method-item-desc">Platitude words (values, opportunity, incredible, families, freedom). More fluff = lower score.</div>
         <div class="method-item-weight">Penalty: -3 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--green)">SPECIFICITY</div>
+        <div class="method-item-name color-green">SPECIFICITY</div>
         <div class="method-item-desc">Concrete policy words (budget, tax, build, invest, plan, vote). Substance raises your score.</div>
         <div class="method-item-weight">Bonus: +4 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--amber)">PROMISE BALANCE</div>
+        <div class="method-item-name color-amber">PROMISE BALANCE</div>
         <div class="method-item-desc">Unbounded promises ("I will never") get penalized. Hedged aspirations ("I want to") get rewarded.</div>
         <div class="method-item-weight">-4 unbounded / +3 hedged</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--purple)">EMOTIONAL CHARGE</div>
+        <div class="method-item-name color-purple">EMOTIONAL CHARGE</div>
         <div class="method-item-desc">Density of emotionally loaded language. Lower charge = clearer structural integrity.</div>
         <div class="method-item-weight">Penalty: -0.2 per %</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--amber)">TILT PATTERNS</div>
+        <div class="method-item-name color-amber">TILT PATTERNS</div>
         <div class="method-item-desc">Structural manipulation: certainty inflation, absolute language, manufactured consensus, pressure tactics.</div>
         <div class="method-item-weight">Penalty: -7 per tag</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name" style="color:var(--blue)">DATA DENSITY</div>
+        <div class="method-item-name color-blue">DATA DENSITY</div>
         <div class="method-item-desc">Numbers, names, dates, percentages, dollar amounts. Facts in the text = credibility bonus.</div>
         <div class="method-item-weight">Bonus: +3 per fact</div>
       </div>
@@ -464,9 +478,9 @@ function renderCard(candidate) {
           <div class="score-label">${activeLens.toUpperCase()}</div>
         </div>
         <div class="score-meta">
-          <span>Best: <strong style="color:var(--green)">${hcs.best}</strong></span>
-          <span>Worst: <strong style="color:var(--red)">${hcs.worst}</strong></span>
-          <span>Tilt: <strong style="color:var(--amber)">${hcs.totalTilt}</strong></span>
+          <span>Best: <strong class="score-meta-best">${hcs.best}</strong></span>
+          <span>Worst: <strong class="score-meta-worst">${hcs.worst}</strong></span>
+          <span>Tilt: <strong class="score-meta-tilt">${hcs.totalTilt}</strong></span>
         </div>
       </div>
       <div class="statements">${stmtsHtml}</div>
@@ -495,7 +509,7 @@ function renderCompare() {
     return `<div class="compare-row"><div class="compare-label">${m.label}</div><div class="compare-bars">${bars}</div></div>`;
   }).join('');
 
-  const legend = scores.map((s,i) => `<span style="font-family:var(--mono);font-size:11px;color:var(--dim)">${s.name}</span>`).join(' vs ');
+  const legend = scores.map((s,i) => `<span class="compare-legend">${s.name}</span>`).join(' vs ');
 
   document.getElementById('compareBar').innerHTML = `
     <div class="compare-card">
