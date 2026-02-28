@@ -78,6 +78,15 @@
 .trial-counter{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:1px;text-align:center;padding:8px;background:rgba(251,191,36,.06);border-bottom:1px solid rgba(251,191,36,.1);display:none}
 .trial-counter.visible{display:block}
 
+
+/* Builder helpers */
+.hero-body-sm{font-size:14px}
+.btn-row-flex{display:flex;gap:12px}
+.btn-flex1{flex:1}
+.key-section-hidden{display:none;margin-bottom:20px}
+.enterprise-spacer{margin-top:16px;color:var(--dim)}
+.enterprise-contact{display:inline-block;margin-top:16px}
+
 @media(max-width:640px){
   .doors{grid-template-columns:1fr}
   .hero{padding:60px 20px 40px}
@@ -96,7 +105,7 @@
   <div class="hero-badge">Governance Demo Environment</div>
   <h1>Build your own<br><em>operating system</em></h1>
   <p class="hero-body">Define five rules. Name your system. See what happens when AI is structurally governed instead of free-associating.</p>
-  <p class="hero-body" style="font-size:14px;">This is a working demonstration of the NTI governance engine. The interface is a bridge. The engine is real.</p>
+  <p class="hero-body hero-body-sm">This is a working demonstration of the NTI governance engine. The interface is a bridge. The engine is real.</p>
   <div class="hero-note">No account required. No credit card. Just build it.</div>
 </div>
 
@@ -178,9 +187,9 @@
       </select>
     </div>
     <br>
-    <div style="display:flex;gap:12px">
+    <div class="btn-row-flex">
       <button class="btn btn-ghost" onclick="builderStep(1)">← Back</button>
-      <button class="btn btn-primary" style="flex:1" onclick="builderStep(3)">Next: Preview →</button>
+      <button class="btn btn-primary btn-flex1" onclick="builderStep(3)">Next: Preview →</button>
     </div>
   </div>
 
@@ -191,7 +200,7 @@
     <p class="step-desc">This gets injected before every message. Review it, then try it live.</p>
     <div class="proto-preview" id="protoPreview"></div>
     <br>
-    <div id="keySection" style="display:none;margin-bottom:20px;">
+    <div id="keySection" class="key-section-hidden">
       <div class="form-group">
         <label>Your API Key</label>
         <input type="password" id="userApiKey" placeholder="sk-... or sk-ant-...">
@@ -206,9 +215,9 @@
         </select>
       </div>
     </div>
-    <div style="display:flex;gap:12px">
+    <div class="btn-row-flex">
       <button class="btn btn-ghost" onclick="builderStep(2)">← Edit</button>
-      <button class="btn btn-primary" style="flex:1" onclick="launchOS()" id="launchBtn">Launch your OS →</button>
+      <button class="btn btn-primary btn-flex1" onclick="launchOS()" id="launchBtn">Launch your OS →</button>
     </div>
   </div>
 </div>
@@ -218,8 +227,8 @@
   <div class="divider"></div>
   <p>This is a working demonstration of the NTI governance engine.</p>
   <p>The structural analysis is real. The protocol enforcement is real. The scoring is real.</p>
-  <p style="margin-top:16px;color:var(--dim);">When your team is ready for enterprise deployment, we're here.</p>
-  <a href="mailto:jame@dontgofulltilt.com" style="display:inline-block;margin-top:16px;">CONTACT ARTIFACT ZERO LABS →</a>
+  <p class="enterprise-spacer">When your team is ready for enterprise deployment, we're here.</p>
+  <a href="mailto:jame@dontgofulltilt.com" class="enterprise-contact">CONTACT ARTIFACT ZERO LABS →</a>
 </div>
 {% endblock %}
 
