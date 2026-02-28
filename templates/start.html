@@ -28,7 +28,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family:var(--az-sans);
   line-height: 1.6;
   overflow-x: hidden;
 }
@@ -51,7 +51,7 @@ body {
 
 .hero-badge {
   display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -91,7 +91,7 @@ body {
 
 .doors-label {
   text-align: center;
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 12px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -104,6 +104,13 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
+
+
+.sc-icon-blue{background:rgba(96,165,250,0.12)}
+.sc-icon-red{background:rgba(248,113,113,0.12)}
+.sc-icon-green{background:rgba(52,211,153,0.12)}
+.sc-icon-purple{background:rgba(167,139,250,0.12)}
+.sc-icon-amber{background:rgba(245,166,35,0.12)}
 
 @media (max-width: 700px) {
   .doors { grid-template-columns: 1fr; }
@@ -165,7 +172,7 @@ body {
 }
 
 .door-cta {
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 12px;
   color: var(--accent);
   margin-top: 16px;
@@ -210,7 +217,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 12px;
   color: var(--text2);
   cursor: pointer;
@@ -267,7 +274,7 @@ body {
 }
 
 .sc-proof {
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 12px;
   color: var(--green);
   margin-top: 8px;
@@ -300,7 +307,7 @@ body {
 }
 
 .sc-link {
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 11px;
   color: var(--accent);
   opacity: 0.6;
@@ -394,7 +401,7 @@ body {
 }
 
 .si-label {
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 10px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -415,7 +422,7 @@ body {
 }
 
 .si-status {
-  font-family: 'JetBrains Mono', monospace;
+  font-family:var(--az-mono);
   font-size: 11px;
   margin-top: 10px;
   display: inline-block;
@@ -494,7 +501,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(96,165,250,0.12);">📧</div>
+        <div class="sc-icon sc-icon-blue">📧</div>
         <div>
           <div class="sc-title">Email & Message Analysis</div>
           <div class="sc-desc">Paste any email, Slack message, or written communication. Get instant structural scoring across 7 layers (L0-L7), failure mode detection (false commitments, hidden constraints, deferred obligations), and a clear integrity score. See exactly where your message creates ambiguity or exposure.</div>
@@ -507,7 +514,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(248,113,113,0.12);">🏥</div>
+        <div class="sc-icon sc-icon-red">🏥</div>
         <div>
           <div class="sc-title">Medical Document Analysis</div>
           <div class="sc-desc">NTI analyzes clinical documentation for structural failures that create legal exposure, weaken insurance justification, and reduce clinical defensibility. Real case: an ER discharge summary scored 0.625 (CCA-CONFIRMED), while a neurology consult scored 0.975. Same patient. Different structural integrity. Three different professionals would each pay to know about the gap.</div>
@@ -520,7 +527,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(52,211,153,0.12);">⚖️</div>
+        <div class="sc-icon sc-icon-green">⚖️</div>
         <div>
           <div class="sc-title">Legal Communication Governance</div>
           <div class="sc-desc">Law firms send thousands of case status emails, lien negotiation messages, and settlement communications. Analysis of 269 outbound messages across 10 threads revealed 98% lacked clear objectives and deadlines, creating $47K-$95K in annual recoverable staff efficiency across 500 cases. NTI detects structural gaps professional tone analysis misses.</div>
@@ -532,7 +539,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(167,139,250,0.12);">📰</div>
+        <div class="sc-icon sc-icon-purple">📰</div>
         <div>
           <div class="sc-title">Live News Structural Analysis</div>
           <div class="sc-desc">Watch NTI analyze headlines in real-time across 13 RSS sources. See readability scores, emotional charge detection, assertion density, and source attribution quality — updated continuously. Shows the difference between journalism and manipulation, structurally.</div>
@@ -544,7 +551,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(245,166,35,0.12);">🗳️</div>
+        <div class="sc-icon sc-icon-amber">🗳️</div>
         <div>
           <div class="sc-title">Political Accountability Dashboard</div>
           <div class="sc-desc">Knox County Mayor's Race — 4 candidates scored on Clarity, Accountability, Substance, and Authenticity. 16 statements analyzed through NTI. See which candidates say something and which ones say nothing with a lot of words.</div>
@@ -574,7 +581,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(245,166,35,0.12);">🖥️</div>
+        <div class="sc-icon sc-icon-amber">🖥️</div>
         <div>
           <div class="sc-title">Your OS — AI Control Room</div>
           <div class="sc-desc">Name your operating system. Define 5 binding rules. Every AI response gets structurally scored. Works across ChatGPT, Claude, and Gemini simultaneously. Your protocol is enforced on every message — the AI can't drift, can't add filler, can't forget what you told it. Try 5 messages free, no API key needed.</div>
@@ -587,7 +594,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(96,165,250,0.12);">🔍</div>
+        <div class="sc-icon sc-icon-blue">🔍</div>
         <div>
           <div class="sc-title">Structural AI Output Analysis</div>
           <div class="sc-desc">Paste any AI prompt and response. See exactly where the AI drifted from your objective, introduced false commitments, collapsed your constraints, or padded with filler. Detects 10 tilt categories, 3 parent failure modes, and scores structural integrity from 0.0 to 1.0. Rule-based — no AI analyzing AI.</div>
@@ -599,7 +606,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(167,139,250,0.12);">📋</div>
+        <div class="sc-icon sc-icon-purple">📋</div>
         <div>
           <div class="sc-title">JOS Binding Contracts</div>
           <div class="sc-desc">Before you talk to AI, fill in 5 fields: Objective, Constraints, No-Go Zones, Definition of Done, Closure Authority. The contract freezes before execution. The AI can't reinterpret, soften, or expand scope. It's a task binding, not a prompt.</div>
@@ -611,7 +618,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(52,211,153,0.12);">💰</div>
+        <div class="sc-icon sc-icon-green">💰</div>
         <div>
           <div class="sc-title">Token Economics Calculator</div>
           <div class="sc-desc">See how much your AI spend is actually waste. The CFO persona on the homepage shows real token economics — what an exchange needed vs. what was burned. At enterprise scale (2M requests/year), the savings range from $5.9M to $92M annually depending on model pricing.</div>
@@ -641,7 +648,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(245,166,35,0.12);">🏗️</div>
+        <div class="sc-icon sc-icon-amber">🏗️</div>
         <div>
           <div class="sc-title">NTI Full Pipeline — v2 → AI → v3</div>
           <div class="sc-desc">The complete convergence loop. v2 audits your input before AI processes it (hedge detection, missing objectives, conflicting directives). AI generates a response. v3 stabilizes the output (strips filler, anchors to objective, enforces token ceiling). Iterates up to 3 passes until score hits 0.80. The full stack for enterprise communications.</div>
@@ -653,7 +660,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(96,165,250,0.12);">🖥️</div>
+        <div class="sc-icon sc-icon-blue">🖥️</div>
         <div>
           <div class="sc-title">Your OS + Communication Scoring</div>
           <div class="sc-desc">Build your protocol, use AI with governance enforced, then run the AI's output through NTI before sending it to a human. Double-gated: your rules on the AI, structural scoring on the output. Nothing leaves without passing both checks.</div>
@@ -664,7 +671,7 @@ body {
 
     <div class="solution-card">
       <div class="sc-top">
-        <div class="sc-icon" style="background:rgba(167,139,250,0.12);">🏢</div>
+        <div class="sc-icon sc-icon-purple">🏢</div>
         <div>
           <div class="sc-title">Territory Licensing</div>
           <div class="sc-desc">Own the NTI deployment rights for your market. One license per DMA. The live feed, political dashboard, and structural analysis tools — branded and deployed for your territory. Currently available: Knoxville, TN.</div>

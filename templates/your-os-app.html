@@ -135,6 +135,36 @@
 .key-missing { color:var(--text-muted); }
 
 /* RESPONSIVE */
+
+/* Sidebar footer */
+.sb-spacer{flex:1}
+.sb-footer{padding:12px;border-top:1px solid var(--border)}
+.sb-footer-brand{font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:1px}
+.sb-footer-url{font-size:11px;color:var(--text-dim);margin-top:2px}
+/* Chat view */
+.os-chat-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.os-tabs-row{display:flex;gap:6px}
+.os-prov-dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.os-prov-dot-lg{display:inline-block;width:8px;height:8px;border-radius:50%}
+.os-tab-compare{margin-left:auto}
+.os-compare-grid-hidden{display:none}
+.os-txt-btn{margin-left:auto}
+/* Panel headers */
+.os-panel-title{font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px}
+.os-panel-desc{font-size:13px;color:var(--text-dim);margin-bottom:20px}
+/* Protocol select */
+.os-proto-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none}
+/* Panel nav */
+.os-panel-nav{display:flex;gap:8px}
+.os-btn-back{padding:8px 16px}
+.os-panel-nav-mt{margin-top:16px}
+.os-panel-nav-mt20{margin-top:20px;display:flex;gap:8px}
+/* JS helpers */
+.os-compare-empty{color:var(--text-dim);text-align:center;padding:40px}
+.os-compare-loading{opacity:.4}
+.os-compare-loading-body{display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.os-search-empty{padding:8px 10px;font-size:12px;color:var(--text-muted)}
+
 @media(max-width:768px) {
   .app { grid-template-columns:1fr; }
   .sidebar { display:none; }
@@ -186,10 +216,10 @@
     <div id="closedConvs"></div>
   </div>
 
-  <div style="flex:1"></div>
-  <div style="padding:12px;border-top:1px solid var(--border);">
-    <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;">ARTIFACT ZERO LABS</div>
-    <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">dontgofulltilt.com</div>
+  <div class="sb-spacer"></div>
+  <div class="sb-footer">
+    <div class="sb-footer-brand">ARTIFACT ZERO LABS</div>
+    <div class="sb-footer-url">dontgofulltilt.com</div>
   </div>
 </div>
 
@@ -197,13 +227,13 @@
 <div class="main" id="mainArea">
 
   <!-- CHAT VIEW (default) -->
-  <div id="chatView" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div id="chatView" class="os-chat-view">
     <div class="chat-header">
       <div>
         <div class="conv-title" id="convTitle">Welcome</div>
         <div class="conv-meta" id="convMeta">T-1 · Started just now</div>
       </div>
-      <div style="display:flex;gap:6px;">
+      <div class="os-tabs-row">
         <button class="btn-sm" onclick="copyConversation()">COPY</button>
         <button class="btn-sm" onclick="txtMode()">TXT</button>
         <button class="btn-sm" onclick="closeConversation()">CLOSE</button>
@@ -212,18 +242,18 @@
 
     <div class="model-tabs">
       <div class="model-tab active" onclick="setView('single','openai')" id="tab-openai">
-        <span class="prov-dot prov-openai" style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
+        <span class="prov-dot prov-openai os-prov-dot"></span>
         CHATGPT<span class="score" id="score-openai"></span>
       </div>
       <div class="model-tab" onclick="setView('single','anthropic')" id="tab-anthropic">
-        <span class="prov-dot prov-anthropic" style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
+        <span class="prov-dot prov-anthropic os-prov-dot"></span>
         CLAUDE<span class="score" id="score-anthropic"></span>
       </div>
       <div class="model-tab" onclick="setView('single','google')" id="tab-google">
-        <span class="prov-dot prov-google" style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
+        <span class="prov-dot prov-google os-prov-dot"></span>
         GEMINI<span class="score" id="score-google"></span>
       </div>
-      <div class="model-tab" onclick="setView('compare')" id="tab-compare" style="margin-left:auto;">
+      <div class="model-tab" onclick="setView('compare')" id="tab-compare" class="os-tab-compare">
         ◫ COMPARE ALL
       </div>
     </div>
@@ -239,7 +269,7 @@
     </div>
 
     <!-- Compare view -->
-    <div class="compare-grid" id="compareView" style="display:none;">
+    <div class="compare-grid" id="compareView" class="os-compare-grid-hidden">
     </div>
 
     <!-- Input -->
@@ -255,14 +285,14 @@
         <button class="mode-btn" id="mode-openai" onclick="setMode('openai')">CHATGPT</button>
         <button class="mode-btn" id="mode-anthropic" onclick="setMode('anthropic')">CLAUDE</button>
         <button class="mode-btn" id="mode-google" onclick="setMode('google')">GEMINI</button>
-        <button class="mode-btn" id="mode-txt" onclick="toggleTxt()" style="margin-left:auto;">TXT MODE</button>
+        <button class="mode-btn" id="mode-txt" onclick="toggleTxt()" class="os-txt-btn">TXT MODE</button>
       </div>
     </div>
   </div>
 
   <!-- PROTOCOL PANEL -->
   <div class="protocol-panel" id="protocolPanel">
-    <h2 style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px;">YOUR PROTOCOL</h2>
+    <h2 class="os-panel-title">YOUR PROTOCOL</h2>
     <div class="proto-field">
       <label>System Name</label>
       <input type="text" id="protoName" value="JOS" oninput="document.getElementById('topOsName').textContent=this.value">
@@ -290,21 +320,21 @@ Never add disclaimers I didn't ask for</textarea>
     </div>
     <div class="proto-field">
       <label>Closure Authority</label>
-      <select id="protoClosure" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none;">
+      <select id="protoClosure" class="os-proto-select">
         <option value="human">Human decides when done</option>
         <option value="system">System closes on definition of done</option>
         <option value="both">Either can close</option>
       </select>
     </div>
-    <div style="display:flex;gap:8px;">
+    <div class="os-panel-nav">
       <button class="proto-save" onclick="saveProtocol()">SAVE PROTOCOL</button>
-      <button class="btn-sm" onclick="showPanel('chat')" style="padding:8px 16px;">← BACK TO CHAT</button>
+      <button class="btn-sm" onclick="showPanel('chat')" class="os-btn-back">← BACK TO CHAT</button>
     </div>
   </div>
 
   <!-- TASK REGISTRY -->
   <div class="task-panel" id="taskPanel">
-    <h2 style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px;">TASK REGISTRY</h2>
+    <h2 class="os-panel-title">TASK REGISTRY</h2>
     <div id="taskList">
       <div class="task-item">
         <span class="t-id">T-1</span>
@@ -313,19 +343,19 @@ Never add disclaimers I didn't ask for</textarea>
         <span class="t-status status-open">OPEN</span>
       </div>
     </div>
-    <div style="margin-top:16px;">
-      <button class="btn-sm" onclick="showPanel('chat')" style="padding:8px 16px;">← BACK TO CHAT</button>
+    <div class="os-panel-nav os-panel-nav-mt">
+      <button class="btn-sm" onclick="showPanel('chat')" class="os-btn-back">← BACK TO CHAT</button>
     </div>
   </div>
 
   <!-- SETTINGS PANEL -->
   <div class="settings-panel" id="settingsPanel">
-    <h2 style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--green);margin-bottom:20px;">API KEYS</h2>
-    <p style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Your keys are encrypted and stored locally. We never see them.</p>
+    <h2 class="os-panel-title">API KEYS</h2>
+    <p class="os-panel-desc">Your keys are encrypted and stored locally. We never see them.</p>
 
     <div class="key-field">
       <div class="provider-label">
-        <span class="prov-dot prov-openai" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+        <span class="prov-dot prov-openai os-prov-dot-lg"></span>
         <span class="prov-name">OPENAI</span>
       </div>
       <input type="password" id="key-openai" placeholder="sk-..." oninput="checkKey('openai')">
@@ -334,7 +364,7 @@ Never add disclaimers I didn't ask for</textarea>
 
     <div class="key-field">
       <div class="provider-label">
-        <span class="prov-dot prov-anthropic" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+        <span class="prov-dot prov-anthropic os-prov-dot-lg"></span>
         <span class="prov-name">ANTHROPIC</span>
       </div>
       <input type="password" id="key-anthropic" placeholder="sk-ant-..." oninput="checkKey('anthropic')">
@@ -343,16 +373,16 @@ Never add disclaimers I didn't ask for</textarea>
 
     <div class="key-field">
       <div class="provider-label">
-        <span class="prov-dot prov-google" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+        <span class="prov-dot prov-google os-prov-dot-lg"></span>
         <span class="prov-name">GOOGLE (GEMINI)</span>
       </div>
       <input type="password" id="key-google" placeholder="AIza..." oninput="checkKey('google')">
       <div class="key-status key-missing" id="status-google">Not connected</div>
     </div>
 
-    <div style="margin-top:20px;display:flex;gap:8px;">
+    <div class="os-panel-nav os-panel-nav-mt20">
       <button class="proto-save" onclick="saveKeys()">SAVE KEYS</button>
-      <button class="btn-sm" onclick="showPanel('chat')" style="padding:8px 16px;">← BACK TO CHAT</button>
+      <button class="btn-sm" onclick="showPanel('chat')" class="os-btn-back">← BACK TO CHAT</button>
     </div>
   </div>
 
@@ -649,13 +679,13 @@ function renderCompare() {
           <div class="choose-btn">CONTINUE WITH THIS →</div>
         </div>`;
       } else {
-        html += `<div class="compare-card" style="opacity:.4;"><div class="card-header"><span class="provider-name" style="color:${colors[provider]}">${provNames[provider]}</span></div><div class="card-body" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);">Loading...</div></div>`;
+        html += `<div class="compare-card os-compare-loading"><div class="card-header"><span class="provider-name" style="color:${colors[provider]}">${provNames[provider]}</span></div><div class="card-body os-compare-loading-body">Loading...</div></div>`;
       }
     }
     html += '</div>';
   }
 
-  container.innerHTML = html || '<p style="color:var(--text-dim);text-align:center;padding:40px;">Send a message in ALL MODELS mode to compare responses.</p>';
+  container.innerHTML = html || '<p class="os-compare-empty">Send a message in ALL MODELS mode to compare responses.</p>';
 }
 
 function chooseResponse(msgId, provider) {
@@ -748,7 +778,7 @@ function searchConversations() {
       <span class="t-num">${c.taskNum}</span>
       <span>${c.title}</span>
     </div>`
-  ).join('') || '<div style="padding:8px 10px;font-size:12px;color:var(--text-muted);">No results</div>';
+  ).join('') || '<div class="os-search-empty">No results</div>';
 }
 
 // ==========================================
