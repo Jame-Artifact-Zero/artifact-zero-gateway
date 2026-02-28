@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pre_score_gate import pre_score_gate
-from safecheck_engine import generate_observations as _sc_observations
 
 from flask import Flask, request, jsonify, render_template, session
 import db as database
@@ -825,6 +824,17 @@ def api_fortune500_detail(slug):
                     # Normalize: vc table has fund_name, f500 has company_name
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
+                    # Parse score_json and merge CSI/NTI into response
+                    if "score_json" in result and result["score_json"]:
+                        try:
+                            import json as _json
+                            sj = result["score_json"] if isinstance(result["score_json"], dict) else _json.loads(result["score_json"])
+                            if "csi" in sj:
+                                result["csi"] = sj["csi"]
+                            if "nti" in sj:
+                                result["nti"] = sj["nti"]
+                        except Exception:
+                            pass
                     conn.close()
                     return jsonify(result)
             else:
@@ -834,6 +844,17 @@ def api_fortune500_detail(slug):
                     result = dict(row)
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
+                    # Parse score_json and merge CSI/NTI into response
+                    if "score_json" in result and result["score_json"]:
+                        try:
+                            import json as _json
+                            sj = result["score_json"] if isinstance(result["score_json"], dict) else _json.loads(result["score_json"])
+                            if "csi" in sj:
+                                result["csi"] = sj["csi"]
+                            if "nti" in sj:
+                                result["nti"] = sj["nti"]
+                        except Exception:
+                            pass
                     conn.close()
                     return jsonify(result)
         conn.close()
@@ -977,153 +998,6 @@ def api_score_free():
         result["v3"] = {"error": str(e), "passed": True}
 
     return jsonify(result)
-
-
-# ═══════════════════════════════════════════════════════════
-# SAFECHECK API — observation cards, no score, no LLM
-# ═══════════════════════════════════════════════════════════
-SAFECHECK_MESSAGES = [
-    {"id": "calm_down",
-     "text": 'I used to tell my wife <span class="hl">"calm down."</span> It never once accomplished what I wanted it to accomplish. Not once. So I stopped.',
-     "sub": "Type what you'd actually send. We'll show you what they'll hear."},
-    {"id": "dog_foster",
-     "text": "She wants to foster a dog. You're worried about the kids.",
-     "sub": "Type what you'd actually text her. We'll show you what she'll hear."},
-    {"id": "per_my_last",
-     "text": '"Per my last email, we should circle back and align."',
-     "sub": "Don't send it. Check it first."},
-    {"id": "typed_it",
-     "text": "You typed it. You meant it. But will they hear it?",
-     "sub": "Before you send it, check it."},
-]
-
-
-@app.route("/api/v1/safecheck", methods=["POST"])
-def api_safecheck():
-    """SafeCheck — observation cards from engine detection. No LLM."""
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    month_key = f"{ip}:{datetime.now(timezone.utc).strftime('%Y-%m')}"
-    count = _free_usage.get(month_key, 0)
-    if count >= 10:
-        return jsonify({"error": "Free tier limit reached (10/month)", "upgrade": "https://artifact0.com/docs#pricing"}), 429
-
-    t0 = time.time()
-    payload = request.get_json() or {}
-    text = payload.get("text", "").strip()
-    if not text:
-        return jsonify({"error": "Missing 'text' field"}), 400
-    if len(text) > 50000:
-        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
-
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    try:
-        # Run V1 engines (same functions used by /api/v1/score/free)
-        l0 = detect_l0_constraints(text)
-        l2 = detect_l2_framing(text)
-        tilts = classify_tilt(text)
-        dbc = detect_downstream_before_constraint("", text, l0)
-        nii = compute_nii("", text, l0, dbc, tilts)
-
-        # Run edge engine
-        try:
-            from edge_engine import compute_relational_field
-            edge = compute_relational_field(text)
-        except Exception:
-            edge = {"edge_index": 0, "edge_markers": [], "triggered_patterns": []}
-
-        # Generate observation cards (no LLM, pure rule-based)
-        observations = _sc_observations(text, nii, l2, tilts, edge)
-    except Exception as e:
-        return jsonify({"error": "SafeCheck error", "detail": str(e)}), 500
-
-    _free_usage[month_key] = count + 1
-    latency_ms = int((time.time() - t0) * 1000)
-
-    sents = split_sentences(text)
-    return jsonify({
-        "version": "safecheck-v1.0",
-        "text_length": len(text),
-        "word_count": len(text.split()),
-        "sentence_count": len(sents),
-        "observation_count": len(observations),
-        "observations": observations,
-        "structural_summary": {
-            "constraint_density": nii.get("d1_constraint_density", 0),
-            "ask_architecture": nii.get("d2_ask_architecture", 0),
-            "enforcement_integrity": nii.get("d3_enforcement_integrity", 0),
-            "tilt_resistance": nii.get("d4_tilt_resistance", 0),
-            "edge_index": edge.get("edge_index", 0),
-        },
-        "meta": {
-            "latency_ms": latency_ms,
-            "tier": "free",
-            "usage_this_month": count + 1,
-            "monthly_limit": 10
-        }
-    })
-
-
-@app.route("/api/v1/safecheck-message", methods=["GET"])
-def api_safecheck_message():
-    """Returns current SafeCheck messaging. DB override or default."""
-    msg_id = request.args.get("id", "")
-    try:
-        conn = _get_db()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT message_id, text_html, sub_text FROM safecheck_messages WHERE active = true ORDER BY priority LIMIT 1")
-        else:
-            cur.execute("SELECT message_id, text_html, sub_text FROM safecheck_messages WHERE active = 1 ORDER BY priority LIMIT 1")
-        row = cur.fetchone()
-        if row:
-            return jsonify({"id": row[0], "text": row[1], "sub": row[2], "source": "db"})
-    except Exception:
-        pass
-    for msg in SAFECHECK_MESSAGES:
-        if msg_id and msg["id"] == msg_id:
-            return jsonify({**msg, "source": "default"})
-    return jsonify({**SAFECHECK_MESSAGES[0], "source": "default"})
-
-
-@app.route("/api/v1/contact-enforce", methods=["POST"])
-def api_contact_enforce():
-    """V3 enforcement on contact form message before submission."""
-    payload = request.get_json() or {}
-    message = payload.get("message", "").strip()
-    if not message:
-        return jsonify({"error": "No message"}), 400
-    try:
-        from core_engine.v3_enforcement import enforce
-        result = enforce(message, objective="contact form message to Artifact Zero")
-        original_words = len(message.split())
-        cleaned_words = len(result["final_output"].split())
-        all_actions = []
-        for level_key in ["level_0_actions", "level_1_actions", "level_2_actions"]:
-            for action in result.get(level_key, []):
-                all_actions.append({
-                    "check": action.get("check", ""),
-                    "action": action.get("action", ""),
-                    "detail": action.get("detail", ""),
-                })
-        return jsonify({
-            "original": message,
-            "cleaned": result["final_output"],
-            "changed": result["final_output"] != message,
-            "actions": all_actions,
-            "action_count": len(all_actions),
-            "original_words": original_words,
-            "cleaned_words": cleaned_words,
-            "compression": round(result.get("compression_ratio", 0) * 100),
-            "elapsed_ms": round(result.get("elapsed_ms", 0), 1),
-        })
-    except Exception as e:
-        return jsonify({
-            "original": message, "cleaned": message, "changed": False,
-            "actions": [], "action_count": 0, "error": str(e),
-        })
 
 
 @app.route("/health")
