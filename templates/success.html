@@ -1,50 +1,55 @@
-{% extends "base.html" %}
-{% block title %}Payment Success — Artifact Zero{% endblock %}
-{% block body_class %}page-success{% endblock %}
+<!-- =========================
+FILE: templates/success.html
+========================= -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Artifact Zero — Payment Success</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100">
+  <div class="max-w-3xl mx-auto px-6 py-10">
+    <h1 class="text-3xl font-semibold">Payment confirmed.</h1>
+    <p class="mt-2 text-zinc-300">Your access code is below. You have <span class="font-medium">{{ max_runs }}</span> runs.</p>
 
-{% block head %}
-<style>
-.az-status{max-width:520px;margin:80px auto 40px;padding:0 20px}
-.az-status h1{font-size:22px;font-weight:700;margin-bottom:6px}
-.az-status-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px}
-.az-status-sub strong{color:var(--text);font-weight:600}
-.az-code-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
-.az-code-label{font-family:var(--az-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
-.az-code-value{font-family:var(--az-mono);font-size:22px;font-weight:700;letter-spacing:3px;color:var(--accent)}
-.az-code-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-.az-btn-p{padding:10px 18px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--az-sans);transition:background .15s;text-decoration:none;display:inline-block}
-.az-btn-p:hover{background:#00d48c}
-.az-btn-g{padding:10px 18px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--az-sans);transition:all .15s;text-decoration:none;display:inline-block}
-.az-btn-g:hover{color:var(--accent);border-color:var(--accent)}
-.az-share-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
-.az-share-url{font-family:var(--az-mono);font-size:12px;color:var(--muted);word-break:break-all;margin-top:6px;line-height:1.5}
-.az-fine{font-size:12px;color:var(--muted);margin-top:8px}
-</style>
-{% endblock %}
+    <div class="mt-6 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
+      <div class="text-sm text-zinc-400">Access code</div>
+      <div class="mt-2 text-2xl font-mono tracking-widest">{{ code }}</div>
 
-{% block content %}
-<div class="az-status">
-<h1>Payment confirmed</h1>
-<p class="az-status-sub">Your access code is below. You have <strong>{{ max_runs }}</strong> runs.</p>
+      <div class="mt-4 flex gap-2">
+        <button onclick="navigator.clipboard.writeText('{{ code }}')"
+                class="rounded-xl bg-white text-zinc-900 font-semibold px-4 py-2 hover:bg-zinc-200 transition">
+          Copy code
+        </button>
+        <a href="{{ base_url }}/"
+           class="rounded-xl bg-emerald-400 text-zinc-950 font-semibold px-4 py-2 hover:bg-emerald-300 transition">
+          Use code now
+        </a>
+      </div>
 
-<div class="az-code-box">
-  <div class="az-code-label">Access code</div>
-  <div class="az-code-value">{{ code }}</div>
-  <div class="az-code-actions">
-    <button class="az-btn-p" onclick="navigator.clipboard.writeText('{{ code }}')">Copy code</button>
-    <a href="/" class="az-btn-g">Use code now</a>
+      <div class="mt-6 border-t border-zinc-800 pt-4">
+        <div class="text-sm text-zinc-400">Tell a friend link</div>
+        <div class="mt-2 text-sm font-mono break-all">{{ base_url }}/?ref={{ share_ref }}</div>
+        <div class="mt-2 flex gap-2">
+          <button onclick="navigator.clipboard.writeText('{{ base_url }}/?ref={{ share_ref }}')"
+                  class="rounded-xl bg-zinc-800 text-zinc-100 px-4 py-2 hover:bg-zinc-700 transition">
+            Copy link
+          </button>
+          <a target="_blank"
+             href="https://x.com/intent/tweet?text=I%20ran%20a%20message%20through%20Artifact%20Zero%20and%20saw%20structural%20distortion%20I%20didn%E2%80%99t%20notice.%20Try%20it%20here%3A%20{{ base_url|urlencode }}%2F%3Fref%3D{{ share_ref }}"
+             class="rounded-xl bg-zinc-800 text-zinc-100 px-4 py-2 hover:bg-zinc-700 transition">
+            Share on X
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 text-xs text-zinc-500">
+      If you lose this code, you can purchase again to generate a new one.
+    </div>
   </div>
-</div>
-
-<div class="az-share-box">
-  <div class="az-code-label">Tell a friend</div>
-  <div class="az-share-url">{{ base_url }}/?ref={{ share_ref }}</div>
-  <div class="az-code-actions">
-    <button class="az-btn-g" onclick="navigator.clipboard.writeText('{{ base_url }}/?ref={{ share_ref }}')">Copy link</button>
-    <a class="az-btn-g" target="_blank" href="https://x.com/intent/tweet?text=I%20ran%20a%20message%20through%20Artifact%20Zero%20and%20saw%20structural%20distortion%20I%20didn%E2%80%99t%20notice.%20Try%20it%20here%3A%20{{ base_url|urlencode }}%2F%3Fref%3D{{ share_ref }}">Share on X</a>
-  </div>
-</div>
-
-<div class="az-fine">If you lose this code, you can purchase again to generate a new one.</div>
-</div>
-{% endblock %}
+<script src="/static/az-nav.js"></script>
+</body>
+</html>

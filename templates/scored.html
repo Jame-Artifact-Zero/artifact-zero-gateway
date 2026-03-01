@@ -126,7 +126,6 @@
 
 {% block content %}
 <div class="content">
-  <h1 id="pageTitle" style="display:none">Structure Check</h1>
   <div id="scorecard">
     <div class="loading">Loading scorecard...</div>
   </div>
@@ -168,9 +167,7 @@ function render(c){
   const constraints = Array.isArray(nti.constraints) ? nti.constraints : [];
   const hedgeWords = (detail.d4_hedge_density && detail.d4_hedge_density.hedge_words_found) || [];
 
-  const ptEl = document.getElementById('pageTitle');
-  if(ptEl) ptEl.textContent = c.company_name + ' Structure Check';
-  document.title = c.company_name + ' Structure Check — Artifact Zero';
+  document.getElementById('pageTitle').textContent = c.company_name + ' Structure Check';
 
   const rankLabel = c.rank ? (c.fund_name ? 'VC Fund #' : 'Fortune 500 #') + c.rank : '';
 

@@ -4,66 +4,87 @@
 
 {% block head %}
 <style>
-.az-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;transition:all .4s ease}
-.az-center.scored{justify-content:flex-start;padding-top:80px}
-.az-hero-logo{font-family:var(--az-mono);font-weight:700;font-size:28px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;transition:all .4s ease}
-.az-hero-logo .dot{color:var(--text)}
-.az-center.scored .az-hero-logo{font-size:16px;margin-bottom:20px}
-.az-input-box{width:100%;max-width:580px;position:relative;transition:all .4s ease}
-.az-center.scored .az-input-box{max-width:640px}
-.az-input-box textarea{width:100%;min-height:48px;max-height:200px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:24px;color:var(--text);font-family:var(--az-sans);font-size:15px;line-height:1.5;resize:none;outline:none;transition:all .2s;overflow:hidden}
-.az-input-box textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,232,156,.1)}
-.az-input-box textarea::placeholder{color:#3d4452}
-.az-actions{display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap}
-.az-btn{padding:8px 20px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--az-sans);transition:all .15s}
-.az-btn-score{background:var(--accent);color:#000;font-weight:700}
-.az-btn-score:hover{background:#00d48c}
-.az-btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.az-btn-ghost{background:transparent;color:var(--accent);font-size:12px;border:1px solid var(--accent)}
-.az-btn-ghost:hover{color:#000;background:var(--accent)}
-.az-tagline{margin-top:20px;font-size:13px;color:var(--muted);text-align:center;transition:opacity .4s}
-.az-center.scored .az-tagline{opacity:0;height:0;margin:0;overflow:hidden}
-.az-tagline-stat{color:var(--accent)}
-.az-tagline a{color:var(--muted);font-size:11px;margin-top:8px;display:inline-block;text-decoration:none;border-bottom:1px solid var(--border);transition:color .15s}
-.az-tagline a:hover{color:var(--accent);border-color:var(--accent)}
-.az-results{display:none;width:100%;max-width:640px;margin-top:24px}
-.az-results.show{display:block;animation:fadeIn .4s ease}
+
+
+.nav a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s}
+.nav a:hover{color:var(--accent)}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;transition:all .4s ease}
+.center.scored{justify-content:flex-start;padding-top:80px}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:28px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;transition:all .4s ease}
+.logo .dot{color:var(--text)}
+.center.scored .logo{font-size:16px;margin-bottom:20px}
+.box{width:100%;max-width:580px;position:relative;transition:all .4s ease}
+.center.scored .box{max-width:640px}
+.box textarea{width:100%;min-height:48px;max-height:200px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:24px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;resize:none;outline:none;transition:all .2s;overflow:hidden}
+.box textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,232,156,.1)}
+.box textarea::placeholder{color:#3d4452}
+.actions{display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.btn{padding:8px 20px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-score{background:var(--accent);color:#000;font-weight:700}
+.btn-score:hover{background:#00d48c}
+.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
+.btn-ghost{background:transparent;color:var(--accent);font-size:12px;border:1px solid var(--accent)}
+.btn-ghost:hover{color:#000;background:var(--accent)}
+.tagline{margin-top:20px;font-size:13px;color:var(--muted);text-align:center;transition:opacity .4s}
+.center.scored .tagline{opacity:0;height:0;margin:0;overflow:hidden}
+.tagline a{color:var(--muted);font-size:11px;margin-top:8px;display:inline-block;text-decoration:none;border-bottom:1px solid var(--border);transition:color .15s}
+.tagline a:hover{color:var(--accent);border-color:var(--accent)}
+.results{display:none;width:100%;max-width:640px;margin-top:24px}
+.results.show{display:block;animation:fadeIn .4s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.az-again{text-align:center;margin-top:20px;display:none}
-.az-again a{color:var(--accent);font-family:var(--az-mono);font-size:13px;text-decoration:none;cursor:pointer}
-.az-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+.score-ring{text-align:center;margin-bottom:24px}
+.score-ring .num{font-family:'JetBrains Mono',monospace;font-size:72px;font-weight:700;line-height:1}
+.score-ring .num.high{color:var(--accent)}.score-ring .num.mid{color:var(--amber)}.score-ring .num.low{color:var(--red)}
+.score-ring .label{font-family:'JetBrains Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:500px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card h4{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.card .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+.card .v.green{color:var(--accent)}.card .v.red{color:var(--red)}.card .v.amber{color:var(--amber)}
+.fm-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+.tilt-tags{display:flex;flex-wrap:wrap;gap:4px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--amber)}
+.meta{text-align:center;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.again{text-align:center;margin-top:20px}
+.again a{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;text-decoration:none;cursor:pointer}
+
+.center.scored ~ 
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="az-center" id="center">
-  <div class="az-hero-logo">ARTIFACT ZERO<span class="dot">.</span></div>
-  <div class="az-input-box">
+<div class="center" id="center">
+  <div class="logo">ARTIFACT ZERO<span class="dot">.</span></div>
+  <div class="box">
     <textarea id="input" placeholder="Paste any message, email, or AI response..." oninput="autoGrow(this)" rows="1"></textarea>
-    <div class="az-actions">
-      <button class="az-btn az-btn-score" id="scoreBtn" onclick="score()">Score it</button>
-      <button class="az-btn az-btn-ghost" onclick="sample('email')">Try: Email</button>
-      <button class="az-btn az-btn-ghost" onclick="sample('contract')">Try: Contract</button>
-      <button class="az-btn az-btn-ghost" onclick="sample('ai')">Try: AI response</button>
+    <div class="actions">
+      <button class="btn btn-score" id="scoreBtn" onclick="score()">Score it</button>
+      <button class="btn btn-ghost" onclick="sample('email')">Try: Email</button>
+      <button class="btn btn-ghost" onclick="sample('contract')">Try: Contract</button>
+      <button class="btn btn-ghost" onclick="sample('ai')">Try: AI response</button>
     </div>
   </div>
-  <div class="az-tagline">Structural integrity scoring for any communication.<br><span class="az-tagline-stat">49% → 7%</span> false commitment rate. Rule-based. Zero LLM.<br><a href="/examples">But what do you actually do? See 25 real examples →</a></div>
-  <div class="az-results" id="results">
+  <div class="tagline">Structural integrity scoring for any communication.<br><span style="color:var(--accent)">49% → 7%</span> false commitment rate. Rule-based. Zero LLM.<br><a href="/examples">But what do you actually do? See 25 real examples →</a></div>
+  <div class="results" id="results">
     <div id="ntiResults"></div>
-    <div class="az-again" id="againBtn"><a onclick="reset()">Score another →</a></div>
+    <div class="again" id="againBtn" style="display:none"><a onclick="reset()">Score another →</a></div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/nti-score-component.js"></script>
+
 <script>
-var S={email:"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.",contract:"The service provider shall use commercially reasonable efforts to maintain system availability at generally accepted industry standards. Modifications to pricing may occur upon reasonable notice. The client agrees to indemnify the provider against any and all claims arising from use of the service.",ai:"I'd be happy to help with that! There are several approaches you could consider, and each has its own merits. Generally speaking, the best practice would depend on your specific situation. Let me know if you'd like me to elaborate on any of these points or if there's anything else I can assist with!"};
-var _lastText='';
+const S={email:"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.",contract:"The service provider shall use commercially reasonable efforts to maintain system availability at generally accepted industry standards. Modifications to pricing may occur upon reasonable notice. The client agrees to indemnify the provider against any and all claims arising from use of the service.",ai:"I'd be happy to help with that! There are several approaches you could consider, and each has its own merits. Generally speaking, the best practice would depend on your specific situation. Let me know if you'd like me to elaborate on any of these points or if there's anything else I can assist with!"};
+let _lastText='';
 function sample(k){document.getElementById('input').value=S[k];autoGrow(document.getElementById('input'))}
 function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';el.style.borderRadius=el.scrollHeight>60?'16px':'24px'}
-async function score(){var text=document.getElementById('input').value.trim();if(!text)return;_lastText=text;var btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="az-spinner"></span>Scoring...';try{var r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text})});var d=await r.json();if(d.error){alert(d.error);return}var el=document.getElementById('ntiResults');el.innerHTML='';el.appendChild(NTIScore.render(d,_lastText));document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show');document.getElementById('againBtn').style.display='block'}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
+async function score(){const text=document.getElementById('input').value.trim();if(!text)return;_lastText=text;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}const el=document.getElementById('ntiResults');el.innerHTML='';el.appendChild(NTIScore.render(d,_lastText));document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show');document.getElementById('againBtn').style.display='block'}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
 function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');document.getElementById('ntiResults').innerHTML='';document.getElementById('againBtn').style.display='none';autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
 </script>
+
 {% endblock %}

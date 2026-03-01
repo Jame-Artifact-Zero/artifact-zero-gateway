@@ -4,7 +4,7 @@
 
 {% block head %}
 <style>
-.mono{font-family:var(--az-mono)}
+.mono{font-family:'JetBrains Mono',monospace}
 
 /* Nav bar */
 
@@ -15,13 +15,13 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
 /* Balance card */
 .balance-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px 24px;margin-bottom:24px;position:relative;overflow:hidden}
 .balance-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--blue))}
-.balance-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-family:var(--az-mono);margin-bottom:8px}
-.balance-amount{font-size:48px;font-weight:700;font-family:var(--az-mono);line-height:1}
+.balance-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-family:'JetBrains Mono',monospace;margin-bottom:8px}
+.balance-amount{font-size:48px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1}
 .balance-amount .dollar{color:var(--muted);font-size:32px}
 .balance-stats{display:flex;gap:32px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
 .stat{display:flex;flex-direction:column;gap:2px}
-.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--az-mono)}
-.stat-value{font-size:18px;font-weight:700;font-family:var(--az-mono)}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+.stat-value{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace}
 .low-balance{color:var(--amber)}
 .zero-balance{color:var(--red)}
 
@@ -31,18 +31,18 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
 /* Credit packs */
 .pack{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:border-color .15s,transform .1s}
 .pack:hover{border-color:var(--accent);transform:translateY(-2px)}
-.pack-name{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:2px;font-family:var(--az-mono);margin-bottom:8px}
-.pack-price{font-size:28px;font-weight:700;font-family:var(--az-mono)}
+.pack-name{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:2px;font-family:'JetBrains Mono',monospace;margin-bottom:8px}
+.pack-price{font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace}
 .pack-scores{font-size:13px;color:var(--muted);margin-top:6px}
 
 /* Custom amount */
 .custom-topup{display:flex;gap:10px;margin-bottom:32px;align-items:center}
-.custom-topup input{flex:1;max-width:180px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:var(--az-mono);outline:none}
+.custom-topup input{flex:1;max-width:180px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'JetBrains Mono',monospace;outline:none}
 .custom-topup input:focus{border-color:var(--accent)}
 .custom-topup input::placeholder{color:var(--muted)}
 
 /* Buttons */
-.btn{padding:12px 24px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--az-sans);transition:background .15s}
+.btn{padding:12px 24px;background:var(--accent);color:#0a0c10;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
 .btn:hover{background:#00d48c}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn-sm{padding:8px 16px;font-size:12px}
@@ -51,26 +51,21 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
 
 /* Section headers */
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.section-title{font-size:16px;font-weight:700;color:var(--accent);font-family:var(--az-mono);letter-spacing:1px;text-transform:uppercase}
+.section-title{font-size:16px;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
 
 /* Transactions table */
 .tx-table{width:100%;border-collapse:collapse;margin-bottom:32px}
-.tx-table th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--az-mono);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.tx-table th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
 .tx-table td{padding:10px 12px;border-bottom:1px solid rgba(37,42,53,.5);font-size:13px}
 .tx-table .deposit{color:var(--accent)}
 .tx-table .score{color:var(--muted)}
 .tx-empty{text-align:center;padding:32px;color:var(--muted);font-size:14px}
-.tx-table td.tx-time{color:var(--muted);font-family:var(--az-mono);font-size:12px}
-.tx-table td.tx-type{text-transform:uppercase;font-family:var(--az-mono);font-size:12px}
-.tx-table td.tx-amount{font-family:var(--az-mono)}
-.tx-table td.tx-bal{font-family:var(--az-mono)}
-
 
 /* Pricing reference */
 .pricing-ref{display:flex;gap:24px;padding:16px 20px;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:32px;flex-wrap:wrap}
 .pricing-item{display:flex;flex-direction:column;gap:2px}
-.pricing-item .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--az-mono)}
-.pricing-item .value{font-size:18px;font-weight:700;font-family:var(--az-mono);color:var(--accent)}
+.pricing-item .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+.pricing-item .value{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent)}
 
 /* Loading */
 .loading{text-align:center;padding:40px;color:var(--muted)}
@@ -207,10 +202,10 @@ async function loadTransactions() {
       const sign = t.amount > 0 ? '+' : '';
       const time = new Date(t.created_at).toLocaleString();
       return `<tr>
-        <td class="tx-time">${time}</td>
-        <td class="${cls} tx-type">${t.type}</td>
-        <td class="${cls} tx-amount">${sign}$${Math.abs(t.amount).toFixed(2)}</td>
-        <td class="tx-bal">$${t.balance_after.toFixed(2)}</td>
+        <td style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px">${time}</td>
+        <td class="${cls}" style="text-transform:uppercase;font-family:'JetBrains Mono',monospace;font-size:12px">${t.type}</td>
+        <td class="${cls}" style="font-family:'JetBrains Mono',monospace">${sign}$${Math.abs(t.amount).toFixed(2)}</td>
+        <td style="font-family:'JetBrains Mono',monospace">$${t.balance_after.toFixed(2)}</td>
       </tr>`;
     }).join('');
   } catch(e) {

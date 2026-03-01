@@ -1,21 +1,23 @@
-{% extends "base.html" %}
-{% block title %}Canceled — Artifact Zero{% endblock %}
-{% block body_class %}page-cancel{% endblock %}
-
-{% block head %}
-<style>
-.az-status{max-width:480px;margin:100px auto 40px;padding:0 20px;text-align:center}
-.az-status h1{font-size:22px;font-weight:700;margin-bottom:8px}
-.az-status p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px}
-.az-status-btn{display:inline-block;padding:12px 24px;background:var(--accent);color:#0a0c10;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;transition:background .15s}
-.az-status-btn:hover{background:#00d48c}
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="az-status">
-<h1>Checkout canceled</h1>
-<p>No payment was completed. You can try again anytime.</p>
-<a href="/" class="az-status-btn">Back to Artifact Zero</a>
-</div>
-{% endblock %}
+<!-- =========================
+FILE: templates/cancel.html
+========================= -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Artifact Zero — Canceled</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100">
+  <div class="max-w-2xl mx-auto px-6 py-16">
+    <h1 class="text-3xl font-semibold">Checkout canceled.</h1>
+    <p class="mt-3 text-zinc-300">No payment was completed.</p>
+    <a href="{{ base_url }}/"
+       class="mt-6 inline-block rounded-xl bg-white text-zinc-900 font-semibold px-4 py-2 hover:bg-zinc-200 transition">
+      Back to Artifact Zero
+    </a>
+  </div>
+<script src="/static/az-nav.js"></script>
+</body>
+</html>

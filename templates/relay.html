@@ -109,13 +109,13 @@ textarea{min-height:100px;resize:vertical;font-family:var(--mono);font-size:13px
 {% endblock %}
 
 {% block content %}
-<div class="rl-topbar">
-  <a href="/" class="rl-topbar-logo">ARTIFACT ZERO</a>
-  <nav class="rl-topbar-nav">
-    <a href="/dashboard" class="rl-topbar-link">DASHBOARD</a>
-    <a href="/safecheck" class="rl-topbar-link">SAFECHECK</a>
-    <a href="/wall" class="rl-topbar-link">WALL</a>
-    <a href="/logout" class="rl-topbar-link">LOG OUT</a>
+<div style="position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)">
+  <a href="/" style="font-family:monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:#00e89c;text-decoration:none">ARTIFACT ZERO</a>
+  <nav style="display:flex;gap:16px">
+    <a href="/dashboard" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">DASHBOARD</a>
+    <a href="/safecheck" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">SAFECHECK</a>
+    <a href="/wall" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">WALL</a>
+    <a href="/logout" style="font-family:monospace;font-size:10px;color:#6b7280;text-decoration:none;letter-spacing:1.5px">LOG OUT</a>
   </nav>
 </div>
 
@@ -137,13 +137,13 @@ let currentToken = null;
 function render() {
   if (!user) { renderAuth(); return; }
   document.getElementById('app').innerHTML = `
-    <div data-shell-nav class="rl-shell-nav">
-      <a href="/" class="rl-shell-logo">ARTIFACT ZERO</a>
-      <div class="rl-shell-links">
-        <a href="/relay" class="rl-shell-link active">RELAY</a>
-        <a href="/chat" class="rl-shell-link">CONTROL ROOM</a>
-        <a href="/lab" class="rl-shell-link">LAB</a>
-        <a href="/live" class="rl-shell-link">LIVE</a>
+    <div data-shell-nav style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:8px;font-family:var(--mono);font-size:11px">
+      <a href="/" style="color:var(--green);font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
+      <div style="display:flex;gap:16px;align-items:center">
+        <a href="/relay" style="color:var(--green);font-weight:600">RELAY</a>
+        <a href="/chat" style="color:var(--dim)">CONTROL ROOM</a>
+        <a href="/lab" style="color:var(--dim)">LAB</a>
+        <a href="/live" style="color:var(--dim)">LIVE</a>
       </div>
     </div>
     <div class="top">
@@ -180,7 +180,7 @@ function switchTab(t) {
 function renderAuth() {
   document.getElementById('app').innerHTML = `
     <div class="auth-box">
-      <img src="/static/favicon.png" alt="0" class="rl-logo-img">
+      <img src="/static/favicon.png" alt="0" style="width:48px;height:48px;margin-bottom:16px">
       <h2>Artifact Zero Relay</h2>
       <p>Encrypted AI governance. Your protocol never leaves our server.</p>
       <div class="card" id="auth-card">
@@ -198,8 +198,8 @@ function showLogin() {
     <label>Password</label>
     <input type="password" id="a-pass" placeholder="8+ characters">
     <div id="auth-err"></div>
-    <div class="rl-action-row">
-      <button class="btn btn-primary rl-btn-full" onclick="doLogin()">Log In</button>
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Log In</button>
     </div>
     <div class="auth-toggle">No account? <a onclick="showSignup()">Sign up</a></div>
   `;
@@ -214,8 +214,8 @@ function showSignup() {
     <label>Password</label>
     <input type="password" id="a-pass" placeholder="8+ characters">
     <div id="auth-err"></div>
-    <div class="rl-action-row">
-      <button class="btn btn-primary rl-btn-full" onclick="doSignup()">Create Account</button>
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" style="width:100%" onclick="doSignup()">Create Account</button>
     </div>
     <div class="auth-toggle">Have an account? <a onclick="showLogin()">Log in</a></div>
   `;
@@ -274,7 +274,7 @@ function renderProtocols() {
     <div class="sub">Each protocol defines how AI should behave in your threads. Create one, start a session, paste the token.</div>`;
 
   if (protocols.length === 0) {
-    h += `<p class="rl-empty-msg">No protocols yet. Create your first one below.</p>`;
+    h += `<p style="color:var(--dim);font-size:14px;padding:20px 0">No protocols yet. Create your first one below.</p>`;
   } else {
     for (const p of protocols) {
       h += `<div class="proto-item">
@@ -295,37 +295,37 @@ function renderProtocols() {
     <label>Objective</label>
     <input type="text" id="po" placeholder="What should the AI accomplish?">
     <label>Constraints</label>
-    <div class="rl-form-row">
-      <input type="text" id="pc-input" placeholder="Type a constraint and press Enter" class="rl-input-flex" onkeydown="if(event.key==='Enter'){addItem('pc');event.preventDefault()}">
+    <div style="display:flex;gap:8px">
+      <input type="text" id="pc-input" placeholder="Type a constraint and press Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addItem('pc');event.preventDefault()}">
       <button class="btn btn-ghost btn-sm" onclick="addItem('pc')">Add</button>
     </div>
     <div class="picklist" id="pc-list"></div>
     <input type="hidden" id="pc">
     <label>No-Go Zones</label>
-    <div class="rl-form-row">
-      <input type="text" id="png-input" placeholder="Type a no-go zone and press Enter" class="rl-input-flex" onkeydown="if(event.key==='Enter'){addItem('png');event.preventDefault()}">
+    <div style="display:flex;gap:8px">
+      <input type="text" id="png-input" placeholder="Type a no-go zone and press Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addItem('png');event.preventDefault()}">
       <button class="btn btn-ghost btn-sm" onclick="addItem('png')">Add</button>
     </div>
     <div class="picklist" id="png-list"></div>
     <input type="hidden" id="png">
     <label>Definition of Done</label>
     <input type="text" id="pd" placeholder="When is the task complete?">
-    <label class="rl-ca-label">Closure Authority <span class="help-tip rl-ca-tip-btn" onclick="toggleTip('ca-tip')">ⓘ</span></label>
-    <div id="ca-tip" class="rl-ca-tip">
-      <strong>Who decides when the task is done?</strong><br>
-      <span class="green">User</span> — Only you can close the loop. AI keeps working until you say stop.<br>
-      <span class="amber">AI</span> — AI can declare completion when Definition of Done is met.<br>
-      <span class="accent">Mutual</span> — Both parties must agree the task is complete.<br>
-      <span class="dim">Protocol</span> — Auto-closes when all constraints are satisfied (strict).
+    <label style="display:flex;align-items:center;gap:6px">Closure Authority <span class="help-tip" onclick="toggleTip('ca-tip')" style="cursor:pointer;color:var(--accent);font-size:13px;text-transform:none;letter-spacing:0">ⓘ</span></label>
+    <div id="ca-tip" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;font-size:13px;color:var(--dim);line-height:1.5">
+      <strong style="color:var(--text)">Who decides when the task is done?</strong><br>
+      <span style="color:var(--green)">User</span> — Only you can close the loop. AI keeps working until you say stop.<br>
+      <span style="color:var(--amber)">AI</span> — AI can declare completion when Definition of Done is met.<br>
+      <span style="color:var(--accent)">Mutual</span> — Both parties must agree the task is complete.<br>
+      <span style="color:var(--dim)">Protocol</span> — Auto-closes when all constraints are satisfied (strict).
     </div>
-    <div class="rl-ca-options" id="ca-options">
+    <div style="display:flex;gap:8px;flex-wrap:wrap" id="ca-options">
       <button class="btn btn-sm ca-opt on" onclick="pickCA(this,'user')">User</button>
       <button class="btn btn-sm ca-opt" onclick="pickCA(this,'ai')">AI</button>
       <button class="btn btn-sm ca-opt" onclick="pickCA(this,'mutual')">Mutual</button>
       <button class="btn btn-sm ca-opt" onclick="pickCA(this,'protocol')">Protocol</button>
     </div>
     <input type="hidden" id="pca" value="user">
-    <div class="rl-action-row">
+    <div style="margin-top:20px">
       <button class="btn btn-primary" onclick="createProtocol()">Create Protocol</button>
     </div>
     <div id="proto-err"></div>
@@ -457,8 +457,8 @@ function renderRelay() {
         <button class="copy-btn" onclick="copyBlock('init-block')">COPY</button>
         <pre id="init-block">${esc(activeSession.paste_block)}</pre>
       </div>
-      <div class="rl-done-box">
-        <strong class="rl-done-title">Done?</strong> Close this tab and go chat with your AI. Have a real conversation. When you get a response you want scored, come back here and paste it into Step 2 below. The first AI reply is usually just an acknowledgment — that's normal. Start working.
+      <div style="margin-top:12px;padding:14px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:14px">
+        <strong style="color:var(--green)">Done?</strong> Close this tab and go chat with your AI. Have a real conversation. When you get a response you want scored, come back here and paste it into Step 2 below. The first AI reply is usually just an acknowledgment — that's normal. Start working.
       </div>
     </div>
 
@@ -466,27 +466,27 @@ function renderRelay() {
       <h3>Score Any Response</h3>
       <div class="sub">Anytime during your conversation, paste an AI response here to score it. <strong>Copy the full text of any AI message</strong> — not just a code block. This is on-demand, not required every turn.</div>
       
-      <div class="rl-score-row">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn btn-sm ${relayIsNew?'btn-primary':'btn-ghost'}" onclick="setThreadType(true)" id="btn-new">New Thread</button>
         <button class="btn btn-sm ${!relayIsNew?'btn-primary':'btn-ghost'}" onclick="setThreadType(false)" id="btn-existing">Existing Thread</button>
       </div>
       
       <label>AI Output</label>
-      <textarea id="relay-ai" placeholder="Paste the AI's full response text here..." class="rl-textarea-tall"></textarea>
+      <textarea id="relay-ai" placeholder="Paste the AI's full response text here..." style="min-height:150px"></textarea>
       
-      <div id="human-input-row" class="${relayIsNew?'rl-result-hidden':''}">
+      <div id="human-input-row" style="display:${relayIsNew?'none':'block'}">
         <label>What you asked the AI</label>
         <input type="text" id="relay-human" placeholder="Paste or type what you said to get this response">
       </div>
       
-      <div class="rl-action-row">
+      <div style="margin-top:16px">
         <button class="btn btn-primary" onclick="processRelay()">Score This Response</button>
-        <button class="btn btn-ghost" onclick="endSession()" class="rl-end-btn">End Session</button>
+        <button class="btn btn-ghost" onclick="endSession()" style="margin-left:8px">End Session</button>
       </div>
       <div id="relay-err"></div>
     </div>
 
-    <div id="relay-result" class="rl-result-hidden">
+    <div id="relay-result" style="display:none">
       <div class="card">
         <h3>NTI Governance Report</h3>
         <div id="relay-scores"></div>
@@ -499,9 +499,9 @@ function renderRelay() {
           <pre id="next-block"></pre>
         </div>
       </div>
-      <div class="card rl-done-card">
-        <h3 class="rl-done-title">What Now?</h3>
-        <p class="rl-done-body">Go back to your AI thread and keep chatting. Whenever you want to check another response, come back here and paste it into Step 2. Each check uses 1 turn.</p>
+      <div class="card" style="background:var(--green-dim);border-color:var(--green)">
+        <h3 style="color:var(--green)">What Now?</h3>
+        <p style="font-size:14px">Go back to your AI thread and keep chatting. Whenever you want to check another response, come back here and paste it into Step 2. Each check uses 1 turn.</p>
       </div>
     </div>
   `;
@@ -588,7 +588,7 @@ async function renderHistory() {
   const d = await r.json();
 
   if (!d.sessions || d.sessions.length === 0) {
-    el.innerHTML = `<div class="card"><p class="rl-session-empty">No sessions yet.</p></div>`;
+    el.innerHTML = `<div class="card"><p style="color:var(--dim)">No sessions yet.</p></div>`;
     return;
   }
 
@@ -596,10 +596,10 @@ async function renderHistory() {
   for (const s of d.sessions) {
     h += `<div class="sess-item">
       <div>
-        <div class="rl-session-name">${esc(s.protocol_name)}</div>
-        <div class="rl-session-date">${s.started_at?.slice(0,16)||''}</div>
+        <div style="font-weight:600;font-size:14px">${esc(s.protocol_name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${s.started_at?.slice(0,16)||''}</div>
       </div>
-      <div class="rl-session-actions">
+      <div style="display:flex;gap:8px;align-items:center">
         <span class="sess-platform">${s.platform}</span>
         <span class="sess-turns">${s.turn_count} turns</span>
       </div>

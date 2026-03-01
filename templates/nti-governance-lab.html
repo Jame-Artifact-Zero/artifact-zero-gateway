@@ -5,8 +5,8 @@
 {% block head %}
 <style>
 .top{border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:var(--s1)}
-.top .logo{font-family:var(--az-mono);font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
-.top .tag{font-family:var(--az-mono);font-size:10px;color:var(--muted);background:var(--s2);padding:3px 8px;border-radius:3px;margin-left:12px}
+.top .logo{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--blue)}
+.top .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);background:var(--s2);padding:3px 8px;border-radius:3px;margin-left:12px}
 .top .dot{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:p 2s infinite}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
 
@@ -24,7 +24,7 @@
 /* Input areas */
 .field{margin-bottom:16px}
 .field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px}
-.field textarea{width:100%;min-height:100px;background:var(--s1);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:6px;font-family:var(--az-sans);font-size:14px;line-height:1.5;resize:vertical;outline:none}
+.field textarea{width:100%;min-height:100px;background:var(--s1);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:6px;font-family:'Instrument Sans',sans-serif;font-size:14px;line-height:1.5;resize:vertical;outline:none}
 .field textarea:focus{border-color:var(--blue)}
 .field textarea::placeholder{color:var(--dim)}
 
@@ -33,10 +33,10 @@
 .upload-zone.dragover{border-color:var(--green);background:rgba(52,211,153,.05)}
 .upload-zone .icon{font-size:28px;margin-bottom:8px;color:var(--muted)}
 .upload-zone .hint{font-size:13px;color:var(--muted)}
-.upload-zone .filename{font-family:var(--az-mono);font-size:12px;color:var(--green);margin-top:8px}
+.upload-zone .filename{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--green);margin-top:8px}
 .upload-zone input{display:none}
 
-.btn{padding:10px 20px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--az-sans);transition:all .15s}
+.btn{padding:10px 20px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:all .15s}
 .btn-run{background:var(--blue);color:#fff;width:100%}
 .btn-run:hover{background:#3a7bc8}
 .btn-run:disabled{background:var(--s2);color:var(--muted);cursor:default}
@@ -46,7 +46,7 @@
 /* Results */
 .scores{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:20px 0}
 .sc{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:14px 12px;text-align:center}
-.sc .v{font-family:var(--az-mono);font-size:20px;font-weight:700}
+.sc .v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700}
 .sc .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
 .sc.good .v{color:var(--green)}
 .sc.warn .v{color:var(--amber)}
@@ -57,7 +57,7 @@
 .section{background:var(--s1);border:1px solid var(--border);border-radius:8px;margin:16px 0;overflow:hidden}
 .section-head{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-bottom:1px solid var(--border)}
 .section-head h3{font-size:13px;font-weight:600;letter-spacing:.5px}
-.section-head .badge{font-family:var(--az-mono);font-size:10px;padding:3px 8px;border-radius:3px}
+.section-head .badge{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;border-radius:3px}
 .badge-green{background:rgba(52,211,153,.1);color:var(--green)}
 .badge-red{background:rgba(248,113,113,.1);color:var(--red)}
 .badge-amber{background:rgba(251,191,36,.1);color:var(--amber)}
@@ -71,38 +71,20 @@
 .bi-bar .bar.pos{background:var(--red);bottom:50%}
 .bi-bar .bar.neg{background:var(--blue);top:50%}
 .bi-zero{position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--dim)}
-.bi-label{font-family:var(--az-mono);font-size:8px;color:var(--muted);position:absolute;bottom:-14px}
+.bi-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);position:absolute;bottom:-14px}
 
 /* Violations */
 .viol{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(248,113,113,.05);border-radius:4px;margin:4px 0;font-size:12px;border-left:3px solid var(--red)}
-.viol-type{font-family:var(--az-mono);font-weight:600;color:var(--red)}
+.viol-type{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--red)}
 
 /* Window table */
-.wtable{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--az-mono)}
+.wtable{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace}
 .wtable th{text-align:left;padding:6px 8px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase}
 .wtable td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03)}
 .wtable tr:hover td{background:rgba(74,144,217,.03)}
 
 /* Raw JSON */
-.raw{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:var(--az-mono);font-size:11px;color:var(--muted);max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all}
-
-
-/* Shell nav (shared pattern) */
-.lab-shell-nav{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #252b38;background:#0f1116;font-family:var(--az-mono);font-size:11px}
-.lab-shell-logo{color:#34d399;font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none}
-.lab-shell-links{display:flex;gap:16px;align-items:center}
-.lab-shell-link{color:#5a6275;text-decoration:none}
-.lab-shell-link.active{color:#34d399;font-weight:600}
-/* Lab form overrides */
-.lab-textarea-tall{min-height:140px}
-.lab-textarea-xtall{min-height:180px}
-.lab-upload-hint{font-size:11px;margin-top:4px}
-/* JS result helpers */
-.lab-ose-flags{margin-top:8px;font-size:12px;color:var(--muted)}
-.lab-section-rel{position:relative}
-.lab-bi-legend{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:18px}
-.lab-section-scroll{overflow-x:auto}
-.lab-more-note{text-align:center;padding:8px;font-size:11px;color:var(--muted)}
+.raw{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all}
 
 .or-divider{text-align:center;color:var(--dim);font-size:11px;margin:12px 0;text-transform:uppercase;letter-spacing:2px}
 </style>
@@ -110,13 +92,13 @@
 
 {% block content %}
 <!-- NAV BAR -->
-<div data-shell-nav class="lab-shell-nav">
-  <a href="/" class="lab-shell-logo">ARTIFACT ZERO</a>
-  <div class="lab-shell-links">
-    <a href="/relay" class="lab-shell-link">RELAY</a>
-    <a href="/chat" class="lab-shell-link">CONTROL ROOM</a>
-    <a href="/lab" class="lab-shell-link active">LAB</a>
-    <a href="/live" class="lab-shell-link">LIVE</a>
+<div data-shell-nav style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #252b38;background:#0f1116;font-family:'IBM Plex Mono',monospace;font-size:11px">
+  <a href="/" style="color:#34d399;font-weight:700;letter-spacing:2px;font-size:13px;text-decoration:none">ARTIFACT ZERO</a>
+  <div style="display:flex;gap:16px;align-items:center">
+    <a href="/relay" style="color:#5a6275;text-decoration:none">RELAY</a>
+    <a href="/chat" style="color:#5a6275;text-decoration:none">CONTROL ROOM</a>
+    <a href="/lab" style="color:#34d399;font-weight:600;text-decoration:none">LAB</a>
+    <a href="/live" style="color:#5a6275;text-decoration:none">LIVE</a>
   </div>
 </div>
 <div class="top">
@@ -137,7 +119,7 @@
     </div>
     <div class="field">
       <label>Answer (what the AI said)</label>
-      <textarea id="sAnswer" placeholder="Great question! So basically there were some issues..." class="lab-textarea-tall"></textarea>
+      <textarea id="sAnswer" placeholder="Great question! So basically there were some issues..." style="min-height:140px"></textarea>
     </div>
     <button class="btn btn-run" onclick="runSingle()">Run Governance Audit</button>
     <div id="sResults"></div>
@@ -148,14 +130,14 @@
     <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📄</div>
       <div class="hint">Drop a thread file here or click to upload</div>
-      <div class="hint lab-upload-hint">.txt, .md, .json, .docx — or paste below</div>
+      <div class="hint" style="font-size:11px;margin-top:4px">.txt, .md, .json, .docx — or paste below</div>
       <div class="filename" id="fileName"></div>
       <input type="file" id="fileInput" accept=".txt,.md,.json,.docx">
     </div>
     <div class="or-divider">— or paste thread —</div>
     <div class="field">
       <label>Paste full thread (alternating Human: / AI: format)</label>
-      <textarea id="tPaste" placeholder="Human: What went wrong?&#10;AI: Great question! So basically...&#10;Human: No. Tell me exactly.&#10;AI: Auth middleware missing. Config line 47..." class="lab-textarea-xtall"></textarea>
+      <textarea id="tPaste" placeholder="Human: What went wrong?&#10;AI: Great question! So basically...&#10;Human: No. Tell me exactly.&#10;AI: Auth middleware missing. Config line 47..." style="min-height:180px"></textarea>
     </div>
     <button class="btn btn-run" onclick="runThread()">Analyze Thread</button>
     <div id="tResults"></div>
@@ -334,7 +316,7 @@ function runSingle() {
       <div class="sc info"><div class="v">${a.metd.toFixed(1)}</div><div class="l">MetD</div></div>
     </div>
     ${viols.length ? '<div class="section"><div class="section-head"><h3>VIOLATIONS</h3><span class="badge badge-red">'+viols.length+'</span></div><div class="section-body">'+viols.map(v=>'<div class="viol"><span class="viol-type">'+v+'</span></div>').join('')+'</div></div>' : '<div class="section"><div class="section-head"><h3>COMPLIANCE</h3><span class="badge badge-green">CLEAN</span></div></div>'}
-    ${a.flags.length ? '<div class="lab-ose-flags">OSE flags: '+a.flags.join(' | ')+'</div>' : ''}
+    ${a.flags.length ? '<div style="margin-top:8px;font-size:12px;color:var(--muted)">OSE flags: '+a.flags.join(' | ')+'</div>' : ''}
   `;
 }
 
@@ -430,9 +412,9 @@ function runThread() {
 
     <div class="section">
       <div class="section-head"><h3>BI TRAJECTORY</h3><span class="badge badge-blue">${biHistory.length} windows</span></div>
-      <div class="section-body lab-section-rel">
-        <div class="bi-chart lab-section-rel">${biChartBars}<div class="bi-zero"></div></div>
-        <div class="lab-bi-legend">
+      <div class="section-body" style="position:relative">
+        <div class="bi-chart" style="position:relative">${biChartBars}<div class="bi-zero"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:18px">
           <span>← Escalation (+)</span><span>Zero line</span><span>Utility (-) →</span>
         </div>
       </div>
@@ -440,12 +422,12 @@ function runThread() {
 
     <div class="section">
       <div class="section-head"><h3>WINDOW DETAIL</h3><span class="badge badge-blue">${Math.min(pairs,30)} shown</span></div>
-      <div class="section-body lab-section-scroll">
+      <div class="section-body" style="overflow-x:auto">
         <table class="wtable">
           <thead><tr><th>#</th><th>BI</th><th>OSR</th><th>CIR</th><th>SL</th><th>PBL</th><th>LR</th><th>SNR</th><th>SOV</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        ${pairs>30?'<div class="lab-more-note">'+(pairs-30)+' more windows not shown</div>':''}
+        ${pairs>30?'<div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)">'+(pairs-30)+' more windows not shown</div>':''}
       </div>
     </div>
   `;
