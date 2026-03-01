@@ -7,10 +7,15 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pre_score_gate import pre_score_gate
 
-from flask import Flask, request, jsonify, render_template, session
+from flask import Flask, request, jsonify, render_template, session, send_from_directory
 import db as database
 
 app = Flask(__name__)
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(app.static_folder, 'favicon.png', mimetype='image/png')
 
 
 # ── Score JSON parsing helper ──
@@ -810,6 +815,11 @@ def voice_page():
     return render_template("voice.html",
                            logged_in=session.get('logged_in', False),
                            user_id=session.get('user_id'))
+
+
+@app.route("/contact-v3")
+def contact_v3_page():
+    return render_template("contact-v3.html")
 
 
 @app.route("/fortune500")
