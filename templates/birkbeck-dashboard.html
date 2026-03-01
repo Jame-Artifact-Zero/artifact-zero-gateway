@@ -107,19 +107,6 @@
 .glossary-term{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);min-width:60px;flex-shrink:0}
 .glossary-def{font-size:12px;color:var(--dim);line-height:1.4}
 
-
-/* Method & shared helpers */
-.method-desc{font-size:13px;color:var(--dim);line-height:1.6}
-.method-item-name.color-red{color:var(--red)}
-.method-item-name.color-green{color:var(--green)}
-.method-item-name.color-amber{color:var(--amber)}
-.method-item-name.color-purple{color:var(--purple)}
-.method-item-name.color-blue{color:var(--blue)}
-/* JS helpers */
-.metric-val-text{color:var(--text)}
-.stmt-meta-info{font-family:var(--mono);font-size:10px;color:var(--muted)}
-.opponent-no-data{font-size:13px;color:var(--muted);padding:8px 0}
-
 @media(max-width:480px){
   .metrics{grid-template-columns:1fr}
   .score-ring{width:100px;height:100px}
@@ -180,35 +167,35 @@
 <div class="methodology">
   <div class="method-card">
     <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
-    <p class="method-desc">Every public statement is scored 0–100 by analyzing six structural dimensions. No AI opinion. No sentiment analysis. Pure structural measurement of what was said and how it was said.</p>
+    <p style="font-size:13px;color:var(--dim);line-height:1.6">Every public statement is scored 0–100 by analyzing six structural dimensions. No AI opinion. No sentiment analysis. Pure structural measurement of what was said and how it was said.</p>
     <div class="method-grid">
       <div class="method-item">
-        <div class="method-item-name color-red">VAGUENESS</div>
+        <div class="method-item-name" style="color:var(--red)">VAGUENESS</div>
         <div class="method-item-desc">Platitude words (values, opportunity, incredible, families, freedom). More fluff = lower score.</div>
         <div class="method-item-weight">Penalty: -3 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-green">SPECIFICITY</div>
+        <div class="method-item-name" style="color:var(--green)">SPECIFICITY</div>
         <div class="method-item-desc">Concrete policy words (budget, tax, build, invest, plan, vote). Substance raises your score.</div>
         <div class="method-item-weight">Bonus: +4 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-amber">PROMISE BALANCE</div>
+        <div class="method-item-name" style="color:var(--amber)">PROMISE BALANCE</div>
         <div class="method-item-desc">Unbounded promises ("I will never") get penalized. Hedged aspirations ("I want to") get rewarded.</div>
         <div class="method-item-weight">-4 unbounded / +3 hedged</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-purple">EMOTIONAL CHARGE</div>
+        <div class="method-item-name" style="color:var(--purple)">EMOTIONAL CHARGE</div>
         <div class="method-item-desc">Density of emotionally loaded language. Lower charge = clearer structural integrity.</div>
         <div class="method-item-weight">Penalty: -0.2 per %</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-amber">TILT PATTERNS</div>
+        <div class="method-item-name" style="color:var(--amber)">TILT PATTERNS</div>
         <div class="method-item-desc">Structural manipulation: certainty inflation, absolute language, manufactured consensus, pressure tactics.</div>
         <div class="method-item-weight">Penalty: -7 per tag</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-blue">DATA DENSITY</div>
+        <div class="method-item-name" style="color:var(--blue)">DATA DENSITY</div>
         <div class="method-item-desc">Numbers, names, dates, percentages, dollar amounts. Facts in the text = credibility bonus.</div>
         <div class="method-item-weight">Bonus: +3 per fact</div>
       </div>
@@ -418,7 +405,7 @@ function renderAll(){
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric">
       <div class="metric-label">AVG READING LEVEL</div>
-      <div class="metric-val metric-val-text">${results.length?Math.round(results.reduce((s,r)=>s+r.grade,0)/results.length*10)/10:0}</div>
+      <div class="metric-val" style="color:var(--text)">${results.length?Math.round(results.reduce((s,r)=>s+r.grade,0)/results.length*10)/10:0}</div>
       <div class="metric-bar"><div class="metric-fill" style="width:${results.length?(results.reduce((s,r)=>s+r.grade,0)/results.length/18*100):0}%;background:var(--blue)"></div></div>
     </div>
     <div class="metric">
@@ -451,7 +438,7 @@ function renderAll(){
       <div class="stmt">
         <div class="stmt-top">
           <span class="stmt-score-badge" style="color:var(--${color})">${sc}</span>
-          <span class="stmt-meta-info">Grade ${r.grade} · ${r.wc} words</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Grade ${r.grade} · ${r.wc} words</span>
         </div>
         <div class="stmt-text">${escHtml(r.text)}</div>
         <div class="stmt-analysis">${tags}${meta.join('')}</div>
@@ -484,7 +471,7 @@ function renderAll(){
   } else {
     document.getElementById('opponentSection').innerHTML = `
       <h3>VS. OPPONENT — ${OPPONENT.name}</h3>
-      <div class="opponent-no-data">No public statements available yet for ${OPPONENT.name}. Dashboard updates automatically as campaign statements are published.</div>`;
+      <div style="font-size:13px;color:var(--muted);padding:8px 0">No public statements available yet for ${OPPONENT.name}. Dashboard updates automatically as campaign statements are published.</div>`;
   }
 }
 

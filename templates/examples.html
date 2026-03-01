@@ -1,175 +1,216 @@
 {% extends "base.html" %}
-{% block title %}Examples — Artifact Zero{% endblock %}
+{% block title %}25 Ways to Score It — Artifact Zero{% endblock %}
 {% block body_class %}page-examples{% endblock %}
 
 {% block head %}
 <style>
-.ex-wrap{max-width:640px;margin:0 auto;padding:100px 16px 60px}
-.ex-intro{margin-bottom:32px}
-.ex-intro h1{font-family:var(--az-mono);font-size:20px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
-.ex-intro p{font-size:14px;color:var(--muted);line-height:1.6;max-width:500px}
 
-.ex-tabs{display:flex;gap:0;margin-bottom:24px;flex-wrap:wrap}
-.ex-tab{padding:10px 16px;font-family:var(--az-mono);font-size:10px;font-weight:600;letter-spacing:.8px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;text-transform:uppercase}
-.ex-tab:first-child{border-radius:6px 0 0 6px}.ex-tab:last-child{border-radius:0 6px 6px 0}
-.ex-tab.on{background:rgba(0,232,156,.1);color:var(--accent);border-color:rgba(0,232,156,.3)}
 
-.ex-panel{display:none}.ex-panel.on{display:block;animation:fadeUp .2s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.hero{max-width:700px;margin:0 auto;padding:100px 20px 40px;text-align:center}
+.hero h1{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,4vw,32px);font-weight:700;margin-bottom:8px}
+.hero h1 .accent{color:var(--accent)}
+.hero p{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:24px}
 
-/* Example card */
-.ex-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
-.ex-card-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.ex-card-title{font-family:var(--az-mono);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
-.ex-card-title.sc{color:var(--accent)}.ex-card-title.sr{color:var(--amber)}
-.ex-card-badge{font-family:var(--az-mono);font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600}
-.ex-card-badge.outbound{background:rgba(0,232,156,.1);color:var(--accent)}
-.ex-card-badge.inbound{background:rgba(245,158,11,.1);color:var(--amber)}
+/* Filter tabs */
+.filters{display:flex;justify-content:center;gap:8px;padding:0 20px 32px;flex-wrap:wrap}
+.filter-btn{
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 16px;
+  border-radius:20px;border:1px solid var(--border);background:transparent;
+  color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.filter-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
 
-.ex-text{padding:16px;font-size:15px;line-height:1.7;color:var(--text);border-bottom:1px solid var(--border)}
-.ex-text .hl{background:rgba(245,158,11,.15);color:var(--amber);padding:1px 4px;border-radius:3px}
+/* Cards */
+.grid{max-width:900px;margin:0 auto;padding:0 20px 60px;display:flex;flex-direction:column;gap:12px}
 
-.sl{font-family:var(--az-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-weight:600;padding:14px 16px 8px}
+.uc{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;transition:border-color .2s;
+}
+.uc:hover{border-color:var(--accent)}
+.uc-header{padding:16px;cursor:pointer;display:flex;align-items:flex-start;gap:12px}
+.uc-num{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  color:var(--accent);min-width:24px;padding-top:2px;
+}
+.uc-content{flex:1}
+.uc-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.uc-app{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.uc-type{
+  font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;
+  border-radius:3px;flex-shrink:0;font-weight:600;
+}
+.uc-type.send{background:#3b82f622;color:var(--blue)}
+.uc-type.speak{background:#a78bfa22;color:var(--purple)}
+.uc-type.read{background:#00e89c22;color:var(--accent)}
 
-/* Observation cards (reuse from SafeCheck) */
-.obs{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
-.obs:last-child{border-bottom:none}
-.obs-t{flex:1;font-size:13px;line-height:1.4;color:var(--text)}
-.obs-a{flex-shrink:0;padding:7px 12px;background:rgba(0,232,156,.1);color:var(--accent);border:1px solid rgba(0,232,156,.2);border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.uc-detail{display:none;padding:0 16px 16px;padding-left:52px}
+.uc-detail.open{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-/* Score mini */
-.score-mini{padding:16px;text-align:center;border-bottom:1px solid var(--border)}
-.score-mini-num{font-family:var(--az-mono);font-size:36px;font-weight:700;line-height:1}
-.score-mini-num.g{color:var(--accent)}.score-mini-num.a{color:var(--amber)}.score-mini-num.r{color:var(--red)}
-.score-mini-label{font-family:var(--az-mono);font-size:10px;letter-spacing:2px;margin-top:2px}
-.score-mini-label.g{color:var(--accent)}.score-mini-label.a{color:var(--amber)}.score-mini-label.r{color:var(--red)}
-
-/* FM mini */
-.fm-mini{padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:12px;border-bottom:1px solid var(--border)}
-.fm-mini:last-child{border-bottom:none}
-.fm-mini-name{font-family:var(--az-mono);font-weight:600;color:var(--text)}
-.fm-mini-badge{font-family:var(--az-mono);font-size:10px;font-weight:700}
-.fm-mini-badge.g{color:var(--accent)}.fm-mini-badge.r{color:var(--red)}.fm-mini-badge.a{color:var(--amber)}
-
-/* Bar mini */
-.bar-mini{padding:4px 16px 10px}
-.bar-mini-h{display:flex;justify-content:space-between;font-family:var(--az-mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
-.bar-mini-h span:last-child{font-weight:700}
-.bar-mini-h span.g{color:var(--accent)}.bar-mini-h span.a{color:var(--amber)}.bar-mini-h span.r{color:var(--red)}
-.bar-mini-b{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
-.bar-mini-f{height:100%;border-radius:2px}
-.bar-mini-f.g{background:var(--accent)}.bar-mini-f.a{background:var(--amber)}.bar-mini-f.r{background:var(--red)}
-
-/* Try it CTA */
-.try-cta{padding:16px;text-align:center}
-.try-cta a{display:inline-block;padding:12px 24px;background:var(--accent);color:#0a0c10;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;transition:background .15s}
-.try-cta a:hover{background:#00d48c}
+.uc-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:600px){.uc-row{grid-template-columns:1fr}}
+.uc-box{background:var(--surface2);border-radius:6px;padding:12px}
+.uc-box-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.uc-box-label.red{color:var(--red)}
+.uc-box-label.green{color:var(--accent)}
+.uc-box p{font-size:13px;line-height:1.5;color:var(--text)}
+.uc-result{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);padding:8px 12px;background:var(--bg);border-radius:6px;margin-top:8px}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ex-wrap">
-  <div class="ex-intro">
-    <h1>See it in action</h1>
-    <p>Real messages. Real detection. No AI rewriting — just what the engine finds.</p>
-  </div>
-
-  <div class="ex-tabs">
-    <div class="ex-tab on" onclick="showPanel('p1',this)">Wife text</div>
-    <div class="ex-tab" onclick="showPanel('p2',this)">Work email</div>
-    <div class="ex-tab" onclick="showPanel('p3',this)">AI response</div>
-    <div class="ex-tab" onclick="showPanel('p4',this)">Sales pitch</div>
-  </div>
-
-  <!-- ═══ EXAMPLE 1: Wife Text (SafeCheck) ═══ -->
-  <div class="ex-panel on" id="p1">
-    <div class="ex-card">
-      <div class="ex-card-header">
-        <span class="ex-card-title sc">SafeCheck</span>
-        <span class="ex-card-badge outbound">Outbound · Text</span>
-      </div>
-      <div class="ex-text">hun, I'm <span class="hl">glad</span> you got a chance to talk with someone about that dog fostering. i <span class="hl">hope</span> they have a screening process so we <span class="hl">dont have to worry</span> about our kids getting bit by the foster dog.</div>
-      <div class="sl">What we noticed</div>
-      <div class="obs"><div class="obs-t">You opened with "glad" — she may hear encouragement, not concern.</div><div class="obs-a">Strengthen</div></div>
-      <div class="obs"><div class="obs-t">"Hope" softens your ask. She may not hear it as something important to you.</div><div class="obs-a">Strengthen</div></div>
-      <div class="obs"><div class="obs-t">"Don't have to worry" transfers the worry to her instead of stating what you need.</div><div class="obs-a">Make it direct</div></div>
-      <div class="obs"><div class="obs-t">No deadline or boundary. This can be responded to whenever — or never.</div><div class="obs-a">Add a timeline</div></div>
-      <div class="obs"><div class="obs-t">Your concern is in sentence 2. She may stop reading after sentence 1.</div><div class="obs-a">Make it direct</div></div>
-      <div class="obs"><div class="obs-t">You didn't set any rules. She can interpret this however she wants.</div><div class="obs-a">Add clarity</div></div>
-    </div>
-    <div class="try-cta"><a href="/safecheck">Try SafeCheck with your words &rarr;</a></div>
-  </div>
-
-  <!-- ═══ EXAMPLE 2: Work Email (SafeCheck) ═══ -->
-  <div class="ex-panel" id="p2">
-    <div class="ex-card">
-      <div class="ex-card-header">
-        <span class="ex-card-title sc">SafeCheck</span>
-        <span class="ex-card-badge outbound">Outbound · Email</span>
-      </div>
-      <div class="ex-text">Hey team, <span class="hl">just</span> wanted to circle back on the Q3 numbers. I <span class="hl">think maybe</span> we should <span class="hl">consider</span> pushing the deadline back a <span class="hl">little</span>. <span class="hl">Let me know what you think</span>. No rush.</div>
-      <div class="sl">What we noticed</div>
-      <div class="obs"><div class="obs-t">"Just" minimizes what you're saying. It tells them this isn't important.</div><div class="obs-a">Strengthen</div></div>
-      <div class="obs"><div class="obs-t">"I think maybe" is a wish, not a statement. Say what you need directly.</div><div class="obs-a">Make it direct</div></div>
-      <div class="obs"><div class="obs-t">"Let me know what you think" opens the door to anything. They may not address what matters to you.</div><div class="obs-a">Add clarity</div></div>
-      <div class="obs"><div class="obs-t">"No rush" signals this isn't urgent. If it is, say so.</div><div class="obs-a">Add a timeline</div></div>
-      <div class="obs"><div class="obs-t">You didn't set any rules. They can interpret this however they want.</div><div class="obs-a">Add clarity</div></div>
-    </div>
-    <div class="try-cta"><a href="/safecheck">Try SafeCheck with your words &rarr;</a></div>
-  </div>
-
-  <!-- ═══ EXAMPLE 3: AI Response (Score) ═══ -->
-  <div class="ex-panel" id="p3">
-    <div class="ex-card">
-      <div class="ex-card-header">
-        <span class="ex-card-title sr">Score</span>
-        <span class="ex-card-badge inbound">Inbound · AI Response</span>
-      </div>
-      <div class="ex-text">Great question! I'd be <span class="hl">happy to</span> help with that. There are <span class="hl">generally</span> a few approaches you <span class="hl">might</span> consider. <span class="hl">Basically</span>, you could try X, Y, or Z — each has its merits. I think the best approach <span class="hl">probably</span> depends on your specific situation. Let me know if you'd like me to <span class="hl">explore</span> any of these further!</div>
-      <div class="score-mini"><div class="score-mini-num a">38</div><div class="score-mini-label a">WEAK</div></div>
-      <div class="sl">Failure Modes</div>
-      <div class="fm-mini"><span class="fm-mini-name">UDDS</span><span class="fm-mini-badge g">CLEAR</span></div>
-      <div class="fm-mini"><span class="fm-mini-name">DCE</span><span class="fm-mini-badge a">PROBABLE</span></div>
-      <div class="fm-mini"><span class="fm-mini-name">CCA</span><span class="fm-mini-badge a">PROBABLE</span></div>
-      <div class="sl">Structure</div>
-      <div class="bar-mini"><div class="bar-mini-h"><span>CONSTRAINT DENSITY</span><span class="r">0%</span></div><div class="bar-mini-b"><div class="bar-mini-f r" style="width:0%"></div></div></div>
-      <div class="bar-mini"><div class="bar-mini-h"><span>ENFORCEMENT INTEGRITY</span><span class="r">22%</span></div><div class="bar-mini-b"><div class="bar-mini-f r" style="width:22%"></div></div></div>
-      <div class="bar-mini"><div class="bar-mini-h"><span>TILT RESISTANCE</span><span class="a">58%</span></div><div class="bar-mini-b"><div class="bar-mini-f a" style="width:58%"></div></div></div>
-    </div>
-    <div class="try-cta"><a href="/score">Score something you received &rarr;</a></div>
-  </div>
-
-  <!-- ═══ EXAMPLE 4: Sales Pitch (Score) ═══ -->
-  <div class="ex-panel" id="p4">
-    <div class="ex-card">
-      <div class="ex-card-header">
-        <span class="ex-card-title sr">Score</span>
-        <span class="ex-card-badge inbound">Inbound · Sales Email</span>
-      </div>
-      <div class="ex-text">We're <span class="hl">absolutely thrilled</span> to share our <span class="hl">revolutionary</span> platform that <span class="hl">handles everything</span> from onboarding to compliance. Our <span class="hl">industry-leading</span> solution <span class="hl">guarantees</span> ROI within 90 days. <span class="hl">Most companies</span> see results within the first week. We'd love to <span class="hl">explore</span> how we can <span class="hl">transform</span> your workflow.</div>
-      <div class="score-mini"><div class="score-mini-num r">18</div><div class="score-mini-label r">FAILING</div></div>
-      <div class="sl">Failure Modes</div>
-      <div class="fm-mini"><span class="fm-mini-name">UDDS</span><span class="fm-mini-badge r">DETECTED</span></div>
-      <div class="fm-mini"><span class="fm-mini-name">DCE</span><span class="fm-mini-badge a">PROBABLE</span></div>
-      <div class="fm-mini"><span class="fm-mini-name">CCA</span><span class="fm-mini-badge r">DETECTED</span></div>
-      <div class="sl">Tilt Patterns</div>
-      <div class="obs"><div class="obs-t" style="font-size:12px;color:var(--amber)">T2 Certainty Inflation · T3 Consensus Claims · T4 Capability Overreach · T5 Absolute Language</div></div>
-      <div class="sl">Structure</div>
-      <div class="bar-mini"><div class="bar-mini-h"><span>CONSTRAINT DENSITY</span><span class="r">0%</span></div><div class="bar-mini-b"><div class="bar-mini-f r" style="width:0%"></div></div></div>
-      <div class="bar-mini"><div class="bar-mini-h"><span>ENFORCEMENT INTEGRITY</span><span class="r">8%</span></div><div class="bar-mini-b"><div class="bar-mini-f r" style="width:8%"></div></div></div>
-      <div class="bar-mini"><div class="bar-mini-h"><span>TILT RESISTANCE</span><span class="r">15%</span></div><div class="bar-mini-b"><div class="bar-mini-f r" style="width:15%"></div></div></div>
-    </div>
-    <div class="try-cta"><a href="/score">Score something you received &rarr;</a></div>
-  </div>
+<div class="hero">
+  <h1>What do you <span class="accent">actually</span> do?</h1>
+  <p>Every person on a phone or computer is doing one of three things. Here are 25 real scenarios where structural scoring changes the outcome.</p>
 </div>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="filter('all')">All 25</button>
+  <button class="filter-btn" onclick="filter('send')">✍️ Write & Send</button>
+  <button class="filter-btn" onclick="filter('speak')">🎤 Write & Speak</button>
+  <button class="filter-btn" onclick="filter('read')">📄 Read & Decide</button>
+</div>
+
+<div class="grid" id="grid"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function showPanel(id,el){
-  document.querySelectorAll('.ex-panel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.ex-tab').forEach(t=>t.classList.remove('on'));
-  document.getElementById(id).classList.add('on');el.classList.add('on');
+const CASES = [
+  {n:1,type:"send",title:"Responding to a client complaint email",app:"Gmail / Outlook",
+   without:"Reads complaint, gets emotional, writes reactive response. Unresolved promises. Legal exposure from vague commitments.",
+   withNti:"Score shows false commitment and missing constraint on resolution timeline.",
+   result:"Prevents 1 false commitment per email. Removes legal exposure."},
+  {n:2,type:"send",title:"Writing a cold sales email to a prospect",app:"Gmail / CRM",
+   without:"Writes email that sounds like every other sales email. Too many hedges. No clear ask.",
+   withNti:"Score shows hedge density at 40%, missing objective, no constraint on next step.",
+   result:"Response rate increases. Every email has a scored structural baseline."},
+  {n:3,type:"send",title:"Texting a contractor about a deadline",app:"iMessage / SMS",
+   without:"Types fast, ambiguous message. 'Hey can you get that done soon?' No date. No scope.",
+   withNti:"Score flags MISSING_OBJECTIVE and no constraint on timeline.",
+   result:"Eliminates the follow-up cycle. One clear text replaces three vague ones."},
+  {n:4,type:"send",title:"Writing a Slack message about a project change",app:"Slack",
+   without:"Half update, half opinion, half question. Gets 5 confused replies. Clarification loop.",
+   withNti:"Score flags scope omission and mixed intent.",
+   result:"One message does the job of three. No clarification loop."},
+  {n:5,type:"send",title:"Sending a rent increase notice to a tenant",app:"Email / Letter",
+   without:"Either too harsh (legal blowback) or too vague (unenforceable). No effective date.",
+   withNti:"Score flags missing constraint (no effective date), vague language.",
+   result:"Removes legal exposure. Every notice hits structural requirements."},
+  {n:6,type:"send",title:"Emailing a professor about a grade dispute",app:"Email",
+   without:"Student writes emotional email. 'I feel like my grade doesn't reflect...' No specific ask.",
+   withNti:"Score flags emotional load, missing objective (no specific grade requested).",
+   result:"Turns an emotional email into a professional request."},
+  {n:7,type:"send",title:"Writing a LinkedIn post about your company",app:"LinkedIn",
+   without:"Sounds like ChatGPT. Hedge words everywhere. No concrete claim. Low engagement.",
+   withNti:"Score shows 60% filler, no concrete claim, no CTA.",
+   result:"Post performs better because it says something."},
+  {n:8,type:"send",title:"Drafting a cover letter for a job application",app:"Google Docs / Word",
+   without:"Uses ChatGPT. Gets polished-sounding letter that says nothing specific.",
+   withNti:"Score shows hedge density, false specificity, missing differentiation.",
+   result:"Cover letter actually differentiates. Structural scoring catches what humans miss."},
+  {n:9,type:"send",title:"Replying to an insurance denial",app:"Email / Portal",
+   without:"Patient writes emotional appeal. No reference to denial code. No structural argument.",
+   withNti:"Score flags: no reference to denial code, missing policy citation, emotional load.",
+   result:"Appeal addresses structural requirements for reversal."},
+  {n:10,type:"send",title:"Writing a proposal to a potential business partner",app:"Email / Google Docs",
+   without:"Full of 'synergies' and 'mutual benefit' without a single specific term.",
+   withNti:"Score flags: MISSING_OBJECTIVE, no constraint, no specific deliverable.",
+   result:"Partner can actually evaluate and respond."},
+  {n:11,type:"speak",title:"Preparing talking points for a board meeting",app:"Notes / Google Docs",
+   without:"2 pages of notes that are anxiety dumping. Gets to the meeting and rambles.",
+   withNti:"Score shows 3 objectives buried in 2 pages. Flags competing priorities.",
+   result:"Board meeting in 2 minutes instead of 8. One clear ask gets approved."},
+  {n:12,type:"speak",title:"Rehearsing a campaign speech",app:"Notes / Phone",
+   without:"Sounds good in her head. Gets to the podium. Mixed reception.",
+   withNti:"Score shows: clarity 72%, hedge density 18%, 2 unresolved commitments.",
+   result:"Every speech is scored before delivery. Public accountability becomes structural."},
+  {n:13,type:"speak",title:"Preparing for a salary negotiation",app:"Notes / Phone",
+   without:"All hedging. 'I was hoping maybe we could discuss...' No anchor number.",
+   withNti:"Score flags: 4 hedge phrases, missing anchor, no constraint on timeline.",
+   result:"Walks in with a structurally sound script. Doesn't fold."},
+  {n:14,type:"speak",title:"Giving a toast at a wedding",app:"Notes app / Phone",
+   without:"Heartfelt but rambling. 5 minutes. People check their phones.",
+   withNti:"Score shows: 3 unresolved threads, 2 competing stories. Flags length.",
+   result:"Toast lands. 90 seconds. Everyone laughs at the right moment."},
+  {n:15,type:"speak",title:"Presenting a quarterly report to executives",app:"PowerPoint / Notes",
+   without:"30-slide deck. 45 minutes. Executives check email at slide 8.",
+   withNti:"Score flags: no decision point, 4 competing objectives, missing ask.",
+   result:"5-minute presentation with a decision point. Executives say yes or no."},
+  {n:16,type:"speak",title:"Recording a video for social media",app:"Notes → Camera",
+   without:"Script sounds corporate. Video sounds stiff. 4 takes. Posts worst one.",
+   withNti:"Score shows: hedge density 35%, no direct claim, no hook.",
+   result:"Video has structural substance. Opening line hooks."},
+  {n:17,type:"speak",title:"Leading a parent-teacher conference",app:"Notes / Phone",
+   without:"8 things to cover. Gets derailed by minute 3. Runs out of time.",
+   withNti:"Score flags: 8 objectives (too many for 15 min), no priority ranking.",
+   result:"Conference stays on track. All priorities addressed."},
+  {n:18,type:"read",title:"Reading a long article before sharing it",app:"Browser / News app",
+   without:"Reads headline, skims 2 paragraphs, shares on social media.",
+   withNti:"Score shows: 3 unsupported claims, 2 emotional triggers, no cited sources.",
+   result:"Stops amplifying structurally weak content."},
+  {n:19,type:"read",title:"Reviewing a contract before signing",app:"PDF viewer / Email",
+   without:"Reads 12-page contract, eyes glaze at page 4. Signs.",
+   withNti:"Score flags: 3 scope omissions, 1 binary without penalty, undefined 'reasonable'.",
+   result:"Catches structural traps without a lawyer."},
+  {n:20,type:"read",title:"Deciding whether to apply for a job",app:"Job board / LinkedIn",
+   without:"Gets excited by title. Applies. Discovers it's not what they thought.",
+   withNti:"Score shows: 40% scope omission, no constraint on role definition.",
+   result:"Doesn't waste time on structurally vague postings."},
+  {n:21,type:"read",title:"Reading a medical report after a doctor visit",app:"Patient portal / PDF",
+   without:"Reads discharge summary. Doesn't understand. Googles. Panics.",
+   withNti:"Score flags: 2 unresolved recommendations, 1 missing follow-up timeline.",
+   result:"Patient becomes informed, not panicked. Asks the right questions."},
+  {n:22,type:"read",title:"Reviewing a report your employee wrote",app:"Email / Google Docs",
+   without:"Looks professional because it's long. Forwards to client. Client confused.",
+   withNti:"Score flags: missing objective, no conclusion, 3 unsupported assertions.",
+   result:"Report gets fixed before the client sees it."},
+  {n:23,type:"read",title:"Reading a lease agreement before signing",app:"PDF / Email",
+   without:"Reads first page and last page. Signs. Misses the auto-renewal clause.",
+   withNti:"Score flags: 'reasonable notice' as undefined, auto-renewal without exit constraint.",
+   result:"Catches the three things that would have cost money."},
+  {n:24,type:"read",title:"Evaluating a vendor proposal",app:"Email / PDF",
+   without:"Focuses on price. Misses that the SLA has no penalty clause.",
+   withNti:"Score flags: SLA without penalty, undefined scope, missing deliverable timeline.",
+   result:"Vendor relationship starts clean. No surprises at renewal."},
+  {n:25,type:"read",title:"Reading a news article about a candidate you'll vote for",app:"Browser / News app",
+   without:"Reads article. Confirms existing bias. Doesn't notice missing sources.",
+   withNti:"Score shows: 2 unverified claims, 1 missing source attribution.",
+   result:"Voter makes informed decision based on structural quality."}
+];
+
+function render(cases) {
+  document.getElementById('grid').innerHTML = cases.map(c => `
+    <div class="uc" data-type="${c.type}">
+      <div class="uc-header" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="uc-num">${String(c.n).padStart(2,'0')}</span>
+        <div class="uc-content">
+          <div class="uc-title">${c.title}</div>
+          <div class="uc-app">${c.app}</div>
+        </div>
+        <span class="uc-type ${c.type}">${c.type==='send'?'Write & Send':c.type==='speak'?'Write & Speak':'Read & Decide'}</span>
+      </div>
+      <div class="uc-detail">
+        <div class="uc-row">
+          <div class="uc-box"><div class="uc-box-label red">Without NTI</div><p>${c.without}</p></div>
+          <div class="uc-box"><div class="uc-box-label green">With NTI</div><p>${c.withNti}</p></div>
+        </div>
+        <div class="uc-result">→ ${c.result}</div>
+      </div>
+    </div>
+  `).join('');
 }
+
+function filter(type) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (type === 'all') { render(CASES); return; }
+  render(CASES.filter(c => c.type === type));
+}
+
+render(CASES);
 </script>
+
 {% endblock %}

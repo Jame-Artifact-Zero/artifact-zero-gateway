@@ -41,7 +41,7 @@
   --accent-dim: rgba(0,232,156,0.15);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5}
 
 /* ── TOP BAR (matches dashboard) ── */
 .topbar{
@@ -51,12 +51,12 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
   display:flex;align-items:center;padding:0 24px;height:48px;
 }
 .topbar .brand{
-  font-family:var(--az-mono);font-weight:700;font-size:13px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
   color:var(--accent);letter-spacing:2px;text-transform:uppercase;
 }
 .topbar nav{display:flex;gap:4px;margin-left:auto}
 .topbar a{
-  font-family:var(--az-mono);font-size:11px;font-weight:500;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;
   letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);
   padding:6px 12px;border-radius:4px;cursor:pointer;text-decoration:none;
   transition:all 0.15s;border:1px solid transparent;
@@ -68,14 +68,14 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .page{display:none;padding:64px 24px 48px;max-width:1160px;margin:0 auto}
 .page.active{display:block}
 .page-title{
-  font-family:var(--az-mono);font-weight:700;font-size:11px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;
   letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;
 }
-.page h1{font-family:var(--az-sans);font-weight:600;font-size:26px;color:var(--text-bright);margin-bottom:6px}
+.page h1{font-family:'DM Sans',sans-serif;font-weight:600;font-size:26px;color:var(--text-bright);margin-bottom:6px}
 .page .desc{font-size:14px;color:var(--text-muted);margin-bottom:32px;max-width:680px;line-height:1.6}
-.mono{font-family:var(--az-mono)}
+.mono{font-family:'JetBrains Mono',monospace}
 .section-label{
-  font-family:var(--az-mono);font-weight:600;font-size:11px;
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px;
   letter-spacing:2px;text-transform:uppercase;color:var(--accent);
   margin:40px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border);
 }
@@ -89,12 +89,12 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .card-header{
   display:flex;align-items:center;gap:10px;
   padding:10px 16px;border-bottom:1px solid var(--border);
-  font-family:var(--az-mono);font-size:11px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
   letter-spacing:1px;text-transform:uppercase;
 }
 .card-body{padding:16px}
 .badge{
-  font-family:var(--az-mono);font-size:10px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
   letter-spacing:0.5px;padding:3px 8px;border-radius:3px;display:inline-block;
 }
 
@@ -106,7 +106,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .petal{
   position:absolute;width:160px;height:52px;border-radius:6px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-family:var(--az-mono);font-size:11px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
   letter-spacing:1px;text-transform:uppercase;
   transition:transform 0.2s,box-shadow 0.2s;cursor:default;
   box-shadow:0 2px 8px rgba(0,0,0,0.3);
@@ -117,7 +117,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   width:90px;height:90px;border-radius:50%;background:var(--bg);
   border:2px solid var(--border);display:flex;align-items:center;justify-content:center;
-  font-family:var(--az-mono);font-size:10px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
   color:var(--accent);text-align:center;line-height:1.3;letter-spacing:1px;
 }
 
@@ -131,13 +131,13 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .color-name{font-weight:600;font-size:15px;margin-bottom:2px}
 .color-psych{font-size:11px;color:var(--text-muted);line-height:1.5}
 .swatches{display:flex;gap:8px;margin-bottom:10px}
-.sw{width:56px;height:32px;border-radius:4px;display:flex;align-items:flex-end;padding:2px 4px;font-size:8px;font-family:var(--az-mono)}
+.sw{width:56px;height:32px;border-radius:4px;display:flex;align-items:flex-end;padding:2px 4px;font-size:8px;font-family:'JetBrains Mono',monospace}
 .sw.on-dark{color:rgba(255,255,255,0.7)}
 .sw.on-light{color:rgba(0,0,0,0.5)}
 .sw-label{font-size:9px;color:var(--text-muted);text-align:center;margin-top:2px}
 .nti-tags{display:flex;flex-wrap:wrap;gap:4px}
 .nti-tag{
-  font-family:var(--az-mono);font-size:10px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
   padding:3px 8px;border-radius:3px;letter-spacing:0.5px;
 }
 
@@ -155,7 +155,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
   border-bottom:1px solid var(--border);
 }
 .tilt-id{
-  font-family:var(--az-mono);font-size:10px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
   padding:2px 8px;border-radius:3px;letter-spacing:0.5px;
 }
 .tilt-name{font-weight:600;font-size:14px;color:var(--text-bright)}
@@ -167,7 +167,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 }
 .tilt-markers{display:flex;flex-wrap:wrap;gap:3px}
 .tilt-marker{
-  font-family:var(--az-mono);font-size:9px;padding:2px 6px;
+  font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;
   border-radius:2px;background:var(--bg-elevated);color:var(--text-muted);
   border:1px solid var(--border);
 }
@@ -191,13 +191,13 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .deriv{
   padding:10px 12px;border-radius:4px;font-size:12px;line-height:1.4;
 }
-.deriv strong{display:block;font-size:10px;font-family:var(--az-mono);margin-bottom:2px;letter-spacing:0.5px}
+.deriv strong{display:block;font-size:10px;font-family:'JetBrains Mono',monospace;margin-bottom:2px;letter-spacing:0.5px}
 .ix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:16px}
 .ix-card{
   padding:14px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);
   font-size:12px;line-height:1.5;
 }
-.ix-card strong{display:block;font-size:11px;font-family:var(--az-mono);color:var(--text-bright);margin-bottom:4px}
+.ix-card strong{display:block;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-bright);margin-bottom:4px}
 
 /* ═══════════════════════════
    PAGE 4: LAYER MODEL
@@ -205,12 +205,12 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .layer-table{width:100%;border-collapse:collapse}
 .layer-table td,.layer-table th{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
 .layer-table th{
-  font-family:var(--az-mono);font-size:10px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
   letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);
   background:var(--bg-elevated);
 }
 .layer-num{
-  font-family:var(--az-mono);font-size:11px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
   padding:3px 8px;border-radius:3px;display:inline-block;min-width:32px;text-align:center;
 }
 .layer-name{font-weight:600;color:var(--text-bright);font-size:13px}
@@ -222,13 +222,13 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .demo-input{
   width:100%;background:var(--bg-card);border:1px solid var(--border);
   border-radius:6px;padding:16px;font-size:14px;color:var(--text);
-  font-family:var(--az-sans);min-height:100px;resize:vertical;line-height:1.6;
+  font-family:'DM Sans',sans-serif;min-height:100px;resize:vertical;line-height:1.6;
 }
 .demo-input:focus{outline:none;border-color:var(--accent)}
 .demo-btn{
   margin-top:10px;padding:8px 24px;border-radius:4px;
   background:var(--accent);color:#000;border:none;cursor:pointer;
-  font-family:var(--az-mono);font-size:11px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
   letter-spacing:1px;text-transform:uppercase;transition:opacity 0.15s;
 }
 .demo-btn:hover{opacity:0.85}
@@ -236,7 +236,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
   display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;
   padding:10px 14px;background:var(--bg-elevated);border-radius:4px;border:1px solid var(--border);
 }
-.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted);font-family:var(--az-mono)}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
 .legend-dot{width:10px;height:10px;border-radius:2px}
 .demo-output{
   background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
@@ -246,7 +246,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 .hl:hover::after{
   content:attr(data-tip);position:absolute;bottom:100%;left:0;
   background:var(--bg);border:1px solid var(--border);color:var(--text-bright);
-  font-size:10px;font-weight:400;font-family:var(--az-mono);
+  font-size:10px;font-weight:400;font-family:'JetBrains Mono',monospace;
   padding:5px 8px;border-radius:3px;white-space:nowrap;z-index:10;pointer-events:none;
 }
 
@@ -738,11 +738,11 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
   <!-- ─── CORE SYSTEM ACRONYMS ─── -->
   <div style="margin-top:32px">
-    <div style="font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--signal);margin-bottom:12px">CORE SYSTEM</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--signal);margin-bottom:12px">CORE SYSTEM</div>
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--signal)">NTI</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">NTI</span>
         <span style="font-size:15px;color:var(--text)">No-Tilt Interface</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">Rule-based AI governance system that enforces structural integrity in human-AI communications. Detects and classifies communication failures without requiring LLM inference.</div>
@@ -750,7 +750,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--signal)">NII</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">NII</span>
         <span style="font-size:15px;color:var(--text)">Narrative Integrity Index</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">0-100 score measuring how structurally sound a piece of communication is. Higher = more integrity. Computed from constraint preservation, tilt density, and failure mode presence. The single number that answers "is this text trustworthy?"</div>
@@ -758,7 +758,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--signal)">JOS</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">JOS</span>
         <span style="font-size:15px;color:var(--text)">Jame's Operating System</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">Containment architecture with 5 fields: Objective, Constraints, No-Go Zones, Definition of Done, Closure Authority. Prevents scope drift and ensures operator decisions cannot be overridden by system interpretation. Act/Park/Discard — no fourth option.</div>
@@ -766,7 +766,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--signal)">AZ-CCS</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">AZ-CCS</span>
         <span style="font-size:15px;color:var(--text)">Artifact Zero Communication Color Standard</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">Formal specification mapping Plutchik's 8 primary emotions to NTI structural failure categories via color. Eight permanent colors with three intensity tiers (glow, signal, deep). The standard that defines how communication intent is visually encoded.</div>
@@ -775,11 +775,11 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
   <!-- ─── PARENT FAILURE MODES ─── -->
   <div style="margin-top:32px">
-    <div style="font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">PARENT FAILURE MODES</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">PARENT FAILURE MODES</div>
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--disgust);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--disgust)">UDDS</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--disgust)">UDDS</span>
         <span style="font-size:15px;color:var(--text)">Unresolved Dependency Drift via Substitution</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">A constraint is replaced with a structurally different substitute that appears to satisfy it but doesn't. The original is never violated — it's bypassed. Color: <span style="color:var(--disgust)">Magenta (Disgust)</span></div>
@@ -787,7 +787,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--fear);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--fear)">DCE</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--fear)">DCE</span>
         <span style="font-size:15px;color:var(--text)">Deferred Constraint Erosion</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">A constraint acknowledged at declaration time is deferred across execution layers until it becomes structurally invisible. Not denied — delayed into irrelevance. Color: <span style="color:var(--fear)">Forest Green (Fear)</span></div>
@@ -795,7 +795,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--sad);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--sad)">CCA</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--sad)">CCA</span>
         <span style="font-size:15px;color:var(--text)">Constraint Collapse via Aggregation</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">Multiple distinct constraints merged into a composite, losing enforcement precision. The most dangerous mode because aggregate metrics appear compliant while individual failures go undetected. Color: <span style="color:var(--sad)">Indigo (Sadness)</span></div>
@@ -804,57 +804,57 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
   <!-- ─── TILT CODES ─── -->
   <div style="margin-top:32px">
-    <div style="font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">TILT CODES (T1 – T10)</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">TILT CODES (T1 – T10)</div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px">
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--joy);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--joy);min-width:28px">T1</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--joy);min-width:28px">T1</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Reassurance Drift</span><br><span style="font-size:12px;color:var(--dim)">Comfort language replaces factual resolution</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--joy);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--joy);min-width:28px">T2</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--joy);min-width:28px">T2</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Certainty Inflation</span><br><span style="font-size:12px;color:var(--dim)">Absolute guarantees without enforcement</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--trust);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--trust);min-width:28px">T3</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--trust);min-width:28px">T3</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Consensus Claims</span><br><span style="font-size:12px;color:var(--dim)">Manufactured agreement without evidence</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--disgust);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--disgust);min-width:28px">T4</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--disgust);min-width:28px">T4</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Capability Overreach</span><br><span style="font-size:12px;color:var(--dim)">Universal claims without boundary acknowledgment</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--trust);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--trust);min-width:28px">T5</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--trust);min-width:28px">T5</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Absolute Language</span><br><span style="font-size:12px;color:var(--dim)">Always/never framing that eliminates nuance</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--fear);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--fear);min-width:28px">T6</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--fear);min-width:28px">T6</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Constraint Deferral</span><br><span style="font-size:12px;color:var(--dim)">Hard requirements pushed to future without assignment</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--sad);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--sad);min-width:28px">T7</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--sad);min-width:28px">T7</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Category Blend</span><br><span style="font-size:12px;color:var(--dim)">Distinct concepts merged into vague composite</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--antic);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--antic);min-width:28px">T8</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--antic);min-width:28px">T8</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Pressure Optimization</span><br><span style="font-size:12px;color:var(--dim)">Artificial urgency forcing premature decisions</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--surprise);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--surprise);min-width:28px">T9</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--surprise);min-width:28px">T9</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Scope Expansion</span><br><span style="font-size:12px;color:var(--dim)">Silent topic migration via new domain tokens</span></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--anger);padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--anger);min-width:28px">T10</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--anger);min-width:28px">T10</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Authority Imposition</span><br><span style="font-size:12px;color:var(--dim)">Unnamed experts cited to silence dissent</span></div>
       </div>
 
@@ -863,39 +863,39 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
   <!-- ─── LAYER MODEL ─── -->
   <div style="margin-top:32px">
-    <div style="font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">LAYERS (L0 – L7)</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">LAYERS (L0 – L7)</div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px">
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--anger);min-width:28px">L0</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--anger);min-width:28px">L0</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Reality Substrate</span><br><span style="font-size:12px;color:var(--dim)">Hard constraints: budgets, deadlines, physics, regulations</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--antic);min-width:28px">L1</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--antic);min-width:28px">L1</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Input Freeze</span><br><span style="font-size:12px;color:var(--dim)">Declared objective preserved at time of entry</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--joy);min-width:28px">L2</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--joy);min-width:28px">L2</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Interpretive Framing</span><br><span style="font-size:12px;color:var(--dim)">Where constraints get reworded or softened. Primary mutation layer</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--fear);min-width:28px">L3</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--fear);min-width:28px">L3</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Objective Integrity</span><br><span style="font-size:12px;color:var(--dim)">Similarity between declared intent and execution</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--trust);min-width:28px">L4</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--trust);min-width:28px">L4</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Execution Vectors</span><br><span style="font-size:12px;color:var(--dim)">Actions taken vs. actions declared</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--surprise);min-width:28px">L5</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--surprise);min-width:28px">L5</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Output Enforcement</span><br><span style="font-size:12px;color:var(--dim)">Final check against original L0 constraints</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--sad);min-width:28px">L6</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--sad);min-width:28px">L6</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Interface Contracts</span><br><span style="font-size:12px;color:var(--dim)">JOS binding: Act / Park / Discard</span></div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;display:flex;align-items:baseline;gap:10px">
-        <span style="font-family:var(--az-mono);font-size:13px;font-weight:700;color:var(--disgust);min-width:28px">L7</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--disgust);min-width:28px">L7</span>
         <div><span style="font-weight:600;color:var(--text);font-size:14px">Telemetry</span><br><span style="font-size:12px;color:var(--dim)">Audit trail: request IDs, timestamps, processing metadata</span></div>
       </div>
     </div>
@@ -903,7 +903,7 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
   <!-- ─── EMOTION FAMILIES ─── -->
   <div style="margin-top:32px">
-    <div style="font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">THE EIGHT — PLUTCHIK EMOTION FAMILIES</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">THE EIGHT — PLUTCHIK EMOTION FAMILIES</div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px">
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:4px;border-left:3px solid var(--joy);padding:10px 14px">
@@ -943,12 +943,12 @@ body{font-family:var(--az-sans);background:var(--bg);color:var(--text);-webkit-f
 
   <!-- ─── BRAND ─── -->
   <div style="margin-top:32px">
-    <div style="font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">BRAND & INFRASTRUCTURE</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:12px">BRAND & INFRASTRUCTURE</div>
 
     <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;border-left:3px solid var(--signal);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
         <div style="width:18px;height:18px;border-radius:3px;background:var(--signal)"></div>
-        <span style="font-family:var(--az-mono);font-size:14px;font-weight:700;color:var(--signal)">#00e89c</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--signal)">#00e89c</span>
         <span style="font-size:15px;color:var(--text)">Structural Green — Brand Accent</span>
       </div>
       <div style="font-size:13px;color:var(--dim);line-height:1.5">The Artifact Zero brand color. Means one thing: structural integrity confirmed. No tilt detected. This is NOT an emotion color — it is the absence of failure. It does not change. It is not part of The Eight. It is reserved.</div>

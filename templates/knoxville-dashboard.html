@@ -9,22 +9,22 @@ a:hover{text-decoration:underline}
 
 /* Topbar */
 
-.live-badge{display:flex;align-items:center;gap:6px;font-family:var(--az-mono);font-size:11px;color:var(--green);font-weight:600}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);font-weight:600}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* Hero */
 .hero{text-align:center;padding:48px 24px 24px}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,232,156,.08);border:1px solid rgba(0,232,156,.2);padding:6px 16px;border-radius:20px;font-family:var(--az-mono);font-size:11px;color:var(--green);font-weight:600;letter-spacing:2px;margin-bottom:20px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,232,156,.08);border:1px solid rgba(0,232,156,.2);padding:6px 16px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);font-weight:600;letter-spacing:2px;margin-bottom:20px}
 .hero h1{font-size:clamp(28px,5vw,48px);font-weight:700;color:var(--text);margin-bottom:8px}
 .hero h1 span{color:var(--green)}
 .hero-sub{font-size:16px;color:var(--dim);max-width:680px;margin:0 auto 8px}
-.hero-meta{font-family:var(--az-mono);font-size:12px;color:var(--muted);margin-top:8px}
+.hero-meta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:8px}
 .hero-meta strong{color:var(--amber)}
 
 /* Race Overview */
 .race-header{max-width:1200px;margin:32px auto 0;padding:0 24px}
-.race-title{font-family:var(--az-mono);font-size:13px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px}
+.race-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px}
 
 /* Candidate Grid */
 .candidates{max-width:1200px;margin:0 auto;padding:0 24px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
@@ -44,12 +44,12 @@ a:hover{text-decoration:underline}
 .card-avatar{
   width:56px;height:56px;border-radius:12px;
   background:var(--surface3);display:flex;align-items:center;justify-content:center;
-  font-family:var(--az-mono);font-size:20px;font-weight:700;color:var(--green);
+  font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--green);
   flex-shrink:0;border:1px solid var(--border);
 }
 .card-info h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px}
 .card-info .card-role{font-size:12px;color:var(--muted);line-height:1.4}
-.card-info .card-party-label{font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;margin-top:4px}
+.card-info .card-party-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;margin-top:4px}
 .card-info .card-party-label.rep{color:var(--red)}
 .card-info .card-party-label.dem{color:var(--blue)}
 
@@ -61,49 +61,49 @@ a:hover{text-decoration:underline}
 .score-ring-fill{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1s ease}
 .score-ring-text{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  font-family:var(--az-mono);font-weight:700;font-size:20px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;
 }
 .score-ring-label{
   position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
-  font-family:var(--az-mono);font-size:8px;font-weight:600;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:600;color:var(--muted);
   letter-spacing:1.5px;white-space:nowrap;
 }
 .score-detail{flex:1}
 .score-detail-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
 .score-detail-row .label{color:var(--muted)}
-.score-detail-row .val{font-family:var(--az-mono);font-weight:600;font-size:11px}
+.score-detail-row .val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
 .score-bar{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-top:2px}
 .score-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
 
 /* Card Stats Row */
 .card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-top:1px solid var(--border)}
 .card-stat{background:var(--surface);padding:12px 8px;text-align:center}
-.card-stat-val{font-family:var(--az-mono);font-size:16px;font-weight:700;color:var(--text)}
+.card-stat-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--text)}
 .card-stat-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
 
 /* Card Footer */
 .card-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.card-footer-link{font-family:var(--az-mono);font-size:11px;font-weight:600;color:var(--green);cursor:pointer}
+.card-footer-link{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--green);cursor:pointer}
 .card-footer-link:hover{text-decoration:underline}
 .card-footer-updated{font-size:10px;color:var(--muted)}
 
 /* Live Feed Section */
 .feed-section{max-width:1200px;margin:0 auto;padding:0 24px 48px}
 .feed-section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.feed-section-title{font-family:var(--az-mono);font-size:13px;color:var(--cyan);letter-spacing:3px;font-weight:700}
+.feed-section-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);letter-spacing:3px;font-weight:700}
 .feed-section-meta{font-size:12px;color:var(--muted)}
 
 .feed-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;transition:border-color .2s}
 .feed-item:hover{border-color:var(--border2)}
 .feed-item-header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
-.feed-item-source{font-family:var(--az-mono);font-size:11px;font-weight:600;color:var(--green)}
+.feed-item-source{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--green)}
 .feed-item-time{font-size:11px;color:var(--muted)}
 .feed-item-
 .feed-item-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;cursor:pointer}
 .feed-item-title:hover{color:var(--green)}
 .feed-item-summary{font-size:13px;color:var(--dim);line-height:1.5;margin-bottom:8px}
 .feed-item-tags{display:flex;gap:6px;flex-wrap:wrap}
-.feed-tag{font-family:var(--az-mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
+.feed-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
 .feed-tag.hcs{background:rgba(0,232,156,.1);color:var(--green);border:1px solid rgba(0,232,156,.2)}
 .feed-tag.tilt{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
 .feed-tag.candidate{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
@@ -111,12 +111,12 @@ a:hover{text-decoration:underline}
 /* Score Methodology */
 .methodology{max-width:1200px;margin:0 auto;padding:0 24px 48px}
 .method-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px}
-.method-title{font-family:var(--az-mono);font-size:13px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px}
+.method-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);letter-spacing:3px;font-weight:700;margin-bottom:16px}
 .method-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:16px}
 .method-item{padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
-.method-item-name{font-family:var(--az-mono);font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:4px}
+.method-item-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:4px}
 .method-item-desc{font-size:12px;color:var(--dim);line-height:1.4}
-.method-item-weight{font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:6px}
+.method-item-weight{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px}
 
 /* Disclaimer */
 .disclaimer-bar{max-width:1200px;margin:0 auto 16px;padding:0 24px}
@@ -126,10 +126,10 @@ a:hover{text-decoration:underline}
 /* Lens Selector */
 .lens-bar{max-width:1200px;margin:0 auto 24px;padding:0 24px}
 .lens-bar-inner{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px}
-.lens-bar-label{font-family:var(--az-mono);font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;text-align:center}
+.lens-bar-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;text-align:center}
 .lens-tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .lens-tab{
-  font-family:var(--az-mono);font-size:11px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
   padding:8px 16px;border-radius:6px;cursor:pointer;
   border:1px solid var(--border);background:var(--surface2);color:var(--muted);
   transition:all .2s;text-align:center;
@@ -145,30 +145,6 @@ a:hover{text-decoration:underline}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* Responsive */
-
-.method-desc{font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:16px}
-.method-item-name.color-red{color:var(--red)}
-.method-item-name.color-green{color:var(--green)}
-.method-item-name.color-amber{color:var(--amber)}
-.method-item-name.color-pink{color:var(--pink)}
-.method-item-name.color-purple{color:var(--purple)}
-.method-item-name.color-blue{color:var(--blue)}
-.color-green{color:var(--green)}
-.feed-loading{text-align:center;padding:32px;color:var(--muted)}
-
-
-/* JS card helpers */
-.feed-item-mb{margin-bottom:10px}
-.feed-item-cursor-default{cursor:default}
-.feed-tag-vague{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)}
-.feed-tag-emo{background:rgba(236,72,153,.1);color:var(--pink);border:1px solid rgba(236,72,153,.2)}
-.feed-tag-clean{background:rgba(0,232,156,.1);color:var(--green);border:1px solid rgba(0,232,156,.2)}
-.score-meta-best{color:var(--green)}
-.detail-wrap{max-width:800px;margin:0 auto}
-.detail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.detail-title{font-size:20px;color:var(--text)}
-.detail-close{background:var(--surface);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-
 @media(max-width:768px){
   .candidates{grid-template-columns:1fr}
   .hero{padding:32px 16px 16px}
@@ -237,42 +213,42 @@ a:hover{text-decoration:underline}
     <div class="feed-section-meta">Auto-updates every 120s · <a href="/live">View full feed →</a></div>
   </div>
   <div id="localFeed">
-    <div class="feed-item"><div class="feed-item-body feed-loading">Loading local news coverage...</div></div>
+    <div class="feed-item"><div class="feed-item-body" style="text-align:center;padding:32px;color:var(--muted)">Loading local news coverage...</div></div>
   </div>
 </div>
 
 <div class="methodology">
   <div class="method-card">
     <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
-    <p class="method-desc">The HCS works like a credit score: every candidate starts at <strong class="color-green">85</strong> and gets deductions for structural problems and bonuses for clarity. Your worst statement counts 1.5× in the average, because you're only as strong as your weakest moment. Scores update live as new statements are analyzed.</p>
+    <p style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:16px">The HCS works like a credit score: every candidate starts at <strong style="color:var(--green)">85</strong> and gets deductions for structural problems and bonuses for clarity. Your worst statement counts 1.5× in the average, because you're only as strong as your weakest moment. Scores update live as new statements are analyzed.</p>
     <div class="method-grid">
       <div class="method-item">
-        <div class="method-item-name color-red">VAGUENESS</div>
+        <div class="method-item-name" style="color:var(--red)">VAGUENESS</div>
         <div class="method-item-desc">Platitude words (values, opportunity, incredible, families, freedom). More fluff = lower score.</div>
         <div class="method-item-weight">Penalty: -3 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-green">SPECIFICITY</div>
+        <div class="method-item-name" style="color:var(--green)">SPECIFICITY</div>
         <div class="method-item-desc">Concrete policy words (budget, tax, build, invest, plan, vote). Substance raises your score.</div>
         <div class="method-item-weight">Bonus: +4 per word</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-amber">PROMISE BALANCE</div>
+        <div class="method-item-name" style="color:var(--amber)">PROMISE BALANCE</div>
         <div class="method-item-desc">Unbounded promises ("I will never") get penalized. Hedged aspirations ("I want to") get rewarded.</div>
         <div class="method-item-weight">-4 unbounded / +3 hedged</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-pink">EMOTIONAL CHARGE</div>
+        <div class="method-item-name" style="color:var(--pink)">EMOTIONAL CHARGE</div>
         <div class="method-item-desc">Density of emotionally loaded language. Lower charge = clearer structural integrity.</div>
         <div class="method-item-weight">Penalty: -0.2 per %</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-purple">TILT PATTERNS</div>
+        <div class="method-item-name" style="color:var(--purple)">TILT PATTERNS</div>
         <div class="method-item-desc">Structural manipulation: certainty inflation, absolute language, manufactured consensus, pressure tactics.</div>
         <div class="method-item-weight">Penalty: -7 per tag</div>
       </div>
       <div class="method-item">
-        <div class="method-item-name color-blue">DATA DENSITY</div>
+        <div class="method-item-name" style="color:var(--blue)">DATA DENSITY</div>
         <div class="method-item-desc">Numbers, names, dates, percentages, dollar amounts. Facts in the text = credibility bonus.</div>
         <div class="method-item-weight">Bonus: +3 per fact</div>
       </div>
@@ -650,7 +626,7 @@ function renderCandidateCard(candidate) {
         <div class="score-detail">
           <div class="score-detail-row">
             <span class="label">Best</span>
-            <span class="val score-meta-best">${hcs.best}</span>
+            <span class="val" style="color:var(--green)">${hcs.best}</span>
           </div>
           <div class="score-detail-row">
             <span class="label">Worst</span>
@@ -714,18 +690,18 @@ function showStatements(candidateId) {
   const scores = candidate.statements.map(s => ({ text: s, hcs: computeHCS(s) }));
 
   const html = scores.map((s, i) => `
-    <div class="feed-item feed-item-mb">
+    <div class="feed-item" style="margin-bottom:10px">
       <div class="feed-item-header">
         <div class="feed-item-source">${candidate.name} — Statement ${i + 1}</div>
         <div class="feed-item-time" style="color:${getScoreColor(s.hcs.score)};font-weight:700">HCS: ${s.hcs.score}</div>
       </div>
       <div class="feed-item-body">
-        <div class="feed-item-title feed-item-cursor-default">"${s.text}"</div>
+        <div class="feed-item-title" style="cursor:default">"${s.text}"</div>
         <div class="feed-item-tags">
           <span class="feed-tag hcs">HCS ${s.hcs.score}</span>
-          <span class="feed-tag feed-tag-vague">Vague:${s.hcs.raw.vague} Spec:${s.hcs.raw.specific}</span>
-          <span class="feed-tag feed-tag-emo">Emo ${s.hcs.raw.emotional}%</span>
-          ${s.hcs.tiltTags.length ? s.hcs.tiltTags.map(t => `<span class="feed-tag tilt">${t}</span>`).join('') : '<span class="feed-tag feed-tag-clean">Clean</span>'}
+          <span class="feed-tag" style="background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)">Vague:${s.hcs.raw.vague} Spec:${s.hcs.raw.specific}</span>
+          <span class="feed-tag" style="background:rgba(236,72,153,.1);color:var(--pink);border:1px solid rgba(236,72,153,.2)">Emo ${s.hcs.raw.emotional}%</span>
+          ${s.hcs.tiltTags.length ? s.hcs.tiltTags.map(t => `<span class="feed-tag tilt">${t}</span>`).join('') : '<span class="feed-tag" style="background:rgba(0,232,156,.1);color:var(--green);border:1px solid rgba(0,232,156,.2)">Clean</span>'}
         </div>
       </div>
     </div>
@@ -735,10 +711,10 @@ function showStatements(candidateId) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);overflow-y:auto;padding:40px 20px';
   overlay.innerHTML = `
-    <div class="detail-wrap">
-      <div class="detail-head">
-        <h2 class="detail-title">${candidate.name} — All Statements</h2>
-        <button onclick="this.closest('div[style]').parentElement.remove()" class="detail-close">&times;</button>
+    <div style="max-width:800px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="font-size:20px;color:var(--text)">${candidate.name} — All Statements</h2>
+        <button onclick="this.closest('div[style]').parentElement.remove()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
       </div>
       ${html}
     </div>
@@ -811,7 +787,7 @@ async function fetchLocalFeed() {
 function renderLocalFeed() {
   const div = document.getElementById('localFeed');
   if (!localItems.length) {
-    div.innerHTML = '<div class="feed-item"><div class="feed-item-body feed-loading">No local stories loaded yet. Check back shortly.</div></div>';
+    div.innerHTML = '<div class="feed-item"><div class="feed-item-body" style="text-align:center;padding:32px;color:var(--muted)">No local stories loaded yet. Check back shortly.</div></div>';
     return;
   }
 
