@@ -805,6 +805,13 @@ def engine_bench():
     return render_template("engine-bench.html")
 
 
+@app.route("/voice")
+def voice_page():
+    return render_template("voice.html",
+                           logged_in=session.get('logged_in', False),
+                           user_id=session.get('user_id'))
+
+
 @app.route("/fortune500")
 @app.route("/live")
 def fortune500_page():
