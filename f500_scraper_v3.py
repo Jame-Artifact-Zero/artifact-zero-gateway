@@ -262,6 +262,14 @@ def ensure_tables(conn):
         except Exception:
             conn.rollback()
 
+    # Add redirect columns if missing
+    for col, coltype in [("redirect_url", "TEXT"), ("redirect_type", "TEXT")]:
+        try:
+            cur.execute(f"ALTER TABLE companies ADD COLUMN {col} {coltype}")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
     conn.commit()
 
 
@@ -548,9 +556,11 @@ def scrape_company(base_url, subpages):
     """
     Scrape a company using Method A (Link Discovery) + Method B (Sitemap fallback).
     Returns list of (page_url, page_type, page_label, raw_text, scrape_method) tuples.
+    Also returns redirect_info dict if redirect/corporate subdomain was discovered.
     """
     results = []
     seen_checksums = set()  # Deduplicate identical content
+    redirect_info = {}  # Track redirects and corporate subdomain discovery
 
     def add_page(url, ptype, label, text, method):
         text = clean_corporate_text(text)
@@ -568,9 +578,81 @@ def scrape_company(base_url, subpages):
     html, final_url = fetch_page(base_url)
     if not html:
         log.warning(f"  Could not fetch homepage")
-        return results
+        return results, redirect_info
+
+    # ── Step 1b: Detect redirect to corporate subdomain ──
+    original_domain = urlparse(base_url).netloc.lower()
+    final_domain = urlparse(final_url).netloc.lower() if final_url else original_domain
+    if final_domain != original_domain:
+        redirect_info["main"] = base_url
+        redirect_info["main2"] = final_url
+        redirect_info["redirect_type"] = "domain_redirect"
+        log.info(f"  REDIRECT: {original_domain} -> {final_domain} (using {final_url})")
+        base_url = final_url  # Use redirected URL as new base
 
     hp_text = extract_text(html)
+
+    # ── Step 1c: If homepage is product/thin, try corporate subdomain ──
+    is_product_page = (
+        len(hp_text) < 200
+        or hp_text.lower().count("add to cart") >= 1
+        or hp_text.lower().count("shop now") >= 1
+        or hp_text.lower().count("buy now") >= 1
+        or (len(PRICE_RE.findall(hp_text)) >= 3)
+    )
+
+    if is_product_page and "main2" not in redirect_info:
+        # Try corporate subdomain variants
+        parsed = urlparse(base_url)
+        domain_base = parsed.netloc.replace("www.", "")
+        corporate_variants = [
+            f"https://corporate.{domain_base}",
+            f"https://about.{domain_base}",
+            f"https://investor.{domain_base}",
+            f"https://ir.{domain_base}",
+        ]
+        for corp_url in corporate_variants:
+            log.info(f"  Trying corporate subdomain: {corp_url}")
+            corp_html, corp_final = fetch_page(corp_url)
+            if corp_html:
+                corp_text = extract_text(corp_html)
+                if len(corp_text) >= 200:
+                    redirect_info["main"] = base_url
+                    redirect_info["main2"] = corp_url
+                    redirect_info["redirect_type"] = "corporate_subdomain"
+                    log.info(f"  FOUND corporate site: {corp_url}")
+                    # Replace homepage with corporate site
+                    html = corp_html
+                    final_url = corp_final
+                    base_url = corp_url
+                    hp_text = corp_text
+                    break
+            time.sleep(0.3)
+
+    # Also check for "Corporate" link in footer of product pages
+    if is_product_page and "main2" not in redirect_info:
+        from bs4 import BeautifulSoup as BS
+        soup = BS(html, "html.parser")
+        for link in soup.find_all("a", href=True):
+            link_text = link.get_text(strip=True).lower()
+            href = link["href"]
+            if link_text in ("corporate", "about us", "our company", "company"):
+                corp_url = urljoin(base_url, href)
+                if corp_url != base_url:
+                    log.info(f"  Found footer corporate link: {corp_url}")
+                    corp_html, corp_final = fetch_page(corp_url)
+                    if corp_html:
+                        corp_text = extract_text(corp_html)
+                        if len(corp_text) >= 200:
+                            redirect_info["main"] = base_url
+                            redirect_info["main2"] = corp_url
+                            redirect_info["redirect_type"] = "footer_corporate_link"
+                            html = corp_html
+                            final_url = corp_final
+                            base_url = corp_url
+                            hp_text = corp_text
+                            break
+
     if len(hp_text) >= 80:
         add_page(base_url, "homepage", "Homepage", hp_text, "link_discovery")
 
@@ -637,8 +719,7 @@ def scrape_company(base_url, subpages):
                         covered_types.add(ptype)
             time.sleep(0.3)
 
-    return results
-
+    return results, redirect_info
 
 # ═══════════════════════════════════════════
 # STORAGE
@@ -782,7 +863,21 @@ def process_entity(conn, slug, name, rank, base_url, subpages, entity_type):
     company_id = get_or_create_company(conn, slug, name, rank, base_url, entity_type)
 
     # Scrape pages
-    pages = scrape_company(base_url, subpages)
+    pages, redirect_info = scrape_company(base_url, subpages)
+
+    # Log redirect/corporate subdomain discovery
+    if redirect_info:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE companies SET
+                redirect_url = %s,
+                redirect_type = %s,
+                updated_at = %s
+            WHERE id = %s
+        """, (redirect_info.get("main2"), redirect_info.get("redirect_type"),
+              datetime.now(timezone.utc), company_id))
+        conn.commit()
+        log.info(f"  Logged redirect: {redirect_info.get('redirect_type')} -> {redirect_info.get('main2')}")
 
     if not pages:
         log.warning(f"  SKIP {name}: no pages with sufficient text")
@@ -851,13 +946,37 @@ VC_FUNDS = [
 def lambda_handler(event, context):
     target = event.get("target", "both")
     limit = event.get("limit", 999)
+    empty_only = event.get("empty_only", False)
     conn = get_conn()
     ensure_tables(conn)
     results = []
 
+    # If empty_only, find which slugs have no/thin copy
+    empty_slugs = set()
+    if empty_only:
+        cur = conn.cursor()
+        cur.execute("SELECT slug FROM fortune500_scores WHERE homepage_copy IS NULL OR length(homepage_copy) < 200")
+        empty_slugs.update(r[0] for r in cur.fetchall())
+        cur.execute("SELECT slug FROM vc_fund_scores WHERE homepage_copy IS NULL OR length(homepage_copy) < 200")
+        empty_slugs.update(r[0] for r in cur.fetchall())
+        # Also include companies not in the scores table at all
+        cur.execute("SELECT slug FROM fortune500_scores")
+        existing_f500 = {r[0] for r in cur.fetchall()}
+        cur.execute("SELECT slug FROM vc_fund_scores")
+        existing_vc = {r[0] for r in cur.fetchall()}
+        for s,n,r,u,sub in COMPANIES:
+            if s not in existing_f500:
+                empty_slugs.add(s)
+        for s,n,r,u,sub in VC_FUNDS:
+            if s not in existing_vc:
+                empty_slugs.add(s)
+        log.info(f"Empty-only mode: {len(empty_slugs)} companies to retry")
+
     if target in ("f500", "both"):
         start = event.get('start', 1)
         companies = [(s,n,r,u,sub) for s,n,r,u,sub in COMPANIES if r >= start][:limit]
+        if empty_only:
+            companies = [(s,n,r,u,sub) for s,n,r,u,sub in companies if s in empty_slugs]
         ok = 0
         for slug, name, rank, url, subs in companies:
             try:
@@ -885,6 +1004,8 @@ def lambda_handler(event, context):
 
     if target in ("vc", "both"):
         funds = VC_FUNDS[:min(limit, len(VC_FUNDS))]
+        if empty_only:
+            funds = [(s,n,r,u,sub) for s,n,r,u,sub in funds if s in empty_slugs]
         ok = 0
         for slug, name, rank, url, subs in funds:
             try:
@@ -920,5 +1041,6 @@ if __name__ == "__main__":
     p.add_argument("--limit", type=int, default=5)
     p.add_argument("--target", choices=["f500", "vc", "both"], default="both")
     p.add_argument("--start", type=int, default=1, help="Start at rank")
+    p.add_argument("--empty-only", action="store_true", help="Only scrape companies with no/thin copy")
     a = p.parse_args()
-    print(lambda_handler({"target": a.target, "limit": a.limit, "start": a.start}, None))
+    print(lambda_handler({"target": a.target, "limit": a.limit, "start": a.start, "empty_only": a.empty_only}, None))
