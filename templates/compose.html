@@ -7,7 +7,7 @@
 
 
 /* ===== TOOLBAR ===== */
-.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.toolbar{position:fixed;top:var(--az-topbar-h, 48px);left:0;right:0;z-index:100;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
 .toolbar-left{display:flex;align-items:center;gap:12px}
 .toolbar-logo{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:2px;text-decoration:none}
 .toolbar-sep{width:1px;height:20px;background:var(--border)}
@@ -24,7 +24,7 @@
 .mode-btn.active{background:var(--surface2);color:var(--accent)}
 
 /* ===== SALES PITCH ===== */
-.pitch{max-width:640px;margin:0 auto;padding:100px 24px 60px;text-align:center;display:none}
+.pitch{max-width:640px;margin:0 auto;padding:140px 24px 60px;text-align:center;display:none}
 .pitch.show{display:block}
 .pitch-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
 .pitch h1{font-size:32px;font-weight:700;line-height:1.25;margin-bottom:16px}
@@ -44,7 +44,7 @@
 .pitch-cta-sub a{color:var(--accent);text-decoration:none}
 
 /* ===== COMPOSE AREA ===== */
-.compose{max-width:760px;width:100%;margin:0 auto;padding:60px 20px 220px;flex:1;display:flex;flex-direction:column}
+.compose{max-width:760px;width:100%;margin:0 auto;padding:100px 20px 220px;flex:1;display:flex;flex-direction:column}
 .compose.hidden{display:none}
 .email-header{padding:16px 0;border-bottom:1px solid var(--border)}
 .email-row{display:flex;align-items:center;padding:8px 0;gap:8px}
