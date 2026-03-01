@@ -282,6 +282,48 @@ JUNK_RE = re.compile(
     r"|^\d+ reviews?$|^\d+ stars?$",
     re.IGNORECASE
 )
+
+# ── Sentence-level noise patterns to strip from extracted text ──
+NOISE_PATTERNS = [
+    re.compile(r"Powered by generative AI\..*?policies\.", re.IGNORECASE | re.DOTALL),
+    re.compile(r"We received a GPC signal.*?Privacy Notice\.", re.IGNORECASE | re.DOTALL),
+    re.compile(r"\*?Restrictions apply\..*?terms\.", re.IGNORECASE | re.DOTALL),
+    re.compile(r"Sign up today and receive.*?inbox\.", re.IGNORECASE | re.DOTALL),
+    re.compile(r"Read more about .*?\.(?:\s|$)", re.IGNORECASE),
+    re.compile(r"Follow us on .*?\.(?:\s|$)", re.IGNORECASE),
+    re.compile(r"We use cookies.*?\.(?:\s|$)", re.IGNORECASE | re.DOTALL),
+    re.compile(r"By (continuing|using|browsing).*?policy\.", re.IGNORECASE | re.DOTALL),
+    re.compile(r"^\d+ [A-Z][a-z]+ (?:Drive|Street|Avenue|Blvd|Road),? [A-Z]{2} \d{5}.*$", re.MULTILINE),
+]
+
+# Lines that are just job titles (no scorable content)
+TITLE_RE = re.compile(
+    r"^(?:Executive |Senior |Chief |Vice |President|Global |Managing )"
+    r".*(?:Officer|President|Partner|Director|Counsel|Executive)\b",
+    re.IGNORECASE
+)
+
+def clean_corporate_text(text):
+    """Strip noise patterns and boilerplate from extracted text."""
+    if not text:
+        return text
+    # Remove known noise patterns
+    for pat in NOISE_PATTERNS:
+        text = pat.sub("", text)
+    # Remove lines that are just leadership titles
+    lines = text.split("\n")
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if TITLE_RE.match(stripped) and len(stripped.split()) < 15:
+            continue
+        cleaned.append(line)
+    text = "\n".join(cleaned)
+    # Collapse multiple blank lines
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 PRICE_RE = re.compile(r"\$\d+\.?\d{0,2}")
 
 CORPORATE_KEYWORDS = {
@@ -511,6 +553,9 @@ def scrape_company(base_url, subpages):
     seen_checksums = set()  # Deduplicate identical content
 
     def add_page(url, ptype, label, text, method):
+        text = clean_corporate_text(text)
+        if not text or len(text.strip()) < 30:
+            return False  # Nothing left after cleaning
         cs = hashlib.md5(text.strip()[:500].encode()).hexdigest()
         if cs in seen_checksums:
             return False  # Duplicate content
@@ -676,9 +721,10 @@ def update_company_rollup(conn, company_id, slug, pages):
     page_types = list(set(p[1] for p in pages))
     page_urls = [p[0] for p in pages]
 
-    # Combine all text for backward compat
+    # Combine all text for backward compat — clean noise first
     combined_text = "\n\n---\n\n".join(
-        f"[{p[1].upper()}]\n{p[3]}" for p in pages
+        f"[{p[1].upper()}]\n{clean_corporate_text(p[3])}" for p in pages
+        if p[1].lower() not in ("careers", "contact", "newsroom")  # skip low-value pages
     )
 
     # Update companies table
