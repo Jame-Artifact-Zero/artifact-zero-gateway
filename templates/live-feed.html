@@ -6,19 +6,37 @@
 <style>
 .live-badge{
   display:flex;align-items:center;gap:6px;
-  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);
-  background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue, #3b82f6);
+  background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);
   padding:4px 10px;border-radius:4px;
 }
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--blue, #3b82f6);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Skeleton loading */
+.skel-bar{background:var(--surface2);border-radius:4px;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{opacity:.5}50%{opacity:.8}100%{opacity:.5}}
+.feed-item.skeleton{pointer-events:none}
+
+/* Blue theme override for live feed */
+.page-livefeed .source-tab.active{background:var(--blue, #3b82f6);border-color:var(--blue, #3b82f6)}
+.page-livefeed .label-nti{color:var(--blue, #3b82f6)}
+
+/* Show more button */
+.load-more{
+  display:block;margin:16px auto;padding:10px 24px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+  background:transparent;border:1px solid var(--blue, #3b82f6);color:var(--blue, #3b82f6);
+  border-radius:6px;cursor:pointer;transition:all .15s;
+}
+.load-more:hover{background:rgba(59,130,246,.1)}
 
 .hero{
   text-align:center;padding:40px 24px 20px;
   background:linear-gradient(180deg,rgba(59,130,246,.04) 0%,transparent 100%);
 }
 .hero h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
-.hero h1 span{color:var(--accent)}
+.hero h1 span{color:var(--blue, #3b82f6)}
 .hero p{font-size:14px;color:var(--muted);max-width:640px;margin:0 auto;line-height:1.6}
 .hero .disclaimer{
   font-size:11px;color:var(--dim);margin-top:12px;
@@ -39,8 +57,7 @@
 .source-tab .tab-count{font-size:10px;font-weight:400;opacity:.7;margin-left:6px}
 .source-tab .tab-pulse{
   position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;
-  background:var(--green);animation:pulse 2s infinite;
-}
+  background:var(--blue, #3b82f6);animation:pulse 2s infinite;}
 
 .feed-controls{
   display:flex;justify-content:space-between;align-items:center;
@@ -468,9 +485,36 @@ function runClientAnalysis(text) {
 function init() {
   renderTabs();
   SOURCES.forEach(s => { feedCache[s.id] = []; });
-  fetchAllSources();
-  refreshTimer = setInterval(fetchAllSources, REFRESH_INTERVAL);
+  // Progressive: load active source immediately, others in background
+  showSkeleton();
+  fetchSource(SOURCES.find(s => s.id === activeSource)).then(() => {
+    hideSkeleton();
+    renderFeed();
+    // Lazy-load remaining sources in background
+    loadRemainingSourcesInBackground();
+  });
+  refreshTimer = setInterval(() => fetchSource(SOURCES.find(s => s.id === activeSource)).then(renderFeed), REFRESH_INTERVAL);
 }
+
+async function loadRemainingSourcesInBackground() {
+  for (const source of SOURCES) {
+    if (source.id === activeSource) continue;
+    try { await fetchSource(source); renderTabs(); } catch(e) {}
+    await new Promise(r => setTimeout(r, 500)); // stagger requests
+  }
+  updateStats();
+}
+
+function showSkeleton() {
+  const feed = document.getElementById('feed');
+  feed.innerHTML = Array(5).fill(0).map(() => `
+    <div class="feed-item skeleton">
+      <div class="feed-item-header"><div class="skel-bar" style="width:80px;height:12px"></div><div class="skel-bar" style="width:60px;height:12px"></div></div>
+      <div style="padding:16px"><div class="skel-bar" style="width:90%;height:18px;margin-bottom:8px"></div><div class="skel-bar" style="width:70%;height:14px"></div></div>
+    </div>
+  `).join('');
+}
+function hideSkeleton() { /* renderFeed will replace content */ }
 
 function renderTabs() {
   const bar = document.getElementById('sourceTabs');
@@ -491,7 +535,13 @@ function renderTabs() {
 function switchSource(id) {
   activeSource = id;
   renderTabs();
-  renderFeed();
+  const source = SOURCES.find(s => s.id === id);
+  if (!feedCache[id] || feedCache[id].length === 0) {
+    showSkeleton();
+    fetchSource(source).then(() => { hideSkeleton(); renderFeed(); });
+  } else {
+    renderFeed();
+  }
 }
 
 async function fetchAllSources() {
@@ -571,14 +621,34 @@ function sortFeed(sourceId) {
 // ══════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════
+let feedShowCount = 5;
+
 function renderFeed() {
   const feed = document.getElementById('feed');
   const items = feedCache[activeSource] || [];
+  feedShowCount = 5; // Reset on source switch
   if (!items.length) {
     feed.innerHTML = `<div class="empty-state"><div class="icon">◎</div>Loading feed from ${SOURCES.find(s=>s.id===activeSource)?.name}...</div>`;
     return;
   }
-  feed.innerHTML = items.map(item => renderItem(item)).join('');
+  const visible = items.slice(0, feedShowCount);
+  let html = visible.map(item => renderItem(item)).join('');
+  if (items.length > feedShowCount) {
+    html += `<button class="load-more" onclick="showMoreItems()">SHOW ${Math.min(5, items.length - feedShowCount)} MORE OF ${items.length}</button>`;
+  }
+  feed.innerHTML = html;
+}
+
+function showMoreItems() {
+  feedShowCount += 5;
+  const feed = document.getElementById('feed');
+  const items = feedCache[activeSource] || [];
+  const visible = items.slice(0, feedShowCount);
+  let html = visible.map(item => renderItem(item)).join('');
+  if (items.length > feedShowCount) {
+    html += `<button class="load-more" onclick="showMoreItems()">SHOW ${Math.min(5, items.length - feedShowCount)} MORE OF ${items.length}</button>`;
+  }
+  feed.innerHTML = html;
 }
 
 function renderItem(item) {

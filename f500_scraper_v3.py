@@ -348,6 +348,12 @@ CORPORATE_KEYWORDS = {
 
 def fetch_page(url, timeout=12):
     try:
+        from curl_cffi import requests as cffi_requests
+        resp = cffi_requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True, impersonate="chrome")
+        resp.raise_for_status()
+        return resp.text, resp.url
+    except ImportError:
+        # Fallback to regular requests if curl_cffi not installed
         resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
         resp.raise_for_status()
         return resp.text, resp.url
@@ -974,9 +980,10 @@ def lambda_handler(event, context):
 
     if target in ("f500", "both"):
         start = event.get('start', 1)
-        companies = [(s,n,r,u,sub) for s,n,r,u,sub in COMPANIES if r >= start][:limit]
+        companies = [(s,n,r,u,sub) for s,n,r,u,sub in COMPANIES if r >= start]
         if empty_only:
             companies = [(s,n,r,u,sub) for s,n,r,u,sub in companies if s in empty_slugs]
+        companies = companies[:limit]
         ok = 0
         for slug, name, rank, url, subs in companies:
             try:
@@ -1003,9 +1010,10 @@ def lambda_handler(event, context):
         results.append(f"F500: {ok}/{len(companies)} scraped")
 
     if target in ("vc", "both"):
-        funds = VC_FUNDS[:min(limit, len(VC_FUNDS))]
+        funds = list(VC_FUNDS)
         if empty_only:
             funds = [(s,n,r,u,sub) for s,n,r,u,sub in funds if s in empty_slugs]
+        funds = funds[:min(limit, len(funds))]
         ok = 0
         for slug, name, rank, url, subs in funds:
             try:
