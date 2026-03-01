@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTI Engine Bench</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --bg: #0a0a0c;
+    --surface: #111114;
+    --surface2: #18181c;
+    --border: #2a2a30;
+    --border-active: #4a4a55;
+    --text: #e0e0e5;
+    --text-dim: #8888a0;
+    --accent: #00ff88;
+    --accent-dim: #00cc6a;
+    --warn: #ff6644;
+    --info: #44aaff;
+    --gold: #ffcc00;
+    --v2-color: #44aaff;
+    --v3-color: #ff6644;
+    --edge-color: #cc44ff;
+    --econ-color: #ffcc00;
+    --obs-color: #00ddcc;
+    --gov-color: #ff8844;
+    --band-color: #88cc44;
+    --pipe-color: #00ff88;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  .header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  .header .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .header .tag {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: calc(100vh - 73px);
+  }
+
+  /* LEFT: Input Panel */
+  .input-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .input-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #inputText {
+    flex: 1;
+    min-height: 300px;
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    padding: 20px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+  }
+  #inputText::placeholder {
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+
+  /* Objective field */
+  .objective-row {
+    border-top: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+  }
+  .objective-row label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  #objectiveText {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    border-radius: 4px;
+    outline: none;
+  }
+  #objectiveText:focus { border-color: var(--accent); }
+
+  /* Engine Rack */
+  .engine-rack {
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    background: var(--surface2);
+  }
+  .rack-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .rack-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .engine-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .engine-toggle:hover { border-color: var(--border-active); }
+  .engine-toggle.active { border-color: var(--accent); background: rgba(0,255,136,0.05); }
+  .engine-toggle .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.15s;
+  }
+  .engine-toggle.active .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .engine-toggle .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: color 0.15s;
+  }
+  .engine-toggle.active .name { color: var(--text); }
+
+  /* Presets */
+  .presets {
+    border-top: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--surface2);
+  }
+  .preset-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Run Button */
+  .run-bar {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  #runBtn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 12px 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  #runBtn:hover { background: var(--accent-dim); }
+  #runBtn:disabled { opacity: 0.4; cursor: default; }
+
+  #clearBtn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #clearBtn:hover { border-color: var(--warn); color: var(--warn); }
+
+  .word-count {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* RIGHT: Output Panel */
+  .output-panel {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: calc(100vh - 73px);
+  }
+
+  .output-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    opacity: 0.4;
+  }
+
+  /* Engine output blocks */
+  .engine-block {
+    border-bottom: 1px solid var(--border);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  .engine-block-header {
+    padding: 14px 24px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .engine-block-header:hover { background: rgba(255,255,255,0.03); }
+  .engine-block-header .indicator {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .engine-block-header .engine-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .engine-block-header .engine-summary {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .engine-block-header .chevron {
+    color: var(--text-dim);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+  .engine-block.collapsed .chevron { transform: rotate(-90deg); }
+  .engine-block.collapsed .engine-body { display: none; }
+
+  .engine-body {
+    padding: 16px 24px 20px;
+    background: var(--surface);
+  }
+
+  /* Data rows inside engine output */
+  .data-row {
+    display: flex;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    align-items: baseline;
+  }
+  .data-row:last-child { border-bottom: none; }
+  .data-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    min-width: 200px;
+    flex-shrink: 0;
+  }
+  .data-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .data-val.score-good { color: var(--accent); }
+  .data-val.score-warn { color: var(--gold); }
+  .data-val.score-bad { color: var(--warn); }
+  .data-val.text-output {
+    background: rgba(0,255,136,0.04);
+    padding: 10px 14px;
+    border-radius: 4px;
+    border-left: 3px solid var(--accent);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    width: 100%;
+  }
+
+  .violations-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .violation-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(255,102,68,0.12);
+    color: var(--warn);
+    border: 1px solid rgba(255,102,68,0.25);
+  }
+  .marker-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(204,68,255,0.12);
+    color: var(--edge-color);
+    border: 1px solid rgba(204,68,255,0.25);
+  }
+  .band-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .band-OPTIMAL, .band-CALM, .band-LOCKED, .band-LOW_COST, .band-STABLE { background: rgba(0,255,136,0.12); color: var(--accent); border: 1px solid rgba(0,255,136,0.25); }
+  .band-STABLE_struct, .band-CONSISTENT, .band-MODERATE_COST, .band-WATCH { background: rgba(255,204,0,0.12); color: var(--gold); border: 1px solid rgba(255,204,0,0.25); }
+  .band-PARTIAL, .band-TENSE, .band-DRIFTING, .band-HIGH_COST, .band-TENSION { background: rgba(255,136,68,0.12); color: var(--gov-color); border: 1px solid rgba(255,136,68,0.25); }
+  .band-UNSTABLE, .band-ELEVATED, .band-DESTABILIZING, .band-HEAVY_COST, .band-CRITICAL { background: rgba(255,102,68,0.12); color: var(--warn); border: 1px solid rgba(255,102,68,0.25); }
+
+  .route-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .route-AI_OPTIMAL { background: rgba(0,255,136,0.12); color: var(--accent); }
+  .route-CLARIFICATION_REQUIRED { background: rgba(255,204,0,0.12); color: var(--gold); }
+  .route-HUMAN_RECOMMENDED { background: rgba(255,136,68,0.12); color: var(--gov-color); }
+  .route-HUMAN_REQUIRED { background: rgba(255,102,68,0.12); color: var(--warn); }
+  .route-AI_PATH { background: rgba(0,255,136,0.12); color: var(--accent); }
+  .route-HUMAN_INTERNAL { background: rgba(255,102,68,0.12); color: var(--warn); }
+
+  /* File upload area */
+  .file-drop {
+    border-top: 1px solid var(--border);
+    padding: 12px 24px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .file-drop label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 6px 14px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .file-drop label:hover { border-color: var(--accent); color: var(--accent); }
+  .file-drop .file-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Diff view */
+  .diff-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .diff-col {
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-before {
+    background: rgba(255,102,68,0.06);
+    border-left: 3px solid var(--warn);
+    color: var(--text-dim);
+  }
+  .diff-after {
+    background: rgba(0,255,136,0.06);
+    border-left: 3px solid var(--accent);
+    color: var(--text);
+  }
+  .diff-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .diff-label-before { color: var(--warn); }
+  .diff-label-after { color: var(--accent); }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .input-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .output-panel { max-height: none; }
+    .diff-container { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">0</div>
+  <div class="subtitle">Engine Bench</div>
+  <div class="tag">DETERMINISTIC · NO LLM · ALL ENGINES</div>
+</div>
+
+<div class="main">
+  <!-- LEFT -->
+  <div class="input-panel">
+    <div class="panel-header" style="display:flex;align-items:center;gap:0">
+      <span class="tab active" data-tab="single" onclick="switchTab('single',this)" style="padding:16px 20px;cursor:pointer;border-bottom:2px solid var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:2px">Single</span>
+      <span class="tab" data-tab="batch" onclick="switchTab('batch',this)" style="padding:16px 20px;cursor:pointer;border-bottom:2px solid transparent;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px">Batch</span>
+      <span class="tab" data-tab="compare" onclick="switchTab('compare',this)" style="padding:16px 20px;cursor:pointer;border-bottom:2px solid transparent;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px">Compare</span>
+    </div>
+    <div class="input-area" id="singleInput">
+      <textarea id="inputText" placeholder="Paste any text here — email, contract, speech, document, AI output, human message, anything. Then pick your engines and run."></textarea>
+    </div>
+    <div class="input-area" id="batchInput" style="display:none">
+      <textarea id="batchText" style="flex:1;min-height:300px;background:var(--surface);color:var(--text);border:none;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;resize:none;outline:none" placeholder="Paste multiple texts separated by ---&#10;&#10;First email text here...&#10;---&#10;Second email text here...&#10;---&#10;Third text here..."></textarea>
+    </div>
+    <div class="input-area" id="compareInput" style="display:none;flex-direction:row">
+      <textarea id="compareA" style="flex:1;min-height:300px;background:var(--surface);color:var(--text);border:none;border-right:1px solid var(--border);padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;resize:none;outline:none" placeholder="Document A — paste first version here"></textarea>
+      <textarea id="compareB" style="flex:1;min-height:300px;background:var(--surface);color:var(--text);border:none;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;resize:none;outline:none" placeholder="Document B — paste second version here"></textarea>
+    </div>
+
+    <div class="file-drop">
+      <label for="fileInput">📎 Upload .txt file</label>
+      <input type="file" id="fileInput" accept=".txt,.md,.csv" style="display:none">
+      <span class="file-name" id="fileName"></span>
+    </div>
+
+    <div class="objective-row">
+      <label>Objective (optional)</label>
+      <input type="text" id="objectiveText" placeholder="e.g. Summarize billing dispute for legal review">
+    </div>
+
+    <div class="engine-rack">
+      <div class="rack-label">Engine Rack — Select What Runs</div>
+      <div class="rack-grid">
+        <div class="engine-toggle active" data-engine="v2" onclick="toggleEngine(this)">
+          <div class="dot" style="--c:var(--v2-color)"></div>
+          <div class="name">V2 Audit</div>
+        </div>
+        <div class="engine-toggle active" data-engine="v3" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">V3 Stabilize</div>
+        </div>
+        <div class="engine-toggle active" data-engine="edge" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">Relational Field</div>
+        </div>
+        <div class="engine-toggle active" data-engine="econ" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">Economic</div>
+        </div>
+        <div class="engine-toggle active" data-engine="band" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">Banding</div>
+        </div>
+        <div class="engine-toggle active" data-engine="gov" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">Invocation Gov</div>
+        </div>
+        <div class="engine-toggle active" data-engine="obs" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">Observability</div>
+        </div>
+        <div class="engine-toggle" data-engine="convergence" onclick="toggleEngine(this)">
+          <div class="dot"></div>
+          <div class="name">Full Pipeline</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px">Industry</span>
+        <select id="industrySelect" onchange="activeIndustry=this.value" style="background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;border-radius:4px;outline:none;cursor:pointer">
+          <option value="all">All Industries</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="legal">Legal</option>
+          <option value="insurance">Insurance</option>
+          <option value="real_estate">Real Estate</option>
+          <option value="financial">Financial Services</option>
+          <option value="government">Government</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="presets">
+      <div class="preset-btn" onclick="setPreset('v2only')">V2 Only</div>
+      <div class="preset-btn" onclick="setPreset('v3only')">V3 Only</div>
+      <div class="preset-btn" onclick="setPreset('audit')">Audit (V2 + Edge + Gov)</div>
+      <div class="preset-btn" onclick="setPreset('stabilize')">Stabilize (V3 + Econ + Band)</div>
+      <div class="preset-btn" onclick="setPreset('all')">All Engines</div>
+      <div class="preset-btn" onclick="setPreset('pipeline')">Full Pipeline</div>
+    </div>
+
+    <div class="run-bar">
+      <button id="runBtn" onclick="runEngines()">Run Engines</button>
+      <button id="clearBtn" onclick="clearAll()">Clear</button>
+      <div class="word-count" id="wordCount">0 words · 0 tokens (est)</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="output-panel" id="outputPanel">
+    <div class="panel-header">Output</div>
+    <div class="output-empty" id="outputEmpty">Select engines. Paste text. Run.</div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// NTI ENGINES — PURE JS PORT (DETERMINISTIC)
+// EXPANDED PATTERN LIBRARIES — PRODUCTION GRADE
+// ==========================================
+
+// --- Shared ---
+function normalize(text) {
+  return (text || '').trim().replace(/\s+/g, ' ');
+}
+function approxTokens(text) {
+  return Math.max(0, Math.round((text || '').length / 4));
+}
+
+// --- V2 ENGINE (EXPANDED) ---
+const HEDGE_WORDS = [
+  // Original 5
+  'maybe', 'likely', 'possibly', 'kind of', 'sort of',
+  // Uncertainty hedges
+  'perhaps', 'might', 'could be', 'i think', 'i believe', 'i guess',
+  'i suppose', 'it seems', 'it appears', 'arguably', 'potentially',
+  'presumably', 'probably', 'conceivably', 'apparently', 'allegedly',
+  // Softeners
+  'just', 'a little', 'a bit', 'somewhat', 'fairly', 'rather',
+  'more or less', 'in a way', 'to some extent', 'to a degree',
+  // Qualifiers
+  'tend to', 'in general', 'for the most part', 'as far as i know',
+  'from my understanding', 'if i recall correctly', 'not entirely sure',
+  'i could be wrong', 'don\'t quote me', 'take this with a grain of salt',
+  // Passive deflection
+  'it would seem', 'one might argue', 'some would say', 'it\'s been said',
+  'there\'s a chance', 'it\'s possible that', 'it\'s not impossible',
+  // Commitment avoidance
+  'we\'ll see', 'time will tell', 'remains to be seen', 'hard to say',
+  'depends on', 'it depends', 'that\'s debatable', 'up in the air'
+];
+
+// Severity weights for hedge words (higher = worse)
+const HEDGE_SEVERITY = {
+  'maybe': 0.04, 'likely': 0.03, 'possibly': 0.04, 'kind of': 0.05, 'sort of': 0.05,
+  'perhaps': 0.04, 'might': 0.03, 'could be': 0.04, 'i think': 0.05, 'i believe': 0.04,
+  'i guess': 0.06, 'i suppose': 0.05, 'it seems': 0.04, 'it appears': 0.03,
+  'arguably': 0.03, 'potentially': 0.03, 'presumably': 0.04, 'probably': 0.03,
+  'conceivably': 0.04, 'apparently': 0.03, 'allegedly': 0.05,
+  'just': 0.02, 'a little': 0.03, 'a bit': 0.03, 'somewhat': 0.03, 'fairly': 0.02,
+  'rather': 0.02, 'more or less': 0.04, 'in a way': 0.04, 'to some extent': 0.04,
+  'to a degree': 0.03, 'tend to': 0.03, 'in general': 0.02,
+  'for the most part': 0.04, 'as far as i know': 0.05,
+  'from my understanding': 0.05, 'if i recall correctly': 0.05,
+  'not entirely sure': 0.07, 'i could be wrong': 0.07,
+  'don\'t quote me': 0.06, 'take this with a grain of salt': 0.06,
+  'it would seem': 0.05, 'one might argue': 0.04, 'some would say': 0.04,
+  'it\'s been said': 0.04, 'there\'s a chance': 0.05, 'it\'s possible that': 0.05,
+  'it\'s not impossible': 0.06, 'we\'ll see': 0.05, 'time will tell': 0.05,
+  'remains to be seen': 0.05, 'hard to say': 0.06, 'depends on': 0.04,
+  'it depends': 0.05, 'that\'s debatable': 0.04, 'up in the air': 0.06
+};
+
+const ACTION_VERBS = [
+  // Original 15
+  'create','analyze','explain','summarize','define','build','calculate','design',
+  'review','draft','write','generate','compare','audit','test',
+  // Expanded action set
+  'fix','update','remove','add','install','configure','deploy','migrate',
+  'implement','refactor','debug','validate','verify','confirm','approve',
+  'reject','send','submit','execute','run','launch','schedule','assign',
+  'delegate','escalate','resolve','close','complete','finalize','sign',
+  'file','report','document','measure','assess','evaluate','diagnose',
+  'prescribe','recommend','negotiate','settle','invoice','bill','collect',
+  'transfer','process','convert','extract','import','export','merge',
+  'split','archive','delete','restore','encrypt','decrypt','authorize',
+  'revoke','list','rank','prioritize','outline','map','trace','monitor',
+  'scan','inspect','investigate','research','compile','synthesize','translate',
+  'transcribe','proofread','edit','rewrite','publish','distribute','notify'
+];
+
+const DEFERRED_PHRASES = [
+  // Original 6
+  "we'll fix later", "we will fix later", "for now just", "adjust after",
+  "fix later", "later we can",
+  // Expanded deferral patterns
+  "we can revisit", "circle back", "table that for now", "tbd",
+  "to be determined", "let's park that", "put a pin in", "come back to this",
+  "deal with that later", "worry about that later", "not a priority right now",
+  "we'll get to it", "we will get to it", "down the road", "at some point",
+  "eventually", "when we have time", "in a future phase", "phase 2",
+  "phase two", "next sprint", "next quarter", "backlog it", "add to backlog",
+  "not now", "later", "soon", "we'll figure it out", "we will figure it out",
+  "can wait", "low priority for now", "revisit next week", "follow up later",
+  "pending further review", "subject to change", "placeholder for now",
+  "temporary fix", "temp fix", "stopgap", "band-aid", "workaround for now",
+  "good enough for now", "ship it and fix later"
+];
+
+const CONFLICT_PAIRS = [
+  // Original 3
+  ['always','never'], ['short','detailed'], ['minimal','expand'],
+  // Expanded conflict pairs
+  ['simple','complex'], ['fast','thorough'], ['cheap','premium'],
+  ['formal','casual'], ['public','private'], ['urgent','no rush'],
+  ['mandatory','optional'], ['strict','flexible'], ['all','none'],
+  ['include','exclude'], ['approve','reject'], ['start','stop'],
+  ['increase','decrease'], ['before','after'], ['internal','external'],
+  ['conservative','aggressive'], ['automated','manual'],
+  ['centralized','distributed'], ['transparent','confidential'],
+  ['permanent','temporary'], ['required','voluntary'],
+  ['fixed','variable'], ['standard','custom']
+];
+
+const ROUTING_KEYWORDS = [
+  // Original 5
+  'budget approval', 'manager', 'finance', 'legal', 'approval',
+  // Expanded routing triggers
+  'hr department', 'human resources', 'compliance', 'regulatory',
+  'board approval', 'executive sign-off', 'sign off', 'signoff',
+  'supervisor', 'director', 'vp approval', 'c-suite', 'ceo',
+  'cfo', 'cto', 'coo', 'general counsel', 'outside counsel',
+  'insurance carrier', 'underwriter', 'claims adjuster',
+  'physician', 'doctor', 'prescriber', 'pharmacist',
+  'notary', 'witness required', 'countersignature',
+  'two-party consent', 'dual authorization', 'escalate to',
+  'needs authorization', 'requires approval', 'pending review',
+  'committee review', 'board review'
+];
+
+// Industry-specific routing keywords
+const INDUSTRY_ROUTING = {
+  healthcare: ['hipaa', 'phi', 'protected health', 'patient consent', 'medical records',
+    'prior authorization', 'formulary', 'clinical trial', 'irb', 'informed consent',
+    'discharge planning', 'case manager', 'utilization review', 'peer review',
+    'credentialing', 'privileges', 'malpractice', 'adverse event', 'sentinel event'],
+  legal: ['attorney-client', 'privileged', 'work product', 'discovery', 'deposition',
+    'subpoena', 'motion to', 'filing deadline', 'statute of limitations', 'jurisdiction',
+    'venue', 'arbitration', 'mediation', 'settlement authority', 'retainer',
+    'conflict check', 'engagement letter', 'disqualification', 'recusal'],
+  insurance: ['policy limit', 'coverage determination', 'exclusion', 'endorsement',
+    'binder', 'declarations page', 'loss run', 'actuarial', 'reinsurance',
+    'subrogation', 'bad faith', 'reservation of rights', 'excess carrier',
+    'surplus lines', 'admitted carrier', 'naic', 'rate filing'],
+  real_estate: ['title search', 'title insurance', 'escrow', 'closing disclosure',
+    'earnest money', 'contingency', 'inspection period', 'appraisal',
+    'clear to close', 'deed of trust', 'lien', 'encumbrance', 'easement',
+    'zoning', 'survey', 'hoa', 'special assessment', 'transfer tax'],
+  financial: ['fiduciary', 'accredited investor', 'securities', 'sec filing',
+    'material nonpublic', 'insider trading', 'kyc', 'aml', 'anti-money laundering',
+    'beneficial owner', 'qualified purchaser', 'reg d', 'private placement',
+    'prospectus', 'offering memorandum', 'term sheet', 'cap table'],
+  government: ['foia', 'freedom of information', 'public records', 'open meetings',
+    'sunshine law', 'procurement', 'rfp', 'sole source', 'prevailing wage',
+    'davis-bacon', 'ada compliance', 'eeoc', 'title ix', 'ferpa', 'section 508']
+};
+
+// Active industry config (user can switch)
+let activeIndustry = 'all';
+
+function runV2(text, threshold=0.80) {
+  const norm = normalize(text);
+  const lower = norm.toLowerCase();
+  let score = 1.0;
+  const violations = [];
+  const violationDetails = [];
+
+  // 1) Hedge words — severity weighted
+  const hedgeHits = HEDGE_WORDS.filter(w => lower.includes(w));
+  if (hedgeHits.length) {
+    let totalSeverity = 0;
+    for (const h of hedgeHits) {
+      const sev = HEDGE_SEVERITY[h] || 0.04;
+      totalSeverity += sev;
+      violationDetails.push({ type: 'HEDGE_WORD', trigger: h, severity: sev });
+    }
+    score -= Math.min(0.40, totalSeverity); // cap hedge penalty at 0.40
+    violations.push('HEDGE_WORD');
+  }
+
+  // 2) Missing objective (no action verb) — severity 0.10
+  if (!ACTION_VERBS.some(v => lower.includes(v))) {
+    score -= 0.10;
+    violations.push('MISSING_OBJECTIVE');
+    violationDetails.push({ type: 'MISSING_OBJECTIVE', trigger: 'no action verb detected', severity: 0.10 });
+  }
+
+  // 3) Conflicting directives — severity 0.15 (upgraded from 0.10)
+  const conflictsFound = [];
+  for (const [a, b] of CONFLICT_PAIRS) {
+    if (lower.includes(a) && lower.includes(b)) {
+      conflictsFound.push([a, b]);
+    }
+  }
+  if (conflictsFound.length) {
+    const penalty = Math.min(0.30, conflictsFound.length * 0.15);
+    score -= penalty;
+    violations.push('CONFLICTING_DIRECTIVE');
+    for (const [a,b] of conflictsFound) {
+      violationDetails.push({ type: 'CONFLICTING_DIRECTIVE', trigger: `${a} ↔ ${b}`, severity: 0.15 });
+    }
+  }
+
+  // 4) Deferred enforcement — severity 0.12 (upgraded from 0.10)
+  const deferralsFound = DEFERRED_PHRASES.filter(p => lower.includes(p));
+  if (deferralsFound.length) {
+    const penalty = Math.min(0.25, deferralsFound.length * 0.12);
+    score -= penalty;
+    violations.push('DEFERRED_ENFORCEMENT');
+    for (const d of deferralsFound) {
+      violationDetails.push({ type: 'DEFERRED_ENFORCEMENT', trigger: d, severity: 0.12 });
+    }
+  }
+
+  // 5) NEW: Passive voice detection — severity 0.05
+  const passivePatterns = [
+    /\bwas\s+\w+ed\b/gi, /\bwere\s+\w+ed\b/gi, /\bbeen\s+\w+ed\b/gi,
+    /\bis\s+being\s+\w+ed\b/gi, /\bwas\s+being\s+\w+ed\b/gi,
+    /\bhas\s+been\s+\w+ed\b/gi, /\bhave\s+been\s+\w+ed\b/gi,
+    /\bwill\s+be\s+\w+ed\b/gi, /\bshould\s+be\s+\w+ed\b/gi,
+    /\bcould\s+be\s+\w+ed\b/gi, /\bmight\s+be\s+\w+ed\b/gi
+  ];
+  let passiveCount = 0;
+  for (const p of passivePatterns) {
+    const matches = norm.match(p);
+    if (matches) passiveCount += matches.length;
+  }
+  if (passiveCount >= 3) {
+    score -= Math.min(0.15, passiveCount * 0.05);
+    violations.push('EXCESSIVE_PASSIVE');
+    violationDetails.push({ type: 'EXCESSIVE_PASSIVE', trigger: `${passiveCount} passive constructions`, severity: 0.05 });
+  }
+
+  // 6) NEW: Vague quantifier detection — severity 0.04
+  const vagueQuantifiers = ['some', 'several', 'many', 'a few', 'a lot', 'numerous',
+    'various', 'multiple', 'a number of', 'a couple', 'most', 'certain'];
+  const vagueHits = vagueQuantifiers.filter(v => {
+    const regex = new RegExp('\\b' + v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'i');
+    return regex.test(lower);
+  });
+  if (vagueHits.length >= 2) {
+    score -= Math.min(0.12, vagueHits.length * 0.04);
+    violations.push('VAGUE_QUANTIFIER');
+    for (const v of vagueHits) {
+      violationDetails.push({ type: 'VAGUE_QUANTIFIER', trigger: v, severity: 0.04 });
+    }
+  }
+
+  // 7) NEW: Missing deadline/timeframe — severity 0.06
+  const timeIndicators = ['by', 'before', 'deadline', 'due', 'until', 'within',
+    'end of day', 'eod', 'eow', 'asap', 'immediately', 'today', 'tomorrow',
+    'this week', 'next week', 'by friday', 'by monday', 'q1', 'q2', 'q3', 'q4'];
+  const hasTime = timeIndicators.some(t => lower.includes(t));
+  const hasActionButNoTime = ACTION_VERBS.some(v => lower.includes(v)) && !hasTime && norm.length > 100;
+  if (hasActionButNoTime) {
+    score -= 0.06;
+    violations.push('MISSING_TIMEFRAME');
+    violationDetails.push({ type: 'MISSING_TIMEFRAME', trigger: 'action detected but no deadline or timeframe', severity: 0.06 });
+  }
+
+  // 8) NEW: Ambiguous pronoun reference — severity 0.05
+  const ambiguousPronouns = ['it', 'this', 'that', 'they', 'them', 'those', 'these'];
+  // Check if pronouns appear without clear antecedent (beginning of sentence)
+  const sentences = norm.split(/(?<=[.!?])\s+/);
+  let ambiguousPronounCount = 0;
+  for (const s of sentences) {
+    const firstWord = s.trim().split(/\s+/)[0]?.toLowerCase();
+    if (ambiguousPronouns.includes(firstWord)) ambiguousPronounCount++;
+  }
+  if (ambiguousPronounCount >= 2) {
+    score -= Math.min(0.10, ambiguousPronounCount * 0.05);
+    violations.push('AMBIGUOUS_REFERENCE');
+    violationDetails.push({ type: 'AMBIGUOUS_REFERENCE', trigger: `${ambiguousPronounCount} sentences start with ambiguous pronouns`, severity: 0.05 });
+  }
+
+  // Clamp
+  score = Math.max(0, Math.min(1, score));
+
+  // Routing — base + industry
+  let allRoutingKeywords = [...ROUTING_KEYWORDS];
+  if (activeIndustry !== 'all' && INDUSTRY_ROUTING[activeIndustry]) {
+    allRoutingKeywords = allRoutingKeywords.concat(INDUSTRY_ROUTING[activeIndustry]);
+  } else if (activeIndustry === 'all') {
+    for (const ind of Object.values(INDUSTRY_ROUTING)) {
+      allRoutingKeywords = allRoutingKeywords.concat(ind);
+    }
+  }
+
+  const routeMatches = allRoutingKeywords.filter(k => lower.includes(k));
+  const route = routeMatches.length ? 'HUMAN_INTERNAL' : 'AI_PATH';
+
+  // Feedback
+  const lines = [`Score: ${score.toFixed(2)}`];
+  if (route === 'HUMAN_INTERNAL') {
+    lines.push('Route: HUMAN_INTERNAL');
+    if (routeMatches.length) lines.push(`Trigger: ${routeMatches.join(', ')}`);
+    lines.push('Action: This contains routing triggers requiring human involvement.');
+  } else if (violations.length) {
+    lines.push(`Issues detected (${violations.length} types, ${violationDetails.length} instances):`);
+    if (violations.includes('MISSING_OBJECTIVE')) lines.push('- State a clear objective using an action verb.');
+    if (violations.includes('HEDGE_WORD')) lines.push(`- Remove uncertain language: ${hedgeHits.slice(0,5).join(', ')}${hedgeHits.length > 5 ? ` (+${hedgeHits.length-5} more)` : ''}`);
+    if (violations.includes('CONFLICTING_DIRECTIVE')) lines.push(`- Resolve conflicting instructions: ${conflictsFound.map(([a,b])=>`${a}↔${b}`).join(', ')}`);
+    if (violations.includes('DEFERRED_ENFORCEMENT')) lines.push(`- Define enforcement now: ${deferralsFound.slice(0,3).join(', ')}`);
+    if (violations.includes('EXCESSIVE_PASSIVE')) lines.push(`- Reduce passive voice (${passiveCount} instances). Use active constructions.`);
+    if (violations.includes('VAGUE_QUANTIFIER')) lines.push(`- Replace vague quantifiers with specific numbers: ${vagueHits.join(', ')}`);
+    if (violations.includes('MISSING_TIMEFRAME')) lines.push('- Add a deadline or timeframe to the objective.');
+    if (violations.includes('AMBIGUOUS_REFERENCE')) lines.push(`- ${ambiguousPronounCount} sentences start with ambiguous pronouns. Name the subject.`);
+    lines.push('Revise and resubmit.');
+  } else {
+    lines.push('Issues: none');
+  }
+
+  return {
+    normalized_text: norm,
+    score: Math.round(score*100)/100,
+    violations,
+    violation_details: violationDetails,
+    hedge_hits: hedgeHits,
+    route,
+    route_matches: routeMatches,
+    threshold,
+    feedback: lines.join('\n'),
+    industry: activeIndustry
+  };
+}
+
+// --- V3 ENGINE (EXPANDED) ---
+const FILLER_PHRASES = [
+  // Original 4
+  'it is important to note', 'in conclusion', 'ultimately', 'to summarize',
+  // AI-generated filler (the big ones)
+  "i'd be happy to", "i'd be glad to", "i would be happy to",
+  "certainly", "absolutely", "of course", "great question",
+  "that's a great question", "that's an excellent question",
+  "thanks for asking", "thank you for asking",
+  "as mentioned earlier", "as previously mentioned", "as noted above",
+  "as i mentioned", "as we discussed", "as stated before",
+  "it's worth noting", "it's worth mentioning", "it should be noted",
+  "it bears mentioning", "it's important to mention",
+  "that being said", "having said that", "with that being said",
+  "that said", "all that being said",
+  "at the end of the day", "when all is said and done",
+  "moving forward", "going forward", "looking ahead",
+  "in terms of", "with respect to", "with regard to", "in regard to",
+  "when it comes to", "as far as", "on the topic of",
+  "it goes without saying", "needless to say",
+  "for what it's worth", "fwiw",
+  "to be honest", "honestly", "frankly", "to be frank",
+  "in my opinion", "in my humble opinion", "imo", "imho",
+  "i hope this helps", "hope that helps", "hope this was helpful",
+  "let me know if you have any questions",
+  "let me know if you need anything else",
+  "feel free to", "don't hesitate to",
+  "please don't hesitate", "please feel free",
+  "i understand your concern", "i completely understand",
+  "i appreciate your patience", "thank you for your patience",
+  "first and foremost", "last but not least",
+  "it's crucial to", "it's essential to", "it's vital to",
+  "it's important to understand that", "it's key to note",
+  "in order to", "so as to", "for the purpose of",
+  "due to the fact that", "owing to the fact that",
+  "in light of the fact that", "given the fact that",
+  "on the other hand", "by the same token",
+  "in any case", "in any event", "be that as it may",
+  "to put it simply", "to put it another way", "in other words",
+  "simply put", "put simply", "to be clear",
+  "the bottom line is", "the long and short of it",
+  "at this point in time", "at this juncture",
+  "in today's world", "in this day and age",
+  "each and every", "any and all", "first and foremost",
+  "null and void", "part and parcel",
+  "please be advised", "please note that", "kindly note",
+  "i wanted to reach out", "i'm reaching out to",
+  "just wanted to follow up", "just checking in",
+  "per our conversation", "per our discussion",
+  "as per your request", "pursuant to",
+  "for your information", "for your reference",
+  "attached please find", "please find attached",
+  "enclosed please find",
+  // Conversational padding
+  "so basically", "so essentially", "so the thing is",
+  "well actually", "i mean", "you know", "you know what i mean",
+  "like i said", "as i said", "if you will", "so to speak",
+  "more or less", "by and large", "all things considered",
+  "generally speaking", "broadly speaking",
+  // Closing filler
+  "best regards", "warm regards", "kind regards",
+  "sincerely", "respectfully", "with gratitude"
+];
+
+// Filler severity weights
+const FILLER_SEVERITY = {};
+// AI sycophancy patterns get highest weight
+["i'd be happy to","i'd be glad to","certainly","absolutely","great question",
+"that's a great question","that's an excellent question","i completely understand",
+"i hope this helps","hope that helps"].forEach(f => FILLER_SEVERITY[f] = 0.03);
+// Medium weight for padding
+["it is important to note","it's worth noting","that being said","having said that",
+"at the end of the day","moving forward","in terms of","when it comes to",
+"first and foremost","in order to","due to the fact that","at this point in time",
+"in today's world","in this day and age"].forEach(f => FILLER_SEVERITY[f] = 0.02);
+// Default
+const DEFAULT_FILLER_SEVERITY = 0.01;
+
+function runV3(text, maxTokens=400, objective=null) {
+  let t = normalize(text);
+  const originalText = t;
+  let hedgesRemoved = 0;
+  let fillerRemoved = 0;
+  const removedItems = [];
+
+  // Remove hedges
+  for (const w of HEDGE_WORDS) {
+    const regex = new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'gi');
+    const before = t;
+    t = t.replace(regex, '');
+    if (t !== before) {
+      hedgesRemoved++;
+      removedItems.push({ type: 'hedge', phrase: w });
+      t = normalize(t);
+    }
+  }
+
+  // Remove filler
+  for (const p of FILLER_PHRASES) {
+    const regex = new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+    const before = t;
+    t = t.replace(regex, '');
+    if (t !== before) {
+      fillerRemoved++;
+      removedItems.push({ type: 'filler', phrase: p });
+      t = normalize(t);
+    }
+  }
+
+  // NEW: Remove redundant transition phrases
+  const transitionPatterns = [
+    /\b(however|moreover|furthermore|additionally|consequently|therefore|thus|hence|accordingly|nevertheless|nonetheless|meanwhile|subsequently|alternatively)\s*,?\s*/gi
+  ];
+  let transitionsRemoved = 0;
+  for (const p of transitionPatterns) {
+    const before = t;
+    t = t.replace(p, '');
+    if (t !== before) { transitionsRemoved++; t = normalize(t); }
+  }
+
+  // Dedupe sentences
+  const sentences = t.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+  const seen = new Set();
+  const deduped = [];
+  let dupesRemoved = 0;
+  for (const s of sentences) {
+    if (!seen.has(s)) { seen.add(s); deduped.push(s); }
+    else { dupesRemoved++; }
+  }
+  t = deduped.join(' ').trim();
+
+  // NEW: Near-duplicate detection (sentences that share >70% of words)
+  let nearDupesRemoved = 0;
+  if (deduped.length > 1) {
+    const final = [deduped[0]];
+    for (let i = 1; i < deduped.length; i++) {
+      const wordsA = new Set(deduped[i].toLowerCase().split(/\s+/).filter(w => w.length > 3));
+      let isNearDupe = false;
+      for (const kept of final) {
+        const wordsB = new Set(kept.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        if (wordsA.size === 0) break;
+        const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
+        const similarity = overlap / Math.max(wordsA.size, wordsB.size);
+        if (similarity > 0.70) { isNearDupe = true; nearDupesRemoved++; break; }
+      }
+      if (!isNearDupe) final.push(deduped[i]);
+    }
+    t = final.join(' ').trim();
+  }
+
+  // Objective anchoring
+  if (objective && objective.trim()) {
+    const objWords = objective.toLowerCase().match(/[a-z0-9']+/g)?.filter(w => w.length > 3) || [];
+    if (objWords.length) {
+      const sents = t.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+      const kept = sents.filter(s => objWords.some(w => s.toLowerCase().includes(w)));
+      if (kept.length) t = kept.join(' ').trim();
+    }
+  }
+
+  // Token ceiling
+  const words = t.split(/\s+/);
+  let trimmed = false;
+  if (words.length > maxTokens) {
+    t = words.slice(0, maxTokens).join(' ');
+    trimmed = true;
+  }
+
+  t = normalize(t);
+
+  // Calculate compression stats
+  const origTokens = approxTokens(originalText);
+  const stabTokens = approxTokens(t);
+  const tokensSaved = origTokens - stabTokens;
+  const compressionPct = origTokens > 0 ? Math.round((tokensSaved / origTokens) * 100) : 0;
+
+  return {
+    stabilized_text: t,
+    hedges_removed: hedgesRemoved,
+    filler_removed: fillerRemoved,
+    transitions_removed: transitionsRemoved,
+    exact_dupes_removed: dupesRemoved,
+    near_dupes_removed: nearDupesRemoved,
+    removed_items: removedItems,
+    trimmed,
+    max_tokens: maxTokens,
+    tokens_before: origTokens,
+    tokens_after: stabTokens,
+    tokens_saved: tokensSaved,
+    compression_pct: compressionPct
+  };
+}
+
+// --- RELATIONAL FIELD (EDGE ENGINE — EXPANDED) ---
+const EDGE_WEIGHTS = {
+  retroactive_attribution: 0.25,
+  vertical_claim: 0.20,
+  status_displacement: 0.15,
+  amplification_vector: 0.15,
+  escalation_syntax: 0.15,
+  dominance_posture: 0.10,
+  // NEW categories
+  gaslighting_marker: 0.25,
+  false_consensus: 0.15,
+  emotional_leverage: 0.20,
+  authority_assertion: 0.15,
+  dismissal_pattern: 0.20,
+  guilt_induction: 0.20,
+  ultimatum_syntax: 0.20,
+  passive_aggression: 0.15,
+  credit_displacement: 0.15,
+  boundary_violation: 0.20
+};
+const EDGE_PATTERNS = [
+  ['retroactive_attribution', [
+    /\byou\s+were\s+wrong\b/gi, /\byou\s+made\s+(a|the)\s+mistake\b/gi,
+    /\bthat\s+was\s+your\s+fault\b/gi, /\byou\s+did\s+that\b/gi,
+    /\byou\s+caused\s+this\b/gi, /\bthis\s+is\s+on\s+you\b/gi,
+    /\byou\s+dropped\s+the\s+ball\b/gi, /\bif\s+you\s+had(n't)?\b/gi,
+    /\byou\s+should\s+have\b/gi, /\byou\s+could\s+have\b/gi
+  ]],
+  ['vertical_claim', [
+    /\byou\s+(misunderstood|missed|failed)\b/gi, /\byou\s+(thought|assumed)\b/gi,
+    /\byou\s+don'?t\s+get\b/gi, /\blet\s+me\s+be\s+clear\b/gi,
+    /\byou'?re\s+not\s+(seeing|understanding|getting)\b/gi,
+    /\bthat'?s\s+not\s+what\s+i\s+(said|meant)\b/gi,
+    /\byou'?re\s+missing\s+the\s+point\b/gi,
+    /\bi\s+never\s+said\s+that\b/gi,
+    /\byou'?re\s+confused\b/gi, /\byou'?re\s+overthinking\b/gi
+  ]],
+  ['status_displacement', [
+    /\bit\s+wasn'?t\s+[^.]{1,120}\b/gi,
+    /\bnot\s+about\s+[^.]{1,80}\s*[-–—]\s*but\s+about\b/gi,
+    /\bthe\s+real\s+question\s+is\b/gi,
+    /\bwhat\s+matters\s+here\s+is\b/gi,
+    /\bthe\s+point\s+is\b/gi
+  ]],
+  ['amplification_vector', [
+    /\bactually\b/gi, /\bclearly\b/gi, /\bobviously\b/gi, /\bliterally\b/gi,
+    /\bfundamentally\b/gi, /\babsolutely\b/gi, /\bcompletely\b/gi,
+    /\btotally\b/gi, /\bentirely\b/gi, /\bextremely\b/gi,
+    /\bprofoundly\b/gi, /\bindisputably\b/gi, /\bunquestionably\b/gi
+  ]],
+  ['escalation_syntax', [
+    /\bthe\s+(real\s+)?issue\s+is\b/gi, /\bhere'?s\s+the\s+problem\b/gi,
+    /\blet'?s\s+be\s+honest\b/gi, /\bthe\s+truth\s+is\b/gi,
+    /\bwhat\s+really\s+happened\b/gi, /\bhere'?s\s+what\s+you'?re\s+not\s+seeing\b/gi,
+    /\bthe\s+fact\s+of\s+the\s+matter\b/gi, /\blet\s+me\s+tell\s+you\b/gi,
+    /\bi'?ll\s+tell\s+you\s+what\b/gi, /\bwake\s+up\b/gi
+  ]],
+  ['dominance_posture', [
+    /\byou\s+need\s+to\b/gi, /\byou\s+have\s+to\b/gi, /\byou\s+can'?t\b/gi,
+    /\byou\s+must\b/gi, /\byou\s+will\b/gi, /\byou\s+shall\b/gi,
+    /\byou\s+better\b/gi, /\byou'?d\s+better\b/gi,
+    /\bdo\s+as\s+i\s+say\b/gi, /\bthat'?s\s+final\b/gi,
+    /\bend\s+of\s+discussion\b/gi, /\bi\s+don'?t\s+want\s+to\s+hear\b/gi
+  ]],
+  // NEW CATEGORIES
+  ['gaslighting_marker', [
+    /\bthat\s+never\s+happened\b/gi, /\byou'?re\s+(imagining|making)\s+(things|it)\s+up\b/gi,
+    /\byou'?re\s+being\s+(too\s+)?(sensitive|dramatic|emotional|paranoid)\b/gi,
+    /\bi\s+was\s+just\s+joking\b/gi, /\byou\s+can'?t\s+take\s+a\s+joke\b/gi,
+    /\bno\s+one\s+else\s+(thinks|feels|sees)\s+that\b/gi,
+    /\byou'?re\s+the\s+only\s+one\b/gi, /\beveryone\s+(agrees|thinks)\b/gi,
+    /\bthat'?s\s+not\s+how\s+it\s+happened\b/gi,
+    /\byou\s+always\s+do\s+this\b/gi, /\byou\s+never\b/gi
+  ]],
+  ['false_consensus', [
+    /\beveryone\s+(knows|agrees|thinks|says|believes)\b/gi,
+    /\bnobody\s+(thinks|believes|agrees)\b/gi,
+    /\bit'?s\s+common\s+knowledge\b/gi,
+    /\bask\s+anyone\b/gi, /\bthe\s+team\s+(agrees|feels|thinks)\b/gi,
+    /\bwe\s+all\s+(know|agree|think)\b/gi,
+    /\bmost\s+people\s+(would|think|agree)\b/gi
+  ]],
+  ['emotional_leverage', [
+    /\bafter\s+everything\s+i'?ve\s+done\b/gi,
+    /\bi\s+sacrificed\b/gi, /\bi\s+gave\s+up\b/gi,
+    /\byou\s+owe\s+me\b/gi, /\bi\s+deserve\b/gi,
+    /\bhow\s+could\s+you\b/gi, /\bi\s+can'?t\s+believe\s+you\b/gi,
+    /\byou\s+don'?t\s+(care|appreciate)\b/gi,
+    /\bi'?m\s+so\s+disappointed\b/gi, /\byou\s+hurt\s+me\b/gi
+  ]],
+  ['authority_assertion', [
+    /\bi'?m\s+the\s+(boss|manager|owner|ceo|director)\b/gi,
+    /\bi\s+have\s+more\s+experience\b/gi,
+    /\bi'?ve\s+been\s+doing\s+this\s+for\b/gi,
+    /\btrust\s+me\b/gi, /\bbecause\s+i\s+said\s+so\b/gi,
+    /\bi\s+know\s+what\s+i'?m\s+(doing|talking\s+about)\b/gi,
+    /\bwith\s+all\s+due\s+respect\b/gi, /\bno\s+offense\b/gi,
+    /\bnot\s+to\s+be\s+rude\b/gi
+  ]],
+  ['dismissal_pattern', [
+    /\bwhatever\b/gi, /\bit\s+doesn'?t\s+matter\b/gi,
+    /\bwho\s+cares\b/gi, /\bthat'?s\s+(irrelevant|not\s+important)\b/gi,
+    /\bget\s+over\s+it\b/gi, /\bmove\s+on\b/gi,
+    /\bstop\s+(complaining|whining|being)\b/gi,
+    /\bnot\s+my\s+problem\b/gi, /\bnot\s+my\s+(fault|issue|concern)\b/gi,
+    /\byeah\s+yeah\b/gi, /\bsure\s+sure\b/gi
+  ]],
+  ['guilt_induction', [
+    /\bif\s+you\s+(really|truly)\s+(cared|loved|respected)\b/gi,
+    /\ba\s+(good|real|true)\s+(friend|partner|employee)\s+would\b/gi,
+    /\bi\s+guess\s+i'?ll\s+just\b/gi,
+    /\bfine\s*,?\s*i'?ll\s+do\s+it\s+myself\b/gi,
+    /\bdon'?t\s+worry\s+about\s+me\b/gi,
+    /\bi'?m\s+used\s+to\s+it\b/gi, /\bstory\s+of\s+my\s+life\b/gi
+  ]],
+  ['ultimatum_syntax', [
+    /\bor\s+else\b/gi, /\blast\s+(chance|warning|time)\b/gi,
+    /\bfinal\s+(offer|warning|notice)\b/gi,
+    /\btake\s+it\s+or\s+leave\s+it\b/gi,
+    /\bif\s+you\s+don'?t\s*,?\s*(then\s+)?i\s+will\b/gi,
+    /\bdon'?t\s+make\s+me\b/gi, /\byou\s+leave\s+me\s+no\s+choice\b/gi,
+    /\bthis\s+is\s+(your|the)\s+last\b/gi
+  ]],
+  ['passive_aggression', [
+    /\bthat'?s\s+fine\b/gi, /\bno\s+worries\b/gi,
+    /\bi'?m\s+not\s+(mad|upset|angry)\b/gi,
+    /\bdo\s+whatever\s+you\s+want\b/gi,
+    /\bi\s+just\s+think\s+it'?s\s+(funny|interesting)\s+that\b/gi,
+    /\bper\s+my\s+(last|previous)\s+email\b/gi,
+    /\bas\s+(previously|already)\s+(stated|mentioned|noted|discussed)\b/gi,
+    /\bi\s+thought\s+(we|you)\s+(agreed|said|decided)\b/gi
+  ]],
+  ['credit_displacement', [
+    /\bthat\s+was\s+my\s+idea\b/gi, /\bi\s+came\s+up\s+with\s+that\b/gi,
+    /\bi\s+told\s+you\s+so\b/gi, /\bi\s+said\s+that\s+(first|before)\b/gi,
+    /\bif\s+it\s+wasn'?t\s+for\s+me\b/gi,
+    /\bwithout\s+me\b/gi, /\byou\s+wouldn'?t\s+have\b/gi
+  ]],
+  ['boundary_violation', [
+    /\bwhy\s+can'?t\s+you\s+just\b/gi,
+    /\byou\s+always\b/gi, /\byou\s+never\b/gi,
+    /\bi\s+have\s+a\s+right\s+to\s+know\b/gi,
+    /\byou\s+should(n'?t)?\s+have\s+to\b/gi,
+    /\bthat'?s\s+not\s+(fair|right)\b/gi,
+    /\bi\s+thought\s+we\s+were\b/gi
+  ]]
+];
+
+function computeRelationalField(text) {
+  text = text || '';
+  const markers = [];
+  const triggered = new Set();
+  const seen = new Set();
+
+  for (const [name, regexes] of EDGE_PATTERNS) {
+    const weight = EDGE_WEIGHTS[name] || 0;
+    for (const rgx of regexes) {
+      rgx.lastIndex = 0;
+      let m;
+      while ((m = rgx.exec(text)) !== null) {
+        const phrase = m[0].trim();
+        const key = name + '|' + phrase.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        triggered.add(name);
+        markers.push({ pattern: name, phrase, weight: Math.round(weight*10000)/10000 });
+      }
+    }
+  }
+
+  let totalWeight = 0;
+  for (const p of triggered) totalWeight += EDGE_WEIGHTS[p] || 0;
+  const edgeIndex = Math.min(1.0, Math.round(totalWeight * 10000) / 10000);
+
+  return {
+    field: 'relational',
+    version: 'edge-v0.1',
+    edge_index: edgeIndex,
+    edge_markers: markers,
+    triggered_patterns: [...triggered].sort()
+  };
+}
+
+// --- ECONOMIC LAYER ---
+function computeEconomic(inputText, outputText, routeHint, aiInvoked) {
+  const inTok = approxTokens(inputText || '');
+  const outTok = approxTokens(outputText || '');
+  const estCost = Math.round((inTok + outTok) * 0.00001 * 1000000) / 1000000;
+
+  let avoided;
+  if (routeHint === 'HUMAN_REQUIRED') avoided = true;
+  else if (routeHint === 'AI_OPTIMAL') avoided = false;
+  else avoided = 'conditional';
+
+  return {
+    version: 'economic-v1.0',
+    estimated_input_tokens: inTok,
+    estimated_output_tokens: outTok,
+    estimated_roundtrip_cost: estCost,
+    ai_invoked: aiInvoked,
+    invocation_avoided: avoided
+  };
+}
+
+// --- BANDING ---
+function bandStructural(score) {
+  if (score < 0.50) return 'UNSTABLE';
+  if (score < 0.75) return 'PARTIAL';
+  if (score < 0.90) return 'STABLE';
+  return 'OPTIMAL';
+}
+function bandRelational(ei) {
+  if (ei < 0.30) return 'CALM';
+  if (ei < 0.60) return 'TENSE';
+  if (ei < 0.80) return 'ELEVATED';
+  return 'DESTABILIZING';
+}
+function bandCost(cost) {
+  if (cost < 0.002) return 'LOW_COST';
+  if (cost < 0.010) return 'MODERATE_COST';
+  if (cost < 0.050) return 'HIGH_COST';
+  return 'HEAVY_COST';
+}
+function bandObs(composite) {
+  if (composite < 0.30) return 'STABLE';
+  if (composite < 0.60) return 'WATCH';
+  if (composite < 0.80) return 'TENSION';
+  return 'CRITICAL';
+}
+
+// --- INVOCATION GOVERNANCE ---
+function computeInvocationGov(structScore, edgeIndex) {
+  let routeHint;
+  if (structScore >= 0.75 && edgeIndex < 0.60) routeHint = 'AI_OPTIMAL';
+  else if (structScore < 0.75 && edgeIndex < 0.40) routeHint = 'CLARIFICATION_REQUIRED';
+  else if (structScore >= 0.75 && edgeIndex >= 0.60) routeHint = 'HUMAN_RECOMMENDED';
+  else routeHint = 'HUMAN_REQUIRED';
+
+  return { version: 'invocation-v1.0', route_hint: routeHint, advisory_only: true };
+}
+
+// --- OBSERVABILITY ---
+function computeObservability(structScore, edgeIndex) {
+  const sr = 1.0 - Math.max(0, Math.min(1, structScore));
+  const rr = Math.max(0, Math.min(1, edgeIndex));
+  const composite = Math.round((sr * 0.60 + rr * 0.40) * 10000) / 10000;
+  return { version: 'obs-v1.0', composite_score: composite, structural_risk: Math.round(sr*10000)/10000, relational_risk: Math.round(rr*10000)/10000 };
+}
+
+// ==========================================
+// UI LOGIC
+// ==========================================
+
+const activeEngines = new Set(['v2','v3','edge','econ','band','gov','obs']);
+
+function toggleEngine(el) {
+  const eng = el.dataset.engine;
+  if (el.classList.contains('active')) {
+    el.classList.remove('active');
+    activeEngines.delete(eng);
+  } else {
+    el.classList.add('active');
+    activeEngines.add(eng);
+  }
+}
+
+function setPreset(name) {
+  const all = ['v2','v3','edge','econ','band','gov','obs','convergence'];
+  const presets = {
+    v2only: ['v2'],
+    v3only: ['v3'],
+    audit: ['v2','edge','gov'],
+    stabilize: ['v3','econ','band'],
+    all: ['v2','v3','edge','econ','band','gov','obs'],
+    pipeline: ['convergence']
+  };
+  const set = new Set(presets[name] || all);
+  document.querySelectorAll('.engine-toggle').forEach(el => {
+    const eng = el.dataset.engine;
+    if (set.has(eng)) { el.classList.add('active'); activeEngines.add(eng); }
+    else { el.classList.remove('active'); activeEngines.delete(eng); }
+  });
+}
+
+function clearAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('objectiveText').value = '';
+  document.getElementById('outputPanel').innerHTML = '<div class="panel-header">Output</div><div class="output-empty" id="outputEmpty">Select engines. Paste text. Run.</div>';
+  updateWordCount();
+}
+
+function updateWordCount() {
+  const text = document.getElementById('inputText').value;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const tokens = approxTokens(text);
+  document.getElementById('wordCount').textContent = `${words} words · ${tokens} tokens (est)`;
+}
+document.getElementById('inputText').addEventListener('input', updateWordCount);
+
+// File upload
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('inputText').value = ev.target.result;
+    updateWordCount();
+  };
+  reader.readAsText(file);
+});
+
+// Toggle collapse
+function toggleBlock(el) {
+  el.closest('.engine-block').classList.toggle('collapsed');
+}
+
+// ==========================================
+// RUN
+// ==========================================
+
+function runEngines() {
+  const text = document.getElementById('inputText').value;
+  if (!text.trim()) return;
+
+  const objective = document.getElementById('objectiveText').value.trim() || null;
+  const panel = document.getElementById('outputPanel');
+  panel.innerHTML = '<div class="panel-header">Output</div>';
+
+  const startTime = performance.now();
+
+  // Run selected engines
+  let v2Result = null;
+  let v3Result = null;
+  let edgeResult = null;
+  let econResult = null;
+  let govResult = null;
+  let obsResult = null;
+
+  if (activeEngines.has('v2') || activeEngines.has('convergence')) {
+    v2Result = runV2(text);
+  }
+  if (activeEngines.has('v3') || activeEngines.has('convergence')) {
+    v3Result = runV3(text, 400, objective);
+  }
+  if (activeEngines.has('edge') || activeEngines.has('convergence')) {
+    edgeResult = computeRelationalField(text);
+  }
+
+  const structScore = v2Result ? v2Result.score : 0.5;
+  const edgeIndex = edgeResult ? edgeResult.edge_index : 0;
+  const stabText = v3Result ? v3Result.stabilized_text : '';
+
+  if (activeEngines.has('econ') || activeEngines.has('convergence')) {
+    const routeHint = govResult ? govResult.route_hint : 'conditional';
+    econResult = computeEconomic(text, stabText, routeHint, false);
+  }
+  if (activeEngines.has('gov') || activeEngines.has('convergence')) {
+    govResult = computeInvocationGov(structScore, edgeIndex);
+  }
+  // Re-run econ with proper route hint now that gov is done
+  if (econResult && govResult) {
+    econResult = computeEconomic(text, stabText, govResult.route_hint, false);
+  }
+  if (activeEngines.has('obs') || activeEngines.has('convergence')) {
+    obsResult = computeObservability(structScore, edgeIndex);
+  }
+
+  const elapsed = (performance.now() - startTime).toFixed(2);
+
+  // Render output blocks
+  if (v2Result && (activeEngines.has('v2') || activeEngines.has('convergence'))) {
+    panel.innerHTML += renderV2(v2Result);
+  }
+  if (v3Result && (activeEngines.has('v3') || activeEngines.has('convergence'))) {
+    panel.innerHTML += renderV3(v3Result, text);
+  }
+  if (edgeResult && (activeEngines.has('edge') || activeEngines.has('convergence'))) {
+    panel.innerHTML += renderEdge(edgeResult);
+  }
+  if (econResult && (activeEngines.has('econ') || activeEngines.has('convergence'))) {
+    panel.innerHTML += renderEcon(econResult);
+  }
+  if (govResult && (activeEngines.has('gov') || activeEngines.has('convergence'))) {
+    panel.innerHTML += renderGov(govResult);
+  }
+  if (obsResult && (activeEngines.has('obs') || activeEngines.has('convergence'))) {
+    panel.innerHTML += renderObs(obsResult);
+  }
+
+  // Banding summary
+  if (activeEngines.has('band') || activeEngines.has('convergence')) {
+    panel.innerHTML += renderBanding(structScore, edgeIndex, econResult, obsResult);
+  }
+
+  // Timing
+  panel.innerHTML += `<div style="padding:12px 24px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); border-top:1px solid var(--border);">Completed in ${elapsed}ms · No LLM invoked · Deterministic</div>`;
+}
+
+function scoreClass(score) {
+  if (score >= 0.80) return 'score-good';
+  if (score >= 0.50) return 'score-warn';
+  return 'score-bad';
+}
+
+function renderV2(r) {
+  const detailRows = r.violation_details ? r.violation_details.map(d =>
+    `<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+      <span class="violation-tag">${d.type}</span>
+      <span style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:11px">"${escHtml(d.trigger)}"</span>
+      <span style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:10px">-${d.severity.toFixed(2)}</span>
+    </div>`
+  ).join('') : '';
+
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--v2-color)"></div>
+      <div class="engine-name" style="color:var(--v2-color)">V2 — Inbound Audit</div>
+      <div class="engine-summary">Score: ${r.score.toFixed(2)} · ${r.violations.length} types · ${(r.violation_details||[]).length} instances · ${r.route}</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Score</div><div class="data-val ${scoreClass(r.score)}" style="font-size:18px;font-weight:700">${r.score.toFixed(2)}</div></div>
+      <div class="data-row"><div class="data-key">Threshold</div><div class="data-val">${r.threshold}</div></div>
+      <div class="data-row"><div class="data-key">Gate Status</div><div class="data-val ${r.score >= r.threshold ? 'score-good' : 'score-bad'}">${r.score >= r.threshold ? 'PASS' : 'BELOW THRESHOLD'}</div></div>
+      <div class="data-row"><div class="data-key">Industry</div><div class="data-val">${r.industry || 'all'}</div></div>
+      <div class="data-row"><div class="data-key">Violation Types</div><div class="data-val"><div class="violations-list">${r.violations.length ? r.violations.map(v=>`<span class="violation-tag">${v}</span>`).join('') : '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
+      ${detailRows ? `<div class="data-row" style="flex-direction:column;gap:6px"><div class="data-key">Violation Details (${(r.violation_details||[]).length} instances)</div><div style="margin-top:4px">${detailRows}</div></div>` : ''}
+      <div class="data-row"><div class="data-key">Hedge Hits</div><div class="data-val">${r.hedge_hits.length ? r.hedge_hits.map(h=>`<span style="color:var(--gold);margin-right:6px">${h}</span>`).join('') : 'none'}</div></div>
+      <div class="data-row"><div class="data-key">Route</div><div class="data-val"><span class="route-tag route-${r.route}">${r.route}</span></div></div>
+      ${r.route_matches.length ? `<div class="data-row"><div class="data-key">Route Triggers</div><div class="data-val">${r.route_matches.map(m=>`<span style="background:rgba(255,102,68,0.1);padding:2px 6px;border-radius:3px;margin-right:4px;font-size:11px;color:var(--warn)">${m}</span>`).join('')}</div></div>` : ''}
+      <div class="data-row"><div class="data-key">Feedback</div><div class="data-val text-output">${escHtml(r.feedback)}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderV3(r, originalText) {
+  const origWords = originalText.trim().split(/\s+/).length;
+  const stabWords = r.stabilized_text.trim().split(/\s+/).length;
+
+  const removedList = (r.removed_items || []).map(item =>
+    `<div style="margin-bottom:3px"><span style="background:${item.type==='hedge' ? 'rgba(255,204,0,0.12)' : 'rgba(255,102,68,0.12)'};color:${item.type==='hedge' ? 'var(--gold)' : 'var(--warn)'};padding:2px 6px;border-radius:3px;font-size:10px;text-transform:uppercase;margin-right:6px">${item.type}</span><span style="color:var(--text-dim);font-size:12px">${escHtml(item.phrase)}</span></div>`
+  ).join('');
+
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--v3-color)"></div>
+      <div class="engine-name" style="color:var(--v3-color)">V3 — Outbound Stabilization</div>
+      <div class="engine-summary">${r.compression_pct}% compressed · ${r.tokens_saved} tokens saved</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Compression</div><div class="data-val ${r.compression_pct > 20 ? 'score-good' : r.compression_pct > 5 ? 'score-warn' : ''}" style="font-size:18px;font-weight:700">${r.compression_pct}%</div></div>
+      <div class="data-row"><div class="data-key">Tokens</div><div class="data-val">${r.tokens_before} → ${r.tokens_after} <span style="color:var(--accent)">(saved ${r.tokens_saved})</span></div></div>
+      <div class="data-row"><div class="data-key">Words</div><div class="data-val">${origWords} → ${stabWords}</div></div>
+      <div class="data-row"><div class="data-key">Hedges Removed</div><div class="data-val">${r.hedges_removed}</div></div>
+      <div class="data-row"><div class="data-key">Filler Removed</div><div class="data-val">${r.filler_removed}</div></div>
+      <div class="data-row"><div class="data-key">Transitions Removed</div><div class="data-val">${r.transitions_removed || 0}</div></div>
+      <div class="data-row"><div class="data-key">Exact Dupes Removed</div><div class="data-val">${r.exact_dupes_removed || 0}</div></div>
+      <div class="data-row"><div class="data-key">Near Dupes Removed</div><div class="data-val">${r.near_dupes_removed || 0}</div></div>
+      <div class="data-row"><div class="data-key">Trimmed</div><div class="data-val">${r.trimmed ? 'YES (ceiling hit)' : 'No'}</div></div>
+      <div class="data-row"><div class="data-key">Token Ceiling</div><div class="data-val">${r.max_tokens} words</div></div>
+      ${removedList ? `<div class="data-row" style="flex-direction:column;gap:6px"><div class="data-key">Removed Items (${(r.removed_items||[]).length})</div><div style="margin-top:4px;max-height:200px;overflow-y:auto">${removedList}</div></div>` : ''}
+      <div class="data-row" style="flex-direction:column;gap:8px">
+        <div class="data-key">Before → After</div>
+        <div class="diff-container">
+          <div class="diff-col diff-before"><div class="diff-label diff-label-before">Original</div>${escHtml(originalText)}</div>
+          <div class="diff-col diff-after"><div class="diff-label diff-label-after">Stabilized</div>${escHtml(r.stabilized_text)}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEdge(r) {
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--edge-color)"></div>
+      <div class="engine-name" style="color:var(--edge-color)">Relational Field</div>
+      <div class="engine-summary">Edge Index: ${r.edge_index.toFixed(4)} · ${r.edge_markers.length} markers</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Edge Index</div><div class="data-val" style="font-size:18px;font-weight:700;color:${r.edge_index < 0.30 ? 'var(--accent)' : r.edge_index < 0.60 ? 'var(--gold)' : 'var(--warn)'}">${r.edge_index.toFixed(4)}</div></div>
+      <div class="data-row"><div class="data-key">Triggered Patterns</div><div class="data-val"><div class="violations-list">${r.triggered_patterns.length ? r.triggered_patterns.map(p=>`<span class="marker-tag">${p}</span>`).join('') : '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
+      <div class="data-row"><div class="data-key">Markers</div><div class="data-val">${r.edge_markers.length ? r.edge_markers.map(m=>`<div style="margin-bottom:4px"><span class="marker-tag">${m.pattern}</span> <span style="color:var(--text-dim)">"${escHtml(m.phrase)}"</span> <span style="color:var(--text-dim);font-size:10px">w=${m.weight}</span></div>`).join('') : 'No destabilizing patterns detected'}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderEcon(r) {
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--econ-color)"></div>
+      <div class="engine-name" style="color:var(--econ-color)">Economic Layer</div>
+      <div class="engine-summary">${r.estimated_input_tokens} in · ${r.estimated_output_tokens} out · $${r.estimated_roundtrip_cost.toFixed(6)}</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Input Tokens (est)</div><div class="data-val">${r.estimated_input_tokens}</div></div>
+      <div class="data-row"><div class="data-key">Output Tokens (est)</div><div class="data-val">${r.estimated_output_tokens}</div></div>
+      <div class="data-row"><div class="data-key">Roundtrip Cost (est)</div><div class="data-val">$${r.estimated_roundtrip_cost.toFixed(6)}</div></div>
+      <div class="data-row"><div class="data-key">AI Invoked</div><div class="data-val">${r.ai_invoked ? 'Yes' : 'No'}</div></div>
+      <div class="data-row"><div class="data-key">Invocation Avoided</div><div class="data-val">${r.invocation_avoided}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderGov(r) {
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--gov-color)"></div>
+      <div class="engine-name" style="color:var(--gov-color)">Invocation Governance</div>
+      <div class="engine-summary">${r.route_hint}</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Route Hint</div><div class="data-val"><span class="route-tag route-${r.route_hint}">${r.route_hint}</span></div></div>
+      <div class="data-row"><div class="data-key">Advisory Only</div><div class="data-val">${r.advisory_only ? 'Yes' : 'No'}</div></div>
+      <div class="data-row"><div class="data-key">Logic</div><div class="data-val text-output">AI_OPTIMAL: struct ≥ 0.75 AND edge < 0.60
+CLARIFICATION_REQUIRED: struct < 0.75 AND edge < 0.40
+HUMAN_RECOMMENDED: struct ≥ 0.75 AND edge ≥ 0.60
+HUMAN_REQUIRED: struct < 0.75 AND edge ≥ 0.40</div></div>
+    </div>
+  </div>`;
+}
+
+function renderObs(r) {
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--obs-color)"></div>
+      <div class="engine-name" style="color:var(--obs-color)">Observability</div>
+      <div class="engine-summary">Risk Composite: ${r.composite_score.toFixed(4)}</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Composite Score</div><div class="data-val" style="font-size:18px;font-weight:700;color:${r.composite_score < 0.30 ? 'var(--accent)' : r.composite_score < 0.60 ? 'var(--gold)' : 'var(--warn)'}">${r.composite_score.toFixed(4)}</div></div>
+      <div class="data-row"><div class="data-key">Structural Risk</div><div class="data-val">${r.structural_risk.toFixed(4)} <span style="color:var(--text-dim)">(1 - struct_score) × 0.60</span></div></div>
+      <div class="data-row"><div class="data-key">Relational Risk</div><div class="data-val">${r.relational_risk.toFixed(4)} <span style="color:var(--text-dim)">(edge_index) × 0.40</span></div></div>
+    </div>
+  </div>`;
+}
+
+function renderBanding(structScore, edgeIndex, econResult, obsResult) {
+  const bs = bandStructural(structScore);
+  const br = bandRelational(edgeIndex);
+  const bc = econResult ? bandCost(econResult.estimated_roundtrip_cost) : 'N/A';
+  const bo = obsResult ? bandObs(obsResult.composite_score) : 'N/A';
+
+  return `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--band-color)"></div>
+      <div class="engine-name" style="color:var(--band-color)">Banding Classification</div>
+      <div class="engine-summary">${bs} · ${br} · ${bc} · ${bo}</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div class="data-row"><div class="data-key">Structural Band</div><div class="data-val"><span class="band-tag band-${bs}">${bs}</span> <span style="color:var(--text-dim);font-size:11px">(score: ${structScore.toFixed(2)})</span></div></div>
+      <div class="data-row"><div class="data-key">Relational Band</div><div class="data-val"><span class="band-tag band-${br}">${br}</span> <span style="color:var(--text-dim);font-size:11px">(edge: ${edgeIndex.toFixed(4)})</span></div></div>
+      <div class="data-row"><div class="data-key">Cost Band</div><div class="data-val"><span class="band-tag band-${bc}">${bc}</span></div></div>
+      <div class="data-row"><div class="data-key">Observability Band</div><div class="data-val"><span class="band-tag band-${bo}">${bo}</span></div></div>
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ==========================================
+// TAB SWITCHING
+// ==========================================
+let currentTab = 'single';
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.style.borderBottomColor = 'transparent';
+    t.style.color = 'var(--text-dim)';
+  });
+  el.style.borderBottomColor = 'var(--accent)';
+  el.style.color = 'var(--text)';
+
+  document.getElementById('singleInput').style.display = tab === 'single' ? 'flex' : 'none';
+  document.getElementById('batchInput').style.display = tab === 'batch' ? 'flex' : 'none';
+  document.getElementById('compareInput').style.display = tab === 'compare' ? 'flex' : 'none';
+}
+
+// Override run button to handle modes
+const originalRunEngines = runEngines;
+runEngines = function() {
+  if (currentTab === 'single') return originalRunEngines();
+  if (currentTab === 'batch') return runBatch();
+  if (currentTab === 'compare') return runCompare();
+};
+
+function runBatch() {
+  const raw = document.getElementById('batchText').value;
+  if (!raw.trim()) return;
+
+  const texts = raw.split(/\n---\n/).map(t => t.trim()).filter(t => t);
+  if (!texts.length) return;
+
+  const panel = document.getElementById('outputPanel');
+  panel.innerHTML = '<div class="panel-header">Output</div>';
+
+  const objective = document.getElementById('objectiveText').value.trim() || null;
+  const startTime = performance.now();
+
+  for (let i = 0; i < texts.length; i++) {
+    const text = texts[i];
+    panel.innerHTML += `<div style="padding:12px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1px">BATCH ITEM ${i+1} of ${texts.length}</div>`;
+
+    if (activeEngines.has('v2') || activeEngines.has('convergence')) {
+      panel.innerHTML += renderV2(runV2(text));
+    }
+    if (activeEngines.has('v3') || activeEngines.has('convergence')) {
+      panel.innerHTML += renderV3(runV3(text, 400, objective), text);
+    }
+    if (activeEngines.has('edge') || activeEngines.has('convergence')) {
+      panel.innerHTML += renderEdge(computeRelationalField(text));
+    }
+
+    const v2r = runV2(text);
+    const er = computeRelationalField(text);
+    const v3r = runV3(text, 400, objective);
+    const govr = computeInvocationGov(v2r.score, er.edge_index);
+
+    if (activeEngines.has('econ') || activeEngines.has('convergence')) {
+      panel.innerHTML += renderEcon(computeEconomic(text, v3r.stabilized_text, govr.route_hint, false));
+    }
+    if (activeEngines.has('gov') || activeEngines.has('convergence')) {
+      panel.innerHTML += renderGov(govr);
+    }
+    if (activeEngines.has('obs') || activeEngines.has('convergence')) {
+      panel.innerHTML += renderObs(computeObservability(v2r.score, er.edge_index));
+    }
+    if (activeEngines.has('band') || activeEngines.has('convergence')) {
+      const econr = computeEconomic(text, v3r.stabilized_text, govr.route_hint, false);
+      const obsr = computeObservability(v2r.score, er.edge_index);
+      panel.innerHTML += renderBanding(v2r.score, er.edge_index, econr, obsr);
+    }
+  }
+
+  const elapsed = (performance.now() - startTime).toFixed(2);
+  panel.innerHTML += `<div style="padding:12px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);">${texts.length} items processed in ${elapsed}ms · No LLM invoked · Deterministic</div>`;
+}
+
+function runCompare() {
+  const textA = document.getElementById('compareA').value;
+  const textB = document.getElementById('compareB').value;
+  if (!textA.trim() || !textB.trim()) return;
+
+  const panel = document.getElementById('outputPanel');
+  panel.innerHTML = '<div class="panel-header">Output — Comparison</div>';
+
+  const v2a = runV2(textA);
+  const v2b = runV2(textB);
+  const v3a = runV3(textA);
+  const v3b = runV3(textB);
+  const edgeA = computeRelationalField(textA);
+  const edgeB = computeRelationalField(textB);
+  const govA = computeInvocationGov(v2a.score, edgeA.edge_index);
+  const govB = computeInvocationGov(v2b.score, edgeB.edge_index);
+  const obsA = computeObservability(v2a.score, edgeA.edge_index);
+  const obsB = computeObservability(v2b.score, edgeB.edge_index);
+
+  const delta = (a, b, label, higherIsBetter=true) => {
+    const diff = b - a;
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+    const color = (higherIsBetter ? diff > 0 : diff < 0) ? 'var(--accent)' : diff === 0 ? 'var(--text-dim)' : 'var(--warn)';
+    return `<div class="data-row">
+      <div class="data-key">${label}</div>
+      <div class="data-val" style="display:flex;gap:16px;align-items:center">
+        <span style="min-width:60px">${a.toFixed(4)}</span>
+        <span style="color:${color};font-weight:700">${arrow} ${Math.abs(diff).toFixed(4)}</span>
+        <span style="min-width:60px">${b.toFixed(4)}</span>
+      </div>
+    </div>`;
+  };
+
+  panel.innerHTML += `<div class="engine-block">
+    <div class="engine-block-header" onclick="toggleBlock(this)">
+      <div class="indicator" style="background:var(--accent)"></div>
+      <div class="engine-name" style="color:var(--accent)">Comparison — A vs B</div>
+      <div class="engine-summary">Score: ${v2a.score.toFixed(2)} → ${v2b.score.toFixed(2)} · Edge: ${edgeA.edge_index.toFixed(2)} → ${edgeB.edge_index.toFixed(2)}</div>
+      <div class="chevron">▼</div>
+    </div>
+    <div class="engine-body">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;display:flex;gap:16px">
+        <span style="min-width:200px"></span>
+        <span style="min-width:60px;color:var(--warn)">DOC A</span>
+        <span style="min-width:80px;text-align:center">DELTA</span>
+        <span style="min-width:60px;color:var(--accent)">DOC B</span>
+      </div>
+      ${delta(v2a.score, v2b.score, 'V2 Score', true)}
+      ${delta(edgeA.edge_index, edgeB.edge_index, 'Edge Index', false)}
+      ${delta(obsA.composite_score, obsB.composite_score, 'Risk Composite', false)}
+      ${delta(v3a.compression_pct, v3b.compression_pct, 'V3 Compression %', true)}
+      ${delta(v3a.tokens_saved, v3b.tokens_saved, 'Tokens Saved', true)}
+      <div class="data-row"><div class="data-key">V2 Violations A</div><div class="data-val"><div class="violations-list">${v2a.violations.map(v=>`<span class="violation-tag">${v}</span>`).join('') || '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
+      <div class="data-row"><div class="data-key">V2 Violations B</div><div class="data-val"><div class="violations-list">${v2b.violations.map(v=>`<span class="violation-tag">${v}</span>`).join('') || '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
+      <div class="data-row"><div class="data-key">Gov Route A</div><div class="data-val"><span class="route-tag route-${govA.route_hint}">${govA.route_hint}</span></div></div>
+      <div class="data-row"><div class="data-key">Gov Route B</div><div class="data-val"><span class="route-tag route-${govB.route_hint}">${govB.route_hint}</span></div></div>
+      <div class="data-row"><div class="data-key">Edge Patterns A</div><div class="data-val">${edgeA.triggered_patterns.length ? edgeA.triggered_patterns.map(p=>`<span class="marker-tag">${p}</span>`).join(' ') : 'none'}</div></div>
+      <div class="data-row"><div class="data-key">Edge Patterns B</div><div class="data-val">${edgeB.triggered_patterns.length ? edgeB.triggered_patterns.map(p=>`<span class="marker-tag">${p}</span>`).join(' ') : 'none'}</div></div>
+    </div>
+  </div>`;
+
+  // Also show individual breakdowns
+  panel.innerHTML += `<div style="padding:12px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--warn);letter-spacing:1px">DOCUMENT A</div>`;
+  panel.innerHTML += renderV2(v2a);
+  panel.innerHTML += renderV3(v3a, textA);
+  panel.innerHTML += renderEdge(edgeA);
+  panel.innerHTML += `<div style="padding:12px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:1px">DOCUMENT B</div>`;
+  panel.innerHTML += renderV2(v2b);
+  panel.innerHTML += renderV3(v3b, textB);
+  panel.innerHTML += renderEdge(edgeB);
+}
+</script>
+
+</body>
+</html>
