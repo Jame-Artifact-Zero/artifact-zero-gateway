@@ -8,15 +8,15 @@
 
 /* Company header */
 .company-header{text-align:center;padding:20px 0 28px}
-.ch-rank{font-family:var(--az-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.ch-rank{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
 .ch-name{font-size:clamp(24px,5vw,36px);font-weight:700;margin-bottom:8px}
-.ch-url{font-family:var(--az-mono);font-size:11px;color:var(--muted)}
+.ch-url{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
 .ch-url a{color:var(--blue);text-decoration:none}
 
 /* Score hero */
 .score-hero{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
 .sh-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 24px;text-align:center;min-width:100px}
-.sh-val{font-family:var(--az-mono);font-size:32px;font-weight:700}
+.sh-val{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700}
 .sh-val.good{color:var(--accent)}.sh-val.mid{color:var(--amber)}.sh-val.bad{color:var(--red)}
 .sh-label{font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:.5px;text-transform:uppercase}
 .sh-card.issues .sh-val{color:var(--red)}
@@ -24,7 +24,7 @@
 
 /* Split view */
 .split{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
-.split-header{padding:10px 16px;font-family:var(--az-mono);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.split-header{padding:10px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--border)}
 .split-header.copy-h{background:rgba(59,130,246,.06);color:var(--blue);border-right:1px solid var(--border)}
 .split-header.score-h{background:rgba(0,232,156,.06);color:var(--accent)}
 .split-col{padding:16px;font-size:13px;line-height:1.8}
@@ -32,12 +32,12 @@
 .split-col.score-col{max-height:500px;overflow-y:auto}
 
 /* Score details */
-.sd-section{font-family:var(--az-mono);font-size:10px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--border)}
+.sd-section{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--border)}
 .sd-section:first-child{margin-top:0;padding-top:0;border-top:none}
 .sd-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(37,42,53,.5)}
 .sd-row:last-child{border:none}
 .sd-label{color:var(--muted)}
-.sd-val{font-family:var(--az-mono);font-weight:600;font-size:11px}
+.sd-val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
 .sd-clear{color:var(--accent)}.sd-warn{color:var(--amber)}.sd-crit{color:var(--red)}
 
 /* Findings cards */
@@ -46,10 +46,10 @@
 .finding-card.high{background:rgba(239,68,68,.08);border-color:var(--red)}
 .finding-card.medium{background:rgba(245,158,11,.08);border-color:var(--amber)}
 .finding-card.pass{background:rgba(0,232,156,.06);border-color:var(--accent)}
-.finding-dim{font-family:var(--az-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+.finding-dim{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
 .finding-text{font-size:13px;line-height:1.6;color:var(--text)}
-.finding-evidence{font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-top:4px;padding:4px 8px;background:rgba(255,255,255,.03);border-radius:4px}
-.finding-sev{font-family:var(--az-mono);font-size:9px;padding:2px 6px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.finding-evidence{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px;padding:4px 8px;background:rgba(255,255,255,.03);border-radius:4px}
+.finding-sev{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;margin-left:6px;vertical-align:middle}
 .finding-sev.sev-crit{background:#7f1d1d;color:#fca5a5}
 .finding-sev.sev-warn{background:rgba(245,158,11,.15);color:var(--amber)}
 
@@ -57,79 +57,59 @@
 .dim-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
 .dim-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
 .dim-header{display:flex;justify-content:space-between;align-items:center}
-.dim-name{font-family:var(--az-mono);font-size:11px;font-weight:600;color:var(--text)}
-.dim-val{font-family:var(--az-mono);font-size:13px;font-weight:700}
+.dim-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text)}
+.dim-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
 .dim-desc{font-size:11px;color:var(--muted);margin:4px 0 8px}
 .dim-bar-bg{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
 .dim-bar{height:100%;border-radius:3px;transition:width .3s}
 .dim-bar.sd-clear{background:var(--accent)}.dim-bar.sd-warn{background:var(--amber)}.dim-bar.sd-crit{background:var(--red)}
-.dim-weight{font-family:var(--az-mono);font-size:9px;color:var(--muted);margin-top:4px;text-align:right}
+.dim-weight{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;text-align:right}
 
 /* NTI Section */
 .nti-section{margin-bottom:28px}
 .nti-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.nti-badge{font-family:var(--az-mono);font-size:28px;font-weight:700;width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid}
+.nti-badge{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid}
 .nti-badge.good{border-color:var(--accent);color:var(--accent);background:rgba(0,232,156,.08)}
 .nti-badge.mid{border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.08)}
 .nti-badge.bad{border-color:var(--red);color:var(--red);background:rgba(239,68,68,.08)}
 
 .fm-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .fm-card{flex:1;min-width:140px;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface)}
-.fm-name{font-family:var(--az-mono);font-size:12px;font-weight:700;margin-bottom:4px}
-.fm-state{font-family:var(--az-mono);font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px}
+.fm-name{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;margin-bottom:4px}
+.fm-state{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px}
 .fm-state.active{background:#7f1d1d;color:#fca5a5}
 .fm-state.clear{background:#064e3b;color:#86efac}
 .fm-desc{font-size:11px;color:var(--muted);line-height:1.5}
 
 .tilt-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
-.tilt-tag{font-family:var(--az-mono);font-size:10px;padding:4px 10px;border-radius:4px;background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
 .tilt-tag.clean{background:rgba(0,232,156,.08);color:var(--accent);border-color:rgba(0,232,156,.2)}
 
 .hedge-hl{background:rgba(245,158,11,.25);padding:1px 3px;border-radius:2px;color:var(--amber)}
 
 /* What to fix */
 .fix-section{margin-bottom:24px;padding:16px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px}
-.fix-title{font-family:var(--az-mono);font-size:11px;color:var(--red);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.fix-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
 .fix-item{font-size:13px;color:var(--text);line-height:1.6;padding:6px 0;border-bottom:1px solid rgba(239,68,68,.1)}
 .fix-item:last-child{border:none;padding-bottom:0}
 
 /* Share + Meta */
 .meta-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
 .meta-left{font-size:11px;color:var(--muted)}
-.meta-left span{font-family:var(--az-mono)}
-.share-btn{padding:8px 18px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--az-mono);font-size:11px;color:var(--accent);cursor:pointer;transition:all .15s}
+.meta-left span{font-family:'JetBrains Mono',monospace}
+.share-btn{padding:8px 18px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);cursor:pointer;transition:all .15s}
 .share-btn:hover{border-color:var(--accent);background:var(--surface2)}
 .share-btn.copied{background:#064e3b;border-color:var(--accent)}
 
 /* Bottom CTAs */
 .bottom-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:20px 0 40px}
-.bottom-row a{padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;font-family:var(--az-sans);transition:all .15s}
+.bottom-row a{padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all .15s}
 .btn-check{background:var(--accent);color:#0a0c10}
 .btn-check:hover{background:#00d48c}
 .btn-back{background:var(--surface);color:var(--text);border:1px solid var(--border)}
 .btn-back:hover{border-color:var(--accent);color:var(--accent)}
 
-.loading{text-align:center;padding:60px 20px;font-family:var(--az-mono);font-size:12px;color:var(--muted)}
-
-
-/* JS-generated element classes */
-.sh-rating-sound{color:var(--accent)}.sh-rating-clear{color:var(--blue)}.sh-rating-other{color:var(--amber)}
-.sd-section-flat{border:none;padding:0;margin:0 0 10px}
-.sd-section-flush{margin-top:0}
-.finding-card-mb{margin-bottom:20px}
-.nti-detail{flex:1}
-.nti-detail-label{font-family:var(--az-mono);font-size:11px;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
-.nti-detail-desc{font-size:13px;color:var(--muted);margin-top:2px}
-.constraints-note{font-size:12px;color:var(--muted);margin-bottom:16px}
-.constraints-note .ct-count{color:var(--accent)}
-.constraints-none{font-size:12px;color:var(--red);margin-bottom:16px}
-.hedge-note{color:var(--amber)}
-.split-mt{margin-top:20px}
-.split-col-raw{font-family:var(--az-mono);font-size:10px;line-height:1.8;color:var(--muted)}
-.raw-dim{margin-bottom:12px}
-.raw-dim-name{color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
-.raw-dim-key{color:var(--text)}
-.link-accent{color:var(--accent)}
+.loading{text-align:center;padding:60px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
 
 @media(max-width:700px){
   .split{grid-template-columns:1fr}
@@ -146,6 +126,7 @@
 
 {% block content %}
 <div class="content">
+  <h1 id="pageTitle" style="display:none">Structure Check</h1>
   <div id="scorecard">
     <div class="loading">Loading scorecard...</div>
   </div>
@@ -165,7 +146,7 @@ async function loadScorecard(){
     const data = await res.json();
     render(data);
   } catch(e){
-    document.getElementById('scorecard').innerHTML = '<div class="loading">Company not found. <a href="/fortune500" class="link-accent">Back to list</a></div>';
+    document.getElementById('scorecard').innerHTML = '<div class="loading">Company not found. <a href="/fortune500" style="color:var(--accent)">Back to list</a></div>';
   }
 }
 
@@ -187,7 +168,9 @@ function render(c){
   const constraints = Array.isArray(nti.constraints) ? nti.constraints : [];
   const hedgeWords = (detail.d4_hedge_density && detail.d4_hedge_density.hedge_words_found) || [];
 
-  document.getElementById('pageTitle').textContent = c.company_name + ' Structure Check';
+  const ptEl = document.getElementById('pageTitle');
+  if(ptEl) ptEl.textContent = c.company_name + ' Structure Check';
+  document.title = c.company_name + ' Structure Check — Artifact Zero';
 
   const rankLabel = c.rank ? (c.fund_name ? 'VC Fund #' : 'Fortune 500 #') + c.rank : '';
 
@@ -242,7 +225,7 @@ function render(c){
   // WHAT TO FIX items
   const fixItems = [];
   if(constraints.length === 0 && niiScore > 0) fixItems.push('Add explicit constraints: dates, numbers, boundaries, conditions.');
-  if(hedgeWords.length > 0) fixItems.push('Remove hedge language: <span class="hedge-note">' + hedgeWords.join(', ') + '</span>');
+  if(hedgeWords.length > 0) fixItems.push('Remove hedge language: <span style="color:var(--amber)">' + hedgeWords.join(', ') + '</span>');
   Object.entries(fmodes).forEach(([name, data]) => {
     if(!data || typeof data !== 'object') return;
     const stateKey = name.toLowerCase() + '_state';
@@ -279,7 +262,7 @@ function render(c){
   // Score hero
   html += '<div class="score-hero">';
   html += '<div class="sh-card"><div class="sh-val ' + (score>=70?'good':score>=45?'mid':'bad') + '">' + score.toFixed(1) + '%</div><div class="sh-label">CSI Score</div></div>';
-  html += '<div class="sh-card"><div class="sh-val ' + (label.includes('SOUND')?'sh-rating-sound':label.includes('CLEAR')?'sh-rating-clear':'sh-rating-other') + '">' + label + '</div><div class="sh-label">Rating</div></div>';
+  html += '<div class="sh-card"><div class="sh-val" style="color:' + (label.includes('SOUND')?'var(--accent)':label.includes('CLEAR')?'var(--blue)':'var(--amber)') + '">' + label + '</div><div class="sh-label">Rating</div></div>';
   html += '<div class="sh-card ' + (totalIssues>0?'issues':'clear') + '"><div class="sh-val">' + totalIssues + '</div><div class="sh-label">Findings</div></div>';
   if(niiScore > 0){
     html += '<div class="sh-card"><div class="sh-val ' + (niiScore>=70?'good':niiScore>=45?'mid':'bad') + '">' + niiScore + '</div><div class="sh-label">NTI Score</div></div>';
@@ -311,7 +294,7 @@ function render(c){
   // ═══ STRUCTURAL FINDINGS ═══
   if(findings.length > 0){
     html += '<div class="findings-section">';
-    html += '<div class="sd-section sd-section-flat">STRUCTURAL FINDINGS</div>';
+    html += '<div class="sd-section" style="border:none;padding:0;margin:0 0 10px">STRUCTURAL FINDINGS</div>';
     hiFindings.forEach(f => {
       html += '<div class="finding-card high">';
       html += '<div class="finding-dim">' + f.dimension + ' <span class="finding-sev sev-crit">CRITICAL</span></div>';
@@ -334,7 +317,7 @@ function render(c){
     });
     html += '</div>';
   } else {
-    html += '<div class="finding-card pass finding-card-mb"><div class="finding-text">No structural issues detected. This copy is clean.</div></div>';
+    html += '<div class="finding-card pass" style="margin-bottom:20px"><div class="finding-text">No structural issues detected. This copy is clean.</div></div>';
   }
 
   // ═══ NTI STRUCTURAL INTEGRITY ═══
@@ -344,9 +327,9 @@ function render(c){
 
     html += '<div class="nti-header">';
     html += '<div class="nti-badge ' + (niiScore>=70?'good':niiScore>=45?'mid':'bad') + '">' + niiScore + '</div>';
-    html += '<div class="nti-detail">';
-    html += '<div class="nti-detail-label">Structural Integrity Score</div>';
-    html += '<div class="nti-detail-desc">';
+    html += '<div style="flex:1">';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--accent);letter-spacing:1px;text-transform:uppercase">Structural Integrity Score</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:2px">';
     if(niiScore >= 70) html += 'Structurally sound - constraints present and enforced';
     else if(niiScore >= 45) html += 'Mixed signals - structural gaps detected';
     else html += 'Structural risk - significant gaps in constraint language';
@@ -369,7 +352,7 @@ function render(c){
 
     // Tilt patterns
     if(tilts.length > 0){
-      html += '<div class="sd-section sd-section-flush">COMMUNICATION DRIFT PATTERNS</div>';
+      html += '<div class="sd-section" style="margin-top:0">COMMUNICATION DRIFT PATTERNS</div>';
       html += '<div class="tilt-list">';
       tilts.forEach(t => {
         const id = typeof t === 'string' ? t : (t.tilt_id || t.label || String(t));
@@ -382,9 +365,9 @@ function render(c){
 
     // Constraints
     if(constraints.length > 0){
-      html += '<div class="constraints-note"><span class="ct-count">' + constraints.length + '</span> constraint' + (constraints.length>1?'s':'') + ' detected in source text</div>';
+      html += '<div style="font-size:12px;color:var(--muted);margin-bottom:16px"><span style="color:var(--accent)">' + constraints.length + '</span> constraint' + (constraints.length>1?'s':'') + ' detected in source text</div>';
     } else {
-      html += '<div class="constraints-none">No explicit constraints detected in source text</div>';
+      html += '<div style="font-size:12px;color:var(--red);margin-bottom:16px">No explicit constraints detected in source text</div>';
     }
 
     html += '</div>'; // end nti-section
@@ -409,23 +392,23 @@ function render(c){
   html += '</div>';
 
   // ═══ SPLIT VIEW: Source Copy + Raw Detail ═══
-  html += '<div class="split split-mt">';
-  html += '<div class="split-header copy-h">THEIR CORPORATE COPY' + (hedgeWords.length > 0 ? ' &middot; <span class="hedge-note">' + hedgeWords.length + ' hedge words highlighted</span>' : '') + '</div>';
+  html += '<div class="split" style="margin-top:20px">';
+  html += '<div class="split-header copy-h">THEIR CORPORATE COPY' + (hedgeWords.length > 0 ? ' &middot; <span style="color:var(--amber)">' + hedgeWords.length + ' hedge words highlighted</span>' : '') + '</div>';
   html += '<div class="split-header score-h">RAW DIMENSION DATA</div>';
   html += '</div>';
   html += '<div class="split">';
   html += '<div class="split-col copy-col">' + sourceText + '</div>';
-  html += '<div class="split-col score-col split-col-raw">';
+  html += '<div class="split-col score-col" style="font-family:\'JetBrains Mono\',monospace;font-size:10px;line-height:1.8;color:var(--muted)">';
   Object.keys(detail).forEach(k => {
     const d = detail[k];
     if(!d || typeof d !== 'object') return;
-    html += '<div class="raw-dim"><div class="raw-dim-name">' + k.replace(/_/g,' ') + '</div>';
+    html += '<div style="margin-bottom:12px"><div style="color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">' + k.replace(/_/g,' ') + '</div>';
     Object.keys(d).forEach(sk => {
       let val = d[sk];
       if(Array.isArray(val)) val = val.length > 0 ? val.slice(0,5).map(v => typeof v === 'object' ? JSON.stringify(v) : v).join(', ') : '-';
       else if(typeof val === 'object' && val !== null) val = JSON.stringify(val);
       else if(typeof val === 'number') val = val % 1 === 0 ? val : val.toFixed(3);
-      html += '<div><span class="raw-dim-key">' + sk + '</span>: ' + val + '</div>';
+      html += '<div><span style="color:var(--text)">' + sk + '</span>: ' + val + '</div>';
     });
     html += '</div>';
   });
