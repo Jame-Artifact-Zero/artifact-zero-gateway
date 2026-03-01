@@ -12,6 +12,27 @@ import db as database
 
 app = Flask(__name__)
 
+
+# ── Score JSON parsing helper ──
+def _parse_score_json(result):
+    """Parse score_json string and merge csi/nti into result dict."""
+    sj = result.pop("score_json", None)
+    if sj and isinstance(sj, str):
+        try:
+            parsed = json.loads(sj)
+            if "csi" in parsed:
+                result["csi"] = parsed["csi"]
+            if "nti" in parsed:
+                result["nti"] = parsed["nti"]
+        except (json.JSONDecodeError, TypeError):
+            pass
+    elif sj and isinstance(sj, dict):
+        if "csi" in sj:
+            result["csi"] = sj["csi"]
+        if "nti" in sj:
+            result["nti"] = sj["nti"]
+    return result
+
 # ── Session Security ──
 _secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
 if not _secret:
@@ -821,20 +842,9 @@ def api_fortune500_detail(slug):
                 if row:
                     cols = [d[0] for d in cur.description]
                     result = dict(zip(cols, row))
-                    # Normalize: vc table has fund_name, f500 has company_name
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
-                    # Parse score_json and merge CSI/NTI into response
-                    if "score_json" in result and result["score_json"]:
-                        try:
-                            import json as _json
-                            sj = result["score_json"] if isinstance(result["score_json"], dict) else _json.loads(result["score_json"])
-                            if "csi" in sj:
-                                result["csi"] = sj["csi"]
-                            if "nti" in sj:
-                                result["nti"] = sj["nti"]
-                        except Exception:
-                            pass
+                    result = _parse_score_json(result)
                     conn.close()
                     return jsonify(result)
             else:
@@ -844,17 +854,7 @@ def api_fortune500_detail(slug):
                     result = dict(row)
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
-                    # Parse score_json and merge CSI/NTI into response
-                    if "score_json" in result and result["score_json"]:
-                        try:
-                            import json as _json
-                            sj = result["score_json"] if isinstance(result["score_json"], dict) else _json.loads(result["score_json"])
-                            if "csi" in sj:
-                                result["csi"] = sj["csi"]
-                            if "nti" in sj:
-                                result["nti"] = sj["nti"]
-                        except Exception:
-                            pass
+                    result = _parse_score_json(result)
                     conn.close()
                     return jsonify(result)
         conn.close()
@@ -906,6 +906,7 @@ def api_vc_fund_detail(slug):
                 conn.close()
                 return jsonify({"error": "Not found"}), 404
             result = dict(row)
+        result = _parse_score_json(result)
         conn.close()
         return jsonify(result)
     except Exception as e:
