@@ -135,7 +135,8 @@ async function loadScores(){
 
 function updateStats(){
   const total = allFunds.length;
-  const avg = total ? (allFunds.reduce((s,c) => s + (c.nii_score||0), 0) / total) : 0;
+  const scored = allFunds.filter(c => (c.nii_score||0) > 0);
+  const avg = scored.length ? (scored.reduce((s,c) => s + (c.nii_score||0), 0) / scored.length) : 0;
   const clear = allFunds.filter(c => (c.issue_count||0) === 0).length;
   const issues = total - clear;
   document.getElementById('statTotal').textContent = total;

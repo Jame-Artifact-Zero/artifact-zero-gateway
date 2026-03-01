@@ -160,6 +160,10 @@ function render(c){
   const meta = csi.meta || {};
   const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '';
 
+  // Detect unscored: no CSI data and score is 0
+  const isUnscored = !csi.score && !Object.keys(dims).length && score === 0;
+  const noCopy = !c.homepage_copy || c.homepage_copy.trim().length < 20;
+
   // NTI data
   const niiScore = nti.nii_score || 0;
   const fmodes = nti.failure_modes || {};
@@ -167,7 +171,9 @@ function render(c){
   const constraints = Array.isArray(nti.constraints) ? nti.constraints : [];
   const hedgeWords = (detail.d4_hedge_density && detail.d4_hedge_density.hedge_words_found) || [];
 
-  document.getElementById('pageTitle').textContent = c.company_name + ' Structure Check';
+  const ptEl = document.getElementById('pageTitle');
+  if(ptEl) ptEl.textContent = c.company_name + ' Structure Check';
+  document.title = c.company_name + ' — Structure Check — Artifact Zero';
 
   const rankLabel = c.rank ? (c.fund_name ? 'VC Fund #' : 'Fortune 500 #') + c.rank : '';
 
@@ -255,6 +261,19 @@ function render(c){
   html += '<div class="ch-name">' + c.company_name + '</div>';
   html += '<div class="ch-url"><a href="' + c.url + '" target="_blank" rel="noopener">' + (c.url || '') + '</a></div>';
   html += '</div>';
+
+  // Unscored banner
+  if(isUnscored || noCopy){
+    html += '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:16px 20px;margin-bottom:20px;font-size:14px;line-height:1.6">';
+    if(noCopy){
+      html += '<div style="color:var(--amber);font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;margin-bottom:6px">NO CORPORATE COPY FOUND</div>';
+      html += '<div style="color:var(--muted)">We couldn\'t find scoreable content on this company\'s website. This usually means the homepage is behind a login, uses a JavaScript-heavy framework, or redirects to a regional site.</div>';
+    } else {
+      html += '<div style="color:var(--amber);font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;margin-bottom:6px">SCORING PENDING</div>';
+      html += '<div style="color:var(--muted)">Copy has been captured but scoring hasn\'t run yet. Check back soon.</div>';
+    }
+    html += '</div>';
+  }
 
   // Score hero
   html += '<div class="score-hero">';

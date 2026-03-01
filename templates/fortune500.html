@@ -140,8 +140,9 @@ async function loadScores(){
 
 function updateStats(){
   const total = allCompanies.length;
-  const scores = allCompanies.map(c => c.csi_score || c.nii_score || 0);
-  const avg = total ? (scores.reduce((s,v) => s + v, 0) / total) : 0;
+  const scoredCompanies = allCompanies.filter(c => (c.csi_score || c.nii_score || 0) > 0);
+  const scores = scoredCompanies.map(c => c.csi_score || c.nii_score || 0);
+  const avg = scores.length ? (scores.reduce((s,v) => s + v, 0) / scores.length) : 0;
   const clear = allCompanies.filter(c => (c.findings_count || c.issue_count || 0) === 0).length;
   const issues = total - clear;
   document.getElementById('statTotal').textContent = total;
