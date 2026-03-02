@@ -62,24 +62,26 @@
     const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
   }
 
-  /* ── Render highlights from backend spans ── */
-  function renderHL(text, highlights) {
-    const spans = (highlights || []).slice().sort((a, b) => a.start - b.start);
-    let cursor = 0, out = '';
-    for (const h of spans) {
-      const s = Number(h.start), e = Number(h.end);
-      if (s < cursor || e <= s) continue;
-      out += esc(text.slice(cursor, s));
-      const cls = 'az-hl pattern-' + (h.pattern || 'unknown');
-      const tip = h.category || h.pattern || '';
-      out += '<span class="' + cls + '" title="' + esc(tip) + '">' + esc(text.slice(s, e)) + '</span>';
-      cursor = e;
-    }
-    out += esc(text.slice(cursor));
-    return out;
-  }
+  /* ── Pattern explainer (display only — maps backend pattern keys to human sentences) ── */
+  const PATTERN_EXPLAIN = {
+    hedge:                  'Hedges soften commitment or responsibility.',
+    reassurance:            'Reassurance replaces direct answers.',
+    category_blend:         'Blurred categories hide specifics.',
+    direct_blame:           'Direct blame assigns fault by name.',
+    retroactive_fault:      'Fault is reframed after the fact.',
+    passive_aggression:     'Indirect blame or implied fault.',
+    tone_escalation:        'Language escalates emotional temperature.',
+    authority_finality:     'Authority is asserted to end discussion.',
+    threat_consequence:     'Consequences are used as leverage.',
+    character_attack:       'The person is attacked, not the argument.',
+    shaming_moralizing:     'Moral framing is used to control.',
+    gatekeeping_exclusion:  'Access or standing is denied as pressure.',
+    dismissal_invalidating: 'The concern is dismissed outright.',
+    dominance_posture:      'Language asserts dominance over the exchange.',
+    escalation_trigger:     'Words designed to escalate the interaction.'
+  };
 
-  /* ── Human display tables (display only, no analysis) ── */
+  /* ── Tilt + FM display tables ── */
   const TILT = {
     T1_REASSURANCE_DRIFT:    'Reassurance is used instead of addressing the issue.',
     T2_CERTAINTY_INFLATION:  'Certainty claimed without evidence.',
@@ -93,9 +95,9 @@
     T10_AUTHORITY_IMPOSITION:'Authority asserted rather than explained.'
   };
   const FM = {
-    UDDS: { n: 'Upstream Drift',        d: 'Agreement before constraints are set.' },
-    DCE:  { n: 'Deferred Enforcement',   d: 'Specifics pushed to later.' },
-    CCA:  { n: 'Constraint Collapse',    d: 'Vague claims bundled to obscure gaps.' }
+    UDDS: { n: 'Upstream Drift',      d: 'Agreement before constraints are set.' },
+    DCE:  { n: 'Deferred Enforcement', d: 'Specifics pushed to later.' },
+    CCA:  { n: 'Constraint Collapse',  d: 'Vague claims bundled to obscure gaps.' }
   };
 
   function fmActive(data) {
@@ -108,20 +110,73 @@
     return out;
   }
 
-  /* ── Render result ── */
-  function render(text, data) {
+  function fmtLabel(s) {
+    return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  /* ── Interaction state ── */
+  let activePattern = null;
+  let currentText = '';
+  let currentHL = [];
+
+  function buildPatternButtons(container) {
+    const grouped = {};
+    currentHL.forEach(h => { grouped[h.pattern] = (grouped[h.pattern] || 0) + 1; });
+
+    Object.keys(grouped).forEach(pattern => {
+      const btn = document.createElement('button');
+      btn.className = 'az-pattern-btn' + (activePattern === pattern ? ' active' : '');
+      btn.textContent = fmtLabel(pattern) + ' (' + grouped[pattern] + ')';
+      btn.addEventListener('click', () => {
+        activePattern = activePattern === pattern ? null : pattern;
+        renderInteractive();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function renderHighlightedText(container) {
+    container.innerHTML = '';
+    const sorted = currentHL.slice().sort((a, b) => a.start - b.start);
+    let cursor = 0;
+
+    sorted.forEach(h => {
+      const s = Number(h.start), e = Number(h.end);
+      if (s < cursor || e <= s) return;
+      if (s > cursor) container.appendChild(document.createTextNode(currentText.slice(cursor, s)));
+
+      const span = document.createElement('span');
+      span.textContent = currentText.slice(s, e);
+      span.className = 'az-hl pattern-' + (h.pattern || 'unknown');
+      if (activePattern && h.pattern !== activePattern) span.classList.add('dimmed');
+      span.title = h.category || h.pattern || '';
+      container.appendChild(span);
+      cursor = e;
+    });
+    if (cursor < currentText.length) container.appendChild(document.createTextNode(currentText.slice(cursor)));
+  }
+
+  /* ── Render full interactive result ── */
+  function renderInteractive() {
+    const data = renderInteractive._data;
     const nii   = data.score && data.score.nii;
     const label = (data.score && data.score.nii_label) || '';
     const tilt  = (data.tilt && data.tilt.tags) || [];
-    const hl    = data.highlights || [];
     const fails = fmActive(data);
-
     const color = nii >= 80 ? 'var(--accent)' : nii >= 60 ? 'var(--amber)' : 'var(--red)';
 
-    let html = '<div class="az-card">';
+    let html = '<div class="az-card az-results-card">';
 
-    // Highlighted preview
-    html += '<div class="az-preview">' + renderHL(text, hl) + '</div>';
+    // Pattern buttons
+    html += '<div id="az-pattern-buttons" class="az-pattern-bar"></div>';
+
+    // Explainer
+    html += '<div id="az-pattern-explainer" class="az-pattern-explainer' + (activePattern ? '' : ' hidden') + '">';
+    if (activePattern) html += esc(PATTERN_EXPLAIN[activePattern] || 'Pattern detected.');
+    html += '</div>';
+
+    // Highlighted text
+    html += '<div id="az-highlighted-text" class="az-highlighted-text"></div>';
 
     // Score
     if (nii != null) {
@@ -153,9 +208,14 @@
     results.style.display = '';
     inputCard.style.display = 'none';
 
+    // Wire interactive elements after DOM is set
+    buildPatternButtons(document.getElementById('az-pattern-buttons'));
+    renderHighlightedText(document.getElementById('az-highlighted-text'));
+
     document.getElementById('editBtn').addEventListener('click', () => {
       inputCard.style.display = '';
       results.style.display = 'none';
+      activePattern = null;
       input.focus();
       arm();
     });
@@ -178,7 +238,11 @@
         results.innerHTML = '<div class="az-card" style="color:var(--red)">' + esc(data.error) + '</div>';
         results.style.display = '';
       } else {
-        render(text, data);
+        currentText = text;
+        currentHL = data.highlights || [];
+        activePattern = null;
+        renderInteractive._data = data;
+        renderInteractive();
       }
     } catch (e) {
       results.innerHTML = '<div class="az-card" style="color:var(--red)">Error: ' + esc(e.message) + '</div>';
@@ -194,6 +258,9 @@
     results.innerHTML = '';
     results.style.display = 'none';
     inputCard.style.display = '';
+    activePattern = null;
+    currentText = '';
+    currentHL = [];
     lastTouch = Date.now();
   }
   clearBtn.addEventListener('click', hardClear);
