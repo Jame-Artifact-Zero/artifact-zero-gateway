@@ -4,20 +4,10 @@
 
 {% block content %}
 <style>
-  .sc-input-card {
-    background: var(--surface, #111113); border: 1px solid var(--border, #2a2a2e);
-    border-radius: 12px; padding: 16px;
-  }
-  .sc-input-card textarea {
-    width: 100%; min-height: 100px; background: transparent; border: none;
-    color: var(--text, #e5e7eb); font-family: var(--mono); font-size: 15px;
-    line-height: 1.6; resize: none; outline: none;
-  }
+  .sc-input-card { background: var(--surface, #111113); border: 1px solid var(--border, #2a2a2e); border-radius: 12px; padding: 16px; }
+  .sc-input-card textarea { width: 100%; min-height: 100px; background: transparent; border: none; color: var(--text, #e5e7eb); font-family: var(--mono); font-size: 15px; line-height: 1.6; resize: none; outline: none; }
   .sc-input-card textarea::placeholder { color: var(--muted, #6b7280); }
-  .sc-run-btn {
-    display: block; width: 100%; margin-top: 14px; padding: 14px; border-radius: 10px; border: none;
-    background: var(--accent, #00e89c); color: #000; font-family: var(--mono); font-size: 14px; font-weight: 700; cursor: pointer;
-  }
+  .sc-run-btn { display: block; width: 100%; margin-top: 14px; padding: 14px; border-radius: 10px; border: none; background: var(--accent, #00e89c); color: #000; font-family: var(--mono); font-size: 14px; font-weight: 700; cursor: pointer; }
   .sc-run-btn:disabled { opacity: 0.4; cursor: default; }
   .sc-bottom { margin-top: 16px; min-height: 200px; }
   .sc-results-card { background: var(--surface, #111113); border: 1px solid var(--border, #2a2a2e); border-radius: 12px; padding: 16px; }
@@ -25,18 +15,14 @@
   .sc-empty .icon { font-size: 28px; margin-bottom: 12px; opacity: 0.4; }
   .sc-empty .label { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
   .az-pattern-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-  .az-pattern-btn {
-    background: transparent; border: 1px solid var(--accent, #00e89c); color: var(--accent, #00e89c);
-    padding: 7px 14px; border-radius: 999px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s;
-  }
-  .az-pattern-btn:hover, .az-pattern-btn.active { background: var(--accent, #00e89c); color: #000; }
-  .sc-explainer { font-family: var(--mono); font-size: 12px; color: var(--muted, #6b7280); margin-bottom: 14px; border-left: 2px solid var(--accent, #00e89c); padding-left: 10px; line-height: 1.5; }
+  .az-signal-btn { background: transparent; padding: 7px 14px; border-radius: 999px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s; border: 1px solid var(--btn-color, #6b7280); color: var(--btn-color, #6b7280); }
+  .az-signal-btn:hover { opacity: 0.85; }
+  .az-signal-btn.active { background: var(--btn-color, #6b7280); color: #000; }
+  .sc-explainer { font-family: var(--mono); font-size: 12px; color: var(--muted, #6b7280); margin-bottom: 14px; border-left: 2px solid var(--explainer-color, var(--accent, #00e89c)); padding-left: 10px; line-height: 1.5; }
   .sc-explainer.hidden { display: none; }
   .sc-hl-text { line-height: 1.8; font-size: 15px; color: var(--text, #e5e7eb); padding: 14px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid var(--border, #2a2a2e); }
-  .az-hl { padding: 0 2px; border-radius: 3px; font-weight: 700; text-shadow: 0 0 12px rgba(0,0,0,0.3); transition: opacity 0.25s ease, transform 0.3s ease; }
-  .az-hl.dimmed { opacity: 0.12; }
-  .az-hl.reveal { opacity: 0; transform: translateY(3px); }
-  .az-hl.visible { opacity: 1; transform: translateY(0); }
+  .az-hl { padding: 0 2px; border-radius: 3px; transition: all 0.25s ease; }
+  .az-hl.lit { font-weight: 700; }
   .sc-score-block { margin-top: 18px; }
   .sc-score-num { font-family: var(--mono); font-size: 36px; font-weight: 700; line-height: 1; }
   .sc-score-label { font-family: var(--mono); font-size: 10px; color: var(--muted, #6b7280); letter-spacing: 1.5px; margin-top: 4px; }
@@ -51,9 +37,7 @@
 
 <div class="az-page">
   <div id="scoreInputSection">
-    <div class="sc-input-card">
-      <textarea id="scoreInput" placeholder="Paste what someone sent you..."></textarea>
-    </div>
+    <div class="sc-input-card"><textarea id="scoreInput" placeholder="Paste what someone sent you..."></textarea></div>
     <button class="sc-run-btn" id="scoreRunBtn">Score</button>
   </div>
   <div class="sc-bottom">
@@ -63,16 +47,11 @@
         <div id="scorePatternBar" class="az-pattern-bar"></div>
         <div id="scoreExplainer" class="sc-explainer hidden"></div>
         <div id="scoreHlText" class="sc-hl-text"></div>
-        <div class="sc-score-block">
-          <div class="sc-score-num" id="scoreScoreNum"></div>
-          <div class="sc-score-label" id="scoreScoreLabel"></div>
-        </div>
+        <div class="sc-score-block"><div class="sc-score-num" id="scoreScoreNum"></div><div class="sc-score-label" id="scoreScoreLabel"></div></div>
         <div id="scoreTiltSection"></div>
         <div id="scoreFmSection"></div>
         <div id="scoreDimSection"></div>
-        <div style="margin-top:16px;">
-          <button class="sc-run-btn" style="background:transparent;color:var(--accent);border:1px solid var(--accent);" id="scoreNewBtn">New text</button>
-        </div>
+        <div style="margin-top:16px;"><button class="sc-run-btn" style="background:transparent;color:var(--accent);border:1px solid var(--accent);" id="scoreNewBtn">New text</button></div>
       </div>
     </div>
   </div>
@@ -84,86 +63,16 @@
 (() => {
   'use strict';
 
-  const EXPLAIN = {
-    collapse:'Different risks are bundled together and minimized into one vague conclusion.',
-    deferral:'A decision or responsibility is pushed to later without clear ownership.',
-    drift:'The objective shifts mid-message without acknowledgment.',
-    blame:'Responsibility is assigned directly to you.',
-    accusation:'The sentence begins with "You" to frame fault.',
-    retro_fault:'Past actions are reframed as mistakes after the fact.',
-    dominance:'The speaker reinforces authority or superiority.',
-    absolute:'Extreme language removes nuance.',
-    ego:'The speaker positions themselves as correcting you.',
-    direct_blame:'Responsibility is assigned directly to you.',
-    retroactive_fault:'Past actions are reframed as mistakes after the fact.',
-    passive_aggression:'Indirect blame or implied fault.',
-    tone_escalation:'Language escalates emotional temperature.',
-    authority_finality:'Authority is asserted to end discussion.',
-    threat_consequence:'Consequences are used as leverage.',
-    character_attack:'The person is attacked, not the argument.',
-    shaming_moralizing:'Moral framing is used to control.',
-    gatekeeping_exclusion:'Access or standing is denied as pressure.',
-    dismissal_invalidating:'The concern is dismissed outright.',
-    dominance_posture:'The speaker reinforces authority or superiority.',
-    escalation_trigger:'Words designed to escalate the interaction.',
-    constraint:'Clear limits or boundaries are defined.',
-    hedge:'Language softens certainty or avoids commitment.',
-    reassurance:'Reassurance replaces direct answers.',
-    category_blend:'Categories are blurred to hide specifics.',
-    ownership:'Responsibility is clearly assigned.',
-    passive:'Action is described without naming who did it.',
-    filler:'Extra words that add no meaning.',
-    intensifier:'Unnecessary emphasis that inflates tone.',
-    repetition:'The same idea is repeated without adding clarity.',
-    shift:'A new issue is introduced mid-stream.',
-    scope:'Additional tasks are added without agreement.',
-    topic_jump:'The topic changes without transition.',
-    commitment:'A promise is made without defined limits.',
-    unbounded:'A commitment lacks timeline or scope.',
-    emotion:'Emotionally charged words increase tension.',
-    contrast:'A contrast is introduced.',
-    contradiction:'A contradiction appears without resolution.',
-    missing_objective:'The message lacks a clear goal.',
-    missing_action:'No clear next step is defined.',
-    missing_boundary:'Limits are unclear.',
-    authority:'Experience or tenure is used to reinforce hierarchy.',
-    social:'Social consensus is invoked to influence perception.',
-    urgency:'Time pressure is implied.',
-    indirect:'A request is implied but not clearly stated.',
-    conditional:'An outcome depends on unclear conditions.',
-    causal:'The speaker provides justification for a decision.',
-    defense:'Defense language appears before accusation is made.',
-    moral:'The speaker frames themselves as ethically superior.',
-    authority_shift:'Authority is shifted to another party conditionally.',
-    witness:'Other observers are invoked to reinforce claims.',
-    emotion_dismiss:'Emotional responses are minimized or invalidated.',
-    closure:'The speaker signals that the outcome is final.',
-    reputation:'The speaker protects personal or professional standing.',
-    role:'The speaker defines their role to legitimize the decision.',
-  };
+  const SIG_COLORS = { red:'#ef4444', crimson:'#dc2626', amber:'#f59e0b', purple:'#a78bfa', pink:'#ec4899', teal:'#2dd4bf', orange:'#f97316', blue:'#60a5fa', green:'#00e89c', gray:'#9b9b9b', lightgray:'#9b9b9b', yellow:'#eab308' };
+  function sigColor(sig){ const e=catalog[sig]; return e?(SIG_COLORS[e.color]||SIG_COLORS.gray):SIG_COLORS.gray; }
 
-  const TILT = {
-    T1_REASSURANCE_DRIFT:'They\'re reassuring instead of addressing the issue.',
-    T2_CERTAINTY_INFLATION:'Certainty claimed without evidence.',
-    T3_CONSENSUS_CLAIMS:'Broad consensus implied without proof.',
-    T4_CAPABILITY_OVERREACH:'Capability overstated beyond constraints.',
-    T5_ABSOLUTE_LANGUAGE:'Absolute language where nuance would be honest.',
-    T6_CONSTRAINT_DEFERRAL:'Hard decisions pushed to later.',
-    T7_CATEGORY_BLEND:'Categories blended to obscure specifics.',
-    T8_PRESSURE_OPTIMIZATION:'Urgency manufactured to force a decision.',
-    T9_SCOPE_EXPANSION:'Scope expanded without acknowledging the shift.',
-    T10_AUTHORITY_IMPOSITION:'Authority asserted rather than explained.',
-  };
-  const FM = {
-    UDDS:{n:'Upstream Drift',d:'Agreement language before constraints are set.'},
-    DCE:{n:'Deferred Enforcement',d:'Hard decisions pushed to later.'},
-    CCA:{n:'Constraint Collapse',d:'Vague claims bundled to obscure gaps.'},
-  };
+  const TILT = { T1_REASSURANCE_DRIFT:'They\'re reassuring instead of addressing the issue.', T2_CERTAINTY_INFLATION:'Certainty claimed without evidence.', T3_CONSENSUS_CLAIMS:'Broad consensus implied without proof.', T4_CAPABILITY_OVERREACH:'Capability overstated beyond constraints.', T5_ABSOLUTE_LANGUAGE:'Absolute language where nuance would be honest.', T6_CONSTRAINT_DEFERRAL:'Hard decisions pushed to later.', T7_CATEGORY_BLEND:'Categories blended to obscure specifics.', T8_PRESSURE_OPTIMIZATION:'Urgency manufactured to force a decision.', T9_SCOPE_EXPANSION:'Scope expanded without acknowledging the shift.', T10_AUTHORITY_IMPOSITION:'Authority asserted rather than explained.' };
+  const FM = { UDDS:{n:'Upstream Drift',d:'Agreement language before constraints are set.'}, DCE:{n:'Deferred Enforcement',d:'Hard decisions pushed to later.'}, CCA:{n:'Constraint Collapse',d:'Vague claims bundled to obscure gaps.'} };
 
-  let text='',highlights=[],activePattern=null,apiData=null;
+  let text='',highlights=[],activeSignal=null,apiData=null,catalog={};
   function esc(s){const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML;}
-  function fmtLabel(s){return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
   function scoreColor(n){return n>=80?'var(--accent)':n>=60?'var(--amber)':'var(--red)';}
+  function getSig(h){ return h.signal||h.pattern||'unknown'; }
   function fmActive(pfm){
     if(!pfm||typeof pfm!=='object')return[];
     const out=[];
@@ -176,51 +85,86 @@
   const hlTextEl=document.getElementById('scoreHlText');
 
   function buildButtons(){
-    patternBar.innerHTML='';const g={};highlights.forEach(h=>{g[h.pattern]=(g[h.pattern]||0)+1;});
-    Object.keys(g).forEach(p=>{const btn=document.createElement('button');btn.className='az-pattern-btn'+(activePattern===p?' active':'');btn.textContent=fmtLabel(p)+' ('+g[p]+')';btn.addEventListener('click',()=>{activePattern=activePattern===p?null:p;renderAll(false);});patternBar.appendChild(btn);});
+    patternBar.innerHTML='';
+    const g={};
+    highlights.forEach(h=>{ const s=getSig(h); g[s]=(g[s]||0)+1; });
+    Object.keys(g).forEach(sig=>{
+      const entry=catalog[sig]||{};
+      const label=entry.label||sig.replace(/_/g,' ');
+      const color=sigColor(sig);
+      const btn=document.createElement('button');
+      btn.className='az-signal-btn'+(activeSignal===sig?' active':'');
+      btn.style.setProperty('--btn-color',color);
+      btn.textContent=label+' ('+g[sig]+')';
+      btn.addEventListener('click',()=>{ activeSignal=activeSignal===sig?null:sig; renderAll(false); });
+      patternBar.appendChild(btn);
+    });
   }
-  function renderExplainer(){if(!activePattern){explainerEl.classList.add('hidden');return;}explainerEl.classList.remove('hidden');explainerEl.textContent=EXPLAIN[activePattern]||'Pattern detected.';}
+
+  function renderExplainer(){
+    if(!activeSignal){ explainerEl.classList.add('hidden'); return; }
+    explainerEl.classList.remove('hidden');
+    const entry=catalog[activeSignal];
+    explainerEl.style.setProperty('--explainer-color',sigColor(activeSignal));
+    explainerEl.textContent=entry?entry.explanation:'Pattern detected.';
+  }
+
   function renderHL(progressive){
-    hlTextEl.innerHTML='';const sorted=highlights.slice().sort((a,b)=>a.start-b.start);let cursor=0,delay=0;
-    sorted.forEach(h=>{if(h.start>cursor)hlTextEl.appendChild(document.createTextNode(text.slice(cursor,h.start)));const span=document.createElement('span');span.textContent=text.slice(h.start,h.end);span.className='az-hl pattern-'+(h.pattern||'unknown');span.title=h.category||h.pattern||'';if(activePattern&&h.pattern!==activePattern)span.classList.add('dimmed');if(progressive){span.classList.add('reveal');const d=delay;setTimeout(()=>span.classList.add('visible'),100+d*150);delay++;}hlTextEl.appendChild(span);cursor=h.end;});
-    if(cursor<text.length)hlTextEl.appendChild(document.createTextNode(text.slice(cursor)));
+    hlTextEl.innerHTML='';
+    const sorted=highlights.slice().sort((a,b)=>a.start-b.start);
+    let cursor=0,delay=0;
+    sorted.forEach(h=>{
+      if(h.start>cursor) hlTextEl.appendChild(document.createTextNode(text.slice(cursor,h.start)));
+      const sig=getSig(h);
+      const span=document.createElement('span');
+      span.textContent=text.slice(h.start,h.end);
+      span.className='az-hl';
+      span.dataset.signal=sig;
+      if(activeSignal&&sig===activeSignal){ span.style.color=sigColor(sig); span.classList.add('lit'); }
+      if(progressive){ span.style.opacity='0';span.style.transform='translateY(3px)'; const d=delay; setTimeout(()=>{span.style.opacity='1';span.style.transform='translateY(0)';span.style.transition='all 0.3s ease';},100+d*120); delay++; }
+      hlTextEl.appendChild(span); cursor=h.end;
+    });
+    if(cursor<text.length) hlTextEl.appendChild(document.createTextNode(text.slice(cursor)));
   }
+
   function renderReadout(){
-    if(!apiData)return;
+    if(!apiData) return;
     const nii=apiData.nii&&apiData.nii.nii_score;const label=(apiData.nii&&apiData.nii.nii_label)||'';
     const tiltTags=apiData.tilt_taxonomy||[];const fails=fmActive(apiData.parent_failure_modes);
-    if(nii!=null){document.getElementById('scoreScoreNum').textContent=nii;document.getElementById('scoreScoreNum').style.color=scoreColor(nii);document.getElementById('scoreScoreLabel').textContent=label+' \u00b7 STRUCTURAL INTEGRITY';}
+    if(nii!=null){document.getElementById('scoreScoreNum').textContent=nii;document.getElementById('scoreScoreNum').style.color=scoreColor(nii);document.getElementById('scoreScoreLabel').textContent=label+' · STRUCTURAL INTEGRITY';}
     let th='';if(tiltTags.length){th+='<div class="sc-section-title">WHAT THE CORE DETECTED</div><ul class="sc-list">';tiltTags.forEach(t=>{th+='<li>'+esc(TILT[t]||t)+'</li>';});th+='</ul>';}document.getElementById('scoreTiltSection').innerHTML=th;
-    let fh='';if(fails.length){fh+='<div class="sc-section-title">STRUCTURAL RISKS</div><ul class="sc-list">';fails.forEach(f=>{const h=FM[f.k];fh+='<li>'+esc(h?h.n+' \u2014 '+h.d:f.k+': '+f.state)+'</li>';});fh+='</ul>';}document.getElementById('scoreFmSection').innerHTML=fh;
+    let fh='';if(fails.length){fh+='<div class="sc-section-title">STRUCTURAL RISKS</div><ul class="sc-list">';fails.forEach(f=>{const h=FM[f.k];fh+='<li>'+esc(h?h.n+' — '+h.d:f.k+': '+f.state)+'</li>';});fh+='</ul>';}document.getElementById('scoreFmSection').innerHTML=fh;
     const dims=apiData.nii||{};const dimKeys=Object.keys(dims).filter(k=>k.startsWith('d')&&k.includes('_')&&typeof dims[k]==='number');
     let dh='';if(dimKeys.length){dh+='<div class="sc-section-title">DIMENSIONS</div>';dimKeys.forEach(k=>{const pct=Math.round(dims[k]*100);dh+='<div class="sc-dim-row"><span class="sc-dim-k">'+esc(k)+'</span><span class="sc-dim-v" style="color:'+scoreColor(pct)+'">'+pct+'%</span></div>';});}document.getElementById('scoreDimSection').innerHTML=dh;
   }
-  function renderAll(progressive){buildButtons();renderExplainer();renderHL(progressive);renderReadout();}
+
+  function renderAll(p){ buildButtons(); renderExplainer(); renderHL(p); renderReadout(); }
 
   document.getElementById('scoreRunBtn').addEventListener('click',async()=>{
     text=document.getElementById('scoreInput').value.trim();if(!text)return;
-    const btn=document.getElementById('scoreRunBtn');btn.disabled=true;btn.textContent='Scoring\u2026';
-    try{const res=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});apiData=await res.json();
-    if(apiData.error){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">'+esc(apiData.error)+'</div>';return;}
-    highlights=((apiData.signals&&apiData.signals.highlights)||apiData.highlights||[]).map(h=>({...h}));activePattern=null;document.getElementById('scoreEmpty').style.display='none';document.getElementById('scoreFilled').style.display='';renderAll(true);
-    }catch(e){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">Error: '+esc(e.message)+'</div>';}finally{btn.disabled=false;btn.textContent='Score';}
+    const btn=document.getElementById('scoreRunBtn');btn.disabled=true;btn.textContent='Scoring…';
+    try{
+      const res=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      apiData=await res.json();
+      if(apiData.error){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">'+esc(apiData.error)+'</div>';return;}
+      catalog=(apiData.signals&&apiData.signals.signal_catalog)||{};
+      highlights=((apiData.signals&&apiData.signals.highlights)||apiData.highlights||[]).map(h=>({...h}));
+      activeSignal=null;
+      document.getElementById('scoreEmpty').style.display='none';
+      document.getElementById('scoreFilled').style.display='';
+      renderAll(true);
+    }catch(e){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">Error: '+esc(e.message)+'</div>';}
+    finally{btn.disabled=false;btn.textContent='Score';}
   });
 
   document.getElementById('scoreNewBtn').addEventListener('click',()=>{
     document.getElementById('scoreInput').value='';document.getElementById('scoreEmpty').style.display='';
-    document.getElementById('scoreEmpty').innerHTML='<div class="icon">\u2193</div><div class="label">RESULTS APPEAR HERE</div>';
-    document.getElementById('scoreFilled').style.display='none';activePattern=null;document.getElementById('scoreInput').focus();
+    document.getElementById('scoreEmpty').innerHTML='<div class="icon">↓</div><div class="label">RESULTS APPEAR HERE</div>';
+    document.getElementById('scoreFilled').style.display='none';activeSignal=null;catalog={};document.getElementById('scoreInput').focus();
   });
 
   /* Pick up demo text from home page */
-  try {
-    const demo = sessionStorage.getItem('az_demo_text');
-    if (demo) {
-      sessionStorage.removeItem('az_demo_text');
-      document.getElementById('scoreInput').value = demo;
-      document.getElementById('scoreRunBtn').click();
-    }
-  } catch(e) {}
+  try{ const demo=sessionStorage.getItem('az_demo_text'); if(demo){ sessionStorage.removeItem('az_demo_text'); document.getElementById('scoreInput').value=demo; document.getElementById('scoreRunBtn').click(); } }catch(e){}
 })();
 </script>
 {% endblock %}

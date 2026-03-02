@@ -71,67 +71,6 @@
   }
   .home-cta.outline:hover { border-color: var(--muted, #6b7280); }
 
-  .home-demo { margin-top: 8px; }
-  .home-demo-label {
-    font-family: var(--mono); font-size: 10px; font-weight: 700;
-    letter-spacing: 2px; color: var(--muted, #6b7280);
-    text-align: center; margin-bottom: 10px;
-  }
-  .home-demo-text {
-    font-family: var(--mono); font-size: 13px; color: var(--muted, #6b7280);
-    font-style: italic; line-height: 1.7;
-    padding: 16px; background: var(--surface, #111113);
-    border: 1px solid var(--border, #2a2a2e); border-radius: 10px;
-  }
-  .home-demo-btn {
-    display: block; width: 100%; margin-top: 12px;
-    padding: 12px; border-radius: 8px; border: none;
-    background: var(--accent, #00e89c); color: #000;
-    font-family: var(--mono); font-size: 13px; font-weight: 700;
-    cursor: pointer; text-align: center; text-decoration: none;
-  }
-  .home-demo-btn:hover { background: #00d48e; }
-
-  .home-cards { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
-  .home-card {
-    background: var(--surface, #111113);
-    border: 1px solid var(--border, #2a2a2e);
-    border-radius: 12px; padding: 20px; transition: border-color 0.15s;
-  }
-  .home-card:hover { border-color: rgba(0,232,156,0.2); }
-  .home-card-title {
-    font-family: var(--mono); font-size: 13px; font-weight: 700;
-    color: var(--text, #e5e7eb); letter-spacing: 0.5px; margin-bottom: 6px;
-  }
-  .home-card-desc {
-    font-family: var(--mono); font-size: 12px; color: var(--muted, #6b7280);
-    line-height: 1.5; margin-bottom: 14px;
-  }
-  .home-card-btn {
-    display: block; width: 100%; padding: 12px; border-radius: 8px; border: none;
-    font-family: var(--mono); font-size: 13px; font-weight: 700;
-    letter-spacing: 0.5px; cursor: pointer; text-align: center;
-    text-decoration: none; transition: all 0.15s;
-  }
-  .home-card-btn.primary { background: var(--accent, #00e89c); color: #000; }
-  .home-card-btn.primary:hover { background: #00d48e; }
-  .home-card-btn.outline {
-    background: transparent; color: var(--accent, #00e89c);
-    border: 1px solid var(--accent, #00e89c);
-  }
-  .home-card-btn.outline:hover { background: rgba(0,232,156,0.08); }
-
-  .home-footer {
-    margin-top: 24px; padding-top: 16px;
-    border-top: 1px solid var(--border, #2a2a2e);
-  }
-  .home-footer-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .home-footer a {
-    font-family: var(--mono); font-size: 11px; color: var(--muted, #6b7280);
-    text-decoration: none; letter-spacing: 0.5px;
-  }
-  .home-footer a:hover { color: var(--accent, #00e89c); }
-
   .home-divider {
     border: none; border-top: 1px solid var(--border, #2a2a2e); margin: 24px 0;
   }
@@ -163,40 +102,7 @@
   <!-- CTA -->
   <div class="home-cta-row">
     <a href="/safecheck" class="home-cta primary">Start free →</a>
-    <a href="#demo" class="home-cta outline">See it work ↓</a>
-  </div>
-
-  <hr class="home-divider">
-
-  <!-- Live demo -->
-  <div class="home-demo" id="demo">
-    <div class="home-demo-label">LIVE DEMO — REAL NTI OUTPUT</div>
-    <div class="home-demo-text" id="demoText">"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered."</div>
-    <a href="#" class="home-demo-btn" id="demoBtn">Score this message</a>
-  </div>
-
-  <hr class="home-divider">
-
-  <!-- Entry cards -->
-  <div class="home-cards">
-    <div class="home-card">
-      <div class="home-card-title">SafeCheck</div>
-      <div class="home-card-desc">Paste what you plan to send. Weakening language illuminates before you hit send. Auto-clears in 3 minutes.</div>
-      <a href="/safecheck" class="home-card-btn primary">Open SafeCheck</a>
-    </div>
-    <div class="home-card">
-      <div class="home-card-title">Score</div>
-      <div class="home-card-desc">Paste what you received. The Core runs deterministically and shows you what the words are doing.</div>
-      <a href="/score" class="home-card-btn outline">Open Score</a>
-    </div>
-  </div>
-
-  <div class="home-footer">
-    <div class="home-footer-row">
-      <a href="/glossary">Glossary</a>
-      <a href="/contact">Contact</a>
-      <a href="/examples">Examples</a>
-    </div>
+    <a href="/score" class="home-cta outline">See it work ↓</a>
   </div>
 
 </div>
@@ -206,23 +112,12 @@
 <script>
 (() => {
   'use strict';
-
-  /* "Calm down" explainer toggle */
   const hl = document.getElementById('calmDown');
   const explain = document.getElementById('calmExplain');
   const cta = document.getElementById('calmCta');
-
   hl.addEventListener('click', () => {
     const showing = explain.classList.toggle('show');
     cta.style.display = showing ? 'none' : '';
-  });
-
-  /* Demo: navigate to score with pre-filled text */
-  document.getElementById('demoBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    const text = document.getElementById('demoText').textContent.replace(/^"|"$/g, '').trim();
-    try { sessionStorage.setItem('az_demo_text', text); } catch(ex) {}
-    window.location.href = '/score';
   });
 })();
 </script>
