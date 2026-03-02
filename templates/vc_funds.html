@@ -1,22 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Top 30 VC Funds Structure Check — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+{% extends "base.html" %}
+{% block title %}Top 30 VC Funds Structure Check — Artifact Zero{% endblock %}
+{% block body_class %}page-vcfunds{% endblock %}
 
-.topbar{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)}
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav{display:flex;gap:18px}
-.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
-.topbar nav a:hover{color:var(--text)}
+{% block head %}
+<style>
+
 
 .hero{padding:90px 20px 24px;text-align:center;max-width:700px;margin:0 auto}
 .hero h1{font-size:clamp(24px,5vw,40px);font-weight:700;line-height:1.2;margin-bottom:10px}
@@ -86,10 +74,9 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   .stat-val{font-size:18px}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 <div class="page-tabs">
   <a href="/fortune500" class="page-tab inactive">FORTUNE 500</a>
   <a href="/vc-funds" class="page-tab active">VC FUNDS</a>
@@ -127,6 +114,10 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <a href="/safecheck">Check your own words &rarr;</a>
 </div>
 
+<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
+{% endblock %}
+
+{% block scripts %}
 <script>
 let allFunds = [];
 
@@ -144,7 +135,8 @@ async function loadScores(){
 
 function updateStats(){
   const total = allFunds.length;
-  const avg = total ? (allFunds.reduce((s,c) => s + (c.nii_score||0), 0) / total) : 0;
+  const scored = allFunds.filter(c => (c.nii_score||0) > 0);
+  const avg = scored.length ? (scored.reduce((s,c) => s + (c.nii_score||0), 0) / scored.length) : 0;
   const clear = allFunds.filter(c => (c.issue_count||0) === 0).length;
   const issues = total - clear;
   document.getElementById('statTotal').textContent = total;
@@ -220,9 +212,5 @@ function filterFunds(list, filter){
 
 loadScores();
 </script>
-<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
-<script src="/static/az-nav.js"></script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+{% endblock %}

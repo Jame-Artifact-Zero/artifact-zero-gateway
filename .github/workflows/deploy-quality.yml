@@ -1,0 +1,97 @@
+# ============================================
+# Artifact Zero — Deploy to Quality (Staging)
+# ============================================
+# Triggers: push to quality branch (after PR merge from dev)
+# Deploys to: quality.artifact0.com (or staging ECS service)
+# Same image build + ECS deploy, different service/subdomain
+# ============================================
+
+name: Deploy to Quality
+
+on:
+  push:
+    branches: [quality]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: artifact-zero
+  ECS_CLUSTER: artifact-zero-cluster
+  ECS_SERVICE: artifact-zero-quality        # Separate ECS service for staging
+  ECS_TASK_DEFINITION: artifact-zero-quality-task
+
+jobs:
+  test:
+    name: Run Tests First
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt && pip install pytest
+      - run: python -m pytest tests/ -v --tb=short
+        env:
+          FLASK_SECRET_KEY: test-ci-key
+          AZ_SECRET: test-ci-az-secret
+          TESTING: "1"
+
+  deploy-quality:
+    name: Deploy to Staging
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image (quality tag)
+        id: build
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: quality-${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:quality-latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:quality-latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition $ECS_TASK_DEFINITION \
+            --query taskDefinition > task-definition.json
+
+      - name: Update task definition image
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        id: render
+        with:
+          task-definition: task-definition.json
+          container-name: artifact-zero
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to quality ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Notify — Quality Deploy
+        if: always()
+        run: |
+          STATUS=${{ job.status }}
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "Quality deploy $STATUS — $SHORT_SHA"

@@ -12,6 +12,27 @@ import db as database
 
 app = Flask(__name__)
 
+
+# ── Score JSON parsing helper ──
+def _parse_score_json(result):
+    """Parse score_json string and merge csi/nti into result dict."""
+    sj = result.pop("score_json", None)
+    if sj and isinstance(sj, str):
+        try:
+            parsed = json.loads(sj)
+            if "csi" in parsed:
+                result["csi"] = parsed["csi"]
+            if "nti" in parsed:
+                result["nti"] = parsed["nti"]
+        except (json.JSONDecodeError, TypeError):
+            pass
+    elif sj and isinstance(sj, dict):
+        if "csi" in sj:
+            result["csi"] = sj["csi"]
+        if "nti" in sj:
+            result["nti"] = sj["nti"]
+    return result
+
 # ── Session Security ──
 _secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
 if not _secret:
@@ -779,6 +800,23 @@ def safecheck_page():
     return render_template("safecheck.html")
 
 
+@app.route("/glossary")
+def glossary_page():
+    return render_template("glossary.html")
+
+
+@app.route("/engine-bench")
+def engine_bench():
+    return render_template("engine-bench.html")
+
+
+@app.route("/voice")
+def voice_page():
+    return render_template("voice.html",
+                           logged_in=session.get('logged_in', False),
+                           user_id=session.get('user_id'))
+
+
 @app.route("/fortune500")
 @app.route("/live")
 def fortune500_page():
@@ -788,6 +826,22 @@ def fortune500_page():
 @app.route("/scored/<slug>")
 def scored_page(slug):
     return render_template("scored.html")
+
+
+@app.route("/knoxville")
+def knoxville_page():
+    return render_template("knoxville.html")
+
+
+@app.route("/birkbeck")
+def birkbeck_page():
+    return render_template("birkbeck.html")
+
+
+@app.route("/anderson")
+@app.route("/anderson-county")
+def anderson_page():
+    return render_template("anderson.html")
 
 
 @app.route("/api/fortune500", methods=["GET"])
@@ -821,9 +875,9 @@ def api_fortune500_detail(slug):
                 if row:
                     cols = [d[0] for d in cur.description]
                     result = dict(zip(cols, row))
-                    # Normalize: vc table has fund_name, f500 has company_name
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
+                    result = _parse_score_json(result)
                     conn.close()
                     return jsonify(result)
             else:
@@ -833,6 +887,7 @@ def api_fortune500_detail(slug):
                     result = dict(row)
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
+                    result = _parse_score_json(result)
                     conn.close()
                     return jsonify(result)
         conn.close()
@@ -884,6 +939,7 @@ def api_vc_fund_detail(slug):
                 conn.close()
                 return jsonify({"error": "Not found"}), 404
             result = dict(row)
+        result = _parse_score_json(result)
         conn.close()
         return jsonify(result)
     except Exception as e:
@@ -918,8 +974,37 @@ def api_score_free():
         l0 = detect_l0_constraints(text)
         obj = objective_extract(text)
         tilt = classify_tilt(text)
+
+        # Highlights: backend owns spans, frontend only renders
+        framing = detect_l2_framing(text)
+        try:
+            from highlight_map import get_highlights
+            axis2, highlights = get_highlights(text, framing=framing)
+        except Exception:
+            axis2, highlights = None, []
+
         dbc = detect_downstream_before_constraint("", text, l0)
         nii = compute_nii("", text, l0, dbc, tilt)
+
+        # NTI signal detection (deterministic taxonomy)
+        try:
+            from core_engine.nti_signals import detect_signals
+            signals = detect_signals(text)
+            # Promote parent failure modes into signal summary
+            _d = nii.get("detail", {})
+            if "CONFIRMED" in str(_d.get("cca", "")) or "PROBABLE" in str(_d.get("cca", "")):
+                signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+            if "CONFIRMED" in str(_d.get("dce", "")) or "PROBABLE" in str(_d.get("dce", "")):
+                signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+            if "CONFIRMED" in str(_d.get("udds", "")) or "PROBABLE" in str(_d.get("udds", "")):
+                signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+            tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+            for code in (tilt or []):
+                _sig = tilt_to_signal.get(code)
+                if _sig:
+                    signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+        except Exception:
+            signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
         # Failure modes already computed inside compute_nii — read from detail
         detail = nii.get("detail", {})
@@ -955,6 +1040,10 @@ def api_score_free():
             "dominance": dominance
         },
         "tilt": {"tags": tilt, "count": len(tilt)},
+        "signals": signals,
+        "highlights": highlights,
+        "axis2": axis2,
+        "framing": framing,
         "meta": {
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
             "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
@@ -1180,6 +1269,13 @@ def nti_run():
 
     framing = detect_l2_framing(text)
 
+    # Highlights: backend owns spans, frontend only renders
+    try:
+        from highlight_map import get_highlights
+        axis2, highlights = get_highlights(text, framing=framing)
+    except Exception:
+        axis2, highlights = None, []
+
     # tilt taxonomy (now uses prompt+answer for scope expansion detection)
     tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
 
@@ -1189,6 +1285,24 @@ def nti_run():
 
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
     nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
+
+    # NTI signal detection (deterministic taxonomy)
+    try:
+        from core_engine.nti_signals import detect_signals
+        signals = detect_signals(text)
+        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+            signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+            signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+            signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+        tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+        for code in (tilt or []):
+            _sig = tilt_to_signal.get(code)
+            if _sig:
+                signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+    except Exception:
+        signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
     dominance: List[str] = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
@@ -1233,7 +1347,10 @@ def nti_run():
         },
         "interaction_matrix": interaction,
         "nii": nii,
-        "tilt_taxonomy": tilt
+        "tilt_taxonomy": tilt,
+        "signals": signals,
+        "highlights": highlights,
+        "axis2": axis2
     }
 
     latency_ms = int((time.time() - t0) * 1000)
@@ -1888,11 +2005,14 @@ def api_rewrite():
 
     # 5. Run V3 enforcement on LLM output
     from core_engine.v3_enforcement import enforce
+    llm_words = len(llm_text.split())
     v3_result = enforce(llm_text, objective=obj.get("objective_text"))
     final = v3_result["final_output"]
 
     original_words = len(text.split())
     rewrite_words = len(final.split())
+    # Compression = what V3 cut from the LLM output, not from user input
+    v3_compression = abs(llm_words - rewrite_words) / max(llm_words, 1) * 100
 
     return jsonify({
         "rewrite": final,
@@ -1900,11 +2020,13 @@ def api_rewrite():
         "model_color": model["color"],
         "method": "llm_v3",
         "original_words": original_words,
+        "llm_words": llm_words,
         "rewrite_words": rewrite_words,
-        "compression": f"{abs(original_words - rewrite_words) / max(original_words, 1) * 100:.0f}%",
+        "compression": f"{v3_compression:.0f}%",
         "nii_score": nii_score,
         "issues": issues,
         "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
+        "llm_raw": llm_text,
         "latency_ms": int((time.time() - t0) * 1000)
     })
 
