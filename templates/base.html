@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Artifact Zero{% endblock %}</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="icon" type="image/png" href="/static/favicon.png">
-<link rel="shortcut icon" href="/static/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/az-base.css">
 {% block head %}{% endblock %}
@@ -35,6 +33,7 @@
   <a href="/examples"{% if request.path == '/examples' %} class="active"{% endif %}>EXAMPLES</a>
   <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
   <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>
+  <a href="/glossary"{% if request.path == '/glossary' %} class="active"{% endif %}>GLOSSARY</a>
   <a href="/signup" class="az-nav-auth{% if request.path == '/signup' %} active{% endif %}">SIGN UP</a>
 </div>
 
@@ -55,6 +54,7 @@
     <a href="/safecheck">SafeCheck</a>
     <a href="/docs">API</a>
     <a href="/examples">Examples</a>
+    <a href="/glossary">Glossary</a>
     <a href="/contact">Contact</a>
   </span>
 </footer>
