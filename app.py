@@ -800,6 +800,11 @@ def safecheck_page():
     return render_template("safecheck.html")
 
 
+@app.route("/glossary")
+def glossary_page():
+    return render_template("glossary.html")
+
+
 @app.route("/engine-bench")
 def engine_bench():
     return render_template("engine-bench.html")

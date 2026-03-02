@@ -421,26 +421,82 @@ body::before {
 .az-hl.dimmed{ opacity: 0.15; }
 
 /* ──────────────────────────────────────────────────────────
-   Highlight palette (maps pattern → semantic color)
+   Highlight palette — Full Detection Taxonomy
    Backend controls spans. Frontend only applies classes.
    ────────────────────────────────────────────────────────── */
 
-.pattern-hedge{ color: #f59e0b; }                 /* amber */
-.pattern-reassurance{ color: #f59e0b; }           /* amber */
-.pattern-category_blend{ color: #a78bfa; }        /* purple */
+/* Structural Integrity (Axis 1) */
+.pattern-collapse, .collapse              { color: #a78bfa; }  /* purple */
+.pattern-deferral, .deferral              { color: #f59e0b; font-style: italic; }  /* amber */
+.pattern-drift, .drift                    { color: #2dd4bf; }  /* teal */
 
-.pattern-passive_aggression{ color: #ec4899; }    /* pink */
-.pattern-direct_blame{ color: #ef4444; }          /* red */
-.pattern-retroactive_fault{ color: #ef4444; }     /* red */
-.pattern-tone_escalation{ color: #ef4444; }       /* red */
-.pattern-authority_finality{ color: #ef4444; }    /* red */
-.pattern-threat_consequence{ color: #ef4444; }    /* red */
-.pattern-character_attack{ color: #ef4444; }      /* red */
-.pattern-shaming_moralizing{ color: #ef4444; }    /* red */
-.pattern-gatekeeping_exclusion{ color: #ef4444; } /* red */
-.pattern-dismissal_invalidating{ color: #ef4444; }/* red */
-.pattern-dominance_posture{ color: #ef4444; }     /* red */
-.pattern-escalation_trigger{ color: #ef4444; }    /* red */
+/* Conversational Friction (Axis 2) */
+.pattern-blame, .blame                    { color: #ef4444; }  /* red */
+.pattern-accusation, .accusation          { color: #ef4444; }  /* red */
+.pattern-retro_fault, .retro_fault        { color: #ef4444; }  /* red */
+.pattern-dominance, .dominance            { color: #dc2626; }  /* crimson */
+.pattern-absolute, .absolute              { color: #ef4444; }  /* red */
+.pattern-ego, .ego                        { color: #ec4899; }  /* pink */
+.pattern-direct_blame                     { color: #ef4444; }
+.pattern-retroactive_fault                { color: #ef4444; }
+.pattern-passive_aggression               { color: #ec4899; }
+.pattern-tone_escalation                  { color: #ef4444; }
+.pattern-authority_finality               { color: #ef4444; }
+.pattern-threat_consequence               { color: #ef4444; }
+.pattern-character_attack                 { color: #ef4444; }
+.pattern-shaming_moralizing               { color: #ef4444; }
+.pattern-gatekeeping_exclusion            { color: #ef4444; }
+.pattern-dismissal_invalidating           { color: #ef4444; }
+.pattern-dominance_posture                { color: #dc2626; }
+.pattern-escalation_trigger               { color: #ef4444; }
+
+/* Clarity & Structure (Axis 3) */
+.pattern-constraint, .constraint          { color: #00e89c; }  /* green */
+.pattern-hedge, .hedge                    { color: #f59e0b; }  /* amber */
+.pattern-reassurance                      { color: #f59e0b; }
+.pattern-category_blend                   { color: #a78bfa; }
+.pattern-ownership, .ownership            { color: #00e89c; }  /* green */
+.pattern-passive, .passive                { color: #9b9b9b; }  /* gray */
+
+/* Filler & Noise */
+.pattern-filler, .filler                  { color: #9b9b9b; }  /* gray */
+.pattern-intensifier, .intensifier        { color: #f97316; }  /* orange */
+.pattern-repetition, .repetition          { color: #9b9b9b; }  /* gray */
+
+/* Drift & Scope */
+.pattern-shift, .shift                    { color: #2dd4bf; }  /* teal */
+.pattern-scope, .scope                    { color: #2dd4bf; }  /* teal */
+.pattern-topic_jump, .topic_jump          { color: #2dd4bf; }  /* teal */
+
+/* Commitment Risk */
+.pattern-commitment, .commitment          { color: #f59e0b; }  /* amber */
+.pattern-unbounded, .unbounded            { color: #f59e0b; }  /* amber */
+
+/* Risk Amplifiers */
+.pattern-emotion, .emotion                { color: #ef4444; }  /* red */
+
+/* Logical Integrity */
+.pattern-contrast, .contrast              { color: #eab308; }  /* yellow */
+.pattern-contradiction, .contradiction    { color: #a78bfa; }  /* purple */
+.pattern-missing_objective                { color: #9b9b9b; }  /* gray */
+.pattern-missing_action                   { color: #9b9b9b; }  /* gray */
+.pattern-missing_boundary                 { color: #9b9b9b; }  /* gray */
+
+/* Meta Signals */
+.pattern-authority, .authority            { color: #dc2626; }  /* crimson */
+.pattern-social, .social                  { color: #ec4899; }  /* pink */
+.pattern-urgency, .urgency                { color: #f97316; }  /* orange */
+.pattern-indirect, .indirect              { color: #f59e0b; }  /* amber */
+.pattern-conditional, .conditional        { color: #f59e0b; }  /* amber */
+.pattern-causal, .causal                  { color: #60a5fa; }  /* blue */
+.pattern-defense, .defense                { color: #a78bfa; }  /* purple */
+.pattern-moral, .moral                    { color: #dc2626; }  /* crimson */
+.pattern-authority_shift                  { color: #f59e0b; }  /* amber */
+.pattern-witness, .witness                { color: #ec4899; }  /* pink */
+.pattern-emotion_dismiss                  { color: #ef4444; }  /* red */
+.pattern-closure, .closure                { color: #a78bfa; }  /* purple */
+.pattern-reputation, .reputation          { color: #dc2626; }  /* crimson */
+.pattern-role, .role                      { color: #60a5fa; }  /* blue */
 
 /* fallback */
 [class*="pattern-axis2_"]{ color: #ef4444; }

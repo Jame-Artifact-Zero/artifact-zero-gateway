@@ -39,9 +39,7 @@
   }
   .sc-run-btn:disabled { opacity: 0.4; cursor: default; }
 
-  .sc-bottom {
-    margin-top: 16px; min-height: 200px;
-  }
+  .sc-bottom { margin-top: 16px; min-height: 200px; }
   .sc-results-card {
     background: var(--surface, #111113);
     border: 1px solid var(--border, #2a2a2e);
@@ -107,7 +105,6 @@
 
 <div class="az-page">
 
-  <!-- Timer -->
   <div class="sc-timer-strip">
     <div class="sc-timer-left">
       <div class="sc-timer-dot"></div>
@@ -116,13 +113,11 @@
     <div class="sc-timer-right">Session clears in <span id="scTimerRight">3:00</span>.</div>
   </div>
 
-  <!-- Privacy -->
   <div class="sc-privacy">
     <span>🔒</span>
     Nothing is stored. Nothing is shared. This page clears itself.
   </div>
 
-  <!-- Input -->
   <div id="scInputSection">
     <div class="sc-input-card">
       <textarea id="scInput" placeholder="Paste what you plan to send..."></textarea>
@@ -130,7 +125,6 @@
     <button class="sc-run-btn" id="scRunBtn">SafeCheck</button>
   </div>
 
-  <!-- Results -->
   <div class="sc-bottom">
     <div class="sc-results-card">
       <div class="sc-empty" id="scEmpty">
@@ -163,22 +157,72 @@
 (() => {
   'use strict';
 
+  /* ── Full Detection Taxonomy — human explanations ── */
   const EXPLAIN = {
-    hedge:                  'Softens commitment or responsibility.',
-    reassurance:            'Reassurance replaces direct answers.',
-    category_blend:         'Blurred categories hide specifics.',
-    passive_aggression:     'Indirect blame or implied fault.',
-    direct_blame:           'Direct blame assigns fault by name.',
-    dominance_posture:      'Asserts dominance over the exchange.',
-    escalation_trigger:     'Words designed to escalate.',
-    tone_escalation:        'Escalates emotional temperature.',
-    authority_finality:     'Authority asserted to end discussion.',
-    threat_consequence:     'Consequences used as leverage.',
-    retroactive_fault:      'Fault reframed after the fact.',
-    character_attack:       'The person is attacked, not the argument.',
-    shaming_moralizing:     'Moral framing used to control.',
-    gatekeeping_exclusion:  'Access denied as pressure.',
-    dismissal_invalidating: 'Concern dismissed outright.',
+    /* Structural Integrity */
+    collapse:             'Different risks are bundled together and minimized into one vague conclusion.',
+    deferral:             'A decision or responsibility is pushed to later without clear ownership.',
+    drift:                'The objective shifts mid-message without acknowledgment.',
+    /* Conversational Friction */
+    blame:                'Responsibility is assigned directly to you.',
+    accusation:           'The sentence begins with "You" to frame fault.',
+    retro_fault:          'Past actions are reframed as mistakes after the fact.',
+    dominance:            'The speaker reinforces authority or superiority.',
+    absolute:             'Extreme language removes nuance.',
+    ego:                  'The speaker positions themselves as correcting you.',
+    direct_blame:         'Responsibility is assigned directly to you.',
+    retroactive_fault:    'Past actions are reframed as mistakes after the fact.',
+    passive_aggression:   'Indirect blame or implied fault.',
+    tone_escalation:      'Language escalates emotional temperature.',
+    authority_finality:   'Authority is asserted to end discussion.',
+    threat_consequence:   'Consequences are used as leverage.',
+    character_attack:     'The person is attacked, not the argument.',
+    shaming_moralizing:   'Moral framing is used to control.',
+    gatekeeping_exclusion:'Access or standing is denied as pressure.',
+    dismissal_invalidating:'The concern is dismissed outright.',
+    dominance_posture:    'The speaker reinforces authority or superiority.',
+    escalation_trigger:   'Words designed to escalate the interaction.',
+    /* Clarity & Structure */
+    constraint:           'Clear limits or boundaries are defined.',
+    hedge:                'Language softens certainty or avoids commitment.',
+    reassurance:          'Reassurance replaces direct answers.',
+    category_blend:       'Categories are blurred to hide specifics.',
+    ownership:            'Responsibility is clearly assigned.',
+    passive:              'Action is described without naming who did it.',
+    /* Filler & Noise */
+    filler:               'Extra words that add no meaning.',
+    intensifier:          'Unnecessary emphasis that inflates tone.',
+    repetition:           'The same idea is repeated without adding clarity.',
+    /* Drift & Scope */
+    shift:                'A new issue is introduced mid-stream.',
+    scope:                'Additional tasks are added without agreement.',
+    topic_jump:           'The topic changes without transition.',
+    /* Commitment Risk */
+    commitment:           'A promise is made without defined limits.',
+    unbounded:            'A commitment lacks timeline or scope.',
+    /* Risk Amplifiers */
+    emotion:              'Emotionally charged words increase tension.',
+    /* Logical Integrity */
+    contrast:             'A contrast is introduced.',
+    contradiction:        'A contradiction appears without resolution.',
+    missing_objective:    'The message lacks a clear goal.',
+    missing_action:       'No clear next step is defined.',
+    missing_boundary:     'Limits are unclear.',
+    /* Meta Signals */
+    authority:            'Experience or tenure is used to reinforce hierarchy.',
+    social:               'Social consensus is invoked to influence perception.',
+    urgency:              'Time pressure is implied.',
+    indirect:             'A request is implied but not clearly stated.',
+    conditional:          'An outcome depends on unclear conditions.',
+    causal:               'The speaker provides justification for a decision.',
+    defense:              'Defense language appears before accusation is made.',
+    moral:                'The speaker frames themselves as ethically superior.',
+    authority_shift:      'Authority is shifted to another party conditionally.',
+    witness:              'Other observers are invoked to reinforce claims.',
+    emotion_dismiss:      'Emotional responses are minimized or invalidated.',
+    closure:              'The speaker signals that the outcome is final.',
+    reputation:           'The speaker protects personal or professional standing.',
+    role:                 'The speaker defines their role to legitimize the decision.',
   };
 
   const TILT = {
@@ -200,7 +244,7 @@
     CCA:  { n: 'Constraint Collapse',  d: 'Vague claims bundled to obscure gaps.' },
   };
 
-  let text = '', highlights = [], activePattern = null;
+  let text = '', highlights = [], activePattern = null, apiData = null;
 
   function esc(s) { const d = document.createElement('div'); d.textContent = String(s ?? ''); return d.innerHTML; }
   function fmtLabel(s) { return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
@@ -229,10 +273,7 @@
       const btn = document.createElement('button');
       btn.className = 'az-pattern-btn' + (activePattern === p ? ' active' : '');
       btn.textContent = fmtLabel(p) + ' (' + g[p] + ')';
-      btn.addEventListener('click', () => {
-        activePattern = activePattern === p ? null : p;
-        renderAll(false);
-      });
+      btn.addEventListener('click', () => { activePattern = activePattern === p ? null : p; renderAll(false); });
       patternBar.appendChild(btn);
     });
   }
@@ -254,12 +295,7 @@
       span.className = 'az-hl pattern-' + (h.pattern || 'unknown');
       span.title = h.category || h.pattern || '';
       if (activePattern && h.pattern !== activePattern) span.classList.add('dimmed');
-      if (progressive) {
-        span.classList.add('reveal');
-        const d = delay;
-        setTimeout(() => span.classList.add('visible'), 100 + d * 150);
-        delay++;
-      }
+      if (progressive) { span.classList.add('reveal'); const d = delay; setTimeout(() => span.classList.add('visible'), 100 + d * 150); delay++; }
       hlTextEl.appendChild(span);
       cursor = h.end;
     });
@@ -270,25 +306,19 @@
     if (!activePattern) { actionBarEl.classList.add('hidden'); return; }
     actionBarEl.classList.remove('hidden');
     actionBarEl.innerHTML = '';
-    if (activePattern === 'hedge' || activePattern === 'reassurance' || activePattern === 'category_blend') {
+    if (['hedge','reassurance','category_blend','filler','intensifier','repetition'].includes(activePattern)) {
       const btn = document.createElement('button');
       btn.className = 'sc-action-btn';
       btn.textContent = 'Remove ' + fmtLabel(activePattern);
-      btn.addEventListener('click', () => {
-        highlights = highlights.filter(h => h.pattern !== activePattern);
-        activePattern = null;
-        renderAll(false);
-      });
+      btn.addEventListener('click', () => { highlights = highlights.filter(h => h.pattern !== activePattern); activePattern = null; renderAll(false); });
       actionBarEl.appendChild(btn);
     }
     const copy = document.createElement('button');
     copy.className = 'sc-action-btn secondary';
     copy.textContent = 'Copy Clean';
-    copy.addEventListener('click', () => { copy.textContent = 'Copied ✓'; setTimeout(() => { copy.textContent = 'Copy Clean'; }, 1200); });
+    copy.addEventListener('click', () => { copy.textContent = 'Copied \u2713'; setTimeout(() => { copy.textContent = 'Copy Clean'; }, 1200); });
     actionBarEl.appendChild(copy);
   }
-
-  let apiData = null;
 
   function renderReadout() {
     if (!apiData) return;
@@ -300,7 +330,7 @@
     if (nii != null) {
       document.getElementById('scScoreNum').textContent = nii;
       document.getElementById('scScoreNum').style.color = scoreColor(nii);
-      document.getElementById('scScoreLabel').textContent = label + ' · STRUCTURAL INTEGRITY';
+      document.getElementById('scScoreLabel').textContent = label + ' \u00b7 STRUCTURAL INTEGRITY';
     }
 
     let th = '';
@@ -320,32 +350,17 @@
     document.getElementById('scFmSection').innerHTML = fh;
   }
 
-  function renderAll(progressive) {
-    buildButtons();
-    renderExplainer();
-    renderHL(progressive);
-    renderActions();
-    renderReadout();
-  }
+  function renderAll(progressive) { buildButtons(); renderExplainer(); renderHL(progressive); renderActions(); renderReadout(); }
 
-  /* ── Run ── */
   document.getElementById('scRunBtn').addEventListener('click', async () => {
     text = document.getElementById('scInput').value.trim();
     if (!text) return;
     const btn = document.getElementById('scRunBtn');
     btn.disabled = true; btn.textContent = 'Checking\u2026';
-
     try {
-      const res = await fetch('/api/v1/score/free', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
+      const res = await fetch('/api/v1/score/free', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
       apiData = await res.json();
-      if (apiData.error) {
-        document.getElementById('scEmpty').innerHTML = '<div style="color:var(--red);font-size:13px;">' + esc(apiData.error) + '</div>';
-        return;
-      }
+      if (apiData.error) { document.getElementById('scEmpty').innerHTML = '<div style="color:var(--red);font-size:13px;">' + esc(apiData.error) + '</div>'; return; }
       highlights = (apiData.highlights || []).map(h => ({...h}));
       activePattern = null;
       document.getElementById('scEmpty').style.display = 'none';
@@ -353,39 +368,30 @@
       renderAll(true);
     } catch (e) {
       document.getElementById('scEmpty').innerHTML = '<div style="color:var(--red);font-size:13px;">Error: ' + esc(e.message) + '</div>';
-    } finally {
-      btn.disabled = false; btn.textContent = 'SafeCheck';
-    }
+    } finally { btn.disabled = false; btn.textContent = 'SafeCheck'; }
   });
 
-  /* ── Edit ── */
   document.getElementById('scEditBtn').addEventListener('click', () => {
     document.getElementById('scEmpty').style.display = '';
-    document.getElementById('scEmpty').innerHTML = '<div class="icon">↓</div><div class="label">RESULTS APPEAR HERE</div>';
+    document.getElementById('scEmpty').innerHTML = '<div class="icon">\u2193</div><div class="label">RESULTS APPEAR HERE</div>';
     document.getElementById('scFilled').style.display = 'none';
     activePattern = null;
     document.getElementById('scInput').focus();
     armTimer();
   });
 
-  /* ── Timer ── */
   const CLEAR_MS = 180000;
   let lastTouch = Date.now(), timerId = null;
-  function fmt(ms) {
-    const s = Math.max(0, Math.floor(ms / 1000));
-    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  }
+  function fmt(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
   function hardClear() {
     document.getElementById('scInput').value = '';
     document.getElementById('scEmpty').style.display = '';
-    document.getElementById('scEmpty').innerHTML = '<div class="icon">↓</div><div class="label">RESULTS APPEAR HERE</div>';
+    document.getElementById('scEmpty').innerHTML = '<div class="icon">\u2193</div><div class="label">RESULTS APPEAR HERE</div>';
     document.getElementById('scFilled').style.display = 'none';
-    activePattern = null; text = ''; highlights = []; apiData = null;
-    lastTouch = Date.now();
+    activePattern = null; text = ''; highlights = []; apiData = null; lastTouch = Date.now();
   }
   function tick() {
-    const rem = CLEAR_MS - (Date.now() - lastTouch);
-    const str = fmt(rem);
+    const rem = CLEAR_MS - (Date.now() - lastTouch); const str = fmt(rem);
     document.getElementById('scTimerTime').textContent = str;
     document.getElementById('scTimerRight').textContent = str;
     if (rem <= 0) hardClear();
