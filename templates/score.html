@@ -7,7 +7,7 @@
 
   <div class="az-card az-intro">
     <h2>Score</h2>
-    <p>Paste what you received. See the structural integrity analysis returned by the NTI engine.</p>
+    <p>Paste what you received. The core runs deterministically and we render the findings in human language — paragraph by paragraph.</p>
   </div>
 
   <div class="az-card" id="scoreInputCard">
@@ -19,7 +19,7 @@
     </div>
   </div>
 
-  <div id="scoreResults" style="display:none;"></div>
+  <div class="az-card az-output" id="scoreOutput" style="display:none;"></div>
 
   <div class="az-section az-actions" id="scoreResetBar" style="display:none;">
     <button class="az-btn" id="scoreNewBtn" type="button">New text</button>
@@ -30,57 +30,14 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-  .sc-block { margin-bottom: 16px; }
-  .sc-label {
-    font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
-  }
-  .sc-score {
-    font-family: var(--mono); font-size: 40px; font-weight: 700; line-height: 1;
-  }
-  .sc-sublabel {
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-    letter-spacing: 1px; margin-top: 4px;
-  }
-  .sc-kv {
-    display: grid; grid-template-columns: auto 1fr;
-    gap: 4px 12px; font-size: 13px; line-height: 1.5;
-  }
-  .sc-k {
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-    letter-spacing: 0.5px; white-space: nowrap; padding-top: 1px;
-  }
-  .sc-v { color: var(--text); word-break: break-word; }
-  .sc-tag {
-    display: inline-block; font-family: var(--mono); font-size: 10px;
-    letter-spacing: 0.5px; padding: 4px 8px; border-radius: 4px;
-    border: 1px solid var(--border); background: var(--surface2);
-    color: var(--text); margin: 2px 4px 2px 0;
-  }
-  .sc-tag.confirmed { border-color: rgba(239,68,68,0.5); color: var(--red); }
-  .sc-tag.probable { border-color: rgba(245,158,11,0.5); color: var(--amber); }
-  .sc-tag.clear { border-color: rgba(0,232,156,0.3); color: var(--accent); }
-  .sc-bar-track {
-    height: 4px; background: var(--border); border-radius: 2px;
-    overflow: hidden; margin-top: 3px;
-  }
-  .sc-bar-fill { height: 100%; border-radius: 2px; }
-  .sc-dim-row { margin-bottom: 10px; }
-  .sc-dim-head {
-    display: flex; justify-content: space-between; align-items: baseline;
-  }
-  .sc-dim-name { font-family: var(--mono); font-size: 11px; color: var(--text); }
-  .sc-dim-val { font-family: var(--mono); font-size: 12px; font-weight: 700; }
-</style>
 <script>
 (() => {
   'use strict';
 
   const elInput = document.getElementById('scoreInput');
   const elBtn = document.getElementById('scoreBtn');
-  const elResults = document.getElementById('scoreResults');
   const elInputCard = document.getElementById('scoreInputCard');
+  const elOut = document.getElementById('scoreOutput');
   const elResetBar = document.getElementById('scoreResetBar');
 
   function esc(s) {
@@ -90,181 +47,171 @@
     return d.innerHTML;
   }
 
-  function stateTag(val) {
-    const s = String(val);
-    if (s.includes('CONFIRMED')) return '<span class="sc-tag confirmed">' + esc(s) + '</span>';
-    if (s.includes('PROBABLE')) return '<span class="sc-tag probable">' + esc(s) + '</span>';
-    if (s.includes('FALSE')) return '<span class="sc-tag clear">' + esc(s) + '</span>';
-    return '<span class="sc-tag">' + esc(s) + '</span>';
+  function splitParagraphs(text) {
+    return text
+      .replace(/\r\n/g, '\n')
+      .split(/\n\s*\n+/)
+      .map(p => p.trim())
+      .filter(Boolean);
   }
 
-  function scoreColor(n) {
-    if (n >= 80) return 'var(--accent)';
-    if (n >= 60) return 'var(--amber)';
-    return 'var(--red)';
+  // DISPLAY mapping only (no analysis). Unknown codes render raw.
+  const TILT_HUMAN = {
+    'T1_REASSURANCE_DRIFT': 'Reassurance is being used instead of directly addressing the issue.',
+    'T2_CERTAINTY_INFLATION': 'Certainty is claimed without evidence or constraint support.',
+    'T3_CONSENSUS_CLAIMS': 'A broad consensus is implied without proof.',
+    'T4_CAPABILITY_OVERREACH': 'Capability is overstated beyond what constraints support.',
+    'T5_ABSOLUTE_LANGUAGE': 'Absolute language is used where nuance would be honest.',
+    'T6_CONSTRAINT_DEFERRAL': 'Hard decisions / constraints are pushed to later.',
+    'T7_CATEGORY_BLEND': 'Categories are blended to obscure specifics.',
+    'T8_PRESSURE_OPTIMIZATION': 'Urgency is manufactured to force a decision.',
+    'T9_SCOPE_EXPANSION': 'Scope expands without acknowledging the shift.',
+    'T10_AUTHORITY_IMPOSITION': 'Authority is asserted rather than explained.'
+  };
+
+  const FAILURE_HUMAN = {
+    'UDDS': { name: 'Upstream Drift', desc: 'Agreement language appears before constraints are established.' },
+    'DCE':  { name: 'Deferred Enforcement', desc: 'Hard decisions and specifics are pushed to later.' },
+    'CCA':  { name: 'Constraint Collapse', desc: 'Vague claims are bundled to obscure missing commitments.' }
+  };
+
+  function scoreTone(n) {
+    if (n >= 80) return 'green';
+    if (n >= 60) return 'amber';
+    return 'red';
   }
 
-  function renderKV(obj, skip) {
-    const keys = Object.keys(obj).filter(k => !(skip || []).includes(k));
-    if (!keys.length) return '<div style="color:var(--muted);font-size:13px;">Empty.</div>';
-    let html = '<div class="sc-kv">';
-    keys.forEach(k => {
-      const v = obj[k];
-      let display;
-      if (v === null || v === undefined) display = '—';
-      else if (typeof v === 'boolean') display = v ? 'true' : 'false';
-      else if (typeof v === 'object') display = '<code style="font-size:11px;color:var(--muted);word-break:break-all;">' + esc(JSON.stringify(v)) + '</code>';
-      else display = esc(v);
-      html += '<div class="sc-k">' + esc(k) + '</div><div class="sc-v">' + display + '</div>';
-    });
-    html += '</div>';
-    return html;
+  function badge(text, tone) {
+    const cls = tone ? ` ${tone}` : '';
+    return `<span class="az-badge${cls}">${esc(text)}</span>`;
   }
 
-  function card(title, content) {
-    return '<div class="az-card sc-block"><div class="sc-label">' + esc(title) + '</div>' + content + '</div>';
+  function asList(arr) {
+    if (!Array.isArray(arr) || !arr.length) return '<div class="az-muted">None.</div>';
+    return `<ul class="az-list">${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
   }
 
-  function render(data) {
-    let html = '';
+  function detectFailureStates(data) {
+    const out = [];
+    const pfm = data && data.parent_failure_modes;
 
-    /* ── NII SCORE ── */
-    const nii = data.nii || {};
-    if (nii.nii_score !== undefined) {
-      const color = scoreColor(nii.nii_score);
-      let inner = '<div class="sc-score" style="color:' + color + '">' + esc(nii.nii_score) + '</div>';
-      inner += '<div class="sc-sublabel">' + esc(nii.nii_label) + ' · v' + esc(data.version || '') + '</div>';
-      html += card('NII STRUCTURAL INTEGRITY', inner);
-    }
-
-    /* ── NII DIMENSIONS (render raw fields from nii object) ── */
-    const dimKeys = Object.keys(nii).filter(k => k.startsWith('d') && k.includes('_'));
-    if (dimKeys.length) {
-      let inner = '';
-      dimKeys.forEach(k => {
-        const val = nii[k];
-        if (typeof val !== 'number') return;
-        const pct = Math.round(val * 100);
-        const color = scoreColor(pct);
-        inner += '<div class="sc-dim-row">';
-        inner += '<div class="sc-dim-head"><span class="sc-dim-name">' + esc(k) + '</span><span class="sc-dim-val" style="color:' + color + '">' + pct + '%</span></div>';
-        inner += '<div class="sc-bar-track"><div class="sc-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>';
-        inner += '</div>';
-      });
-      html += card('NII DIMENSIONS', inner);
-    }
-
-    /* ── NII DETAIL ── */
-    if (nii.detail && typeof nii.detail === 'object') {
-      html += card('NII DETAIL', renderKV(nii.detail));
-    }
-
-    /* ── TILT TAXONOMY ── */
-    const tilt = data.tilt_taxonomy;
-    if (Array.isArray(tilt)) {
-      let inner;
-      if (tilt.length === 0) {
-        inner = '<div style="color:var(--muted);font-size:13px;">None detected.</div>';
-      } else {
-        inner = tilt.map(t => '<span class="sc-tag">' + esc(t) + '</span>').join('');
-      }
-      html += card('TILT TAXONOMY', inner);
-    }
-
-    /* ── PARENT FAILURE MODES ── */
-    const pfm = data.parent_failure_modes;
+    // Shape A: /nti -> parent_failure_modes.{UDDS|DCE|CCA}.*_state
     if (pfm && typeof pfm === 'object') {
-      let inner = '';
-      Object.keys(pfm).forEach(mode => {
-        const obj = pfm[mode];
-        const state = obj[mode.toLowerCase() + '_state'] || obj.state || '';
-        inner += '<div style="margin-bottom:10px;">';
-        inner += '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">' + esc(mode) + ' ' + stateTag(state) + '</div>';
-        inner += renderKV(obj, [mode.toLowerCase() + '_state', 'state']);
-        inner += '</div>';
+      ['UDDS','DCE','CCA'].forEach(k => {
+        const obj = pfm[k];
+        if (!obj) return;
+        const state = obj[k.toLowerCase() + '_state'] || obj.state || '';
+        const s = String(state);
+        if (s.includes('CONFIRMED') || s.includes('PROBABLE')) out.push({ key: k, state: s });
       });
-      html += card('PARENT FAILURE MODES', inner);
+      return out;
     }
 
-    /* ── INTERACTION MATRIX ── */
-    const im = data.interaction_matrix;
-    if (im && typeof im === 'object') {
-      let inner = '';
-      if (im.dominance_detected) {
-        inner += '<div style="margin-bottom:8px;"><span class="sc-k">dominance_detected</span> ';
-        inner += im.dominance_detected.map(d => '<span class="sc-tag">' + esc(d) + '</span>').join('');
-        inner += '</div>';
-      }
-      if (Array.isArray(im.pairwise)) {
-        im.pairwise.forEach(p => {
-          inner += '<div class="sc-kv" style="margin-bottom:4px;"><div class="sc-k">' + esc(p.pair) + '</div><div class="sc-v">' + esc(p.note) + '</div></div>';
-        });
-      }
-      if (im.triadic) {
-        inner += '<div class="sc-kv" style="margin-top:6px;"><div class="sc-k">' + esc(im.triadic.combo) + '</div><div class="sc-v">' + esc(im.triadic.note) + '</div></div>';
-      }
-      html += card('INTERACTION MATRIX', inner);
-    }
-
-    /* ── LAYERS ── */
-    const layers = data.layers;
-    if (layers && typeof layers === 'object') {
-      let inner = '';
-      Object.keys(layers).forEach(lk => {
-        const lv = layers[lk];
-        inner += '<div style="margin-bottom:10px;">';
-        inner += '<div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);margin-bottom:4px;">' + esc(lk) + '</div>';
-        if (typeof lv === 'object' && lv !== null) {
-          inner += renderKV(lv);
-        } else {
-          inner += '<div class="sc-v">' + esc(lv) + '</div>';
-        }
-        inner += '</div>';
+    // Shape B fallback
+    const fm = data && data.failure_modes;
+    if (fm && typeof fm === 'object') {
+      ['UDDS','DCE','CCA'].forEach(k => {
+        const s = String(fm[k] || '');
+        if (s.includes('CONFIRMED') || s.includes('PROBABLE')) out.push({ key: k, state: s });
       });
-      html += card('LAYERS', inner);
     }
 
-    /* ── V3 ENFORCEMENT ── */
-    if (data.v3 && typeof data.v3 === 'object') {
-      html += card('V3 ENFORCEMENT', renderKV(data.v3));
-    }
-
-    /* ── TELEMETRY ── */
-    if (data.telemetry && typeof data.telemetry === 'object') {
-      html += card('TELEMETRY', renderKV(data.telemetry));
-    }
-
-    elResults.innerHTML = html;
-    elResults.style.display = '';
+    return out;
   }
 
-  /* ── ACTIONS ── */
+  function renderParagraphBlock(idx, paragraph, data) {
+    // Support shapes:
+    // /nti: { nii: { nii_score, nii_label }, tilt_taxonomy: [...], parent_failure_modes: {...} }
+    // fallback: { score: { nii }, tilt: { tags }, failure_modes: {...} }
+    const niiObj = data.nii || data.score || {};
+    const niiScore =
+      (niiObj.nii_score !== undefined) ? niiObj.nii_score :
+      (niiObj.nii !== undefined) ? niiObj.nii :
+      (data.score && data.score.nii !== undefined) ? data.score.nii : undefined;
+
+    const niiLabel = niiObj.nii_label || (data.score && data.score.nii_label) || '';
+    const tilt = data.tilt_taxonomy || (data.tilt && data.tilt.tags) || [];
+    const failures = detectFailureStates(data);
+
+    const topBadges = [];
+    if (niiScore !== undefined) topBadges.push(badge(`NII ${niiScore}`, scoreTone(Number(niiScore))));
+    if (Array.isArray(tilt) && tilt.length) topBadges.push(badge(`${tilt.length} tilt`, 'amber'));
+    if (failures.length) topBadges.push(badge(`${failures.length} risk`, 'red'));
+
+    const tiltHuman = Array.isArray(tilt) ? tilt.map(t => TILT_HUMAN[t] || t) : [];
+    const failHuman = failures.map(f => {
+      const h = FAILURE_HUMAN[f.key];
+      return h ? `${h.name} — ${h.desc}` : `${f.key}: ${f.state}`;
+    });
+
+    return `
+      <div class="az-section">
+        <h3>Paragraph ${idx + 1}</h3>
+        <div class="az-preview">${esc(paragraph)}</div>
+
+        <div class="az-section">
+          <h3>Readout</h3>
+          <div class="az-badges">${topBadges.join('') || badge('OK','green')}</div>
+          ${niiLabel ? `<div class="az-muted" style="margin-top:8px;">${esc(niiLabel)}</div>` : ''}
+        </div>
+
+        <div class="az-section">
+          <h3>What the core detected</h3>
+          ${asList(tiltHuman)}
+        </div>
+
+        <div class="az-section">
+          <h3>Structural risks</h3>
+          ${failHuman.length ? asList(failHuman) : '<div class="az-muted">None.</div>'}
+        </div>
+
+        <div class="az-section">
+          <h3>Raw (for verification)</h3>
+          <div class="az-preview"><code class="az-code">${esc(JSON.stringify(data))}</code></div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function callNTI(text) {
+    const res = await fetch('/nti', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    return await res.json();
+  }
+
   elBtn.addEventListener('click', async () => {
-    const text = elInput.value.trim();
-    if (!text) return;
+    const full = elInput.value.trim();
+    if (!full) return;
 
     elBtn.disabled = true;
     elBtn.textContent = 'Scoring...';
+    elOut.style.display = '';
+    elOut.innerHTML = '<div class="az-muted">Running core…</div>';
 
     try {
-      const res = await fetch('/nti', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-      const data = await res.json();
+      const paragraphs = splitParagraphs(full);
+      if (!paragraphs.length) throw new Error('No text.');
 
-      if (data.error) {
-        elResults.innerHTML = '<div class="az-card"><div style="color:var(--red);font-size:14px;">' + esc(data.error) + '</div></div>';
-        elResults.style.display = '';
-      } else {
-        render(data);
-        elInputCard.style.display = 'none';
-        elResetBar.style.display = '';
+      let html = '';
+      // paragraph-by-paragraph = real: core call per paragraph
+      for (let i = 0; i < paragraphs.length; i++) {
+        const p = paragraphs[i];
+        const data = await callNTI(p);
+        if (data && data.error) {
+          html += `<div class="az-section"><h3>Paragraph ${i+1}</h3><div class="az-error">${esc(data.error)}</div></div>`;
+        } else {
+          html += renderParagraphBlock(i, p, data);
+        }
       }
+
+      elOut.innerHTML = html;
+      elInputCard.style.display = 'none';
+      elResetBar.style.display = '';
     } catch (e) {
-      elResults.innerHTML = '<div class="az-card"><div style="color:var(--red);font-size:14px;">Error: ' + esc(e.message) + '</div></div>';
-      elResults.style.display = '';
+      elOut.innerHTML = '<div class="az-error">Error: ' + esc(e.message) + '</div>';
     } finally {
       elBtn.disabled = false;
       elBtn.textContent = 'Score';
@@ -274,7 +221,8 @@
   document.getElementById('scoreNewBtn').addEventListener('click', () => {
     elInput.value = '';
     elInputCard.style.display = '';
-    elResults.style.display = 'none';
+    elOut.style.display = 'none';
+    elOut.innerHTML = '';
     elResetBar.style.display = 'none';
     elInput.focus();
   });
@@ -282,8 +230,8 @@
   document.getElementById('scoreClearBtn').addEventListener('click', () => {
     elInput.value = '';
     elInputCard.style.display = '';
-    elResults.innerHTML = '';
-    elResults.style.display = 'none';
+    elOut.style.display = 'none';
+    elOut.innerHTML = '';
     elResetBar.style.display = 'none';
   });
 })();

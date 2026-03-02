@@ -7,9 +7,7 @@
 
   <div class="az-card az-intro">
     <h2>SafeCheck</h2>
-    <p>
-      Stabilize what you're about to send. See hedges, filler, and missing structure — then strip what doesn't belong.
-    </p>
+    <p>Paste what you plan to send. The same deterministic core runs, and we render it in plain language. Auto-clears in 3 minutes.</p>
   </div>
 
   <div class="az-privacy" id="privacyStrip" aria-live="polite">
@@ -20,222 +18,47 @@
     <button class="az-btn danger" id="scClearBtn" type="button">Clear now</button>
   </div>
 
-  <div class="az-card">
+  <div class="az-card" id="scInputCard">
     <div class="az-section">
       <textarea id="scInput" class="az-textarea" placeholder="Paste what you plan to send..."></textarea>
     </div>
-
-    <div class="az-section az-actions" id="scCheckBar">
+    <div class="az-section az-actions">
       <button class="az-btn primary" id="scRunBtn" type="button">SafeCheck</button>
-    </div>
-
-    <div class="az-section" id="scLensBar" style="display:none;">
-      <div class="az-lensbar" role="group" aria-label="Lenses">
-        <button class="az-chip" data-lens="hedges" type="button">Hedges <span class="az-chip-count" id="c-hedges"></span></button>
-        <button class="az-chip" data-lens="filler" type="button">Filler <span class="az-chip-count" id="c-filler"></span></button>
-        <button class="az-chip" data-lens="clarity" type="button">Clarity <span class="az-chip-count" id="c-clarity"></span></button>
-      </div>
-    </div>
-
-    <div class="az-section" id="scPreviewWrap" style="display:none;">
-      <div class="az-preview" id="scPreview"></div>
-    </div>
-
-    <div class="az-section az-actions" id="scActionBar" style="display:none;">
-      <button class="az-btn" id="scStripHedgesBtn" type="button">Remove hedges</button>
-      <button class="az-btn" id="scStripFillerBtn" type="button">Remove filler</button>
-      <button class="az-btn" id="scCopyCleanBtn" type="button">Copy clean</button>
-      <button class="az-btn" id="scEditBtn" type="button">Edit</button>
     </div>
   </div>
 
   <div class="az-card az-output" id="scOutput" style="display:none;"></div>
 
+  <div class="az-section az-actions" id="scResetBar" style="display:none;">
+    <button class="az-btn" id="scNewBtn" type="button">New text</button>
+    <button class="az-btn danger" id="scClearAllBtn" type="button">Clear</button>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
-<style>
-  .az-chip-count { font-size: 9px; opacity: 0.6; }
-
-  /* Words become the color — not highlighted, colored */
-  .az-preview .w { color: var(--muted); transition: color 0.4s ease, opacity 0.4s ease; }
-
-  .az-preview.lens-hedges .w-hedge { color: var(--amber); }
-  .az-preview.lens-filler .w-filler { color: var(--muted); opacity: 0.35; text-decoration: line-through; text-decoration-color: rgba(107,114,128,0.4); }
-  .az-preview.lens-clarity .w-clarity { color: var(--accent); font-weight: 600; }
-  .az-preview.lens-clarity .clarity-add { display: inline; }
-
-  .clarity-add { display: none; color: var(--accent); font-weight: 600; border-bottom: 1px dashed rgba(0,232,156,0.4); padding: 0 2px; margin: 0 2px; }
-
-  /* Tap label */
-  .sc-tap { position: fixed; z-index: 100; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap; pointer-events: none; display: none; }
-  .sc-tap.vis { display: block; }
-</style>
 <script>
 (() => {
   'use strict';
 
-  /* ── PATTERN LIBRARIES (from production engines) ── */
-  const HEDGES = [
-    "maybe","might","could","perhaps","it seems","it sounds","generally","often","usually",
-    "in general","likely","approximately","around","probably","possibly","kind of","sort of",
-    "i think","i believe","i guess","i suppose","it appears","arguably","potentially",
-    "presumably","conceivably","apparently","allegedly","a little","a bit","somewhat",
-    "fairly","rather","more or less","in a way","to some extent","to a degree","tend to",
-    "for the most part","as far as i know","from my understanding","if i recall correctly",
-    "not entirely sure","i could be wrong","it would seem","one might argue","some would say",
-    "there's a chance","it's possible that","we'll see","time will tell","remains to be seen",
-    "hard to say","depends on","it depends","that's debatable","up in the air",
-    "should be fine","not sure"
-  ];
-
-  const FILLER = [
-    "just wanted to","just checking in","just following up","just a quick",
-    "it is important to note","in conclusion","to summarize","i'd be happy to",
-    "i'd be glad to","certainly","of course","great question","that's a great question",
-    "thanks for asking","as mentioned earlier","as previously mentioned","as noted above",
-    "it's worth noting","it's worth mentioning","it should be noted",
-    "that being said","having said that","at the end of the day",
-    "when all is said and done","moving forward","going forward","looking ahead",
-    "in terms of","with respect to","with regard to","when it comes to",
-    "it goes without saying","needless to say","to be honest","honestly","frankly",
-    "in my opinion","i hope this helps","let me know if you have any questions",
-    "feel free to","don't hesitate to","i understand your concern",
-    "i completely understand","first and foremost","last but not least",
-    "in order to","due to the fact that","on the other hand",
-    "to put it simply","simply put","at this point in time",
-    "each and every","any and all","please be advised","please note that",
-    "per our conversation","as per your request","for your information",
-    "so basically","so essentially","i mean","you know","generally speaking",
-    "thanks so much","actually","basically","literally","really","very",
-    "totally","obviously","clearly"
-  ];
-
-  const INTENSIFIERS = [
-    "always","never","everyone","no one","absolutely","completely","guaranteed",
-    "nobody","ridiculous","insane","crazy"
-  ];
-
-  const CLARITY_WORDS = [
-    "must","cannot","required","limited","confirmed","verified","assigned",
-    "scope","boundary","deadline","by","before","within","due","until",
-    "no later than","end of day","end of week","approve","reject","submit",
-    "deliver","finalize","resolve","sign","confirm"
-  ];
-
-  const ACTION_VERBS = [
-    "create","analyze","explain","summarize","build","review","draft","write",
-    "send","submit","approve","reject","schedule","assign","complete","sign",
-    "confirm","deliver","fix","update","remove","deploy","test","verify",
-    "finalize","resolve"
-  ];
-
-  const TIMELINE_WORDS = [
-    "by","before","within","deadline","timeline","date","due","until",
-    "no later than","end of day","end of week","eod","eow","tomorrow",
-    "monday","tuesday","wednesday","thursday","friday"
-  ];
-
-  /* ── MATCHING ── */
-  function matchAll(text, phrases) {
-    const lo = text.toLowerCase();
-    const hits = [];
-    const sorted = phrases.slice().sort((a,b) => b.length - a.length);
-    sorted.forEach(p => {
-      let idx = 0;
-      while ((idx = lo.indexOf(p, idx)) !== -1) {
-        hits.push({ s: idx, e: idx + p.length, p: p });
-        idx += p.length;
-      }
-    });
-    return hits;
-  }
-
-  function dedup(matches) {
-    matches.sort((a,b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
-    const used = new Set();
-    const clean = [];
-    matches.forEach(m => {
-      for (let i = m.s; i < m.e; i++) { if (used.has(i)) return; }
-      clean.push(m);
-      for (let i = m.s; i < m.e; i++) used.add(i);
-    });
-    return clean;
-  }
-
-  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-  /* ── ANALYSIS ── */
-  let analysis = null;
-
-  function analyze(text) {
-    const hedges = matchAll(text, HEDGES).map(m => ({ ...m, t: 'hedge' }));
-    const fillers = matchAll(text, FILLER).map(m => ({ ...m, t: 'filler' }));
-    const clarity = matchAll(text, CLARITY_WORDS).map(m => ({ ...m, t: 'clarity' }));
-    const all = dedup([].concat(hedges, fillers, clarity));
-
-    const lo = text.toLowerCase();
-    const hasAction = ACTION_VERBS.some(v => lo.includes(v));
-    const hasTimeline = TIMELINE_WORDS.some(v => lo.includes(v));
-    const clarityGaps = [];
-    if (!hasAction) clarityGaps.push('[state what you need done]');
-    if (!hasTimeline) clarityGaps.push('[add a deadline]');
-
-    const counts = {
-      hedges: all.filter(m => m.t === 'hedge').length,
-      filler: all.filter(m => m.t === 'filler').length,
-      clarity: clarityGaps.length
-    };
-
-    return { text, matches: all, clarityGaps, counts };
-  }
-
-  /* ── BUILD REVEALED HTML ── */
-  function buildRevealHTML(a) {
-    const text = a.text;
-    const sorted = a.matches.slice().sort((x,y) => x.s - y.s);
-    let html = '', pos = 0;
-
-    sorted.forEach(m => {
-      if (m.s > pos) html += '<span class="w">' + esc(text.substring(pos, m.s)) + '</span>';
-      html += '<span class="w w-' + m.t + '" data-t="' + m.t + '" data-p="' + esc(m.p) + '">' + esc(text.substring(m.s, m.e)) + '</span>';
-      pos = m.e;
-    });
-    if (pos < text.length) html += '<span class="w">' + esc(text.substring(pos)) + '</span>';
-
-    if (a.clarityGaps.length > 0) {
-      html += a.clarityGaps.map(g => '<span class="clarity-add"> ' + esc(g) + '</span>').join('');
-    }
-
-    return html;
-  }
-
-  /* ── STRIP ── */
-  function stripPhrases(text, phrases) {
-    let out = text;
-    phrases.slice().sort((a,b) => b.length - a.length).forEach(p => {
-      const rx = new RegExp('\\b' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
-      out = out.replace(rx, '');
-    });
-    return out.replace(/\s{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
-  }
-
-  /* ── DOM ── */
   const elInput = document.getElementById('scInput');
-  const elPreview = document.getElementById('scPreview');
-  const elPreviewWrap = document.getElementById('scPreviewWrap');
-  const elLensBar = document.getElementById('scLensBar');
-  const elActionBar = document.getElementById('scActionBar');
-  const elCheckBar = document.getElementById('scCheckBar');
-  const elOutput = document.getElementById('scOutput');
-  const elCountdown = document.getElementById('scCountdown');
-  const runBtn = document.getElementById('scRunBtn');
+  const elBtn = document.getElementById('scRunBtn');
+  const elOut = document.getElementById('scOutput');
+  const elInputCard = document.getElementById('scInputCard');
+  const elResetBar = document.getElementById('scResetBar');
 
-  /* ── TIMER ── */
+  const elCountdown = document.getElementById('scCountdown');
   const CLEAR_MS = 180000;
   let lastInput = Date.now();
   let timerId = null;
+
+  function esc(s) {
+    if (s === null || s === undefined) return '—';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
 
   function fmt(ms) {
     const s = Math.max(0, Math.floor(ms / 1000));
@@ -244,15 +67,10 @@
 
   function hardClear() {
     elInput.value = '';
-    elInput.style.display = '';
-    elPreviewWrap.style.display = 'none';
-    elLensBar.style.display = 'none';
-    elActionBar.style.display = 'none';
-    elCheckBar.style.display = '';
-    elOutput.style.display = 'none';
-    analysis = null;
-    activeLenses.clear();
-    document.querySelectorAll('.az-chip').forEach(b => b.classList.remove('active'));
+    elOut.style.display = 'none';
+    elOut.innerHTML = '';
+    elInputCard.style.display = '';
+    elResetBar.style.display = 'none';
     lastInput = Date.now();
   }
 
@@ -262,198 +80,152 @@
     if (rem <= 0) hardClear();
   }
 
-  function armTimer() { lastInput = Date.now(); tick(); if (!timerId) timerId = setInterval(tick, 250); }
+  function armTimer() {
+    lastInput = Date.now();
+    tick();
+    if (!timerId) timerId = setInterval(tick, 250);
+  }
 
   elInput.addEventListener('input', armTimer);
   document.getElementById('scClearBtn').addEventListener('click', hardClear);
+  document.getElementById('scClearAllBtn').addEventListener('click', hardClear);
 
-  /* ── LENS TOGGLES ── */
-  const activeLenses = new Set();
+  // DISPLAY mapping only (no analysis). Unknown codes render raw.
+  const TILT_HUMAN = {
+    'T1_REASSURANCE_DRIFT': 'Reassurance is being used instead of directly addressing the issue.',
+    'T2_CERTAINTY_INFLATION': 'Certainty is claimed without evidence or constraint support.',
+    'T3_CONSENSUS_CLAIMS': 'A broad consensus is implied without proof.',
+    'T4_CAPABILITY_OVERREACH': 'Capability is overstated beyond what constraints support.',
+    'T5_ABSOLUTE_LANGUAGE': 'Absolute language is used where nuance would be honest.',
+    'T6_CONSTRAINT_DEFERRAL': 'Hard decisions / constraints are pushed to later.',
+    'T7_CATEGORY_BLEND': 'Categories are blended to obscure specifics.',
+    'T8_PRESSURE_OPTIMIZATION': 'Urgency is manufactured to force a decision.',
+    'T9_SCOPE_EXPANSION': 'Scope expands without acknowledging the shift.',
+    'T10_AUTHORITY_IMPOSITION': 'Authority is asserted rather than explained.'
+  };
 
-  document.querySelectorAll('.az-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lens = btn.dataset.lens;
-      if (activeLenses.has(lens)) {
-        activeLenses.delete(lens);
-        btn.classList.remove('active');
-        elPreview.classList.remove('lens-' + lens);
-      } else {
-        activeLenses.add(lens);
-        btn.classList.add('active');
-        elPreview.classList.add('lens-' + lens);
-      }
+  const FAILURE_HUMAN = {
+    'UDDS': { name: 'Upstream Drift', desc: 'Agreement language appears before constraints are established.' },
+    'DCE':  { name: 'Deferred Enforcement', desc: 'Hard decisions and specifics are pushed to later.' },
+    'CCA':  { name: 'Constraint Collapse', desc: 'Vague claims are bundled to obscure missing commitments.' }
+  };
+
+  function scoreTone(n) {
+    if (n >= 80) return 'green';
+    if (n >= 60) return 'amber';
+    return 'red';
+  }
+
+  function badge(text, tone) {
+    const cls = tone ? ` ${tone}` : '';
+    return `<span class="az-badge${cls}">${esc(text)}</span>`;
+  }
+
+  function asList(arr) {
+    if (!Array.isArray(arr) || !arr.length) return '<div class="az-muted">None.</div>';
+    return `<ul class="az-list">${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  }
+
+  function detectFailureStates(data) {
+    const out = [];
+    const fm = data && (data.failure_modes || {});
+    ['UDDS','DCE','CCA'].forEach(k => {
+      const s = String(fm[k] || '');
+      if (s.includes('CONFIRMED') || s.includes('PROBABLE')) out.push({ key: k, state: s });
     });
-  });
+    return out;
+  }
 
-  /* ── SAFECHECK BUTTON ── */
-  runBtn.addEventListener('click', async () => {
-    const text = elInput.value.trim();
-    if (!text) return;
-    armTimer();
+  async function callCore(text) {
+    const res = await fetch('/api/v1/score/free', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    return await res.json();
+  }
 
-    analysis = analyze(text);
-    elPreview.innerHTML = buildRevealHTML(analysis);
-    elPreview.className = 'az-preview';
-
-    // Update counts
-    document.getElementById('c-hedges').textContent = analysis.counts.hedges ? '· ' + analysis.counts.hedges : '';
-    document.getElementById('c-filler').textContent = analysis.counts.filler ? '· ' + analysis.counts.filler : '';
-    document.getElementById('c-clarity').textContent = analysis.counts.clarity ? '· ' + analysis.counts.clarity : '';
-
-    // Swap UI: hide textarea + check button, show preview + lenses + actions
-    elInput.style.display = 'none';
-    elCheckBar.style.display = 'none';
-    elPreviewWrap.style.display = '';
-    elLensBar.style.display = '';
-    elActionBar.style.display = '';
-
-    // Also fire the API for the structured readout
-    runBtn.disabled = true;
-    try {
-      const res = await fetch('/api/v1/score/free', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-      const data = await res.json();
-      renderReadout(data);
-    } catch (e) {
-      elOutput.innerHTML = '<div style="color:var(--red);font-size:14px;">Error processing request.</div>';
-      elOutput.style.display = '';
-    } finally {
-      runBtn.disabled = false;
-    }
-  });
-
-  /* ── RENDER READOUT (matches /api/v1/score/free response shape) ── */
-  function renderReadout(data) {
+  function render(data, originalText) {
     const nii = data?.score?.nii;
     const label = data?.score?.nii_label || '';
     const tiltTags = data?.tilt?.tags || [];
-    const tiltCount = data?.tilt?.count || 0;
-    const fm = data?.failure_modes || {};
-    const comp = data?.score?.components || {};
+    const failures = detectFailureStates(data);
 
-    const TILT_HUMAN = {
-      'T1_REASSURANCE_DRIFT': 'Reassurance is being used to avoid addressing the issue.',
-      'T2_CERTAINTY_INFLATION': 'Certainty is claimed without evidence to back it up.',
-      'T3_CONSENSUS_CLAIMS': 'Broad consensus is implied without proof.',
-      'T4_CAPABILITY_OVERREACH': 'Capability is overstated beyond what constraints support.',
-      'T5_ABSOLUTE_LANGUAGE': 'Absolute terms are used where nuance would be honest.',
-      'T6_CONSTRAINT_DEFERRAL': 'Constraints or hard decisions are pushed to later.',
-      'T7_CATEGORY_BLEND': 'Categories are blurred together to obscure specifics.',
-      'T8_PRESSURE_OPTIMIZATION': 'Urgency is manufactured to force a decision.',
-      'T9_SCOPE_EXPANSION': 'Scope is being expanded without acknowledging the shift.',
-      'T10_AUTHORITY_IMPOSITION': 'Authority is asserted rather than earned.'
-    };
+    const badges = [];
+    if (nii !== undefined) badges.push(badge(`NII ${nii}`, scoreTone(Number(nii))));
+    if (tiltTags.length) badges.push(badge(`${tiltTags.length} tilt`, 'amber'));
+    if (failures.length) badges.push(badge(`${failures.length} risk`, 'red'));
 
-    const FM_HUMAN = {
-      'UDDS': { name: 'Upstream Drift', desc: 'Agreement language appears before constraints are established.' },
-      'DCE': { name: 'Deferred Enforcement', desc: 'Hard decisions and specifics are pushed to later.' },
-      'CCA': { name: 'Constraint Collapse', desc: 'Vague claims are bundled to obscure missing commitments.' }
-    };
-
-    let html = '<div class="az-section"><h3>Readout</h3>';
-    if (nii !== null && nii !== undefined) {
-      const color = nii >= 80 ? 'var(--accent)' : nii >= 60 ? 'var(--amber)' : 'var(--red)';
-      html += '<div style="font-family:var(--mono);font-size:28px;font-weight:700;color:' + color + '">' + nii + '</div>';
-      html += '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px">' + esc(label) + '</div>';
-    }
-    html += '</div>';
-
-    // Tilt patterns in human language
-    if (tiltCount > 0) {
-      html += '<div class="az-section"><h3>What we found</h3><ul class="az-list">';
-      tiltTags.forEach(t => {
-        const human = TILT_HUMAN[t];
-        if (human) html += '<li>' + esc(human) + '</li>';
-        else html += '<li>' + esc(t.replace(/_/g, ' ')) + '</li>';
-      });
-      html += '</ul></div>';
-    }
-
-    // Failure modes in human language
-    const fmActive = [];
-    ['UDDS', 'DCE', 'CCA'].forEach(k => {
-      const state = fm[k] || '';
-      if (state.includes('CONFIRMED') || state.includes('PROBABLE')) {
-        fmActive.push({ key: k, state: state, ...FM_HUMAN[k] });
-      }
+    const tiltHuman = tiltTags.map(t => TILT_HUMAN[t] || t);
+    const failHuman = failures.map(f => {
+      const h = FAILURE_HUMAN[f.key];
+      return h ? `${h.name} — ${h.desc}` : `${f.key}: ${f.state}`;
     });
 
-    if (fmActive.length > 0) {
-      html += '<div class="az-section"><h3>Structural risks</h3><ul class="az-list">';
-      fmActive.forEach(f => {
-        html += '<li><strong>' + esc(f.name) + '</strong> — ' + esc(f.desc) + '</li>';
-      });
-      html += '</ul></div>';
-    }
+    elOut.innerHTML = `
+      <div class="az-section">
+        <h3>Your text</h3>
+        <div class="az-preview">${esc(originalText)}</div>
+      </div>
 
-    elOutput.innerHTML = html;
-    elOutput.style.display = '';
+      <div class="az-section">
+        <h3>Readout</h3>
+        <div class="az-badges">${badges.join('') || badge('OK','green')}</div>
+        ${label ? `<div class="az-muted" style="margin-top:8px;">${esc(label)}</div>` : ''}
+      </div>
+
+      <div class="az-section">
+        <h3>What the core detected</h3>
+        ${asList(tiltHuman)}
+      </div>
+
+      <div class="az-section">
+        <h3>Structural risks</h3>
+        ${failHuman.length ? asList(failHuman) : '<div class="az-muted">None.</div>'}
+      </div>
+
+      <div class="az-section">
+        <h3>Raw (for verification)</h3>
+        <div class="az-preview"><code class="az-code">${esc(JSON.stringify(data))}</code></div>
+      </div>
+    `;
+    elOut.style.display = '';
   }
 
-  /* ── ACTION BUTTONS ── */
-  document.getElementById('scStripHedgesBtn').addEventListener('click', () => {
-    elInput.value = stripPhrases(elInput.value, HEDGES);
+  elBtn.addEventListener('click', async () => {
+    const text = elInput.value.trim();
+    if (!text) return;
+
     armTimer();
-    analysis = analyze(elInput.value.trim());
-    elPreview.innerHTML = buildRevealHTML(analysis);
-    document.getElementById('c-hedges').textContent = analysis.counts.hedges ? '· ' + analysis.counts.hedges : '';
-  });
 
-  document.getElementById('scStripFillerBtn').addEventListener('click', () => {
-    elInput.value = stripPhrases(elInput.value, FILLER);
-    armTimer();
-    analysis = analyze(elInput.value.trim());
-    elPreview.innerHTML = buildRevealHTML(analysis);
-    document.getElementById('c-filler').textContent = analysis.counts.filler ? '· ' + analysis.counts.filler : '';
-  });
+    elBtn.disabled = true;
+    elBtn.textContent = 'Checking...';
+    elOut.style.display = '';
+    elOut.innerHTML = '<div class="az-muted">Running core…</div>';
 
-  document.getElementById('scCopyCleanBtn').addEventListener('click', () => {
-    if (!analysis) return;
-    let clean = stripPhrases(analysis.text, FILLER);
-    clean = stripPhrases(clean, HEDGES);
-    navigator.clipboard.writeText(clean).then(() => {
-      const btn = document.getElementById('scCopyCleanBtn');
-      btn.textContent = 'Copied ✓';
-      setTimeout(() => { btn.textContent = 'Copy clean'; }, 1500);
-    });
-  });
-
-  document.getElementById('scEditBtn').addEventListener('click', () => {
-    elInput.style.display = '';
-    elCheckBar.style.display = '';
-    elPreviewWrap.style.display = 'none';
-    elLensBar.style.display = 'none';
-    elActionBar.style.display = 'none';
-    elOutput.style.display = 'none';
-    elInput.focus();
-    activeLenses.clear();
-    document.querySelectorAll('.az-chip').forEach(b => b.classList.remove('active'));
-  });
-
-  /* ── TAP LABELS ── */
-  const tapEl = document.createElement('div');
-  tapEl.className = 'sc-tap';
-  document.body.appendChild(tapEl);
-
-  const TAP_NAMES = { hedge: 'HEDGE', filler: 'FILLER', clarity: 'CONSTRAINT' };
-
-  document.addEventListener('click', e => {
-    const t = e.target;
-    if (t.dataset && t.dataset.t) {
-      const rect = t.getBoundingClientRect();
-      tapEl.innerHTML = '<span style="font-weight:700;color:' + getComputedStyle(t).color + '">' + (TAP_NAMES[t.dataset.t] || t.dataset.t) + '</span> ' + esc(t.dataset.p);
-      tapEl.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
-      tapEl.style.top = (rect.bottom + 4) + 'px';
-      tapEl.classList.add('vis');
-    } else {
-      tapEl.classList.remove('vis');
+    try {
+      const data = await callCore(text);
+      if (data && data.error) {
+        elOut.innerHTML = '<div class="az-error">' + esc(data.error) + '</div>';
+      } else {
+        render(data, text);
+        elInputCard.style.display = 'none';
+        elResetBar.style.display = '';
+      }
+    } catch (e) {
+      elOut.innerHTML = '<div class="az-error">Error: ' + esc(e.message) + '</div>';
+    } finally {
+      elBtn.disabled = false;
+      elBtn.textContent = 'SafeCheck';
     }
   });
 
-  /* ── INIT ── */
+  document.getElementById('scNewBtn').addEventListener('click', () => {
+    hardClear();
+    elInput.focus();
+  });
+
+  // init
   tick();
   timerId = setInterval(tick, 250);
 })();
