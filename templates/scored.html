@@ -87,6 +87,16 @@
 
 .hedge-hl{background:rgba(245,158,11,.25);padding:1px 3px;border-radius:2px;color:var(--amber)}
 
+/* Signal buttons (from nti_signals) */
+.sig-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.sig-btn{background:transparent;padding:6px 12px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;cursor:pointer;transition:all .15s;border:1px solid var(--btn-color,#6b7280);color:var(--btn-color,#6b7280)}
+.sig-btn:hover{opacity:.85}
+.sig-btn.active{background:var(--btn-color,#6b7280);color:#000}
+.sig-explain{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:12px;border-left:2px solid var(--explainer-color,var(--accent));padding-left:10px;line-height:1.5;display:none}
+.sig-explain.show{display:block}
+.sig-hl{padding:0 2px;border-radius:3px;transition:all .25s ease}
+.sig-hl.lit{font-weight:700}
+
 /* Clickable dimensions */
 .dim-row{cursor:pointer;transition:border-color .2s}
 .dim-row:hover{border-color:var(--accent)}
@@ -399,6 +409,12 @@ function render(c){
     html += '</div>'; // end nti-section
   }
 
+  // ═══ NTI SIGNAL DETECTION ═══
+  // Run the source copy through detect_signals for signal buttons
+  html += '<div class="sd-section">SIGNAL DETECTION</div>';
+  html += '<div id="sigBar" class="sig-bar"><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted)">Analyzing...</span></div>';
+  html += '<div id="sigExplain" class="sig-explain"></div>';
+
   // ═══ 10-DIMENSION BREAKDOWN ═══
   html += '<div class="sd-section">10-DIMENSION BREAKDOWN</div>';
   html += '<div class="dim-grid">';
@@ -568,6 +584,108 @@ function highlightFinding(cardEl) {
 }
 
 loadScorecard();
+
+// ═══ SIGNAL DETECTION — BUTTONS + CLICK-TO-HIGHLIGHT ═══
+const SIG_COLORS = {red:'#ef4444',crimson:'#dc2626',amber:'#f59e0b',purple:'#a78bfa',pink:'#ec4899',teal:'#2dd4bf',orange:'#f97316',blue:'#60a5fa',green:'#00e89c',gray:'#9b9b9b',lightgray:'#9b9b9b',yellow:'#eab308'};
+let _sigCatalog={}, _sigHighlights=[], _activeSig=null;
+
+async function runSignals(){
+  const copyCol = document.querySelector('.copy-col');
+  if(!copyCol) return;
+  // Extract plain text from copy column
+  const rawText = copyCol.textContent || '';
+  if(rawText.length < 20) return;
+
+  try {
+    const res = await fetch('/api/v1/score/free', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:rawText})});
+    const data = await res.json();
+    if(!data.signals) return;
+    _sigCatalog = data.signals.signal_catalog || {};
+    _sigHighlights = data.signals.highlights || [];
+    renderSigButtons(data.signals.signals_summary || {});
+  } catch(e){ console.error('Signal detection error:', e); }
+}
+
+function sigColor(sig){ const e=_sigCatalog[sig]; return e?(SIG_COLORS[e.color]||SIG_COLORS.gray):SIG_COLORS.gray; }
+
+function renderSigButtons(summary){
+  const bar = document.getElementById('sigBar');
+  if(!bar) return;
+  bar.innerHTML = '';
+  const entries = Object.entries(summary);
+  if(!entries.length){ bar.innerHTML='<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--accent)">No signals detected. Clean copy.</span>'; return; }
+
+  entries.sort((a,b)=>{
+    const A=_sigCatalog[a[0]]||{},B=_sigCatalog[b[0]]||{};
+    return (B.priority||0)-(A.priority||0)||(b[1]-a[1]);
+  });
+
+  entries.forEach(([sig,count])=>{
+    const entry=_sigCatalog[sig]||{};
+    const label=entry.label||sig.replace(/_/g,' ');
+    const color=sigColor(sig);
+    const btn=document.createElement('button');
+    btn.className='sig-btn'+(_activeSig===sig?' active':'');
+    btn.style.setProperty('--btn-color',color);
+    btn.textContent=label+' ('+count+')';
+    btn.addEventListener('click',()=>{ _activeSig=_activeSig===sig?null:sig; renderSigButtons(summary); applySigHighlights(); });
+    bar.appendChild(btn);
+  });
+}
+
+function applySigHighlights(){
+  const copyCol=document.querySelector('.copy-col');
+  const explainEl=document.getElementById('sigExplain');
+  if(!copyCol) return;
+
+  // Clear existing signal highlights
+  copyCol.querySelectorAll('.sig-hl').forEach(el=>{ el.outerHTML=el.textContent; });
+
+  if(!_activeSig){
+    if(explainEl){explainEl.classList.remove('show');explainEl.textContent='';}
+    return;
+  }
+
+  // Show explainer
+  if(explainEl){
+    const entry=_sigCatalog[_activeSig];
+    if(entry){
+      explainEl.textContent=entry.explanation;
+      explainEl.style.setProperty('--explainer-color',sigColor(_activeSig));
+      explainEl.classList.add('show');
+    } else { explainEl.classList.remove('show'); }
+  }
+
+  // Apply highlights for active signal only
+  const hits=_sigHighlights.filter(h=>h.signal===_activeSig);
+  if(!hits.length) return;
+
+  // We need to work with the plain text and create spans
+  const plainText=copyCol.textContent;
+  const color=sigColor(_activeSig);
+
+  // Build highlighted HTML from plain text + hit positions
+  // First, get the text content mapping (accounting for existing HTML)
+  hits.sort((a,b)=>a.start-b.start);
+
+  // Simple approach: find each hit phrase in the copyCol innerHTML
+  let html=copyCol.innerHTML;
+  hits.forEach(h=>{
+    const phrase=plainText.slice(h.start,h.end);
+    if(phrase.length<2) return;
+    const escaped=phrase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re=new RegExp('(?<!<[^>]*)\\b('+escaped+')\\b','gi');
+    html=html.replace(re,'<span class="sig-hl lit" style="color:'+color+'">$1</span>');
+  });
+  copyCol.innerHTML=html;
+
+  // Scroll to first highlight
+  const first=copyCol.querySelector('.sig-hl');
+  if(first) first.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// Run after page renders
+setTimeout(runSignals, 500);
 </script>
 
 {% endblock %}
