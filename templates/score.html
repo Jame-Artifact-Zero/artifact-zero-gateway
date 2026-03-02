@@ -7,233 +7,245 @@
 
   <div class="az-card az-intro">
     <h2>Score</h2>
-    <p>
-      Paste what you received. See what's actually being said — pressure, drift, hidden commitments, and structural gaps — in plain language.
-    </p>
+    <p>Paste what you received. See the structural integrity analysis returned by the NTI engine.</p>
   </div>
 
-  <div class="az-card">
+  <div class="az-card" id="scoreInputCard">
     <div class="az-section">
       <textarea id="scoreInput" class="az-textarea" placeholder="Paste what someone sent you..."></textarea>
     </div>
-
-    <div class="az-section az-actions" id="scoreCheckBar">
+    <div class="az-section az-actions">
       <button class="az-btn primary" id="scoreBtn" type="button">Score</button>
-    </div>
-
-    <div class="az-section" id="scoreLensBar" style="display:none;">
-      <div class="az-lensbar" role="group" aria-label="Lenses">
-        <button class="az-chip" data-lens="tone" type="button">Tone <span class="az-chip-count" id="sc-c-tone"></span></button>
-        <button class="az-chip" data-lens="edge" type="button">Edge <span class="az-chip-count" id="sc-c-edge"></span></button>
-        <button class="az-chip" data-lens="drift" type="button">Drift <span class="az-chip-count" id="sc-c-drift"></span></button>
-      </div>
-    </div>
-
-    <div class="az-section" id="scorePreviewWrap" style="display:none;">
-      <div class="az-preview" id="scorePreview"></div>
-    </div>
-
-    <div class="az-section az-actions" id="scoreActionBar" style="display:none;">
-      <button class="az-btn" id="scoreEditBtn" type="button">New text</button>
-      <button class="az-btn danger" id="scoreClearBtn" type="button">Clear</button>
     </div>
   </div>
 
-  <div class="az-card az-output" id="scoreOutput" style="display:none;"></div>
+  <div id="scoreResults" style="display:none;"></div>
+
+  <div class="az-section az-actions" id="scoreResetBar" style="display:none;">
+    <button class="az-btn" id="scoreNewBtn" type="button">New text</button>
+    <button class="az-btn danger" id="scoreClearBtn" type="button">Clear</button>
+  </div>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
 <style>
-  .az-chip-count { font-size: 9px; opacity: 0.6; }
-
-  /* Score page: words become the color */
-  .az-preview .w { color: var(--text); transition: color 0.4s ease; }
-
-  /* Tone lens: passive aggression + dominance */
-  .az-preview.lens-tone .w-passive { color: var(--az-purple); }
-  .az-preview.lens-tone .w-dominance { color: var(--red); font-weight: 600; }
-  .az-preview.lens-tone .w-intensifier { color: var(--red); }
-
-  /* Edge lens: serious relational patterns */
-  .az-preview.lens-edge .w-edge { color: var(--red); font-weight: 700; text-decoration: underline; text-decoration-color: rgba(239,68,68,0.4); }
-
-  /* Drift lens: hedge + deferral */
-  .az-preview.lens-drift .w-hedge { color: var(--amber); }
-  .az-preview.lens-drift .w-defer { color: var(--az-amber); font-style: italic; }
-  .az-preview.lens-drift .w-collapse { color: var(--az-purple); }
-
-  .sc-tap { position: fixed; z-index: 100; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap; pointer-events: none; display: none; }
-  .sc-tap.vis { display: block; }
+  .sc-block { margin-bottom: 16px; }
+  .sc-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+  .sc-score {
+    font-family: var(--mono); font-size: 40px; font-weight: 700; line-height: 1;
+  }
+  .sc-sublabel {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 1px; margin-top: 4px;
+  }
+  .sc-kv {
+    display: grid; grid-template-columns: auto 1fr;
+    gap: 4px 12px; font-size: 13px; line-height: 1.5;
+  }
+  .sc-k {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.5px; white-space: nowrap; padding-top: 1px;
+  }
+  .sc-v { color: var(--text); word-break: break-word; }
+  .sc-tag {
+    display: inline-block; font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.5px; padding: 4px 8px; border-radius: 4px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); margin: 2px 4px 2px 0;
+  }
+  .sc-tag.confirmed { border-color: rgba(239,68,68,0.5); color: var(--red); }
+  .sc-tag.probable { border-color: rgba(245,158,11,0.5); color: var(--amber); }
+  .sc-tag.clear { border-color: rgba(0,232,156,0.3); color: var(--accent); }
+  .sc-bar-track {
+    height: 4px; background: var(--border); border-radius: 2px;
+    overflow: hidden; margin-top: 3px;
+  }
+  .sc-bar-fill { height: 100%; border-radius: 2px; }
+  .sc-dim-row { margin-bottom: 10px; }
+  .sc-dim-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .sc-dim-name { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .sc-dim-val { font-family: var(--mono); font-size: 12px; font-weight: 700; }
 </style>
 <script>
 (() => {
   'use strict';
 
-  /* ── PATTERN LIBRARIES (Score = analyzing someone else's words) ── */
+  const elInput = document.getElementById('scoreInput');
+  const elBtn = document.getElementById('scoreBtn');
+  const elResults = document.getElementById('scoreResults');
+  const elInputCard = document.getElementById('scoreInputCard');
+  const elResetBar = document.getElementById('scoreResetBar');
 
-  const PASSIVE = [
-    "per my last email","as previously stated","as i mentioned","as already discussed",
-    "i thought we agreed","as i said","i thought we said","i was under the impression",
-    "friendly reminder","gentle reminder","not sure why","as i already explained",
-    "i believe i mentioned","if you recall"
-  ];
-
-  const DOMINANCE = [
-    "you need to","you have to","you can't","you must","you better",
-    "you should have","you were supposed to","you failed to","you didn't",
-    "let me be clear","the fact is","the reality is","the truth is",
-    "to be frank","i need you to"
-  ];
-
-  const INTENSIFIERS = [
-    "obviously","clearly","literally","actually","totally","completely",
-    "absolutely","always","never","everyone","no one","nobody",
-    "ridiculous","insane","crazy"
-  ];
-
-  const EDGE_PATTERNS = [
-    "that never happened","you're being too sensitive","you're being dramatic",
-    "you always do this","after everything i've done","you owe me",
-    "i can't believe you","or else","last chance","last warning",
-    "take it or leave it","get over it","not my problem",
-    "it doesn't matter","whatever","you're imagining things",
-    "nobody else thinks that","you're overreacting"
-  ];
-
-  const HEDGE = [
-    "maybe","might","could","perhaps","it seems","it sounds","generally","often","usually",
-    "in general","likely","approximately","around","probably","possibly","kind of","sort of",
-    "i think","i believe","i guess","i suppose","it appears","arguably","potentially",
-    "presumably","not sure","we'll see","hard to say","should be fine"
-  ];
-
-  const DEFER = [
-    "later","eventually","we can handle that later","we'll address later",
-    "we'll figure it out","next week","after we launch","phase 2",
-    "future iteration","explore","consider","evaluate","assess",
-    "as we continue","as we iterate","we will look into","we'll revisit",
-    "circle back","table that","at some point","down the road"
-  ];
-
-  const COLLAPSE = [
-    "overall","basically","in general","at the end of the day","all in all",
-    "net net","it all comes down to","the main thing","just"
-  ];
-
-  /* ── MATCHING ── */
-  function matchAll(text, phrases) {
-    const lo = text.toLowerCase();
-    const hits = [];
-    phrases.slice().sort((a,b) => b.length - a.length).forEach(p => {
-      let idx = 0;
-      while ((idx = lo.indexOf(p, idx)) !== -1) {
-        hits.push({ s: idx, e: idx + p.length, p: p });
-        idx += p.length;
-      }
-    });
-    return hits;
+  function esc(s) {
+    if (s === null || s === undefined) return '—';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
   }
 
-  function dedup(matches) {
-    matches.sort((a,b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
-    const used = new Set();
-    return matches.filter(m => {
-      for (let i = m.s; i < m.e; i++) { if (used.has(i)) return false; }
-      for (let i = m.s; i < m.e; i++) used.add(i);
-      return true;
-    });
+  function stateTag(val) {
+    const s = String(val);
+    if (s.includes('CONFIRMED')) return '<span class="sc-tag confirmed">' + esc(s) + '</span>';
+    if (s.includes('PROBABLE')) return '<span class="sc-tag probable">' + esc(s) + '</span>';
+    if (s.includes('FALSE')) return '<span class="sc-tag clear">' + esc(s) + '</span>';
+    return '<span class="sc-tag">' + esc(s) + '</span>';
   }
 
-  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-  /* ── ANALYSIS ── */
-  let scoreAnalysis = null;
-
-  function analyze(text) {
-    const passives = matchAll(text, PASSIVE).map(m => ({ ...m, t: 'passive' }));
-    const doms = matchAll(text, DOMINANCE).map(m => ({ ...m, t: 'dominance' }));
-    const intens = matchAll(text, INTENSIFIERS).map(m => ({ ...m, t: 'intensifier' }));
-    const edges = matchAll(text, EDGE_PATTERNS).map(m => ({ ...m, t: 'edge' }));
-    const hedges = matchAll(text, HEDGE).map(m => ({ ...m, t: 'hedge' }));
-    const defers = matchAll(text, DEFER).map(m => ({ ...m, t: 'defer' }));
-    const collapses = matchAll(text, COLLAPSE).map(m => ({ ...m, t: 'collapse' }));
-
-    const all = dedup([].concat(passives, doms, intens, edges, hedges, defers, collapses));
-
-    return {
-      text, matches: all,
-      counts: {
-        tone: all.filter(m => m.t === 'passive' || m.t === 'dominance' || m.t === 'intensifier').length,
-        edge: all.filter(m => m.t === 'edge').length,
-        drift: all.filter(m => m.t === 'hedge' || m.t === 'defer' || m.t === 'collapse').length
-      }
-    };
+  function scoreColor(n) {
+    if (n >= 80) return 'var(--accent)';
+    if (n >= 60) return 'var(--amber)';
+    return 'var(--red)';
   }
 
-  function buildRevealHTML(a) {
-    const text = a.text;
-    const sorted = a.matches.slice().sort((x,y) => x.s - y.s);
-    let html = '', pos = 0;
-    sorted.forEach(m => {
-      if (m.s > pos) html += '<span class="w">' + esc(text.substring(pos, m.s)) + '</span>';
-      html += '<span class="w w-' + m.t + '" data-t="' + m.t + '" data-p="' + esc(m.p) + '">' + esc(text.substring(m.s, m.e)) + '</span>';
-      pos = m.e;
+  function renderKV(obj, skip) {
+    const keys = Object.keys(obj).filter(k => !(skip || []).includes(k));
+    if (!keys.length) return '<div style="color:var(--muted);font-size:13px;">Empty.</div>';
+    let html = '<div class="sc-kv">';
+    keys.forEach(k => {
+      const v = obj[k];
+      let display;
+      if (v === null || v === undefined) display = '—';
+      else if (typeof v === 'boolean') display = v ? 'true' : 'false';
+      else if (typeof v === 'object') display = '<code style="font-size:11px;color:var(--muted);word-break:break-all;">' + esc(JSON.stringify(v)) + '</code>';
+      else display = esc(v);
+      html += '<div class="sc-k">' + esc(k) + '</div><div class="sc-v">' + display + '</div>';
     });
-    if (pos < text.length) html += '<span class="w">' + esc(text.substring(pos)) + '</span>';
+    html += '</div>';
     return html;
   }
 
-  /* ── DOM ── */
-  const elInput = document.getElementById('scoreInput');
-  const elPreview = document.getElementById('scorePreview');
-  const elPreviewWrap = document.getElementById('scorePreviewWrap');
-  const elLensBar = document.getElementById('scoreLensBar');
-  const elActionBar = document.getElementById('scoreActionBar');
-  const elCheckBar = document.getElementById('scoreCheckBar');
-  const elOutput = document.getElementById('scoreOutput');
-  const scoreBtn = document.getElementById('scoreBtn');
+  function card(title, content) {
+    return '<div class="az-card sc-block"><div class="sc-label">' + esc(title) + '</div>' + content + '</div>';
+  }
 
-  /* ── LENS TOGGLES ── */
-  const activeLenses = new Set();
+  function render(data) {
+    let html = '';
 
-  document.querySelectorAll('.az-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lens = btn.dataset.lens;
-      if (activeLenses.has(lens)) {
-        activeLenses.delete(lens);
-        btn.classList.remove('active');
-        elPreview.classList.remove('lens-' + lens);
+    /* ── NII SCORE ── */
+    const nii = data.nii || {};
+    if (nii.nii_score !== undefined) {
+      const color = scoreColor(nii.nii_score);
+      let inner = '<div class="sc-score" style="color:' + color + '">' + esc(nii.nii_score) + '</div>';
+      inner += '<div class="sc-sublabel">' + esc(nii.nii_label) + ' · v' + esc(data.version || '') + '</div>';
+      html += card('NII STRUCTURAL INTEGRITY', inner);
+    }
+
+    /* ── NII DIMENSIONS (render raw fields from nii object) ── */
+    const dimKeys = Object.keys(nii).filter(k => k.startsWith('d') && k.includes('_'));
+    if (dimKeys.length) {
+      let inner = '';
+      dimKeys.forEach(k => {
+        const val = nii[k];
+        if (typeof val !== 'number') return;
+        const pct = Math.round(val * 100);
+        const color = scoreColor(pct);
+        inner += '<div class="sc-dim-row">';
+        inner += '<div class="sc-dim-head"><span class="sc-dim-name">' + esc(k) + '</span><span class="sc-dim-val" style="color:' + color + '">' + pct + '%</span></div>';
+        inner += '<div class="sc-bar-track"><div class="sc-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>';
+        inner += '</div>';
+      });
+      html += card('NII DIMENSIONS', inner);
+    }
+
+    /* ── NII DETAIL ── */
+    if (nii.detail && typeof nii.detail === 'object') {
+      html += card('NII DETAIL', renderKV(nii.detail));
+    }
+
+    /* ── TILT TAXONOMY ── */
+    const tilt = data.tilt_taxonomy;
+    if (Array.isArray(tilt)) {
+      let inner;
+      if (tilt.length === 0) {
+        inner = '<div style="color:var(--muted);font-size:13px;">None detected.</div>';
       } else {
-        activeLenses.add(lens);
-        btn.classList.add('active');
-        elPreview.classList.add('lens-' + lens);
+        inner = tilt.map(t => '<span class="sc-tag">' + esc(t) + '</span>').join('');
       }
-    });
-  });
+      html += card('TILT TAXONOMY', inner);
+    }
 
-  /* ── SCORE BUTTON ── */
-  scoreBtn.addEventListener('click', async () => {
+    /* ── PARENT FAILURE MODES ── */
+    const pfm = data.parent_failure_modes;
+    if (pfm && typeof pfm === 'object') {
+      let inner = '';
+      Object.keys(pfm).forEach(mode => {
+        const obj = pfm[mode];
+        const state = obj[mode.toLowerCase() + '_state'] || obj.state || '';
+        inner += '<div style="margin-bottom:10px;">';
+        inner += '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">' + esc(mode) + ' ' + stateTag(state) + '</div>';
+        inner += renderKV(obj, [mode.toLowerCase() + '_state', 'state']);
+        inner += '</div>';
+      });
+      html += card('PARENT FAILURE MODES', inner);
+    }
+
+    /* ── INTERACTION MATRIX ── */
+    const im = data.interaction_matrix;
+    if (im && typeof im === 'object') {
+      let inner = '';
+      if (im.dominance_detected) {
+        inner += '<div style="margin-bottom:8px;"><span class="sc-k">dominance_detected</span> ';
+        inner += im.dominance_detected.map(d => '<span class="sc-tag">' + esc(d) + '</span>').join('');
+        inner += '</div>';
+      }
+      if (Array.isArray(im.pairwise)) {
+        im.pairwise.forEach(p => {
+          inner += '<div class="sc-kv" style="margin-bottom:4px;"><div class="sc-k">' + esc(p.pair) + '</div><div class="sc-v">' + esc(p.note) + '</div></div>';
+        });
+      }
+      if (im.triadic) {
+        inner += '<div class="sc-kv" style="margin-top:6px;"><div class="sc-k">' + esc(im.triadic.combo) + '</div><div class="sc-v">' + esc(im.triadic.note) + '</div></div>';
+      }
+      html += card('INTERACTION MATRIX', inner);
+    }
+
+    /* ── LAYERS ── */
+    const layers = data.layers;
+    if (layers && typeof layers === 'object') {
+      let inner = '';
+      Object.keys(layers).forEach(lk => {
+        const lv = layers[lk];
+        inner += '<div style="margin-bottom:10px;">';
+        inner += '<div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);margin-bottom:4px;">' + esc(lk) + '</div>';
+        if (typeof lv === 'object' && lv !== null) {
+          inner += renderKV(lv);
+        } else {
+          inner += '<div class="sc-v">' + esc(lv) + '</div>';
+        }
+        inner += '</div>';
+      });
+      html += card('LAYERS', inner);
+    }
+
+    /* ── V3 ENFORCEMENT ── */
+    if (data.v3 && typeof data.v3 === 'object') {
+      html += card('V3 ENFORCEMENT', renderKV(data.v3));
+    }
+
+    /* ── TELEMETRY ── */
+    if (data.telemetry && typeof data.telemetry === 'object') {
+      html += card('TELEMETRY', renderKV(data.telemetry));
+    }
+
+    elResults.innerHTML = html;
+    elResults.style.display = '';
+  }
+
+  /* ── ACTIONS ── */
+  elBtn.addEventListener('click', async () => {
     const text = elInput.value.trim();
     if (!text) return;
 
-    scoreAnalysis = analyze(text);
-    elPreview.innerHTML = buildRevealHTML(scoreAnalysis);
-    elPreview.className = 'az-preview';
+    elBtn.disabled = true;
+    elBtn.textContent = 'Scoring...';
 
-    document.getElementById('sc-c-tone').textContent = scoreAnalysis.counts.tone ? '· ' + scoreAnalysis.counts.tone : '';
-    document.getElementById('sc-c-edge').textContent = scoreAnalysis.counts.edge ? '· ' + scoreAnalysis.counts.edge : '';
-    document.getElementById('sc-c-drift').textContent = scoreAnalysis.counts.drift ? '· ' + scoreAnalysis.counts.drift : '';
-
-    elInput.style.display = 'none';
-    elCheckBar.style.display = 'none';
-    elPreviewWrap.style.display = '';
-    elLensBar.style.display = '';
-    elActionBar.style.display = '';
-
-    // Fire API
-    scoreBtn.disabled = true;
     try {
       const res = await fetch('/nti', {
         method: 'POST',
@@ -241,165 +253,38 @@
         body: JSON.stringify({ text })
       });
       const data = await res.json();
-      renderScoreReadout(data);
+
+      if (data.error) {
+        elResults.innerHTML = '<div class="az-card"><div style="color:var(--red);font-size:14px;">' + esc(data.error) + '</div></div>';
+        elResults.style.display = '';
+      } else {
+        render(data);
+        elInputCard.style.display = 'none';
+        elResetBar.style.display = '';
+      }
     } catch (e) {
-      elOutput.innerHTML = '<div style="color:var(--red);font-size:14px;">Error processing request.</div>';
-      elOutput.style.display = '';
+      elResults.innerHTML = '<div class="az-card"><div style="color:var(--red);font-size:14px;">Error: ' + esc(e.message) + '</div></div>';
+      elResults.style.display = '';
     } finally {
-      scoreBtn.disabled = false;
+      elBtn.disabled = false;
+      elBtn.textContent = 'Score';
     }
   });
 
-  /* ── RENDER READOUT (matches /nti response shape) ── */
-  function renderScoreReadout(data) {
-    const nii = data?.nii?.nii_score;
-    const niiLabel = data?.nii?.nii_label || '';
-    const tiltTags = data?.tilt_taxonomy || [];
-    const fm = data?.parent_failure_modes || {};
-    const niiDetail = data?.nii || {};
-
-    const TILT_HUMAN = {
-      'T1_REASSURANCE_DRIFT': 'They\'re reassuring you instead of addressing the issue.',
-      'T2_CERTAINTY_INFLATION': 'They\'re claiming certainty without backing it up.',
-      'T3_CONSENSUS_CLAIMS': 'They\'re implying broad consensus without proof.',
-      'T4_CAPABILITY_OVERREACH': 'They\'re overstating what they can deliver.',
-      'T5_ABSOLUTE_LANGUAGE': 'They\'re using absolute terms where nuance would be honest.',
-      'T6_CONSTRAINT_DEFERRAL': 'They\'re pushing hard decisions to later.',
-      'T7_CATEGORY_BLEND': 'They\'re blurring categories to hide specifics.',
-      'T8_PRESSURE_OPTIMIZATION': 'They\'re manufacturing urgency to force a decision.',
-      'T9_SCOPE_EXPANSION': 'They\'re expanding scope without acknowledging the shift.',
-      'T10_AUTHORITY_IMPOSITION': 'They\'re asserting authority rather than earning it.'
-    };
-
-    const FM_HUMAN = {
-      'UDDS': { name: 'Upstream Drift', desc: 'Agreement language appeared before constraints were set. They said "yes" before defining what "yes" means.' },
-      'DCE': { name: 'Deferred Enforcement', desc: 'Hard decisions and specifics got pushed to later. The commitment exists on paper but the details don\'t.' },
-      'CCA': { name: 'Constraint Collapse', desc: 'Vague claims were bundled together to obscure what\'s actually missing.' }
-    };
-
-    let html = '';
-
-    // Big score
-    if (nii !== null && nii !== undefined) {
-      const color = nii >= 80 ? 'var(--accent)' : nii >= 60 ? 'var(--amber)' : 'var(--red)';
-      html += '<div class="az-section">';
-      html += '<div style="font-family:var(--mono);font-size:36px;font-weight:700;color:' + color + '">' + nii + '</div>';
-      html += '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px">' + esc(niiLabel) + ' · STRUCTURAL INTEGRITY</div>';
-      html += '</div>';
-    }
-
-    // What's happening (tilt in human language)
-    if (tiltTags.length > 0) {
-      html += '<div class="az-section"><h3>What\'s happening in this message</h3><ul class="az-list">';
-      tiltTags.forEach(t => {
-        const human = TILT_HUMAN[t];
-        html += '<li>' + esc(human || t.replace(/_/g, ' ')) + '</li>';
-      });
-      html += '</ul></div>';
-    } else {
-      html += '<div class="az-section"><h3>What\'s happening</h3><div style="color:var(--muted);font-size:14px;">No tilt patterns detected. The message is structurally clean.</div></div>';
-    }
-
-    // Failure modes
-    const fmActive = [];
-    ['UDDS', 'DCE', 'CCA'].forEach(k => {
-      const obj = fm[k] || {};
-      const state = obj[k.toLowerCase() + '_state'] || '';
-      if (state.includes('CONFIRMED') || state.includes('PROBABLE')) {
-        fmActive.push({ key: k, state: state, ...FM_HUMAN[k] });
-      }
-    });
-
-    if (fmActive.length > 0) {
-      html += '<div class="az-section"><h3>Structural risks</h3><ul class="az-list">';
-      fmActive.forEach(f => {
-        const badge = f.state.includes('CONFIRMED') ? 'red' : 'amber';
-        html += '<li><span class="az-badge ' + badge + '">' + esc(f.key) + '</span> <strong>' + esc(f.name) + '</strong> — ' + esc(f.desc) + '</li>';
-      });
-      html += '</ul></div>';
-    }
-
-    // Dimension scores in human language
-    const dims = [
-      { key: 'd1_constraint_density', name: 'Specificity', desc: 'Claims backed by numbers, dates, or constraints' },
-      { key: 'd2_ask_architecture', name: 'Ask Architecture', desc: 'Main request positioned before capability claims' },
-      { key: 'd3_enforcement_integrity', name: 'Enforcement', desc: 'Freedom from deferral and erosion markers' },
-      { key: 'd4_tilt_resistance', name: 'Tilt Resistance', desc: 'Resistance to drift patterns and structural manipulation' },
-      { key: 'd5_failure_mode_severity', name: 'Failure Mode Severity', desc: 'Freedom from UDDS, DCE, and CCA' }
-    ];
-
-    html += '<div class="az-section"><h3>5-dimension breakdown</h3>';
-    dims.forEach(dim => {
-      const val = niiDetail[dim.key];
-      if (val !== undefined && val !== null) {
-        const pct = Math.round(val * 100);
-        const color = pct >= 80 ? 'var(--accent)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
-        html += '<div style="margin-bottom:12px;">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">';
-        html += '<span style="font-family:var(--mono);font-size:12px;color:var(--text)">' + esc(dim.name) + '</span>';
-        html += '<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:' + color + '">' + pct + '%</span>';
-        html += '</div>';
-        html += '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">';
-        html += '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:2px;"></div>';
-        html += '</div>';
-        html += '<div style="font-size:12px;color:var(--muted);margin-top:2px;">' + esc(dim.desc) + '</div>';
-        html += '</div>';
-      }
-    });
-    html += '</div>';
-
-    elOutput.innerHTML = html;
-    elOutput.style.display = '';
-  }
-
-  /* ── ACTION BUTTONS ── */
-  document.getElementById('scoreEditBtn').addEventListener('click', () => {
-    elInput.style.display = '';
+  document.getElementById('scoreNewBtn').addEventListener('click', () => {
     elInput.value = '';
-    elCheckBar.style.display = '';
-    elPreviewWrap.style.display = 'none';
-    elLensBar.style.display = 'none';
-    elActionBar.style.display = 'none';
-    elOutput.style.display = 'none';
-    activeLenses.clear();
-    document.querySelectorAll('.az-chip').forEach(b => b.classList.remove('active'));
+    elInputCard.style.display = '';
+    elResults.style.display = 'none';
+    elResetBar.style.display = 'none';
     elInput.focus();
   });
 
   document.getElementById('scoreClearBtn').addEventListener('click', () => {
     elInput.value = '';
-    elInput.style.display = '';
-    elCheckBar.style.display = '';
-    elPreviewWrap.style.display = 'none';
-    elLensBar.style.display = 'none';
-    elActionBar.style.display = 'none';
-    elOutput.style.display = 'none';
-    scoreAnalysis = null;
-    activeLenses.clear();
-    document.querySelectorAll('.az-chip').forEach(b => b.classList.remove('active'));
-  });
-
-  /* ── TAP LABELS ── */
-  const tapEl = document.createElement('div');
-  tapEl.className = 'sc-tap';
-  document.body.appendChild(tapEl);
-
-  const TAP_NAMES = {
-    passive: 'PASSIVE AGGRESSION', dominance: 'DOMINANCE', intensifier: 'INTENSIFIER',
-    edge: 'EDGE WARNING', hedge: 'HEDGE', defer: 'DEFERRED', collapse: 'COLLAPSE'
-  };
-
-  document.addEventListener('click', e => {
-    const t = e.target;
-    if (t.dataset && t.dataset.t) {
-      const rect = t.getBoundingClientRect();
-      tapEl.innerHTML = '<span style="font-weight:700;color:' + getComputedStyle(t).color + '">' + (TAP_NAMES[t.dataset.t] || t.dataset.t) + '</span> ' + esc(t.dataset.p);
-      tapEl.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
-      tapEl.style.top = (rect.bottom + 4) + 'px';
-      tapEl.classList.add('vis');
-    } else {
-      tapEl.classList.remove('vis');
-    }
+    elInputCard.style.display = '';
+    elResults.innerHTML = '';
+    elResults.style.display = 'none';
+    elResetBar.style.display = 'none';
   });
 })();
 </script>
