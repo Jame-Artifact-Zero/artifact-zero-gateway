@@ -828,6 +828,22 @@ def scored_page(slug):
     return render_template("scored.html")
 
 
+@app.route("/knoxville")
+def knoxville_page():
+    return render_template("knoxville.html")
+
+
+@app.route("/birkbeck")
+def birkbeck_page():
+    return render_template("birkbeck.html")
+
+
+@app.route("/anderson")
+@app.route("/anderson-county")
+def anderson_page():
+    return render_template("anderson.html")
+
+
 @app.route("/api/fortune500", methods=["GET"])
 def api_fortune500_list():
     try:
