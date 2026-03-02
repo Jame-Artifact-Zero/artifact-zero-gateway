@@ -20,7 +20,7 @@
     <a href="/examples"{% if request.path == '/examples' %} class="active"{% endif %}>EXAMPLES</a>
     <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
     <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>
-    <a href="/signup" class="az-nav-auth{% if request.path == '/signup' %} active{% endif %}">SIGN UP</a>
+    <a href="/login" class="az-nav-auth{% if request.path == '/login' %} active{% endif %}">LOG IN</a>
   </nav>
   <button class="az-hamburger" onclick="document.getElementById('az-mobile-menu').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
@@ -34,7 +34,7 @@
   <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
   <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>
   <a href="/glossary"{% if request.path == '/glossary' %} class="active"{% endif %}>GLOSSARY</a>
-  <a href="/signup" class="az-nav-auth{% if request.path == '/signup' %} active{% endif %}">SIGN UP</a>
+  <a href="/login" class="az-nav-auth{% if request.path == '/login' %} active{% endif %}">LOG IN</a>
 </div>
 
 <main class="az-main">
