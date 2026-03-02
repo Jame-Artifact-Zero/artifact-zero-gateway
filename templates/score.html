@@ -5,26 +5,22 @@
 {% block content %}
 <div class="az-page">
 
-  <div class="az-card az-intro">
+  <div class="az-card">
     <h2>Score</h2>
-    <p>Paste what you received. The core runs deterministically and we render the findings in human language — paragraph by paragraph.</p>
+    <p class="az-muted">
+      Paste what you received. Words that carry structural signal will change color.
+    </p>
   </div>
 
-  <div class="az-card" id="scoreInputCard">
-    <div class="az-section">
-      <textarea id="scoreInput" class="az-textarea" placeholder="Paste what someone sent you..."></textarea>
+  <div class="az-card" id="inputCard">
+    <textarea id="inputText" class="az-textarea"
+      placeholder="Paste message here..."></textarea>
+    <div class="az-actions">
+      <button id="runBtn" class="az-btn primary">Score</button>
     </div>
-    <div class="az-section az-actions">
-      <button class="az-btn primary" id="scoreBtn" type="button">Score</button>
-    </div>
   </div>
 
-  <div class="az-card az-output" id="scoreOutput" style="display:none;"></div>
-
-  <div class="az-section az-actions" id="scoreResetBar" style="display:none;">
-    <button class="az-btn" id="scoreNewBtn" type="button">New text</button>
-    <button class="az-btn danger" id="scoreClearBtn" type="button">Clear</button>
-  </div>
+  <div id="results" style="display:none;"></div>
 
 </div>
 {% endblock %}
@@ -34,205 +30,158 @@
 (() => {
   'use strict';
 
-  const elInput = document.getElementById('scoreInput');
-  const elBtn = document.getElementById('scoreBtn');
-  const elInputCard = document.getElementById('scoreInputCard');
-  const elOut = document.getElementById('scoreOutput');
-  const elResetBar = document.getElementById('scoreResetBar');
+  const input    = document.getElementById('inputText');
+  const runBtn   = document.getElementById('runBtn');
+  const results  = document.getElementById('results');
+  const inputCard = document.getElementById('inputCard');
 
+  /* ── Util ── */
   function esc(s) {
-    if (s === null || s === undefined) return '—';
-    const d = document.createElement('div');
-    d.textContent = String(s);
-    return d.innerHTML;
+    if (s == null) return '\u2014';
+    const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
   }
 
-  function splitParagraphs(text) {
-    return text
-      .replace(/\r\n/g, '\n')
-      .split(/\n\s*\n+/)
-      .map(p => p.trim())
-      .filter(Boolean);
-  }
-
-  // DISPLAY mapping only (no analysis). Unknown codes render raw.
-  const TILT_HUMAN = {
-    'T1_REASSURANCE_DRIFT': 'Reassurance is being used instead of directly addressing the issue.',
-    'T2_CERTAINTY_INFLATION': 'Certainty is claimed without evidence or constraint support.',
-    'T3_CONSENSUS_CLAIMS': 'A broad consensus is implied without proof.',
-    'T4_CAPABILITY_OVERREACH': 'Capability is overstated beyond what constraints support.',
-    'T5_ABSOLUTE_LANGUAGE': 'Absolute language is used where nuance would be honest.',
-    'T6_CONSTRAINT_DEFERRAL': 'Hard decisions / constraints are pushed to later.',
-    'T7_CATEGORY_BLEND': 'Categories are blended to obscure specifics.',
-    'T8_PRESSURE_OPTIMIZATION': 'Urgency is manufactured to force a decision.',
-    'T9_SCOPE_EXPANSION': 'Scope expands without acknowledging the shift.',
-    'T10_AUTHORITY_IMPOSITION': 'Authority is asserted rather than explained.'
-  };
-
-  const FAILURE_HUMAN = {
-    'UDDS': { name: 'Upstream Drift', desc: 'Agreement language appears before constraints are established.' },
-    'DCE':  { name: 'Deferred Enforcement', desc: 'Hard decisions and specifics are pushed to later.' },
-    'CCA':  { name: 'Constraint Collapse', desc: 'Vague claims are bundled to obscure missing commitments.' }
-  };
-
-  function scoreTone(n) {
-    if (n >= 80) return 'green';
-    if (n >= 60) return 'amber';
-    return 'red';
-  }
-
-  function badge(text, tone) {
-    const cls = tone ? ` ${tone}` : '';
-    return `<span class="az-badge${cls}">${esc(text)}</span>`;
-  }
-
-  function asList(arr) {
-    if (!Array.isArray(arr) || !arr.length) return '<div class="az-muted">None.</div>';
-    return `<ul class="az-list">${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
-  }
-
-  function detectFailureStates(data) {
-    const out = [];
-    const pfm = data && data.parent_failure_modes;
-
-    // Shape A: /nti -> parent_failure_modes.{UDDS|DCE|CCA}.*_state
-    if (pfm && typeof pfm === 'object') {
-      ['UDDS','DCE','CCA'].forEach(k => {
-        const obj = pfm[k];
-        if (!obj) return;
-        const state = obj[k.toLowerCase() + '_state'] || obj.state || '';
-        const s = String(state);
-        if (s.includes('CONFIRMED') || s.includes('PROBABLE')) out.push({ key: k, state: s });
-      });
-      return out;
+  /* ── Render highlights from backend spans ── */
+  function renderHL(text, highlights) {
+    const spans = (highlights || []).slice().sort((a, b) => a.start - b.start);
+    let cursor = 0, out = '';
+    for (const h of spans) {
+      const s = Number(h.start), e = Number(h.end);
+      if (s < cursor || e <= s) continue;
+      out += esc(text.slice(cursor, s));
+      const cls = 'az-hl pattern-' + (h.pattern || 'unknown');
+      const tip = h.category || h.pattern || '';
+      out += '<span class="' + cls + '" title="' + esc(tip) + '">' + esc(text.slice(s, e)) + '</span>';
+      cursor = e;
     }
-
-    // Shape B fallback
-    const fm = data && data.failure_modes;
-    if (fm && typeof fm === 'object') {
-      ['UDDS','DCE','CCA'].forEach(k => {
-        const s = String(fm[k] || '');
-        if (s.includes('CONFIRMED') || s.includes('PROBABLE')) out.push({ key: k, state: s });
-      });
-    }
-
+    out += esc(text.slice(cursor));
     return out;
   }
 
-  function renderParagraphBlock(idx, paragraph, data) {
-    // Support shapes:
-    // /nti: { nii: { nii_score, nii_label }, tilt_taxonomy: [...], parent_failure_modes: {...} }
-    // fallback: { score: { nii }, tilt: { tags }, failure_modes: {...} }
-    const niiObj = data.nii || data.score || {};
-    const niiScore =
-      (niiObj.nii_score !== undefined) ? niiObj.nii_score :
-      (niiObj.nii !== undefined) ? niiObj.nii :
-      (data.score && data.score.nii !== undefined) ? data.score.nii : undefined;
+  /* ── Human display tables (display only, no analysis) ── */
+  const TILT = {
+    T1_REASSURANCE_DRIFT:    'They\'re reassuring instead of addressing the issue.',
+    T2_CERTAINTY_INFLATION:  'Certainty claimed without evidence.',
+    T3_CONSENSUS_CLAIMS:     'Broad consensus implied without proof.',
+    T4_CAPABILITY_OVERREACH: 'Capability overstated beyond constraints.',
+    T5_ABSOLUTE_LANGUAGE:    'Absolute language where nuance would be honest.',
+    T6_CONSTRAINT_DEFERRAL:  'Hard decisions pushed to later.',
+    T7_CATEGORY_BLEND:       'Categories blended to obscure specifics.',
+    T8_PRESSURE_OPTIMIZATION:'Urgency manufactured to force a decision.',
+    T9_SCOPE_EXPANSION:      'Scope expanded without acknowledging the shift.',
+    T10_AUTHORITY_IMPOSITION:'Authority asserted rather than explained.'
+  };
+  const FM = {
+    UDDS: { n: 'Upstream Drift',        d: 'Agreement language before constraints are set.' },
+    DCE:  { n: 'Deferred Enforcement',   d: 'Hard decisions pushed to later.' },
+    CCA:  { n: 'Constraint Collapse',    d: 'Vague claims bundled to obscure gaps.' }
+  };
 
-    const niiLabel = niiObj.nii_label || (data.score && data.score.nii_label) || '';
-    const tilt = data.tilt_taxonomy || (data.tilt && data.tilt.tags) || [];
-    const failures = detectFailureStates(data);
-
-    const topBadges = [];
-    if (niiScore !== undefined) topBadges.push(badge(`NII ${niiScore}`, scoreTone(Number(niiScore))));
-    if (Array.isArray(tilt) && tilt.length) topBadges.push(badge(`${tilt.length} tilt`, 'amber'));
-    if (failures.length) topBadges.push(badge(`${failures.length} risk`, 'red'));
-
-    const tiltHuman = Array.isArray(tilt) ? tilt.map(t => TILT_HUMAN[t] || t) : [];
-    const failHuman = failures.map(f => {
-      const h = FAILURE_HUMAN[f.key];
-      return h ? `${h.name} — ${h.desc}` : `${f.key}: ${f.state}`;
+  function fmActive(pfm) {
+    if (!pfm || typeof pfm !== 'object') return [];
+    const out = [];
+    ['UDDS','DCE','CCA'].forEach(k => {
+      const obj = pfm[k];
+      if (!obj) return;
+      const state = String(obj[k.toLowerCase() + '_state'] || obj.state || '');
+      if (state.includes('CONFIRMED') || state.includes('PROBABLE')) out.push({ k, state });
     });
-
-    return `
-      <div class="az-section">
-        <h3>Paragraph ${idx + 1}</h3>
-        <div class="az-preview">${esc(paragraph)}</div>
-
-        <div class="az-section">
-          <h3>Readout</h3>
-          <div class="az-badges">${topBadges.join('') || badge('OK','green')}</div>
-          ${niiLabel ? `<div class="az-muted" style="margin-top:8px;">${esc(niiLabel)}</div>` : ''}
-        </div>
-
-        <div class="az-section">
-          <h3>What the core detected</h3>
-          ${asList(tiltHuman)}
-        </div>
-
-        <div class="az-section">
-          <h3>Structural risks</h3>
-          ${failHuman.length ? asList(failHuman) : '<div class="az-muted">None.</div>'}
-        </div>
-
-        <div class="az-section">
-          <h3>Raw (for verification)</h3>
-          <div class="az-preview"><code class="az-code">${esc(JSON.stringify(data))}</code></div>
-        </div>
-      </div>
-    `;
+    return out;
   }
 
-  async function callNTI(text) {
-    const res = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    return await res.json();
-  }
+  /* ── Render result ── */
+  function render(text, data) {
+    const nii   = data.nii && data.nii.nii_score;
+    const label = (data.nii && data.nii.nii_label) || '';
+    const tilt  = data.tilt_taxonomy || [];
+    const hl    = data.highlights || [];
+    const fails = fmActive(data.parent_failure_modes);
 
-  elBtn.addEventListener('click', async () => {
-    const full = elInput.value.trim();
-    if (!full) return;
+    const color = nii >= 80 ? 'var(--accent)' : nii >= 60 ? 'var(--amber)' : 'var(--red)';
 
-    elBtn.disabled = true;
-    elBtn.textContent = 'Scoring...';
-    elOut.style.display = '';
-    elOut.innerHTML = '<div class="az-muted">Running core…</div>';
+    let html = '<div class="az-card">';
 
-    try {
-      const paragraphs = splitParagraphs(full);
-      if (!paragraphs.length) throw new Error('No text.');
+    // Highlighted preview
+    html += '<div class="az-preview">' + renderHL(text, hl) + '</div>';
 
-      let html = '';
-      // paragraph-by-paragraph = real: core call per paragraph
-      for (let i = 0; i < paragraphs.length; i++) {
-        const p = paragraphs[i];
-        const data = await callNTI(p);
-        if (data && data.error) {
-          html += `<div class="az-section"><h3>Paragraph ${i+1}</h3><div class="az-error">${esc(data.error)}</div></div>`;
-        } else {
-          html += renderParagraphBlock(i, p, data);
-        }
-      }
-
-      elOut.innerHTML = html;
-      elInputCard.style.display = 'none';
-      elResetBar.style.display = '';
-    } catch (e) {
-      elOut.innerHTML = '<div class="az-error">Error: ' + esc(e.message) + '</div>';
-    } finally {
-      elBtn.disabled = false;
-      elBtn.textContent = 'Score';
+    // Score
+    if (nii != null) {
+      html += '<div style="margin-top:16px;font-family:var(--mono);font-size:32px;font-weight:700;color:' + color + '">' + esc(nii) + '</div>';
+      html += '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px">' + esc(label) + '</div>';
     }
-  });
 
-  document.getElementById('scoreNewBtn').addEventListener('click', () => {
-    elInput.value = '';
-    elInputCard.style.display = '';
-    elOut.style.display = 'none';
-    elOut.innerHTML = '';
-    elResetBar.style.display = 'none';
-    elInput.focus();
-  });
+    // Tilt
+    if (tilt.length) {
+      html += '<div style="margin-top:16px"><div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">WHAT THE CORE DETECTED</div><ul class="az-list">';
+      tilt.forEach(t => { html += '<li>' + esc(TILT[t] || t) + '</li>'; });
+      html += '</ul></div>';
+    }
 
-  document.getElementById('scoreClearBtn').addEventListener('click', () => {
-    elInput.value = '';
-    elInputCard.style.display = '';
-    elOut.style.display = 'none';
-    elOut.innerHTML = '';
-    elResetBar.style.display = 'none';
+    // Failure modes
+    if (fails.length) {
+      html += '<div style="margin-top:16px"><div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">STRUCTURAL RISKS</div><ul class="az-list">';
+      fails.forEach(f => {
+        const h = FM[f.k];
+        html += '<li>' + esc(h ? h.n + ' \u2014 ' + h.d : f.k + ': ' + f.state) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // NII dimensions (render raw from API if present)
+    const dims = data.nii || {};
+    const dimKeys = Object.keys(dims).filter(k => k.startsWith('d') && k.includes('_') && typeof dims[k] === 'number');
+    if (dimKeys.length) {
+      html += '<div style="margin-top:16px"><div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">DIMENSIONS</div>';
+      dimKeys.forEach(k => {
+        const pct = Math.round(dims[k] * 100);
+        const c = pct >= 80 ? 'var(--accent)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
+        html += '<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;margin-bottom:4px">';
+        html += '<span style="color:var(--muted)">' + esc(k) + '</span>';
+        html += '<span style="color:' + c + ';font-weight:700">' + pct + '%</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div style="margin-top:16px"><button class="az-btn" id="newBtn">New text</button></div>';
+    html += '</div>';
+
+    results.innerHTML = html;
+    results.style.display = '';
+    inputCard.style.display = 'none';
+
+    document.getElementById('newBtn').addEventListener('click', () => {
+      input.value = '';
+      inputCard.style.display = '';
+      results.style.display = 'none';
+      input.focus();
+    });
+  }
+
+  /* ── Run ── */
+  runBtn.addEventListener('click', async () => {
+    const text = input.value.trim();
+    if (!text) return;
+    runBtn.disabled = true; runBtn.textContent = 'Scoring\u2026';
+    try {
+      const res = await fetch('/nti', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.error) {
+        results.innerHTML = '<div class="az-card" style="color:var(--red)">' + esc(data.error) + '</div>';
+        results.style.display = '';
+      } else {
+        render(text, data);
+      }
+    } catch (e) {
+      results.innerHTML = '<div class="az-card" style="color:var(--red)">Error: ' + esc(e.message) + '</div>';
+      results.style.display = '';
+    } finally {
+      runBtn.disabled = false; runBtn.textContent = 'Score';
+    }
   });
 })();
 </script>

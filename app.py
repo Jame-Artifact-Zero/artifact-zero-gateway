@@ -7,15 +7,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pre_score_gate import pre_score_gate
 
-from flask import Flask, request, jsonify, render_template, session, send_from_directory
+from flask import Flask, request, jsonify, render_template, session
 import db as database
 
 app = Flask(__name__)
-
-
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(app.static_folder, 'favicon.png', mimetype='image/png')
 
 
 # ── Score JSON parsing helper ──
@@ -817,11 +812,6 @@ def voice_page():
                            user_id=session.get('user_id'))
 
 
-@app.route("/contact-v3")
-def contact_v3_page():
-    return render_template("contact-v3.html")
-
-
 @app.route("/fortune500")
 @app.route("/live")
 def fortune500_page():
@@ -963,6 +953,15 @@ def api_score_free():
         l0 = detect_l0_constraints(text)
         obj = objective_extract(text)
         tilt = classify_tilt(text)
+
+        # Highlights: backend owns spans, frontend only renders
+        framing = detect_l2_framing(text)
+        try:
+            from highlight_map import get_highlights
+            axis2, highlights = get_highlights(text, framing=framing)
+        except Exception:
+            axis2, highlights = None, []
+
         dbc = detect_downstream_before_constraint("", text, l0)
         nii = compute_nii("", text, l0, dbc, tilt)
 
@@ -1000,6 +999,9 @@ def api_score_free():
             "dominance": dominance
         },
         "tilt": {"tags": tilt, "count": len(tilt)},
+        "highlights": highlights,
+        "axis2": axis2,
+        "framing": framing,
         "meta": {
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
             "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
@@ -1225,6 +1227,13 @@ def nti_run():
 
     framing = detect_l2_framing(text)
 
+    # Highlights: backend owns spans, frontend only renders
+    try:
+        from highlight_map import get_highlights
+        axis2, highlights = get_highlights(text, framing=framing)
+    except Exception:
+        axis2, highlights = None, []
+
     # tilt taxonomy (now uses prompt+answer for scope expansion detection)
     tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
 
@@ -1278,7 +1287,9 @@ def nti_run():
         },
         "interaction_matrix": interaction,
         "nii": nii,
-        "tilt_taxonomy": tilt
+        "tilt_taxonomy": tilt,
+        "highlights": highlights,
+        "axis2": axis2
     }
 
     latency_ms = int((time.time() - t0) * 1000)
