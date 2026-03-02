@@ -239,3 +239,213 @@ body::before {
   }
   .az-footer-right { flex-wrap: wrap; justify-content: center; }
 }
+
+/* ───────────────────────────────────────────────────────────
+   PAGE INTERNAL STRUCTURE (shared by SafeCheck + Score)
+   No inline styles. No page-level layout overrides.
+   ─────────────────────────────────────────────────────────── */
+
+.az-page {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--az-5);
+}
+
+.az-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: var(--az-5);
+}
+
+.az-intro h2 {
+  font-family: var(--az-mono);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 8px 0;
+}
+.az-intro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.az-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--az-4);
+  border: 1px solid rgba(37, 42, 53, .7);
+  background: rgba(18, 21, 27, .7);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.az-privacy .left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.az-privacy .title {
+  font-family: var(--az-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--az-text);
+}
+.az-privacy .sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.az-privacy .countdown {
+  font-family: var(--az-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--amber);
+}
+
+.az-lensbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.az-chip {
+  font-family: var(--az-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  padding: 8px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+}
+.az-chip:hover { color: var(--az-text); }
+.az-chip.active {
+  border-color: rgba(0, 232, 156, .6);
+  color: var(--az-text);
+}
+
+.az-textarea {
+  width: 100%;
+  min-height: 180px;
+  background: transparent;
+  border: none;
+  color: var(--az-text);
+  font-family: var(--az-sans);
+  font-size: 15px;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+}
+
+.az-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--az-3);
+  flex-wrap: wrap;
+}
+
+.az-btn {
+  padding: 12px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--az-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.az-btn:hover { border-color: rgba(0, 232, 156, .35); }
+.az-btn.primary {
+  background: var(--az-accent);
+  color: #000;
+  border-color: transparent;
+}
+.az-btn.danger {
+  background: transparent;
+  border-color: rgba(239, 68, 68, .5);
+  color: var(--az-text);
+}
+.az-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.az-output {
+  min-height: 160px;
+}
+
+.az-section {
+  border-top: 1px solid rgba(37, 42, 53, .6);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.az-section:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.az-section h3 {
+  font-family: var(--az-mono);
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--az-text);
+  margin: 0 0 10px 0;
+}
+.az-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.az-kv strong { color: var(--az-text); font-weight: 600; }
+
+.az-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 14px;
+}
+.az-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.az-badge {
+  font-family: var(--az-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 42, 53, .8);
+  background: rgba(26, 30, 39, .85);
+  color: var(--az-text);
+}
+.az-badge.red { border-color: rgba(239, 68, 68, .5); }
+.az-badge.amber { border-color: rgba(245, 158, 11, .5); }
+.az-badge.green { border-color: rgba(0, 232, 156, .45); }
+.az-badge.purple { border-color: rgba(167, 139, 250, .5); }
+
+.az-preview {
+  background: rgba(10, 12, 16, .35);
+  border: 1px solid rgba(37, 42, 53, .6);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--az-text);
+  white-space: pre-wrap;
+}
+
+.az-hl.hedge { background: rgba(245, 158, 11, .22); border-bottom: 1px solid rgba(245, 158, 11, .55); }
+.az-hl.filler { background: rgba(167, 139, 250, .18); border-bottom: 1px solid rgba(167, 139, 250, .55); }
+.az-hl.clarity { background: rgba(0, 232, 156, .14); border-bottom: 1px solid rgba(0, 232, 156, .45); }
+
+/* Hide privacy strip on pages that don't use timer */
+.page-score .az-privacy { display: none; }

@@ -2,197 +2,405 @@
 {% block title %}Score — Artifact Zero{% endblock %}
 {% block body_class %}page-score{% endblock %}
 
-{% block head %}
-<style>
-.main{max-width:720px;margin:0 auto;padding:40px 20px 80px}
-
-h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
-.subtitle{color:var(--muted);font-size:14px;margin-bottom:30px}
-.free-badge{display:inline-block;background:rgba(0,232,156,.12);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;margin-left:8px}
-
-textarea{
-  width:100%;min-height:160px;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);padding:16px;border-radius:8px;font-family:'DM Sans',sans-serif;
-  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
-}
-textarea:focus{border-color:var(--accent)}
-textarea::placeholder{color:#3d4452}
-
-.controls{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
-.btn{padding:10px 24px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-score{background:var(--green);color:#000;font-size:15px;padding:12px 32px}
-.btn-score:hover{background:#16a34a}
-.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
-.btn-sample:hover{color:var(--text);background:var(--border)}
-.char-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-
-.usage-bar{margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
-.usage-bar .label{color:var(--muted);font-family:'JetBrains Mono',monospace}
-.usage-bar .count{color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:600}
-.usage-bar a{color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace}
-
-/* Results */
-.results{display:none;margin-top:30px}
-.results.show{display:block;animation:fadeIn .3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-.score-hero{text-align:center;padding:30px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px}
-.score-number{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;line-height:1}
-.score-number.high{color:var(--green)}
-.score-number.mid{color:var(--amber)}
-.score-number.low{color:var(--red)}
-.score-number.crit{color:var(--red)}
-.score-label{font-family:'JetBrains Mono',monospace;font-size:13px;margin-top:6px;text-transform:uppercase;letter-spacing:2px}
-.score-label.high{color:var(--green)}
-.score-label.mid{color:var(--amber)}
-.score-label.low{color:var(--red)}
-.score-label.crit{color:var(--red)}
-
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-@media(max-width:500px){.detail-grid{grid-template-columns:1fr}}
-.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
-.detail-card h3{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.detail-card .value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
-.detail-card .value.green{color:var(--green)}
-.detail-card .value.red{color:var(--red)}
-.detail-card .value.amber{color:var(--amber)}
-
-.failure-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
-.failure-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
-.failure-badge.confirmed{background:#ef444422;color:var(--red)}
-.failure-badge.probable{background:#f59e0b22;color:var(--amber)}
-.failure-badge.false{background:rgba(0,232,156,.12);color:var(--green)}
-.failure-name{font-size:13px;color:var(--muted)}
-
-.tilt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-
-.meta-row{display:flex;gap:16px;margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap}
-
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="main">
+<div class="az-page">
 
-<h1>Score your text <span class="free-badge">10 free / month</span></h1>
-<p class="subtitle">Paste any message, email, or AI output. Get a structural integrity score in milliseconds.</p>
-
-<textarea id="input" placeholder="Paste your text here...&#10;&#10;Example: &quot;I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.&quot;"></textarea>
-
-<div class="controls">
-  <div>
-    <button class="btn btn-score" id="scoreBtn" onclick="scoreText()">Score this →</button>
-    <button class="btn btn-sample" onclick="loadSample()">Load sample</button>
+  <div class="az-card az-intro">
+    <h2>Score</h2>
+    <p>
+      Paste what you received. See what's actually being said — pressure, drift, hidden commitments, and structural gaps — in plain language.
+    </p>
   </div>
-  <span class="char-count" id="charCount">0 / 50,000</span>
-</div>
 
-<div class="usage-bar" id="usageBar">
-  <span class="label">Free tier</span>
-  <span class="count" id="usageCount">— / 10 this month</span>
-  <a href="/docs#pricing">Upgrade →</a>
-</div>
+  <div class="az-card">
+    <div class="az-section">
+      <textarea id="scoreInput" class="az-textarea" placeholder="Paste what someone sent you..."></textarea>
+    </div>
 
-<div id="ntiResults"></div>
+    <div class="az-section az-actions" id="scoreCheckBar">
+      <button class="az-btn primary" id="scoreBtn" type="button">Score</button>
+    </div>
+
+    <div class="az-section" id="scoreLensBar" style="display:none;">
+      <div class="az-lensbar" role="group" aria-label="Lenses">
+        <button class="az-chip" data-lens="tone" type="button">Tone <span class="az-chip-count" id="sc-c-tone"></span></button>
+        <button class="az-chip" data-lens="edge" type="button">Edge <span class="az-chip-count" id="sc-c-edge"></span></button>
+        <button class="az-chip" data-lens="drift" type="button">Drift <span class="az-chip-count" id="sc-c-drift"></span></button>
+      </div>
+    </div>
+
+    <div class="az-section" id="scorePreviewWrap" style="display:none;">
+      <div class="az-preview" id="scorePreview"></div>
+    </div>
+
+    <div class="az-section az-actions" id="scoreActionBar" style="display:none;">
+      <button class="az-btn" id="scoreEditBtn" type="button">New text</button>
+      <button class="az-btn danger" id="scoreClearBtn" type="button">Clear</button>
+    </div>
+  </div>
+
+  <div class="az-card az-output" id="scoreOutput" style="display:none;"></div>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/nti-score-component.js"></script>
+<style>
+  .az-chip-count { font-size: 9px; opacity: 0.6; }
 
-<script src="/static/nti-engine.js"></script>
+  /* Score page: words become the color */
+  .az-preview .w { color: var(--text); transition: color 0.4s ease; }
 
+  /* Tone lens: passive aggression + dominance */
+  .az-preview.lens-tone .w-passive { color: var(--az-purple); }
+  .az-preview.lens-tone .w-dominance { color: var(--red); font-weight: 600; }
+  .az-preview.lens-tone .w-intensifier { color: var(--red); }
 
+  /* Edge lens: serious relational patterns */
+  .az-preview.lens-edge .w-edge { color: var(--red); font-weight: 700; text-decoration: underline; text-decoration-color: rgba(239,68,68,0.4); }
+
+  /* Drift lens: hedge + deferral */
+  .az-preview.lens-drift .w-hedge { color: var(--amber); }
+  .az-preview.lens-drift .w-defer { color: var(--az-amber); font-style: italic; }
+  .az-preview.lens-drift .w-collapse { color: var(--az-purple); }
+
+  .sc-tap { position: fixed; z-index: 100; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap; pointer-events: none; display: none; }
+  .sc-tap.vis { display: block; }
+</style>
 <script>
-const input = document.getElementById('input');
-const charCount = document.getElementById('charCount');
-const scoreBtn = document.getElementById('scoreBtn');
+(() => {
+  'use strict';
 
-const SAMPLE = `I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered.`;
+  /* ── PATTERN LIBRARIES (Score = analyzing someone else's words) ── */
 
-input.addEventListener('input', () => {
-  charCount.textContent = input.value.length.toLocaleString() + ' / 50,000';
-});
+  const PASSIVE = [
+    "per my last email","as previously stated","as i mentioned","as already discussed",
+    "i thought we agreed","as i said","i thought we said","i was under the impression",
+    "friendly reminder","gentle reminder","not sure why","as i already explained",
+    "i believe i mentioned","if you recall"
+  ];
 
-function loadSample() {
-  input.value = SAMPLE;
-  input.dispatchEvent(new Event('input'));
-}
+  const DOMINANCE = [
+    "you need to","you have to","you can't","you must","you better",
+    "you should have","you were supposed to","you failed to","you didn't",
+    "let me be clear","the fact is","the reality is","the truth is",
+    "to be frank","i need you to"
+  ];
 
-function getUsage() {
-  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
-  return parseInt(localStorage.getItem(key) || '0');
-}
-function addUsage() {
-  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
-  const n = getUsage() + 1;
-  localStorage.setItem(key, n);
-  return n;
-}
-function updateUsageDisplay() {
-  const used = getUsage();
-  document.getElementById('usageCount').textContent = used + ' / 10 this month';
-}
-updateUsageDisplay();
+  const INTENSIFIERS = [
+    "obviously","clearly","literally","actually","totally","completely",
+    "absolutely","always","never","everyone","no one","nobody",
+    "ridiculous","insane","crazy"
+  ];
 
-async function scoreText() {
-  const text = input.value.trim();
-  if (!text) return;
+  const EDGE_PATTERNS = [
+    "that never happened","you're being too sensitive","you're being dramatic",
+    "you always do this","after everything i've done","you owe me",
+    "i can't believe you","or else","last chance","last warning",
+    "take it or leave it","get over it","not my problem",
+    "it doesn't matter","whatever","you're imagining things",
+    "nobody else thinks that","you're overreacting"
+  ];
 
-  if (getUsage() >= 10) {
-    alert('Free tier limit reached (10/month). Get an API key at /docs for more.');
-    return;
-  }
+  const HEDGE = [
+    "maybe","might","could","perhaps","it seems","it sounds","generally","often","usually",
+    "in general","likely","approximately","around","probably","possibly","kind of","sort of",
+    "i think","i believe","i guess","i suppose","it appears","arguably","potentially",
+    "presumably","not sure","we'll see","hard to say","should be fine"
+  ];
 
-  scoreBtn.disabled = true;
-  scoreBtn.textContent = 'Scoring...';
+  const DEFER = [
+    "later","eventually","we can handle that later","we'll address later",
+    "we'll figure it out","next week","after we launch","phase 2",
+    "future iteration","explore","consider","evaluate","assess",
+    "as we continue","as we iterate","we will look into","we'll revisit",
+    "circle back","table that","at some point","down the road"
+  ];
 
-  try {
-    const resp = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+  const COLLAPSE = [
+    "overall","basically","in general","at the end of the day","all in all",
+    "net net","it all comes down to","the main thing","just"
+  ];
+
+  /* ── MATCHING ── */
+  function matchAll(text, phrases) {
+    const lo = text.toLowerCase();
+    const hits = [];
+    phrases.slice().sort((a,b) => b.length - a.length).forEach(p => {
+      let idx = 0;
+      while ((idx = lo.indexOf(p, idx)) !== -1) {
+        hits.push({ s: idx, e: idx + p.length, p: p });
+        idx += p.length;
+      }
     });
-    const data = await resp.json();
-    if (data.error) {
-      const el = document.getElementById('results');
-      el.innerHTML = '<div style="text-align:center;padding:24px;color:#f59e0b;font-family:\'JetBrains Mono\',monospace;font-size:13px">' + data.error + '</div>';
-      return;
-    }
-    addUsage();
-    updateUsageDisplay();
-    const el = document.getElementById('ntiResults');
-    el.innerHTML = '';
-    el.appendChild(NTIScore.render(data, text));
-  } catch (e) {
-    alert('Scoring failed: ' + e.message);
-  } finally {
-    scoreBtn.disabled = false;
-    scoreBtn.textContent = 'Score this →';
+    return hits;
   }
-}
-</script>
 
-
-<script>
-// Add rewrite capability to score page
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form') || document.querySelector('textarea');
-  if (form) {
-    const rw = document.createElement('div');
-    rw.id = 'score-rewrite-out';
-    rw.style.cssText = 'display:none;margin-top:16px;background:#12151b;border:1px solid #00e89c;border-radius:10px;padding:16px';
-    const ta = document.querySelector('textarea');
-    if (ta && ta.parentElement) {
-      ta.parentElement.appendChild(rw);
-      NTI.rewriteButton('textarea', '#score-rewrite-out');
-    }
+  function dedup(matches) {
+    matches.sort((a,b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
+    const used = new Set();
+    return matches.filter(m => {
+      for (let i = m.s; i < m.e; i++) { if (used.has(i)) return false; }
+      for (let i = m.s; i < m.e; i++) used.add(i);
+      return true;
+    });
   }
-});
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  /* ── ANALYSIS ── */
+  let scoreAnalysis = null;
+
+  function analyze(text) {
+    const passives = matchAll(text, PASSIVE).map(m => ({ ...m, t: 'passive' }));
+    const doms = matchAll(text, DOMINANCE).map(m => ({ ...m, t: 'dominance' }));
+    const intens = matchAll(text, INTENSIFIERS).map(m => ({ ...m, t: 'intensifier' }));
+    const edges = matchAll(text, EDGE_PATTERNS).map(m => ({ ...m, t: 'edge' }));
+    const hedges = matchAll(text, HEDGE).map(m => ({ ...m, t: 'hedge' }));
+    const defers = matchAll(text, DEFER).map(m => ({ ...m, t: 'defer' }));
+    const collapses = matchAll(text, COLLAPSE).map(m => ({ ...m, t: 'collapse' }));
+
+    const all = dedup([].concat(passives, doms, intens, edges, hedges, defers, collapses));
+
+    return {
+      text, matches: all,
+      counts: {
+        tone: all.filter(m => m.t === 'passive' || m.t === 'dominance' || m.t === 'intensifier').length,
+        edge: all.filter(m => m.t === 'edge').length,
+        drift: all.filter(m => m.t === 'hedge' || m.t === 'defer' || m.t === 'collapse').length
+      }
+    };
+  }
+
+  function buildRevealHTML(a) {
+    const text = a.text;
+    const sorted = a.matches.slice().sort((x,y) => x.s - y.s);
+    let html = '', pos = 0;
+    sorted.forEach(m => {
+      if (m.s > pos) html += '<span class="w">' + esc(text.substring(pos, m.s)) + '</span>';
+      html += '<span class="w w-' + m.t + '" data-t="' + m.t + '" data-p="' + esc(m.p) + '">' + esc(text.substring(m.s, m.e)) + '</span>';
+      pos = m.e;
+    });
+    if (pos < text.length) html += '<span class="w">' + esc(text.substring(pos)) + '</span>';
+    return html;
+  }
+
+  /* ── DOM ── */
+  const elInput = document.getElementById('scoreInput');
+  const elPreview = document.getElementById('scorePreview');
+  const elPreviewWrap = document.getElementById('scorePreviewWrap');
+  const elLensBar = document.getElementById('scoreLensBar');
+  const elActionBar = document.getElementById('scoreActionBar');
+  const elCheckBar = document.getElementById('scoreCheckBar');
+  const elOutput = document.getElementById('scoreOutput');
+  const scoreBtn = document.getElementById('scoreBtn');
+
+  /* ── LENS TOGGLES ── */
+  const activeLenses = new Set();
+
+  document.querySelectorAll('.az-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lens = btn.dataset.lens;
+      if (activeLenses.has(lens)) {
+        activeLenses.delete(lens);
+        btn.classList.remove('active');
+        elPreview.classList.remove('lens-' + lens);
+      } else {
+        activeLenses.add(lens);
+        btn.classList.add('active');
+        elPreview.classList.add('lens-' + lens);
+      }
+    });
+  });
+
+  /* ── SCORE BUTTON ── */
+  scoreBtn.addEventListener('click', async () => {
+    const text = elInput.value.trim();
+    if (!text) return;
+
+    scoreAnalysis = analyze(text);
+    elPreview.innerHTML = buildRevealHTML(scoreAnalysis);
+    elPreview.className = 'az-preview';
+
+    document.getElementById('sc-c-tone').textContent = scoreAnalysis.counts.tone ? '· ' + scoreAnalysis.counts.tone : '';
+    document.getElementById('sc-c-edge').textContent = scoreAnalysis.counts.edge ? '· ' + scoreAnalysis.counts.edge : '';
+    document.getElementById('sc-c-drift').textContent = scoreAnalysis.counts.drift ? '· ' + scoreAnalysis.counts.drift : '';
+
+    elInput.style.display = 'none';
+    elCheckBar.style.display = 'none';
+    elPreviewWrap.style.display = '';
+    elLensBar.style.display = '';
+    elActionBar.style.display = '';
+
+    // Fire API
+    scoreBtn.disabled = true;
+    try {
+      const res = await fetch('/nti', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      renderScoreReadout(data);
+    } catch (e) {
+      elOutput.innerHTML = '<div style="color:var(--red);font-size:14px;">Error processing request.</div>';
+      elOutput.style.display = '';
+    } finally {
+      scoreBtn.disabled = false;
+    }
+  });
+
+  /* ── RENDER READOUT (matches /nti response shape) ── */
+  function renderScoreReadout(data) {
+    const nii = data?.nii?.nii_score;
+    const niiLabel = data?.nii?.nii_label || '';
+    const tiltTags = data?.tilt_taxonomy || [];
+    const fm = data?.parent_failure_modes || {};
+    const niiDetail = data?.nii || {};
+
+    const TILT_HUMAN = {
+      'T1_REASSURANCE_DRIFT': 'They\'re reassuring you instead of addressing the issue.',
+      'T2_CERTAINTY_INFLATION': 'They\'re claiming certainty without backing it up.',
+      'T3_CONSENSUS_CLAIMS': 'They\'re implying broad consensus without proof.',
+      'T4_CAPABILITY_OVERREACH': 'They\'re overstating what they can deliver.',
+      'T5_ABSOLUTE_LANGUAGE': 'They\'re using absolute terms where nuance would be honest.',
+      'T6_CONSTRAINT_DEFERRAL': 'They\'re pushing hard decisions to later.',
+      'T7_CATEGORY_BLEND': 'They\'re blurring categories to hide specifics.',
+      'T8_PRESSURE_OPTIMIZATION': 'They\'re manufacturing urgency to force a decision.',
+      'T9_SCOPE_EXPANSION': 'They\'re expanding scope without acknowledging the shift.',
+      'T10_AUTHORITY_IMPOSITION': 'They\'re asserting authority rather than earning it.'
+    };
+
+    const FM_HUMAN = {
+      'UDDS': { name: 'Upstream Drift', desc: 'Agreement language appeared before constraints were set. They said "yes" before defining what "yes" means.' },
+      'DCE': { name: 'Deferred Enforcement', desc: 'Hard decisions and specifics got pushed to later. The commitment exists on paper but the details don\'t.' },
+      'CCA': { name: 'Constraint Collapse', desc: 'Vague claims were bundled together to obscure what\'s actually missing.' }
+    };
+
+    let html = '';
+
+    // Big score
+    if (nii !== null && nii !== undefined) {
+      const color = nii >= 80 ? 'var(--accent)' : nii >= 60 ? 'var(--amber)' : 'var(--red)';
+      html += '<div class="az-section">';
+      html += '<div style="font-family:var(--mono);font-size:36px;font-weight:700;color:' + color + '">' + nii + '</div>';
+      html += '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px">' + esc(niiLabel) + ' · STRUCTURAL INTEGRITY</div>';
+      html += '</div>';
+    }
+
+    // What's happening (tilt in human language)
+    if (tiltTags.length > 0) {
+      html += '<div class="az-section"><h3>What\'s happening in this message</h3><ul class="az-list">';
+      tiltTags.forEach(t => {
+        const human = TILT_HUMAN[t];
+        html += '<li>' + esc(human || t.replace(/_/g, ' ')) + '</li>';
+      });
+      html += '</ul></div>';
+    } else {
+      html += '<div class="az-section"><h3>What\'s happening</h3><div style="color:var(--muted);font-size:14px;">No tilt patterns detected. The message is structurally clean.</div></div>';
+    }
+
+    // Failure modes
+    const fmActive = [];
+    ['UDDS', 'DCE', 'CCA'].forEach(k => {
+      const obj = fm[k] || {};
+      const state = obj[k.toLowerCase() + '_state'] || '';
+      if (state.includes('CONFIRMED') || state.includes('PROBABLE')) {
+        fmActive.push({ key: k, state: state, ...FM_HUMAN[k] });
+      }
+    });
+
+    if (fmActive.length > 0) {
+      html += '<div class="az-section"><h3>Structural risks</h3><ul class="az-list">';
+      fmActive.forEach(f => {
+        const badge = f.state.includes('CONFIRMED') ? 'red' : 'amber';
+        html += '<li><span class="az-badge ' + badge + '">' + esc(f.key) + '</span> <strong>' + esc(f.name) + '</strong> — ' + esc(f.desc) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // Dimension scores in human language
+    const dims = [
+      { key: 'd1_constraint_density', name: 'Specificity', desc: 'Claims backed by numbers, dates, or constraints' },
+      { key: 'd2_ask_architecture', name: 'Ask Architecture', desc: 'Main request positioned before capability claims' },
+      { key: 'd3_enforcement_integrity', name: 'Enforcement', desc: 'Freedom from deferral and erosion markers' },
+      { key: 'd4_tilt_resistance', name: 'Tilt Resistance', desc: 'Resistance to drift patterns and structural manipulation' },
+      { key: 'd5_failure_mode_severity', name: 'Failure Mode Severity', desc: 'Freedom from UDDS, DCE, and CCA' }
+    ];
+
+    html += '<div class="az-section"><h3>5-dimension breakdown</h3>';
+    dims.forEach(dim => {
+      const val = niiDetail[dim.key];
+      if (val !== undefined && val !== null) {
+        const pct = Math.round(val * 100);
+        const color = pct >= 80 ? 'var(--accent)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
+        html += '<div style="margin-bottom:12px;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">';
+        html += '<span style="font-family:var(--mono);font-size:12px;color:var(--text)">' + esc(dim.name) + '</span>';
+        html += '<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:' + color + '">' + pct + '%</span>';
+        html += '</div>';
+        html += '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">';
+        html += '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:2px;"></div>';
+        html += '</div>';
+        html += '<div style="font-size:12px;color:var(--muted);margin-top:2px;">' + esc(dim.desc) + '</div>';
+        html += '</div>';
+      }
+    });
+    html += '</div>';
+
+    elOutput.innerHTML = html;
+    elOutput.style.display = '';
+  }
+
+  /* ── ACTION BUTTONS ── */
+  document.getElementById('scoreEditBtn').addEventListener('click', () => {
+    elInput.style.display = '';
+    elInput.value = '';
+    elCheckBar.style.display = '';
+    elPreviewWrap.style.display = 'none';
+    elLensBar.style.display = 'none';
+    elActionBar.style.display = 'none';
+    elOutput.style.display = 'none';
+    activeLenses.clear();
+    document.querySelectorAll('.az-chip').forEach(b => b.classList.remove('active'));
+    elInput.focus();
+  });
+
+  document.getElementById('scoreClearBtn').addEventListener('click', () => {
+    elInput.value = '';
+    elInput.style.display = '';
+    elCheckBar.style.display = '';
+    elPreviewWrap.style.display = 'none';
+    elLensBar.style.display = 'none';
+    elActionBar.style.display = 'none';
+    elOutput.style.display = 'none';
+    scoreAnalysis = null;
+    activeLenses.clear();
+    document.querySelectorAll('.az-chip').forEach(b => b.classList.remove('active'));
+  });
+
+  /* ── TAP LABELS ── */
+  const tapEl = document.createElement('div');
+  tapEl.className = 'sc-tap';
+  document.body.appendChild(tapEl);
+
+  const TAP_NAMES = {
+    passive: 'PASSIVE AGGRESSION', dominance: 'DOMINANCE', intensifier: 'INTENSIFIER',
+    edge: 'EDGE WARNING', hedge: 'HEDGE', defer: 'DEFERRED', collapse: 'COLLAPSE'
+  };
+
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (t.dataset && t.dataset.t) {
+      const rect = t.getBoundingClientRect();
+      tapEl.innerHTML = '<span style="font-weight:700;color:' + getComputedStyle(t).color + '">' + (TAP_NAMES[t.dataset.t] || t.dataset.t) + '</span> ' + esc(t.dataset.p);
+      tapEl.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+      tapEl.style.top = (rect.bottom + 4) + 'px';
+      tapEl.classList.add('vis');
+    } else {
+      tapEl.classList.remove('vis');
+    }
+  });
+})();
 </script>
-
-
 {% endblock %}
