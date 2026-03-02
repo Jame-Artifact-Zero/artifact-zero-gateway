@@ -970,6 +970,26 @@ def api_score_free():
         dbc = detect_downstream_before_constraint("", text, l0)
         nii = compute_nii("", text, l0, dbc, tilt)
 
+        # NTI signal detection (deterministic taxonomy)
+        try:
+            from core_engine.nti_signals import detect_signals
+            signals = detect_signals(text)
+            # Promote parent failure modes into signal summary
+            _d = nii.get("detail", {})
+            if "CONFIRMED" in str(_d.get("cca", "")) or "PROBABLE" in str(_d.get("cca", "")):
+                signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+            if "CONFIRMED" in str(_d.get("dce", "")) or "PROBABLE" in str(_d.get("dce", "")):
+                signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+            if "CONFIRMED" in str(_d.get("udds", "")) or "PROBABLE" in str(_d.get("udds", "")):
+                signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+            tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+            for code in (tilt or []):
+                _sig = tilt_to_signal.get(code)
+                if _sig:
+                    signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+        except Exception:
+            signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
+
         # Failure modes already computed inside compute_nii — read from detail
         detail = nii.get("detail", {})
         udds_state = detail.get("udds", "FALSE")
@@ -1004,6 +1024,7 @@ def api_score_free():
             "dominance": dominance
         },
         "tilt": {"tags": tilt, "count": len(tilt)},
+        "signals": signals,
         "highlights": highlights,
         "axis2": axis2,
         "framing": framing,
@@ -1249,6 +1270,24 @@ def nti_run():
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
     nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
 
+    # NTI signal detection (deterministic taxonomy)
+    try:
+        from core_engine.nti_signals import detect_signals
+        signals = detect_signals(text)
+        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+            signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+            signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+            signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+        tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+        for code in (tilt or []):
+            _sig = tilt_to_signal.get(code)
+            if _sig:
+                signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+    except Exception:
+        signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
+
     dominance: List[str] = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
         dominance.append("CCA")
@@ -1293,6 +1332,7 @@ def nti_run():
         "interaction_matrix": interaction,
         "nii": nii,
         "tilt_taxonomy": tilt,
+        "signals": signals,
         "highlights": highlights,
         "axis2": axis2
     }
