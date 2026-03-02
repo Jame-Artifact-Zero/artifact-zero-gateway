@@ -202,7 +202,7 @@
     const btn=document.getElementById('scoreRunBtn');btn.disabled=true;btn.textContent='Scoring\u2026';
     try{const res=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});apiData=await res.json();
     if(apiData.error){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">'+esc(apiData.error)+'</div>';return;}
-    highlights=(apiData.highlights||[]).map(h=>({...h}));activePattern=null;document.getElementById('scoreEmpty').style.display='none';document.getElementById('scoreFilled').style.display='';renderAll(true);
+    highlights=((apiData.signals&&apiData.signals.highlights)||apiData.highlights||[]).map(h=>({...h}));activePattern=null;document.getElementById('scoreEmpty').style.display='none';document.getElementById('scoreFilled').style.display='';renderAll(true);
     }catch(e){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">Error: '+esc(e.message)+'</div>';}finally{btn.disabled=false;btn.textContent='Score';}
   });
 

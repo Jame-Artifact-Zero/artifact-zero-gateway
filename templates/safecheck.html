@@ -361,7 +361,7 @@
       const res = await fetch('/api/v1/score/free', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
       apiData = await res.json();
       if (apiData.error) { document.getElementById('scEmpty').innerHTML = '<div style="color:var(--red);font-size:13px;">' + esc(apiData.error) + '</div>'; return; }
-      highlights = (apiData.highlights || []).map(h => ({...h}));
+      highlights = ((apiData.signals && apiData.signals.highlights) || apiData.highlights || []).map(h => ({...h}));
       activePattern = null;
       document.getElementById('scEmpty').style.display = 'none';
       document.getElementById('scFilled').style.display = '';

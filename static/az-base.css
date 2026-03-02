@@ -551,3 +551,77 @@ body::before {
   .az-page{ padding: var(--az-6) var(--az-4); }
   .az-card-pad{ padding: var(--az-5); }
 }
+
+/* ──────────────────────────────────────────────────────────
+   Shared UI components (chips, panels, disclosure, kv)
+   ────────────────────────────────────────────────────────── */
+
+.az-hero{
+  padding: 14px 12px;
+  border: 1px solid var(--border, #2a2a2e);
+  border-radius: 14px;
+  background: var(--surface, #111113);
+  margin-bottom: 12px;
+}
+.az-hero h1{
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 18px; margin: 0 0 6px;
+}
+.az-hero p{
+  margin: 0; color: var(--muted, #6b7280);
+  font-size: 13px; line-height: 1.4;
+}
+
+.az-stack{ display: flex; flex-direction: column; gap: 10px; }
+.az-row{ display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.az-mt8{ margin-top: 8px; }
+
+.az-chip{
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border, #2a2a2e);
+  background: rgba(255,255,255,0.03);
+  color: var(--text, #e5e7eb);
+  padding: 8px 10px; border-radius: 999px;
+  font-size: 12px; cursor: pointer; user-select: none;
+}
+.az-chip.active{
+  border-color: rgba(0,232,156,0.35);
+  background: rgba(0,232,156,0.10);
+}
+.az-chip .count{
+  color: var(--muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+
+.az-panel{
+  border: 1px solid var(--border, #2a2a2e);
+  background: var(--surface2, #1a1a1e);
+  border-radius: 14px; padding: 12px;
+}
+
+.az-preview{
+  white-space: pre-wrap; word-break: break-word;
+  font-size: 14px; line-height: 1.55;
+}
+
+.az-kv{
+  display: grid; grid-template-columns: 1fr; gap: 8px;
+}
+.az-kv .k{ color: var(--muted, #6b7280); font-size: 12px; }
+.az-kv .v{ font-size: 14px; }
+
+.az-divider{ height: 1px; background: var(--border, #2a2a2e); margin: 10px 0; }
+
+.az-disclosure summary{
+  cursor: pointer; color: var(--muted, #6b7280); font-size: 13px;
+}
+.az-disclosure pre{
+  overflow: auto;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border, #2a2a2e);
+  padding: 10px; border-radius: 12px; font-size: 12px;
+}
+
+@media (min-width: 720px){
+  .az-hero h1{ font-size: 22px; }
+}
