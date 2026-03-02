@@ -412,9 +412,13 @@ body::before {
 
 /* Highlight base */
 .az-hl{
+  padding: 0 2px;
+  border-radius: 4px;
   font-weight: 700;
   text-shadow: 0 0 10px rgba(0,0,0,0.25);
+  transition: opacity 0.2s ease;
 }
+.az-hl.dimmed{ opacity: 0.15; }
 
 /* ──────────────────────────────────────────────────────────
    Highlight palette (maps pattern → semantic color)
@@ -435,10 +439,57 @@ body::before {
 .pattern-shaming_moralizing{ color: #ef4444; }    /* red */
 .pattern-gatekeeping_exclusion{ color: #ef4444; } /* red */
 .pattern-dismissal_invalidating{ color: #ef4444; }/* red */
+.pattern-dominance_posture{ color: #ef4444; }     /* red */
+.pattern-escalation_trigger{ color: #ef4444; }    /* red */
 
 /* fallback */
 [class*="pattern-axis2_"]{ color: #ef4444; }
 .pattern-unknown{ color: rgba(255,255,255,0.90); }
+
+/* ──────────────────────────────────────────────────────────
+   Interaction layer — pattern buttons + explainer
+   ────────────────────────────────────────────────────────── */
+.az-results-card{ padding: 16px; }
+
+.az-pattern-bar{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.az-pattern-btn{
+  background: transparent;
+  border: 1px solid var(--az-accent, #00e89c);
+  color: var(--az-accent, #00e89c);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.az-pattern-btn:hover,
+.az-pattern-btn.active{
+  background: var(--az-accent, #00e89c);
+  color: #000;
+}
+
+.az-pattern-explainer{
+  font-size: 13px;
+  color: var(--muted, #9ca3af);
+  margin-bottom: 12px;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  letter-spacing: 0.3px;
+}
+.az-pattern-explainer.hidden{ display: none; }
+
+.az-highlighted-text{
+  line-height: 1.7;
+  font-size: 15px;
+  color: var(--text, #e5e7eb);
+}
 
 @media (max-width: 700px){
   .az-page{ padding: var(--az-6) var(--az-4); }
