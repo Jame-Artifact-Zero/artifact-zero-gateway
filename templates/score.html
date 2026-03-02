@@ -211,6 +211,16 @@
     document.getElementById('scoreEmpty').innerHTML='<div class="icon">\u2193</div><div class="label">RESULTS APPEAR HERE</div>';
     document.getElementById('scoreFilled').style.display='none';activePattern=null;document.getElementById('scoreInput').focus();
   });
+
+  /* Pick up demo text from home page */
+  try {
+    const demo = sessionStorage.getItem('az_demo_text');
+    if (demo) {
+      sessionStorage.removeItem('az_demo_text');
+      document.getElementById('scoreInput').value = demo;
+      document.getElementById('scoreRunBtn').click();
+    }
+  } catch(e) {}
 })();
 </script>
 {% endblock %}
