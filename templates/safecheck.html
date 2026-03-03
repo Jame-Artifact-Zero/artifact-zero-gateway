@@ -43,6 +43,8 @@
 </style>
 
 <div class="az-page">
+  <div style="font:700 11px/1 var(--mono);letter-spacing:3px;color:var(--accent);margin-bottom:12px">SAFECHECK</div>
+  <div style="font:400 14px/1.6 'DM Sans',system-ui,sans-serif;color:rgba(255,255,255,.60);margin-bottom:16px;max-width:48ch">Paste what you plan to send. The engine scores it in real time. Nothing is stored.</div>
   <div class="sc-timer-strip">
     <div class="sc-timer-left"><div class="sc-timer-dot"></div><span class="sc-timer-time" id="scTimerTime">3:00</span></div>
     <div class="sc-timer-right">Session clears in <span id="scTimerRight">3:00</span>.</div>
@@ -225,9 +227,10 @@
   const CLEAR_MS=180000; let startTime=null, timerId=null, timerStarted=false;
   function fmt(ms){const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
   function hardClear(){ document.getElementById('scInput').value=''; document.getElementById('scEmpty').style.display=''; document.getElementById('scEmpty').innerHTML='<div class="icon">↓</div><div class="label">RESULTS APPEAR HERE</div>'; document.getElementById('scFilled').style.display='none'; activeSignal=null;text='';highlights=[];apiData=null;catalog={}; if(timerId){clearInterval(timerId);timerId=null;} timerStarted=false;startTime=null; document.getElementById('scTimerTime').textContent='3:00'; document.getElementById('scTimerRight').textContent='3:00'; }
-  function tick(){ if(!startTime) return; const rem=CLEAR_MS-(Date.now()-startTime);const str=fmt(rem); document.getElementById('scTimerTime').textContent=str; document.getElementById('scTimerRight').textContent=str; if(rem<=0)hardClear(); }
+  function tick(){ if(!startTime) return; const rem=CLEAR_MS-(Date.now()-startTime);if(rem<=0){hardClear();return;} const str=fmt(rem); document.getElementById('scTimerTime').textContent=str; document.getElementById('scTimerRight').textContent=str; }
   function startTimer(){ if(timerStarted) return; timerStarted=true; startTime=Date.now(); timerId=setInterval(tick,250); }
   document.getElementById('scInput').addEventListener('focus',startTimer);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden && startTime) tick();});
 })();
 </script>
 {% endblock %}
