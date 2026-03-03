@@ -175,6 +175,7 @@ body::before {
 /* ── MAIN CONTENT ── */
 .az-main {
   padding: var(--az-6) var(--az-4);
+  padding-top: calc(var(--az-topbar-h) + var(--az-4));
 }
 
 /* ── BOTTOM NAV (mobile only) ── */
