@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Use Cases — Artifact Zero{% endblock %}
+{% block body_class %}page-use-cases{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/az-use-cases.css">
+{% endblock %}
+
+{% block content %}
+<section class="az-hero">
+  <h1 class="az-h1">Use Cases</h1>
+  <p class="az-subhead">
+    These are not “examples.” They’re deployable wedges: deterministic enforcement you can embed into products.
+  </p>
+  <div class="az-hero-badges">
+    <span class="az-pill">V1 detects</span>
+    <span class="az-pill">V3 stabilizes</span>
+    <span class="az-pill">Span-level audit trail</span>
+  </div>
+</section>
+
+<section class="az-usecase-grid">
+  {% for uc in use_cases %}
+  <article class="az-uc-card">
+    <header class="az-uc-hdr">
+      <h2 class="az-uc-title">{{ uc.title }}</h2>
+      <div class="az-uc-tags">
+        <span class="az-tag">{{ uc.industry }}</span>
+        <span class="az-tag az-tag-muted">{{ uc.wedge }}</span>
+      </div>
+    </header>
+
+    <div class="az-uc-body">
+      <div class="az-uc-row">
+        <div class="az-uc-k">Problem</div>
+        <div class="az-uc-v">{{ uc.problem }}</div>
+      </div>
+      <div class="az-uc-row">
+        <div class="az-uc-k">What breaks</div>
+        <div class="az-uc-v">{{ uc.breaks }}</div>
+      </div>
+      <div class="az-uc-row">
+        <div class="az-uc-k">V1 detects</div>
+        <div class="az-uc-v">{{ uc.v1_detects }}</div>
+      </div>
+      <div class="az-uc-row">
+        <div class="az-uc-k">V3 stabilizes</div>
+        <div class="az-uc-v">{{ uc.v3_stabilizes }}</div>
+      </div>
+      <div class="az-uc-row">
+        <div class="az-uc-k">Business model</div>
+        <div class="az-uc-v">{{ uc.model }}</div>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="az-card az-section">
+  <h2 class="az-h2">Developer Note</h2>
+  <p class="az-p">
+    Each use case is the same pattern: <strong>deterministic detection</strong> (V1) + optional <strong>stabilization</strong> (V3) + span-level evidence.
+    This is designed to sit <strong>before</strong> and <strong>after</strong> model calls.
+  </p>
+</section>
+
+{% endblock %}
