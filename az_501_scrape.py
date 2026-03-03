@@ -20,7 +20,7 @@ except ImportError:
     print("ERROR: pip install requests"); sys.exit(1)
 
 try:
-    import database
+    import db as database
 except ImportError:
     print("ERROR: run from project root"); sys.exit(1)
 
@@ -117,18 +117,18 @@ def main():
     cur = conn.cursor()
     if database.USE_PG:
         cur.execute(
-            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json, scraped_text) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
             "ON CONFLICT (slug) DO UPDATE SET nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count, "
-            "last_checked=EXCLUDED.last_checked, score_json=EXCLUDED.score_json, scraped_text=EXCLUDED.scraped_text",
-            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj, combined[:10000])
+            "last_checked=EXCLUDED.last_checked, score_json=EXCLUDED.score_json",
+            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj)
         )
     else:
         cur.execute("DELETE FROM fortune500_scores WHERE slug = ?", (AZ["slug"],))
         cur.execute(
-            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json, scraped_text) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj, combined[:10000])
+            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj)
         )
     conn.commit()
     conn.close()

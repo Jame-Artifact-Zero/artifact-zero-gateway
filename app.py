@@ -1114,6 +1114,7 @@ def api_score_free():
 
 
 @app.route("/health")
+@app.route("/api/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
