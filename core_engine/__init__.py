@@ -1,17 +1,20 @@
-from .convergence import run_core_pipeline
-from .v2_engine import run_v2
-from .v3_engine import run_v3
-from .v3_enforcement import enforce, self_audit, Policy
-from .routing_engine import route_decision
-from .feature_flags import get_flags
-from .trace import TraceLogger, new_trace_context
+"""core_engine — Three-Engine Architecture
 
-# Conversational Physics Layer (v1.0)
-from .otc import declare_objective, validate_objective, get_allowed_transforms
-from .ctc import classify_transform, audit_transform
-from .als import detect_abstraction_level, check_abstraction_guard
-from .salience import detect_salience_transforms
-from .odd import detect_drift, compute_state_delta
+Detection: finds signals, returns positions and types
+Scoring: consumes detection maps, produces scores through multiple lenses
+Storage: persists everything with timestamps, detects changes
 
-# Interrogative Analysis Engine (v1.0)
-from .interrogative_engine import compute_interrogative_field
+Usage:
+    from core_engine.detection import detect_all, detect_paragraphs
+    from core_engine.scoring import score_composite, score_paragraphs
+    from core_engine.storage import detect_changes, store_paragraph_scores, init_storage_tables
+"""
+
+from core_engine.detection import detect_all, detect_paragraphs
+from core_engine.scoring import score_composite, score_paragraphs, score_nii, score_nti, score_csi, score_hcs
+from core_engine.storage import (
+    init_storage_tables, store_snapshot, get_latest_snapshot,
+    detect_changes, store_paragraph_scores, store_page_scores,
+    store_stock_price, get_stock_history,
+)
+from core_engine.nti_signals import detect_signals

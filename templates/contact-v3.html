@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% block title %}Contact — Artifact Zero{% endblock %}
+{% block body_class %}page-contact{% endblock %}
+
+{% block head %}
+<style>
+/* =============================================
+   CONTACT — THE PRODUCT IS THE PAGE
+   Paste anything. See what NTI catches. Live.
+   ============================================= */
+
+.page-contact .az-main { padding: 0; max-width: 100%; }
+
+/* HERO */
+.ct-hero {
+  text-align: center; padding: 48px 24px 0;
+  max-width: 680px; margin: 0 auto;
+}
+.ct-hero h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.ct-hero .ct-sub {
+  color: var(--muted, #6b7280); font-size: 15px; line-height: 1.6;
+  margin-bottom: 0;
+}
+.ct-hero .ct-sub em { color: var(--text, #e8eaf0); font-style: normal; font-weight: 600; }
+
+/* INPUT ZONE */
+.ct-input-zone {
+  max-width: 680px; margin: 24px auto 0; padding: 0 24px;
+}
+.ct-textarea-wrap {
+  position: relative;
+  border: 1px solid var(--border, #252a35);
+  border-radius: 10px; background: var(--surface, #12151b);
+  transition: border-color 0.2s;
+}
+.ct-textarea-wrap:focus-within { border-color: var(--accent, #00e89c); }
+.ct-textarea {
+  width: 100%; min-height: 160px; max-height: 400px; padding: 18px 20px;
+  background: transparent; border: none; color: var(--text, #e8eaf0);
+  font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.7;
+  resize: vertical; outline: none;
+}
+.ct-textarea::placeholder { color: #3d4452; }
+.ct-input-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-top: 1px solid var(--border, #252a35);
+}
+.ct-meta {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--muted, #6b7280); display: flex; gap: 16px;
+}
+.ct-run-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: #000; background: var(--accent, #00e89c); border: none;
+  padding: 8px 24px; border-radius: 6px; cursor: pointer;
+  transition: all 0.15s;
+}
+.ct-run-btn:hover { background: #00d48c; }
+.ct-run-btn:disabled { background: var(--surface2, #1a1e27); color: var(--muted); cursor: default; }
+
+/* RESULTS */
+.ct-results {
+  max-width: 900px; margin: 0 auto; padding: 0 24px 80px;
+  display: none;
+}
+.ct-results.show { display: block; animation: ctFadeIn 0.4s ease; }
+@keyframes ctFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* SCORE BANNER */
+.ct-score-banner {
+  display: flex; align-items: center; justify-content: center;
+  gap: 24px; padding: 28px 24px; margin: 24px 0;
+  border-radius: 10px; background: var(--surface, #12151b);
+  border: 1px solid var(--border, #252a35);
+}
+.ct-big-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 48px; font-weight: 700; line-height: 1;
+}
+.ct-big-score.good { color: var(--accent, #00e89c); }
+.ct-big-score.warn { color: #f59e0b; }
+.ct-big-score.bad { color: #ef4444; }
+.ct-score-meta {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--muted, #6b7280); line-height: 1.8;
+}
+.ct-score-label {
+  font-size: 14px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.ct-score-label.good { color: var(--accent, #00e89c); }
+.ct-score-label.warn { color: #f59e0b; }
+.ct-score-label.bad { color: #ef4444; }
+
+/* ENGINE CARDS */
+.ct-engines {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-top: 20px;
+}
+.ct-card {
+  background: var(--surface, #12151b); border: 1px solid var(--border, #252a35);
+  border-radius: 10px; padding: 20px; animation: ctFadeIn 0.4s ease;
+}
+.ct-card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.ct-card-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Tags */
+.ct-tag {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; padding: 3px 8px; border-radius: 4px;
+  margin: 2px 2px;
+}
+.ct-tag-red { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+.ct-tag-amber { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+.ct-tag-green { background: rgba(0,232,156,0.12); color: #00e89c; border: 1px solid rgba(0,232,156,0.25); }
+.ct-tag-purple { background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.25); }
+.ct-tag-blue { background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); }
+
+/* V3 Diff */
+.ct-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.ct-diff-col {
+  padding: 12px 14px; border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  line-height: 1.7; word-break: break-word;
+}
+.ct-diff-before { background: rgba(239,68,68,0.05); border-left: 3px solid #ef4444; color: var(--muted); }
+.ct-diff-after { background: rgba(0,232,156,0.05); border-left: 3px solid var(--accent, #00e89c); color: var(--text); }
+.ct-diff-label {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 6px; font-weight: 700;
+}
+.ct-diff-label-b { color: #ef4444; }
+.ct-diff-label-a { color: var(--accent, #00e89c); }
+
+/* Edge marker list */
+.ct-marker {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+}
+.ct-marker:last-child { border-bottom: none; }
+.ct-marker-phrase { color: var(--muted); font-size: 11px; }
+
+/* Gov route */
+.ct-route-badge {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700; padding: 6px 14px;
+  border-radius: 6px; letter-spacing: 1px;
+}
+.ct-route-ai { background: rgba(0,232,156,0.12); color: #00e89c; }
+.ct-route-clarify { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.ct-route-human-rec { background: rgba(255,136,68,0.12); color: #ff8844; }
+.ct-route-human-req { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+/* CTA at bottom */
+.ct-cta {
+  margin-top: 32px; text-align: center; padding: 32px 24px;
+  border-radius: 10px; background: var(--surface, #12151b);
+  border: 1px solid var(--border, #252a35);
+}
+.ct-cta p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+.ct-cta a {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700; color: #000; background: var(--accent, #00e89c);
+  padding: 12px 28px; border-radius: 6px; text-decoration: none;
+  letter-spacing: 1px; transition: all 0.15s;
+}
+.ct-cta a:hover { background: #00d48c; }
+
+/* Full-width cards */
+.ct-card-full { grid-column: 1 / -1; }
+
+/* Compression stat */
+.ct-compress-stat {
+  font-family: 'JetBrains Mono', monospace; font-size: 24px;
+  font-weight: 700; color: var(--accent, #00e89c);
+}
+
+@media (max-width: 768px) {
+  .ct-hero { padding: 32px 20px 0; }
+  .ct-hero h1 { font-size: 22px; }
+  .ct-engines { grid-template-columns: 1fr; }
+  .ct-score-banner { flex-direction: column; gap: 12px; text-align: center; }
+  .ct-diff { grid-template-columns: 1fr; }
+  .ct-big-score { font-size: 36px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ct-hero">
+  <h1>Paste anything.</h1>
+  <p class="ct-sub">An email you're about to send. A contract clause. A message you received.<br>
+  NTI scores it in real time. <em>No AI. No cloud. Everything runs in your browser.</em></p>
+</div>
+
+<div class="ct-input-zone">
+  <div class="ct-textarea-wrap">
+    <textarea class="ct-textarea" id="ctInput" placeholder="Paste your text here — email, proposal, contract, message, anything with words that carry consequence."></textarea>
+    <div class="ct-input-bar">
+      <div class="ct-meta">
+        <span id="ctWords">0 words</span>
+        <span id="ctTokens">0 tokens</span>
+      </div>
+      <button class="ct-run-btn" id="ctRun" disabled>ANALYZE</button>
+    </div>
+  </div>
+</div>
+
+<div class="ct-results" id="ctResults">
+  <div class="ct-score-banner" id="ctBanner"></div>
+  <div class="ct-engines" id="ctEngines"></div>
+  <div class="ct-cta">
+    <p>This ran in your browser. No data left this page.<br>
+    Now imagine this running on every message in your organization.</p>
+    <a href="/safecheck">Try SafeCheck</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+'use strict';
+
+/* =============================================
+   NTI ENGINES — CLIENT-SIDE PORT
+   V2 (audit) + V3 (stabilize) + Edge (relational)
+   + Invocation Governance + Banding
+   ============================================= */
+
+var HEDGE=["maybe","likely","possibly","kind of","sort of","perhaps","might","could be","i think","i believe","i guess","i suppose","it seems","it appears","arguably","potentially","presumably","probably","conceivably","apparently","allegedly","just","a little","a bit","somewhat","fairly","rather","more or less","in a way","to some extent","to a degree","tend to","in general","for the most part","as far as i know","from my understanding","if i recall correctly","not entirely sure","i could be wrong","it would seem","one might argue","some would say","there's a chance","it's possible that","we'll see","time will tell","remains to be seen","hard to say","depends on","it depends","that's debatable","up in the air"];
+
+var HSEV={"maybe":0.04,"likely":0.03,"possibly":0.04,"kind of":0.05,"sort of":0.05,"perhaps":0.04,"might":0.03,"could be":0.04,"i think":0.05,"i believe":0.04,"i guess":0.06,"i suppose":0.05,"it seems":0.04,"it appears":0.03,"arguably":0.03,"potentially":0.03,"presumably":0.04,"probably":0.03,"conceivably":0.04,"apparently":0.03,"allegedly":0.05,"just":0.02,"a little":0.03,"a bit":0.03,"somewhat":0.03,"fairly":0.02,"rather":0.02,"more or less":0.04,"in a way":0.04,"to some extent":0.04,"to a degree":0.03,"tend to":0.03,"in general":0.02,"for the most part":0.04,"as far as i know":0.05,"from my understanding":0.05,"if i recall correctly":0.05,"not entirely sure":0.07,"i could be wrong":0.07,"it would seem":0.05,"one might argue":0.04,"some would say":0.04,"there's a chance":0.05,"it's possible that":0.05,"we'll see":0.05,"time will tell":0.05,"remains to be seen":0.05,"hard to say":0.06,"depends on":0.04,"it depends":0.05,"that's debatable":0.04,"up in the air":0.06};
+
+var ACTV=["create","analyze","explain","summarize","define","build","calculate","design","review","draft","write","generate","compare","audit","test","fix","update","remove","add","install","configure","deploy","migrate","implement","refactor","debug","validate","verify","confirm","approve","reject","send","submit","execute","run","launch","schedule","assign","delegate","escalate","resolve","close","complete","finalize","sign","file","report","document","measure","assess","evaluate","diagnose","recommend","negotiate","settle","invoice","bill","collect","transfer","process","convert","extract","import","export","merge","split","archive","delete","restore","authorize","revoke","list","rank","prioritize","outline","map","trace","monitor","scan","inspect","investigate","research","compile","synthesize","translate","transcribe","proofread","edit","rewrite","publish","distribute","notify"];
+
+var DEFER=["we'll fix later","we will fix later","for now just","adjust after","fix later","later we can","we can revisit","circle back","table that for now","tbd","to be determined","let's park that","put a pin in","come back to this","deal with that later","worry about that later","not a priority right now","we'll get to it","down the road","at some point","eventually","when we have time","in a future phase","next sprint","next quarter","backlog it","add to backlog","we'll figure it out","can wait","placeholder for now","temporary fix","workaround for now","good enough for now","ship it and fix later"];
+
+var CONF=[["always","never"],["short","detailed"],["minimal","expand"],["simple","complex"],["fast","thorough"],["cheap","premium"],["formal","casual"],["public","private"],["urgent","no rush"],["mandatory","optional"],["strict","flexible"],["include","exclude"],["approve","reject"],["start","stop"],["increase","decrease"],["conservative","aggressive"],["automated","manual"],["transparent","confidential"],["permanent","temporary"],["required","voluntary"]];
+
+var FILL=["it is important to note","in conclusion","ultimately","to summarize","i'd be happy to","i'd be glad to","certainly","absolutely","of course","great question","that's a great question","thanks for asking","as mentioned earlier","as previously mentioned","as noted above","it's worth noting","it's worth mentioning","it should be noted","that being said","having said that","at the end of the day","when all is said and done","moving forward","going forward","looking ahead","in terms of","with respect to","with regard to","when it comes to","it goes without saying","needless to say","to be honest","honestly","frankly","in my opinion","i hope this helps","let me know if you have any questions","feel free to","don't hesitate to","i understand your concern","i completely understand","first and foremost","last but not least","it's crucial to","it's essential to","in order to","due to the fact that","in light of the fact that","on the other hand","in any case","to put it simply","simply put","the bottom line is","at this point in time","in today's world","in this day and age","each and every","any and all","please be advised","please note that","per our conversation","as per your request","for your information","attached please find","so basically","so essentially","well actually","i mean","you know","generally speaking","broadly speaking","best regards","warm regards","kind regards","sincerely","respectfully"];
+
+var EPAT={
+  retroactive_attribution:[/\byou\s+were\s+wrong\b/gi,/\byou\s+made\s+(a|the)\s+mistake\b/gi,/\bthat\s+was\s+your\s+fault\b/gi,/\byou\s+caused\s+this\b/gi,/\byou\s+should\s+have\b/gi],
+  vertical_claim:[/\byou\s+(misunderstood|missed|failed)\b/gi,/\byou\s+(thought|assumed)\b/gi,/\byou\s+don'?t\s+get\b/gi,/\blet\s+me\s+be\s+clear\b/gi,/\byou'?re\s+missing\s+the\s+point\b/gi],
+  escalation_syntax:[/\bthe\s+(real\s+)?issue\s+is\b/gi,/\bhere'?s\s+the\s+problem\b/gi,/\blet'?s\s+be\s+honest\b/gi,/\bthe\s+truth\s+is\b/gi],
+  dominance_posture:[/\byou\s+need\s+to\b/gi,/\byou\s+have\s+to\b/gi,/\byou\s+can'?t\b/gi,/\byou\s+must\b/gi,/\byou\s+better\b/gi],
+  amplification_vector:[/\bactually\b/gi,/\bclearly\b/gi,/\bobviously\b/gi,/\bliterally\b/gi,/\bcompletely\b/gi,/\btotally\b/gi],
+  gaslighting_marker:[/\bthat\s+never\s+happened\b/gi,/\byou'?re\s+being\s+(too\s+)?(sensitive|dramatic|emotional)\b/gi,/\byou\s+always\s+do\s+this\b/gi],
+  dismissal_pattern:[/\bwhatever\b/gi,/\bit\s+doesn'?t\s+matter\b/gi,/\bget\s+over\s+it\b/gi,/\bnot\s+my\s+problem\b/gi],
+  guilt_induction:[/\bafter\s+everything\s+i'?ve\s+done\b/gi,/\byou\s+owe\s+me\b/gi,/\bi\s+can'?t\s+believe\s+you\b/gi],
+  ultimatum_syntax:[/\bor\s+else\b/gi,/\blast\s+(chance|warning)\b/gi,/\btake\s+it\s+or\s+leave\s+it\b/gi],
+  passive_aggression:[/\bper\s+my\s+(last|previous)\s+email\b/gi,/\bas\s+(previously|already)\s+(stated|mentioned)\b/gi,/\bi\s+thought\s+(we|you)\s+(agreed|said)\b/gi]
+};
+var EW={retroactive_attribution:0.25,vertical_claim:0.20,escalation_syntax:0.15,dominance_posture:0.10,amplification_vector:0.15,gaslighting_marker:0.25,dismissal_pattern:0.20,guilt_induction:0.20,ultimatum_syntax:0.20,passive_aggression:0.15};
+
+function norm(t){return(t||'').trim().replace(/\s+/g,' ');}
+function approxTok(t){return Math.max(0,Math.round((t||'').length/4));}
+
+// V2
+function runV2(text){
+  var n=norm(text),lo=n.toLowerCase(),sc=1.0,viol=[],dets=[];
+  var hh=HEDGE.filter(function(w){return lo.includes(w);});
+  if(hh.length){var ts=0;hh.forEach(function(h){var s=HSEV[h]||0.04;ts+=s;dets.push({t:'HEDGE',d:h,s:s});});sc-=Math.min(0.40,ts);viol.push('HEDGE_WORD');}
+  if(!ACTV.some(function(v){return lo.includes(v);})){sc-=0.10;viol.push('MISSING_OBJECTIVE');dets.push({t:'MISSING_OBJECTIVE',d:'no action verb',s:0.10});}
+  var cf=[];CONF.forEach(function(p){if(lo.includes(p[0])&&lo.includes(p[1]))cf.push(p);});
+  if(cf.length){sc-=Math.min(0.30,cf.length*0.15);viol.push('CONFLICTING_DIRECTIVE');cf.forEach(function(p){dets.push({t:'CONFLICT',d:p[0]+' ↔ '+p[1],s:0.15});});}
+  var df=DEFER.filter(function(p){return lo.includes(p);});
+  if(df.length){sc-=Math.min(0.25,df.length*0.12);viol.push('DEFERRED_ENFORCEMENT');df.forEach(function(d){dets.push({t:'DEFERRED',d:d,s:0.12});});}
+  sc=Math.max(0,Math.min(1,sc));
+  return {score:Math.round(sc*100)/100,violations:viol,details:dets,hedges:hh};
+}
+
+// V3
+function runV3(text){
+  var t=norm(text),orig=t,hr=0,fr=0,items=[];
+  HEDGE.forEach(function(w){var rx=new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');var b=t;t=t.replace(rx,'');if(t!==b){hr++;items.push({t:'hedge',p:w});t=norm(t);}});
+  FILL.forEach(function(p){var rx=new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');var b=t;t=t.replace(rx,'');if(t!==b){fr++;items.push({t:'filler',p:p});t=norm(t);}});
+  var sents=t.split(/(?<=[.!?])\s+/).filter(function(s){return s.trim();}),seen=new Set(),dd=[];
+  sents.forEach(function(s){if(seen.has(s))return;seen.add(s);dd.push(s);});
+  t=dd.join(' ').trim();t=norm(t);
+  var tb=approxTok(orig),ta=approxTok(t),ts=tb-ta,cp=tb>0?Math.round(ts/tb*100):0;
+  return {text:t,hedges:hr,fillers:fr,items:items,tokBefore:tb,tokAfter:ta,tokSaved:ts,compress:cp};
+}
+
+// Edge
+function runEdge(text){
+  var markers=[],trig=new Set(),seen=new Set();
+  Object.keys(EPAT).forEach(function(name){
+    var w=EW[name]||0;
+    EPAT[name].forEach(function(rx){rx.lastIndex=0;var m;while((m=rx.exec(text))!==null){var ph=m[0].trim(),k=name+'|'+ph.toLowerCase();if(seen.has(k))continue;seen.add(k);trig.add(name);markers.push({pattern:name,phrase:ph,weight:w});}});
+  });
+  var v=0;trig.forEach(function(n){v+=EW[n]||0;});
+  return {index:Math.min(1,Math.round(v*10000)/10000),markers:markers,patterns:[...trig].sort()};
+}
+
+// Governance
+function runGov(ss,ei){
+  if(ss>=0.75&&ei<0.60)return 'AI_OPTIMAL';
+  if(ss<0.75&&ei<0.40)return 'CLARIFICATION_REQUIRED';
+  if(ss>=0.75&&ei>=0.60)return 'HUMAN_RECOMMENDED';
+  return 'HUMAN_REQUIRED';
+}
+
+// Banding
+function bandS(s){return s<0.50?'UNSTABLE':s<0.75?'PARTIAL':s<0.90?'STABLE':'OPTIMAL';}
+function bandE(e){return e<0.30?'CALM':e<0.60?'TENSE':e<0.80?'ELEVATED':'DESTABILIZING';}
+
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// ==========================================
+// UI
+// ==========================================
+
+var inp=document.getElementById('ctInput');
+var btn=document.getElementById('ctRun');
+
+inp.addEventListener('input',function(){
+  var t=this.value.trim(),wc=t?t.split(/\s+/).length:0,tc=approxTok(t);
+  document.getElementById('ctWords').textContent=wc+' words';
+  document.getElementById('ctTokens').textContent=tc+' tokens';
+  btn.disabled=wc<3;
+});
+
+btn.addEventListener('click',function(){
+  var text=inp.value.trim();
+  if(!text)return;
+  var v2=runV2(text),v3=runV3(text),edge=runEdge(text);
+  var gov=runGov(v2.score,edge.index);
+  var bs=bandS(v2.score),be=bandE(edge.index);
+  render(text,v2,v3,edge,gov,bs,be);
+});
+
+inp.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();btn.click();}
+});
+
+function scoreClass(s){return s>=0.80?'good':s>=0.50?'warn':'bad';}
+function scoreLabel(s){return s>=0.80?'STRUCTURALLY SOUND':s>=0.50?'NEEDS ATTENTION':'STRUCTURAL FAILURE';}
+
+function tagClass(type){
+  var m={'HEDGE':'ct-tag-amber','MISSING_OBJECTIVE':'ct-tag-red','CONFLICT':'ct-tag-red','DEFERRED':'ct-tag-amber','HEDGE_WORD':'ct-tag-amber','CONFLICTING_DIRECTIVE':'ct-tag-red','DEFERRED_ENFORCEMENT':'ct-tag-amber','hedge':'ct-tag-amber','filler':'ct-tag-purple'};
+  return m[type]||'ct-tag-blue';
+}
+function routeClass(r){
+  var m={'AI_OPTIMAL':'ct-route-ai','CLARIFICATION_REQUIRED':'ct-route-clarify','HUMAN_RECOMMENDED':'ct-route-human-rec','HUMAN_REQUIRED':'ct-route-human-req'};
+  return m[r]||'ct-route-ai';
+}
+function routeLabel(r){
+  var m={'AI_OPTIMAL':'AI can handle this','CLARIFICATION_REQUIRED':'Needs clarification first','HUMAN_RECOMMENDED':'Human involvement recommended','HUMAN_REQUIRED':'Requires human decision'};
+  return m[r]||r;
+}
+
+function render(text,v2,v3,edge,gov,bs,be){
+  var res=document.getElementById('ctResults');
+  var banner=document.getElementById('ctBanner');
+  var engines=document.getElementById('ctEngines');
+
+  var sc=scoreClass(v2.score);
+  banner.innerHTML='<div><div class="ct-big-score '+sc+'">'+v2.score.toFixed(2)+'</div></div><div class="ct-score-meta"><div class="ct-score-label '+sc+'">'+scoreLabel(v2.score)+'</div><div>'+v2.violations.length+' violation types · Edge '+edge.index.toFixed(2)+' · '+be+'</div><div>Governance: '+gov.replace(/_/g,' ')+'</div></div>';
+
+  var html='';
+
+  // V2 Card
+  html+='<div class="ct-card"><div class="ct-card-title"><div class="ct-card-dot" style="background:#3b82f6"></div>V2 — INBOUND AUDIT</div>';
+  if(v2.violations.length){
+    html+='<div style="margin-bottom:12px">'+v2.violations.map(function(v){return '<span class="ct-tag ct-tag-red">'+v+'</span>';}).join('')+'</div>';
+    html+='<div>';
+    v2.details.forEach(function(d){
+      html+='<div class="ct-marker"><span class="ct-tag '+tagClass(d.t)+'">'+d.t+'</span><span class="ct-marker-phrase">"'+esc(d.d)+'"</span><span style="color:var(--muted);font-size:10px;margin-left:auto">-'+d.s.toFixed(2)+'</span></div>';
+    });
+    html+='</div>';
+  } else {
+    html+='<span class="ct-tag ct-tag-green">NO VIOLATIONS</span> <span style="color:var(--muted);font-size:13px">Clean structural input.</span>';
+  }
+  html+='</div>';
+
+  // V3 Card
+  html+='<div class="ct-card"><div class="ct-card-title"><div class="ct-card-dot" style="background:#ef4444"></div>V3 — STABILIZATION</div>';
+  html+='<div style="display:flex;gap:24px;align-items:center;margin-bottom:16px"><div class="ct-compress-stat">'+v3.compress+'%</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--muted);line-height:1.6">compressed<br>'+v3.tokBefore+' → '+v3.tokAfter+' tokens<br>'+v3.hedges+' hedges · '+v3.fillers+' filler stripped</div></div>';
+  if(v3.items.length){
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">';
+    v3.items.slice(0,15).forEach(function(item){html+='<span class="ct-tag '+tagClass(item.t)+'">'+esc(item.p)+'</span>';});
+    if(v3.items.length>15)html+='<span class="ct-tag ct-tag-blue">+' +(v3.items.length-15)+' more</span>';
+    html+='</div>';
+  }
+  if(v3.text!==norm(text)){
+    html+='<div class="ct-diff"><div class="ct-diff-col ct-diff-before"><div class="ct-diff-label ct-diff-label-b">ORIGINAL</div>'+esc(text.substring(0,500))+(text.length>500?'...':'')+'</div><div class="ct-diff-col ct-diff-after"><div class="ct-diff-label ct-diff-label-a">STABILIZED</div>'+esc(v3.text.substring(0,500))+(v3.text.length>500?'...':'')+'</div></div>';
+  }
+  html+='</div>';
+
+  // Edge Card
+  html+='<div class="ct-card"><div class="ct-card-title"><div class="ct-card-dot" style="background:#a78bfa"></div>RELATIONAL FIELD</div>';
+  html+='<div style="font-family:\'JetBrains Mono\',monospace;font-size:24px;font-weight:700;color:'+(edge.index<0.30?'var(--accent)':edge.index<0.60?'#f59e0b':'#ef4444')+'">'+edge.index.toFixed(4)+'</div>';
+  html+='<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--muted);margin:4px 0 12px">'+be+' · '+edge.patterns.length+' pattern categories triggered</div>';
+  if(edge.markers.length){
+    edge.markers.forEach(function(m){
+      html+='<div class="ct-marker"><span class="ct-tag ct-tag-purple">'+m.pattern.replace(/_/g,' ')+'</span><span class="ct-marker-phrase">"'+esc(m.phrase)+'"</span></div>';
+    });
+  } else {
+    html+='<span class="ct-tag ct-tag-green">NO DESTABILIZING PATTERNS</span>';
+  }
+  html+='</div>';
+
+  // Governance Card
+  html+='<div class="ct-card"><div class="ct-card-title"><div class="ct-card-dot" style="background:#ff8844"></div>GOVERNANCE</div>';
+  html+='<div style="margin-bottom:12px"><span class="ct-route-badge '+routeClass(gov)+'">'+gov.replace(/_/g,' ')+'</span></div>';
+  html+='<div style="font-size:14px;color:var(--muted);margin-bottom:16px">'+routeLabel(gov)+'</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="ct-tag ct-tag-blue">STRUCTURAL: '+bs+'</span><span class="ct-tag ct-tag-purple">RELATIONAL: '+be+'</span></div>';
+  html+='</div>';
+
+  engines.innerHTML=html;
+  res.classList.add('show');
+  res.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+})();
+</script>
+{% endblock %}

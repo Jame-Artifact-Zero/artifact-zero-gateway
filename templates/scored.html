@@ -1,24 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title id="pageTitle">Scorecard — Artifact Zero</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Artifact Zero{% endblock %}
+{% block body_class %}page-scored{% endblock %}
+
+{% block head %}
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-
-.topbar{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(37,42,53,.5)}
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav{display:flex;gap:18px}
-.topbar nav a{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
-.topbar nav a:hover{color:var(--text)}
-
-.content{max-width:1000px;margin:0 auto;padding:80px 16px 40px}
+.content{max-width:1000px;margin:0 auto;padding:16px 16px 40px}
 
 /* Company header */
 .company-header{text-align:center;padding:20px 0 28px}
@@ -53,9 +39,78 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .sd-label{color:var(--muted)}
 .sd-val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
 .sd-clear{color:var(--accent)}.sd-warn{color:var(--amber)}.sd-crit{color:var(--red)}
-.sd-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.sd-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-.sd-finding{padding:8px 10px;margin-top:6px;border-radius:6px;font-size:12px;line-height:1.6;background:rgba(0,232,156,.06);border-left:3px solid var(--accent);color:var(--text)}
+
+/* Findings cards */
+.findings-section{margin-bottom:24px}
+.finding-card{padding:12px 14px;margin-bottom:8px;border-radius:8px;border-left:3px solid}
+.finding-card.high{background:rgba(239,68,68,.08);border-color:var(--red)}
+.finding-card.medium{background:rgba(245,158,11,.08);border-color:var(--amber)}
+.finding-card.pass{background:rgba(0,232,156,.06);border-color:var(--accent)}
+.finding-dim{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+.finding-text{font-size:13px;line-height:1.6;color:var(--text)}
+.finding-evidence{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px;padding:4px 8px;background:rgba(255,255,255,.03);border-radius:4px}
+.finding-sev{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.finding-sev.sev-crit{background:#7f1d1d;color:#fca5a5}
+.finding-sev.sev-warn{background:rgba(245,158,11,.15);color:var(--amber)}
+
+/* Dimension grid */
+.dim-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.dim-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.dim-header{display:flex;justify-content:space-between;align-items:center}
+.dim-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text)}
+.dim-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.dim-desc{font-size:11px;color:var(--muted);margin:4px 0 8px}
+.dim-bar-bg{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.dim-bar{height:100%;border-radius:3px;transition:width .3s}
+.dim-bar.sd-clear{background:var(--accent)}.dim-bar.sd-warn{background:var(--amber)}.dim-bar.sd-crit{background:var(--red)}
+.dim-weight{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;text-align:right}
+
+/* NTI Section */
+.nti-section{margin-bottom:28px}
+.nti-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.nti-badge{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid}
+.nti-badge.good{border-color:var(--accent);color:var(--accent);background:rgba(0,232,156,.08)}
+.nti-badge.mid{border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.08)}
+.nti-badge.bad{border-color:var(--red);color:var(--red);background:rgba(239,68,68,.08)}
+
+.fm-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.fm-card{flex:1;min-width:140px;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface)}
+.fm-name{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;margin-bottom:4px}
+.fm-state{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px}
+.fm-state.active{background:#7f1d1d;color:#fca5a5}
+.fm-state.clear{background:#064e3b;color:#86efac}
+.fm-desc{font-size:11px;color:var(--muted);line-height:1.5}
+
+.tilt-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.tilt-tag.clean{background:rgba(0,232,156,.08);color:var(--accent);border-color:rgba(0,232,156,.2)}
+
+.hedge-hl{background:rgba(245,158,11,.25);padding:1px 3px;border-radius:2px;color:var(--amber)}
+
+/* Signal buttons (from nti_signals) */
+.sig-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.sig-btn{background:transparent;padding:6px 12px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;cursor:pointer;transition:all .15s;border:1px solid var(--btn-color,#6b7280);color:var(--btn-color,#6b7280)}
+.sig-btn:hover{opacity:.85}
+.sig-btn.active{background:var(--btn-color,#6b7280);color:#000}
+.sig-explain{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:12px;border-left:2px solid var(--explainer-color,var(--accent));padding-left:10px;line-height:1.5;display:none}
+.sig-explain.show{display:block}
+.sig-hl{padding:0 2px;border-radius:3px;transition:all .25s ease}
+.sig-hl.lit{font-weight:700}
+
+/* Clickable dimensions */
+.dim-row{cursor:pointer;transition:border-color .2s}
+.dim-row:hover{border-color:var(--accent)}
+.dim-row.active-dim{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.copy-highlight{background:rgba(59,130,246,.25);padding:1px 3px;border-radius:2px;transition:background .3s}
+.copy-highlight.flash{background:rgba(59,130,246,.45)}
+.finding-card{cursor:pointer;transition:border-color .2s}
+.finding-card:hover{opacity:.9}
+
+/* What to fix */
+.fix-section{margin-bottom:24px;padding:16px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px}
+.fix-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.fix-item{font-size:13px;color:var(--text);line-height:1.6;padding:6px 0;border-bottom:1px solid rgba(239,68,68,.1)}
+.fix-item:last-child{border:none;padding-bottom:0}
 
 /* Share + Meta */
 .meta-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
@@ -73,7 +128,6 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
 .btn-back{background:var(--surface);color:var(--text);border:1px solid var(--border)}
 .btn-back:hover{border-color:var(--accent);color:var(--accent)}
 
-/* Loading */
 .loading{text-align:center;padding:60px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
 
 @media(max-width:700px){
@@ -83,18 +137,23 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   .score-hero{gap:10px}
   .sh-card{padding:12px 16px;min-width:80px}
   .sh-val{font-size:24px}
+  .fm-grid{flex-direction:column}
+  .nti-badge{width:52px;height:52px;font-size:22px}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- topbar removed: az-shell.js -->
+{% block content %}
 <div class="content">
   <div id="scorecard">
     <div class="loading">Loading scorecard...</div>
   </div>
 </div>
 
+<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
+{% endblock %}
+
+{% block scripts %}
 <script>
 const slug = window.location.pathname.split('/').pop();
 
@@ -109,148 +168,299 @@ async function loadScorecard(){
   }
 }
 
-function scoreClass(nii){
-  const v = nii > 1 ? nii : nii * 100;
-  if(v >= 70) return 'good';
-  if(v >= 40) return 'mid';
-  return 'bad';
-}
-
 function render(c){
-  const nii = c.nii_score || 0;
-  const issues = c.issue_count || 0;
-  const score = c.score_json ? JSON.parse(c.score_json) : {};
+  const csi = c.csi || {};
+  const nti = c.nti || {};
+  const score = csi.score || c.nii_score || 0;
+  const label = csi.label || '';
+  const dims = csi.dimensions || {};
+  const detail = csi.detail || {};
+  _scoreDetail = detail; // Store for clickable dimension lookups
+  const findings = csi.findings || [];
+  const meta = csi.meta || {};
   const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '';
 
-  document.getElementById('pageTitle').textContent = c.company_name + ' Structure Check — Artifact Zero';
+  // Detect unscored: no CSI data and score is 0
+  const isUnscored = !csi.score && !Object.keys(dims).length && score === 0;
+  const noCopy = !c.homepage_copy || c.homepage_copy.trim().length < 20;
 
-  // Parse score data
-  const fm = score.failure_modes || {};
-  const tilt = score.tilt || {};
-  const tiltTags = Array.isArray(tilt) ? tilt : (tilt.tags || []);
-  const tiltCount = Array.isArray(tilt) ? tilt.length : (tilt.count || 0);
-  const niiData = score.score || {};
-  const components = niiData.components || {};
-  const framing = score.l2_framing || {};
-  const drift = score.drift || {};
-  const signals = score.structural_signals || {};
+  // NTI data
+  const niiScore = nti.nii_score || 0;
+  const fmodes = nti.failure_modes || {};
+  const tilts = Array.isArray(nti.tilt_patterns) ? nti.tilt_patterns : [];
+  const constraints = Array.isArray(nti.constraints) ? nti.constraints : [];
+  const hedgeWords = (detail.d4_hedge_density && detail.d4_hedge_density.hedge_words_found) || [];
 
-  // Failure mode states
-  function fmState(key){
-    const v = fm[key];
-    if(!v) return 'CLEAR';
-    if(typeof v === 'string') return v.includes('FALSE') ? 'CLEAR' : v.replace(/_/g,' ');
-    const st = v[key.toLowerCase()+'_state'] || v[key+'_state'] || '';
-    return st.includes('FALSE') ? 'CLEAR' : st.replace(/_/g,' ');
+  const ptEl = document.getElementById('pageTitle');
+  if(ptEl) ptEl.textContent = c.company_name + ' Structure Check';
+  document.title = c.company_name + ' — Structure Check — Artifact Zero';
+
+  const rankLabel = c.rank ? (c.fund_name ? 'VC Fund #' : 'Fortune 500 #') + c.rank : '';
+
+  function sc(v){ return v >= 0.7 ? 'sd-clear' : v >= 0.45 ? 'sd-warn' : 'sd-crit'; }
+  function pct(v){ return (v * 100).toFixed(1) + '%'; }
+
+  const dimLabels = {
+    d1_specificity: {name: 'D1 - Specificity Index', desc: 'Measurable claims with numbers, dates, metrics'},
+    d2_commitment: {name: 'D2 - Commitment Integrity', desc: 'Verifiable commitments vs aspirational language'},
+    d3_clarity: {name: 'D3 - Structural Clarity', desc: 'Sentence structure quality and readability'},
+    d4_hedge_density: {name: 'D4 - Hedge Density', desc: 'Absence of qualifying/hedging language'},
+    d5_tilt_exposure: {name: 'D5 - Tilt Exposure', desc: 'Resistance to NTI drift patterns'},
+    d6_empty_commitments: {name: 'D6 - Empty Commitments', desc: 'Claims backed by evidence vs hollow statements'},
+    d7_objective_anchor: {name: 'D7 - Objective Anchor', desc: 'Clear WHO, WHAT, and constraints identified'},
+    d8_accountability: {name: 'D8 - Accountability', desc: 'Measurement, reporting, timeline language'},
+    d9_redundancy: {name: 'D9 - Redundancy', desc: 'Semantic efficiency (low repetition and filler)'},
+    d10_differentiation: {name: 'D10 - Differentiation', desc: 'Unique language vs generic corporate copy'},
+  };
+
+  const weights = csi.weights || {};
+  const hiFindings = findings.filter(f => f.severity === 'high');
+  const medFindings = findings.filter(f => f.severity === 'medium');
+  const passFindings = findings.filter(f => f.severity === 'pass');
+  const totalIssues = hiFindings.length + medFindings.length;
+
+  // Failure mode helpers
+  const fmLabels = {
+    'UDDS': {full: 'Upstream Dependency Drift', desc: 'Agreement language appears before constraints are established'},
+    'DCE': {full: 'Deferred Constraint Erosion', desc: 'Hard decisions and specifics are pushed to later'},
+    'CCA': {full: 'Constraint Collapse Architecture', desc: 'Vague claims bundled to obscure missing commitments'},
+  };
+  const tiltLabels = {
+    'T1_REASSURANCE_DRIFT': 'Reassurance Drift',
+    'T2_CERTAINTY_INFLATION': 'Certainty Inflation',
+    'T3_COMPLEXITY_SHIELD': 'Complexity Shield',
+    'T4_CAPABILITY_OVERREACH': 'Capability Overreach',
+    'T5_ABSOLUTE_LANGUAGE': 'Absolute Language',
+    'T6_CONSTRAINT_DEFERRAL': 'Constraint Deferral',
+    'T7_CATEGORY_BLEND': 'Category Blend',
+    'T8_PRESSURE_OPTIMIZATION': 'Pressure Optimization',
+  };
+
+  // Build source text with hedge highlighting
+  let sourceText = (c.homepage_copy || 'Copy not yet captured.').replace(/\n/g,'<br>');
+  if(hedgeWords.length > 0){
+    hedgeWords.forEach(w => {
+      const re = new RegExp('\\b(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')\\b', 'gi');
+      sourceText = sourceText.replace(re, '<span class="hedge-hl">$1</span>');
+    });
   }
-  function fmCls(key){
-    const s = fmState(key);
-    return s === 'CLEAR' ? 'sd-clear' : s.includes('PROBABLE') ? 'sd-warn' : 'sd-crit';
+
+  // WHAT TO FIX items
+  const fixItems = [];
+  if(constraints.length === 0 && niiScore > 0) fixItems.push('Add explicit constraints: dates, numbers, boundaries, conditions.');
+  if(hedgeWords.length > 0) fixItems.push('Remove hedge language: <span style="color:var(--amber)">' + hedgeWords.join(', ') + '</span>');
+  Object.entries(fmodes).forEach(([name, data]) => {
+    if(!data || typeof data !== 'object') return;
+    const stateKey = name.toLowerCase() + '_state';
+    const state = data[stateKey] || '';
+    if(state.includes('CONFIRMED') || state.includes('PROBABLE')){
+      const fixes = {
+        'UDDS': 'Stop leading with agreement. State constraints before promises.',
+        'DCE': 'Replace "we will figure it out later" with specific timelines and conditions.',
+        'CCA': 'Break vague bundled claims into specific, measurable commitments.',
+      };
+      fixItems.push(fixes[name] || 'Address ' + name + ' failure mode.');
+    }
+  });
+  tilts.forEach(t => {
+    const id = typeof t === 'string' ? t : (t.tilt_id || '');
+    const fixes = {
+      'T1_REASSURANCE_DRIFT': 'Replace reassurance ("don\'t worry", "rest assured") with evidence.',
+      'T4_CAPABILITY_OVERREACH': 'Scope claims to what is actually delivered, not aspirational.',
+      'T5_ABSOLUTE_LANGUAGE': 'Replace "always", "never", "everything" with specific scope.',
+      'T6_CONSTRAINT_DEFERRAL': 'Move deferred items ("later", "eventually") to concrete timelines.',
+    };
+    if(fixes[id]) fixItems.push(fixes[id]);
+  });
+  hiFindings.forEach(f => fixItems.push(f.finding));
+
+  // ═══ BUILD HTML ═══
+
+  let html = '<div class="company-header">';
+  html += '<div class="ch-rank">' + rankLabel + '</div>';
+  html += '<div class="ch-name">' + c.company_name + '</div>';
+  html += '<div class="ch-url"><a href="' + c.url + '" target="_blank" rel="noopener">' + (c.url || '') + '</a></div>';
+  html += '</div>';
+
+  // Unscored banner
+  if(isUnscored || noCopy){
+    html += '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:16px 20px;margin-bottom:20px;font-size:14px;line-height:1.6">';
+    if(noCopy){
+      html += '<div style="color:var(--amber);font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;margin-bottom:6px">NO CORPORATE COPY FOUND</div>';
+      html += '<div style="color:var(--muted)">We couldn\'t find scoreable content on this company\'s website. This usually means the homepage is behind a login, uses a JavaScript-heavy framework, or redirects to a regional site.</div>';
+    } else {
+      html += '<div style="color:var(--amber);font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;margin-bottom:6px">SCORING PENDING</div>';
+      html += '<div style="color:var(--muted)">Copy has been captured but scoring hasn\'t run yet. Check back soon.</div>';
+    }
+    html += '</div>';
   }
 
-  // Build the 15 criteria rows
-  const criteria = [
-    // NII Components
-    {cat: 'STRUCTURAL INTEGRITY (NII)', items: [
-      {label: 'Q1 — Constraint density', val: components.q1, pass: (components.q1||0) >= 0.5},
-      {label: 'Q2 — Ask architecture', val: components.q2, pass: (components.q2||0) >= 0.7},
-      {label: 'Q3 — Enforcement integrity', val: components.q3, pass: (components.q3||0) >= 0.7},
-      {label: 'Q4 — Tilt resistance', val: components.q4, pass: (components.q4||0) >= 0.7},
-    ]},
-    // Failure Modes
-    {cat: 'FAILURE MODES', items: [
-      {label: 'UDDS — Upstream drift', val: fmState('UDDS'), pass: fmState('UDDS')==='CLEAR', cls: fmCls('UDDS')},
-      {label: 'DCE — Deferred enforcement', val: fmState('DCE'), pass: fmState('DCE')==='CLEAR', cls: fmCls('DCE')},
-      {label: 'CCA — Constraint collapse', val: fmState('CCA'), pass: fmState('CCA')==='CLEAR', cls: fmCls('CCA')},
-    ]},
-    // L2 Framing
-    {cat: 'L2 — INTERPRETIVE FRAMING', items: [
-      {label: 'Hedge markers', val: (framing.hedge_markers||[]).length, pass: (framing.hedge_markers||[]).length === 0, detail: (framing.hedge_markers||[]).join(', ')},
-      {label: 'Reassurance markers', val: (framing.reassurance_markers||[]).length, pass: (framing.reassurance_markers||[]).length === 0, detail: (framing.reassurance_markers||[]).join(', ')},
-      {label: 'Category blend', val: (framing.category_blend_markers||[]).length, pass: (framing.category_blend_markers||[]).length === 0, detail: (framing.category_blend_markers||[]).join(', ')},
-    ]},
-    // Structural Signals
-    {cat: 'STRUCTURAL SIGNALS', items: [
-      {label: 'Constraints found', val: signals.constraints_found ?? '—', pass: (signals.constraints_found||0) >= 1},
-      {label: 'Downstream before constraint', val: signals.downstream_before_constraint ? 'YES' : 'NO', pass: !signals.downstream_before_constraint},
-      {label: 'Boundary absence', val: signals.boundary_absence ? 'DETECTED' : 'CLEAR', pass: !signals.boundary_absence},
-      {label: 'Narrative stabilization', val: signals.narrative_stabilization ? 'DETECTED' : 'CLEAR', pass: !signals.narrative_stabilization},
-      {label: 'Content coherence', val: drift.coherence != null ? (drift.coherence * 100).toFixed(0) + '%' : '—', pass: (drift.coherence||1) >= 0.3},
-    ]},
-  ];
+  // Score hero
+  html += '<div class="score-hero">';
+  html += '<div class="sh-card"><div class="sh-val ' + (score>=70?'good':score>=45?'mid':'bad') + '">' + score.toFixed(1) + '%</div><div class="sh-label">CSI Score</div></div>';
+  html += '<div class="sh-card"><div class="sh-val" style="color:' + (label.includes('SOUND')?'var(--accent)':label.includes('CLEAR')?'var(--blue)':'var(--amber)') + '">' + label + '</div><div class="sh-label">Rating</div></div>';
+  html += '<div class="sh-card ' + (totalIssues>0?'issues':'clear') + '"><div class="sh-val">' + totalIssues + '</div><div class="sh-label">Findings</div></div>';
+  if(niiScore > 0){
+    html += '<div class="sh-card"><div class="sh-val ' + (niiScore>=70?'good':niiScore>=45?'mid':'bad') + '">' + niiScore + '</div><div class="sh-label">NTI Score</div></div>';
+  }
+  html += '</div>';
 
-  // Build findings
-  const findings = [];
-  if((components.q1||0) < 0.7) findings.push('No explicit constraints — readers interpret freely.');
-  if((components.q2||0) < 0.7) findings.push('Benefits presented before constraints are established.');
-  if((components.q3||0) < 0.7) findings.push('No enforcement boundary — commitments can be deferred.');
-  if((components.q4||0) < 0.7) findings.push('Tilt patterns detected — language may distort structural integrity.');
-  if(fmState('UDDS') !== 'CLEAR') findings.push('Upstream Drift Destabilization detected.');
-  if(fmState('DCE') !== 'CLEAR') findings.push('Accountability deferred to future interaction.');
-  if(fmState('CCA') !== 'CLEAR') findings.push('Multiple claims collapsed into vague statements.');
-  if((framing.hedge_markers||[]).length > 2) findings.push('Heavy hedging weakens structural commitment.');
-  if((framing.reassurance_markers||[]).length > 1) findings.push('Reassurance language detected — may mask constraints.');
-  if(signals.boundary_absence) findings.push('Boundary enforcement absent or delayed.');
-  if(signals.narrative_stabilization) findings.push('Narrative stabilization present — language smooths over structural gaps.');
+  // Meta row
+  html += '<div class="meta-row">';
+  html += '<div class="meta-left">Last checked: <span>' + (checked || 'pending') + '</span> &middot; <span>' + (meta.word_count || '?') + ' words analyzed</span> &middot; <span>CSI v1.0</span></div>';
+  html += '<button class="share-btn" onclick="shareCard()">&#128279; Share this scorecard</button>';
+  html += '</div>';
 
-  // Rank label
-  const rankLabel = c.rank ? (c.fund_name ? 'VC Fund · #' : 'Fortune 500 · #') + c.rank : '';
+  // ═══ WHAT TO FIX (top of page if issues exist) ═══
+  if(fixItems.length > 0){
+    html += '<div class="fix-section">';
+    html += '<div class="fix-title">WHAT TO FIX</div>';
+    // Deduplicate
+    const seen = new Set();
+    fixItems.forEach(item => {
+      const key = item.replace(/<[^>]*>/g, '').substring(0, 60);
+      if(!seen.has(key)){
+        seen.add(key);
+        html += '<div class="fix-item">' + item + '</div>';
+      }
+    });
+    html += '</div>';
+  }
 
-  let html = `
-    <div class="company-header">
-      <div class="ch-rank">${rankLabel}</div>
-      <div class="ch-name">${c.company_name}</div>
-      <div class="ch-url"><a href="${c.url}" target="_blank" rel="noopener">${c.url}</a></div>
-    </div>
+  // ═══ STRUCTURAL FINDINGS ═══
+  if(findings.length > 0){
+    html += '<div class="findings-section">';
+    html += '<div class="sd-section" style="border:none;padding:0;margin:0 0 10px">STRUCTURAL FINDINGS</div>';
+    hiFindings.forEach(f => {
+      html += '<div class="finding-card high" onclick="highlightFinding(this)">';
+      html += '<div class="finding-dim">' + f.dimension + ' <span class="finding-sev sev-crit">CRITICAL</span></div>';
+      html += '<div class="finding-text">' + f.finding + '</div>';
+      if(f.evidence) html += '<div class="finding-evidence">' + f.evidence + '</div>';
+      html += '</div>';
+    });
+    medFindings.forEach(f => {
+      html += '<div class="finding-card medium" onclick="highlightFinding(this)">';
+      html += '<div class="finding-dim">' + f.dimension + ' <span class="finding-sev sev-warn">WARNING</span></div>';
+      html += '<div class="finding-text">' + f.finding + '</div>';
+      if(f.evidence) html += '<div class="finding-evidence">' + f.evidence + '</div>';
+      html += '</div>';
+    });
+    passFindings.forEach(f => {
+      html += '<div class="finding-card pass" onclick="highlightFinding(this)">';
+      html += '<div class="finding-dim">' + f.dimension + '</div>';
+      html += '<div class="finding-text">' + f.finding + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="finding-card pass" style="margin-bottom:20px"><div class="finding-text">No structural issues detected. This copy is clean.</div></div>';
+  }
 
-    <div class="score-hero">
-      <div class="sh-card">
-        <div class="sh-val ${scoreClass(nii)}">${(nii > 1 ? nii : nii*100).toFixed(0)}%</div>
-        <div class="sh-label">Structure Score</div>
-      </div>
-      <div class="sh-card ${issues>0?'issues':'clear'}">
-        <div class="sh-val">${issues>0?issues:'0'}</div>
-        <div class="sh-label">${issues>0?'Issues Found':'Clean'}</div>
-      </div>
-      <div class="sh-card">
-        <div class="sh-val" style="color:var(--blue)">${criteria.reduce((n,g)=>n+g.items.filter(i=>i.pass).length,0)}/${criteria.reduce((n,g)=>n+g.items.length,0)}</div>
-        <div class="sh-label">Criteria Passed</div>
-      </div>
-    </div>
+  // ═══ NTI STRUCTURAL INTEGRITY ═══
+  if(niiScore > 0){
+    html += '<div class="nti-section">';
+    html += '<div class="sd-section">NTI STRUCTURAL INTEGRITY</div>';
 
-    <div class="meta-row">
-      <div class="meta-left">Last checked: <span>${checked || 'pending'}</span></div>
-      <button class="share-btn" onclick="shareCard()">&#128279; Share this scorecard</button>
-    </div>
+    html += '<div class="nti-header">';
+    html += '<div class="nti-badge ' + (niiScore>=70?'good':niiScore>=45?'mid':'bad') + '">' + niiScore + '</div>';
+    html += '<div style="flex:1">';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--accent);letter-spacing:1px;text-transform:uppercase">Structural Integrity Score</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:2px">';
+    if(niiScore >= 70) html += 'Structurally sound - constraints present and enforced';
+    else if(niiScore >= 45) html += 'Mixed signals - structural gaps detected';
+    else html += 'Structural risk - significant gaps in constraint language';
+    html += '</div></div></div>';
 
-    <div class="split">
-      <div class="split-header copy-h">Their Homepage Copy</div>
-      <div class="split-header score-h">Full Structure Analysis</div>
-    </div>
-    <div class="split">
-      <div class="split-col copy-col">${(c.homepage_copy||'Copy not yet captured.').replace(/\n/g,'<br>')}</div>
-      <div class="split-col score-col">
-        ${findings.length > 0 ? '<div class="sd-section">Findings</div>' + findings.map(f => '<div class="sd-finding">'+f+'</div>').join('') : '<div class="sd-finding" style="border-color:var(--accent)">No structural issues detected. This copy is clear.</div>'}
+    // Failure modes
+    html += '<div class="fm-grid">';
+    Object.entries(fmodes).forEach(([name, data]) => {
+      const stateKey = name.toLowerCase() + '_state';
+      const state = (data && typeof data === 'object') ? (data[stateKey] || 'UNKNOWN') : 'UNKNOWN';
+      const isActive = state.includes('CONFIRMED') || state.includes('PROBABLE');
+      const info = fmLabels[name] || {full: name, desc: ''};
+      html += '<div class="fm-card">';
+      html += '<div class="fm-name">' + name + '</div>';
+      html += '<span class="fm-state ' + (isActive?'active':'clear') + '">' + (isActive?'DETECTED':'CLEAR') + '</span>';
+      html += '<div class="fm-desc">' + info.desc + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
 
-        ${criteria.map(group => `
-          <div class="sd-section">${group.cat}</div>
-          ${group.items.map(item => {
-            const valDisplay = item.cls ? item.val : (typeof item.val === 'number' && item.val <= 1 ? (item.val * 100).toFixed(0) + '%' : item.val);
-            const cls = item.cls || (item.pass ? 'sd-clear' : 'sd-crit');
-            return `<div class="sd-row"><span class="sd-label">${item.label}</span><span class="sd-val ${cls}">${item.pass && !item.cls ? '✓' : ''} ${valDisplay}</span></div>` +
-              (item.detail && !item.pass ? `<div style="font-size:10px;color:var(--muted);padding:2px 0 4px;font-family:'JetBrains Mono',monospace">${item.detail}</div>` : '');
-          }).join('')}
-        `).join('')}
+    // Tilt patterns
+    if(tilts.length > 0){
+      html += '<div class="sd-section" style="margin-top:0">COMMUNICATION DRIFT PATTERNS</div>';
+      html += '<div class="tilt-list">';
+      tilts.forEach(t => {
+        const id = typeof t === 'string' ? t : (t.tilt_id || t.label || String(t));
+        html += '<span class="tilt-tag">' + (tiltLabels[id] || id) + '</span>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="tilt-list"><span class="tilt-tag clean">No drift patterns detected</span></div>';
+    }
 
-        ${tiltCount > 0 ? '<div class="sd-section">Tilt Patterns</div><div class="sd-tags">' + tiltTags.map(t => '<span class="sd-tag">'+t+'</span>').join('') + '</div>' : ''}
-      </div>
-    </div>
+    // Constraints
+    if(constraints.length > 0){
+      html += '<div style="font-size:12px;color:var(--muted);margin-bottom:16px"><span style="color:var(--accent)">' + constraints.length + '</span> constraint' + (constraints.length>1?'s':'') + ' detected in source text</div>';
+    } else {
+      html += '<div style="font-size:12px;color:var(--red);margin-bottom:16px">No explicit constraints detected in source text</div>';
+    }
 
-    <div class="bottom-row">
-      <a class="btn-check" href="/safecheck">Check your own words &rarr;</a>
-      <a class="btn-back" href="/fortune500">&larr; All companies</a>
-    </div>
-  `;
+    html += '</div>'; // end nti-section
+  }
+
+  // ═══ NTI SIGNAL DETECTION ═══
+  // Run the source copy through detect_signals for signal buttons
+  html += '<div class="sd-section">SIGNAL DETECTION</div>';
+  html += '<div id="sigBar" class="sig-bar"><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted)">Analyzing...</span></div>';
+  html += '<div id="sigExplain" class="sig-explain"></div>';
+
+  // ═══ 10-DIMENSION BREAKDOWN ═══
+  html += '<div class="sd-section">10-DIMENSION BREAKDOWN</div>';
+  html += '<div class="dim-grid">';
+  Object.keys(dimLabels).forEach(k => {
+    const v = dims[k] || 0;
+    const w = weights[k] || 0;
+    const info = dimLabels[k];
+    const barW = Math.max(v * 100, 2);
+    const cls = sc(v);
+    html += '<div class="dim-row" onclick="highlightDimension(\'' + k + '\')" title="Click to highlight in source text">';
+    html += '<div class="dim-header"><span class="dim-name">' + info.name + '</span><span class="dim-val ' + cls + '">' + pct(v) + '</span></div>';
+    html += '<div class="dim-desc">' + info.desc + '</div>';
+    html += '<div class="dim-bar-bg"><div class="dim-bar ' + cls + '" style="width:' + barW + '%"></div></div>';
+    html += '<div class="dim-weight">Weight: ' + (w*100).toFixed(0) + '%</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ═══ SPLIT VIEW: Source Copy + Raw Detail ═══
+  html += '<div class="split" style="margin-top:20px">';
+  html += '<div class="split-header copy-h">THEIR CORPORATE COPY' + (hedgeWords.length > 0 ? ' &middot; <span style="color:var(--amber)">' + hedgeWords.length + ' hedge words highlighted</span>' : '') + '</div>';
+  html += '<div class="split-header score-h">RAW DIMENSION DATA</div>';
+  html += '</div>';
+  html += '<div class="split">';
+  html += '<div class="split-col copy-col">' + sourceText + '</div>';
+  html += '<div class="split-col score-col" style="font-family:\'JetBrains Mono\',monospace;font-size:10px;line-height:1.8;color:var(--muted)">';
+  Object.keys(detail).forEach(k => {
+    const d = detail[k];
+    if(!d || typeof d !== 'object') return;
+    html += '<div style="margin-bottom:12px"><div style="color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">' + k.replace(/_/g,' ') + '</div>';
+    Object.keys(d).forEach(sk => {
+      let val = d[sk];
+      if(Array.isArray(val)) val = val.length > 0 ? val.slice(0,5).map(v => typeof v === 'object' ? JSON.stringify(v) : v).join(', ') : '-';
+      else if(typeof val === 'object' && val !== null) val = JSON.stringify(val);
+      else if(typeof val === 'number') val = val % 1 === 0 ? val : val.toFixed(3);
+      html += '<div><span style="color:var(--text)">' + sk + '</span>: ' + val + '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // ═══ BOTTOM CTAs ═══
+  html += '<div class="bottom-row">';
+  html += '<a class="btn-check" href="/safecheck">Check your own words &rarr;</a>';
+  html += '<a class="btn-back" href="/fortune500">&larr; All companies</a>';
+  html += '</div>';
 
   document.getElementById('scorecard').innerHTML = html;
 }
@@ -259,17 +469,223 @@ function shareCard(){
   const url = window.location.href;
   navigator.clipboard.writeText(url).then(() => {
     const btn = document.querySelector('.share-btn');
-    btn.textContent = '✓ Copied';
+    btn.textContent = 'Copied';
     btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '🔗 Share this scorecard'; btn.classList.remove('copied'); }, 2000);
+    setTimeout(() => { btn.textContent = '&#128279; Share this scorecard'; btn.classList.remove('copied'); }, 2000);
   });
 }
 
-loadScorecard();
-</script>
-<script src="/static/az-mobile-audit.js" data-mode="silent"></script>
-<script src="/static/az-nav.js"></script>
+// ═══ CLICKABLE DIMENSION HIGHLIGHTING ═══
+let _scoreDetail = null; // Store detail data for click lookups
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+function highlightDimension(dimKey) {
+  // Remove previous active state
+  document.querySelectorAll('.dim-row.active-dim').forEach(el => el.classList.remove('active-dim'));
+  // Find and activate clicked row
+  const rows = document.querySelectorAll('.dim-row');
+  rows.forEach(r => { if(r.getAttribute('onclick')?.includes(dimKey)) r.classList.add('active-dim'); });
+
+  // Get example sentences from detail data
+  const copyCol = document.querySelector('.copy-col');
+  if(!copyCol || !_scoreDetail) return;
+
+  // Clear previous highlights (keep hedge highlights)
+  copyCol.querySelectorAll('.copy-highlight').forEach(el => {
+    el.outerHTML = el.textContent;
+  });
+
+  const d = _scoreDetail[dimKey];
+  if(!d) return;
+
+  // Collect searchable text fragments from dimension data
+  const fragments = [];
+  if(d.examples) {
+    d.examples.forEach(ex => {
+      const s = typeof ex === 'string' ? ex : (ex.sentence || '');
+      if(s.length > 20) fragments.push(s.replace(/\.+$/, '').trim());
+    });
+  }
+  if(d.empty_examples) {
+    d.empty_examples.forEach(s => { if(s.length > 20) fragments.push(s.replace(/\.+$/, '').trim()); });
+  }
+  if(d.commit_words) fragments.push(...(typeof d.commit_words === 'string' ? d.commit_words.split(', ') : []));
+
+  if(fragments.length === 0) {
+    // Scroll to raw dimension data in the score column
+    const scoreCol = document.querySelector('.score-col');
+    if(scoreCol) {
+      const dimHeader = Array.from(scoreCol.querySelectorAll('div')).find(el => 
+        el.textContent.toLowerCase().includes(dimKey.replace(/_/g, ' '))
+      );
+      if(dimHeader) dimHeader.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+    return;
+  }
+
+  // Search and highlight in copy text
+  let copyHtml = copyCol.innerHTML;
+  let firstMatch = null;
+  fragments.forEach(frag => {
+    // Find the fragment in the copy (fuzzy: first 40 chars)
+    const search = frag.substring(0, 40).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(' + search + '[^<]{0,80})', 'gi');
+    copyHtml = copyHtml.replace(re, (match) => {
+      if(!firstMatch) firstMatch = match;
+      return '<span class="copy-highlight flash">' + match + '</span>';
+    });
+  });
+  copyCol.innerHTML = copyHtml;
+
+  // Scroll to first match
+  const first = copyCol.querySelector('.copy-highlight');
+  if(first) {
+    first.scrollIntoView({behavior: 'smooth', block: 'center'});
+    // Fade flash after a moment
+    setTimeout(() => {
+      copyCol.querySelectorAll('.copy-highlight.flash').forEach(el => el.classList.remove('flash'));
+    }, 1500);
+  }
+}
+
+function highlightFinding(cardEl) {
+  // Extract evidence text from the finding card
+  const evidenceEl = cardEl.querySelector('.finding-evidence');
+  const copyCol = document.querySelector('.copy-col');
+  if(!copyCol) return;
+
+  // Clear previous highlights
+  copyCol.querySelectorAll('.copy-highlight').forEach(el => { el.outerHTML = el.textContent; });
+
+  let searchText = '';
+  if(evidenceEl) {
+    searchText = evidenceEl.textContent.trim();
+  } else {
+    // Try to find text from the finding itself
+    const textEl = cardEl.querySelector('.finding-text');
+    if(textEl) searchText = textEl.textContent.trim();
+  }
+
+  if(searchText.length < 10) return;
+
+  // Search for the evidence text in copy
+  const search = searchText.substring(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let copyHtml = copyCol.innerHTML;
+  const re = new RegExp('(' + search + '[^<]{0,60})', 'gi');
+  copyHtml = copyHtml.replace(re, '<span class="copy-highlight flash">$1</span>');
+  copyCol.innerHTML = copyHtml;
+
+  const first = copyCol.querySelector('.copy-highlight');
+  if(first) {
+    first.scrollIntoView({behavior: 'smooth', block: 'center'});
+    setTimeout(() => {
+      copyCol.querySelectorAll('.copy-highlight.flash').forEach(el => el.classList.remove('flash'));
+    }, 1500);
+  }
+}
+
+loadScorecard();
+
+// ═══ SIGNAL DETECTION — BUTTONS + CLICK-TO-HIGHLIGHT ═══
+const SIG_COLORS = {red:'#ef4444',crimson:'#dc2626',amber:'#f59e0b',purple:'#a78bfa',pink:'#ec4899',teal:'#2dd4bf',orange:'#f97316',blue:'#60a5fa',green:'#00e89c',gray:'#9b9b9b',lightgray:'#9b9b9b',yellow:'#eab308'};
+let _sigCatalog={}, _sigHighlights=[], _activeSig=null;
+
+async function runSignals(){
+  const copyCol = document.querySelector('.copy-col');
+  if(!copyCol) return;
+  // Extract plain text from copy column
+  const rawText = copyCol.textContent || '';
+  if(rawText.length < 20) return;
+
+  try {
+    const res = await fetch('/api/v1/score/free', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:rawText})});
+    const data = await res.json();
+    if(!data.signals) return;
+    _sigCatalog = data.signals.signal_catalog || {};
+    _sigHighlights = data.signals.highlights || [];
+    renderSigButtons(data.signals.signals_summary || {});
+  } catch(e){ console.error('Signal detection error:', e); }
+}
+
+function sigColor(sig){ const e=_sigCatalog[sig]; return e?(SIG_COLORS[e.color]||SIG_COLORS.gray):SIG_COLORS.gray; }
+
+function renderSigButtons(summary){
+  const bar = document.getElementById('sigBar');
+  if(!bar) return;
+  bar.innerHTML = '';
+  const entries = Object.entries(summary);
+  if(!entries.length){ bar.innerHTML='<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--accent)">No signals detected. Clean copy.</span>'; return; }
+
+  entries.sort((a,b)=>{
+    const A=_sigCatalog[a[0]]||{},B=_sigCatalog[b[0]]||{};
+    return (B.priority||0)-(A.priority||0)||(b[1]-a[1]);
+  });
+
+  entries.forEach(([sig,count])=>{
+    const entry=_sigCatalog[sig]||{};
+    const label=entry.label||sig.replace(/_/g,' ');
+    const color=sigColor(sig);
+    const btn=document.createElement('button');
+    btn.className='sig-btn'+(_activeSig===sig?' active':'');
+    btn.style.setProperty('--btn-color',color);
+    btn.textContent=label+' ('+count+')';
+    btn.addEventListener('click',()=>{ _activeSig=_activeSig===sig?null:sig; renderSigButtons(summary); applySigHighlights(); });
+    bar.appendChild(btn);
+  });
+}
+
+function applySigHighlights(){
+  const copyCol=document.querySelector('.copy-col');
+  const explainEl=document.getElementById('sigExplain');
+  if(!copyCol) return;
+
+  // Clear existing signal highlights
+  copyCol.querySelectorAll('.sig-hl').forEach(el=>{ el.outerHTML=el.textContent; });
+
+  if(!_activeSig){
+    if(explainEl){explainEl.classList.remove('show');explainEl.textContent='';}
+    return;
+  }
+
+  // Show explainer
+  if(explainEl){
+    const entry=_sigCatalog[_activeSig];
+    if(entry){
+      explainEl.textContent=entry.explanation;
+      explainEl.style.setProperty('--explainer-color',sigColor(_activeSig));
+      explainEl.classList.add('show');
+    } else { explainEl.classList.remove('show'); }
+  }
+
+  // Apply highlights for active signal only
+  const hits=_sigHighlights.filter(h=>h.signal===_activeSig);
+  if(!hits.length) return;
+
+  // We need to work with the plain text and create spans
+  const plainText=copyCol.textContent;
+  const color=sigColor(_activeSig);
+
+  // Build highlighted HTML from plain text + hit positions
+  // First, get the text content mapping (accounting for existing HTML)
+  hits.sort((a,b)=>a.start-b.start);
+
+  // Simple approach: find each hit phrase in the copyCol innerHTML
+  let html=copyCol.innerHTML;
+  hits.forEach(h=>{
+    const phrase=plainText.slice(h.start,h.end);
+    if(phrase.length<2) return;
+    const escaped=phrase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re=new RegExp('(?<!<[^>]*)\\b('+escaped+')\\b','gi');
+    html=html.replace(re,'<span class="sig-hl lit" style="color:'+color+'">$1</span>');
+  });
+  copyCol.innerHTML=html;
+
+  // Scroll to first highlight
+  const first=copyCol.querySelector('.sig-hl');
+  if(first) first.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// Run after page renders
+setTimeout(runSignals, 500);
+</script>
+
+{% endblock %}

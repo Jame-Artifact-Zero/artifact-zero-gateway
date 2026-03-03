@@ -1,0 +1,54 @@
+# ============================================
+# Artifact Zero — Test Suite
+# ============================================
+# Runs on: PRs to quality and main, pushes to dev/*
+# Must pass before merge is allowed
+# ============================================
+
+name: Test Suite
+
+on:
+  push:
+    branches: [dev/*, quality]
+  pull_request:
+    branches: [quality, main]
+
+jobs:
+  test:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        env:
+          FLASK_SECRET_KEY: test-ci-key
+          AZ_SECRET: test-ci-az-secret
+          TESTING: "1"
+        run: |
+          python -m pytest tests/ -v --tb=short
+
+      - name: Boot check
+        env:
+          FLASK_SECRET_KEY: test-ci-key
+          AZ_SECRET: test-ci-az-secret
+        run: |
+          python -c "
+          from app import app
+          client = app.test_client()
+          r = client.get('/health')
+          assert r.status_code == 200, f'Health check failed: {r.status_code}'
+          print('Boot check passed')
+          "

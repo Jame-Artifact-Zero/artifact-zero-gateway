@@ -1,96 +1,145 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artifact Zero — Score it.</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Artifact Zero — Structural Enforcement for AI Pipelines{% endblock %}
+{% block body_class %}page-home{% endblock %}
+
+{% block head %}
 <style>
-:root{--bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;--text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--red:#ef4444;--amber:#f59e0b}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.nav{position:fixed;top:0;right:0;padding:16px 24px;z-index:100;display:flex;gap:20px;align-items:center}
-.nav a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s}
-.nav a:hover{color:var(--accent)}
-.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;transition:all .4s ease}
-.center.scored{justify-content:flex-start;padding-top:80px}
-.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:28px;letter-spacing:3px;color:var(--accent);margin-bottom:32px;transition:all .4s ease}
-.logo .dot{color:var(--text)}
-.center.scored .logo{font-size:16px;margin-bottom:20px}
-.box{width:100%;max-width:580px;position:relative;transition:all .4s ease}
-.center.scored .box{max-width:640px}
-.box textarea{width:100%;min-height:48px;max-height:200px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:24px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;resize:none;outline:none;transition:all .2s;overflow:hidden}
-.box textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,232,156,.1)}
-.box textarea::placeholder{color:#3d4452}
-.actions{display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap}
-.btn{padding:8px 20px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-score{background:var(--accent);color:#000;font-weight:700}
-.btn-score:hover{background:#00d48c}
-.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.btn-ghost{background:transparent;color:var(--accent);font-size:12px;border:1px solid var(--accent)}
-.btn-ghost:hover{color:#000;background:var(--accent)}
-.tagline{margin-top:20px;font-size:13px;color:var(--muted);text-align:center;transition:opacity .4s}
-.center.scored .tagline{opacity:0;height:0;margin:0;overflow:hidden}
-.tagline a{color:var(--muted);font-size:11px;margin-top:8px;display:inline-block;text-decoration:none;border-bottom:1px solid var(--border);transition:color .15s}
-.tagline a:hover{color:var(--accent);border-color:var(--accent)}
-.results{display:none;width:100%;max-width:640px;margin-top:24px}
-.results.show{display:block;animation:fadeIn .4s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.score-ring{text-align:center;margin-bottom:24px}
-.score-ring .num{font-family:'JetBrains Mono',monospace;font-size:72px;font-weight:700;line-height:1}
-.score-ring .num.high{color:var(--accent)}.score-ring .num.mid{color:var(--amber)}.score-ring .num.low{color:var(--red)}
-.score-ring .label{font-family:'JetBrains Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:500px){.cards{grid-template-columns:1fr}}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
-.card h4{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.card .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
-.card .v.green{color:var(--accent)}.card .v.red{color:var(--red)}.card .v.amber{color:var(--amber)}
-.fm-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
-.tilt-tags{display:flex;flex-wrap:wrap;gap:4px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--amber)}
-.meta{text-align:center;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-.again{text-align:center;margin-top:20px}
-.again a{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;text-decoration:none;cursor:pointer}
-.footer{padding:20px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);transition:opacity .4s}
-.footer a{color:var(--accent);text-decoration:none}
-.center.scored ~ .footer{opacity:0}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
+.home-hero{max-width:720px;margin:0 auto;padding:8px 0 0}
+.home-eyebrow{font:700 11px/1 var(--mono);letter-spacing:3px;color:var(--accent);margin-bottom:16px}
+.home-h1{font:700 clamp(22px,4vw,36px)/1.2 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.95);margin:0 0 12px}
+.home-sub{font:400 15px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.70);max-width:56ch;margin:0 0 20px}
+.home-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.home-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;font:600 11px/1 var(--mono);color:rgba(255,255,255,.78)}
+.home-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.home-ctas{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.home-btn{padding:12px 20px;border-radius:8px;font:700 12px/1 var(--mono);letter-spacing:.5px;cursor:pointer;text-decoration:none;transition:all .15s;border:none}
+.home-btn.primary{background:var(--accent);color:#000}
+.home-btn.primary:hover{background:#00d48e}
+.home-btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+.home-btn.secondary:hover{border-color:rgba(255,255,255,.3)}
+.home-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;margin-bottom:28px}
+.home-metric{padding:16px;background:var(--bg,#0a0c10);text-align:center}
+.home-metric-num{font:700 26px/1 var(--mono);color:var(--accent);margin-bottom:4px}
+.home-metric-label{font:600 10px/1.3 var(--mono);letter-spacing:1.5px;color:rgba(255,255,255,.50);text-transform:uppercase}
+.home-arch{margin-bottom:28px}
+.home-arch-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);margin-bottom:12px;text-transform:uppercase}
+.home-flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02)}
+.home-node{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);font:700 12px/1 var(--mono);color:rgba(255,255,255,.86)}
+.home-node.engine{border-color:var(--accent);color:var(--accent)}
+.home-arrow{color:rgba(255,255,255,.35);font:700 14px/1 var(--mono)}
+.home-story{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;margin-bottom:28px;background:rgba(255,255,255,.02)}
+.home-story-quote{font:400 16px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.85);margin:0 0 10px}
+.home-story-hl{color:var(--amber,#f59e0b);font-weight:700;border-bottom:2px dashed var(--amber);cursor:pointer;transition:color .2s}
+.home-story-hl:hover{color:#fbbf24}
+.home-story-cta{font:500 11px/1 var(--mono);color:var(--accent);margin-top:6px;letter-spacing:.3px}
+.home-explain{margin-top:14px;font:400 13px/1.6 var(--mono);color:rgba(255,255,255,.65);border-left:2px solid var(--amber);padding-left:14px;display:none}
+.home-explain.show{display:block}
+.home-explain strong{color:var(--red,#ef4444)}
+.home-wedges{margin-bottom:28px}
+.home-wedges-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);margin-bottom:12px;text-transform:uppercase}
+.home-wedge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.home-wedge{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.02);font:500 12px/1.4 var(--mono);color:rgba(255,255,255,.78);transition:border-color .15s}
+.home-wedge:hover{border-color:rgba(255,255,255,.2)}
+.home-wedge-ind{font:700 10px/1 var(--mono);color:rgba(255,255,255,.45);letter-spacing:1px;margin-bottom:6px}
+.home-bottom{text-align:center;padding:16px 0 24px;border-top:1px solid rgba(255,255,255,.06)}
+.home-bottom-text{font:400 14px/1.6 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.60);margin-bottom:14px}
+@media(max-width:600px){.home-flow{gap:6px}.home-node{padding:8px 10px;font-size:10px}.home-metrics{grid-template-columns:1fr 1fr}}
 </style>
-</head>
-<body>
-<!-- nav handled by az-shell.js -->
-<div class="center" id="center">
-  <div class="logo">ARTIFACT ZERO<span class="dot">.</span></div>
-  <div class="box">
-    <textarea id="input" placeholder="Paste any message, email, or AI response..." oninput="autoGrow(this)" rows="1"></textarea>
-    <div class="actions">
-      <button class="btn btn-score" id="scoreBtn" onclick="score()">Score it</button>
-      <button class="btn btn-ghost" onclick="sample('email')">Try: Email</button>
-      <button class="btn btn-ghost" onclick="sample('contract')">Try: Contract</button>
-      <button class="btn btn-ghost" onclick="sample('ai')">Try: AI response</button>
+{% endblock %}
+
+{% block content %}
+<div class="az-page">
+
+  <div class="home-hero">
+    <div class="home-eyebrow">STRUCTURAL ENFORCEMENT</div>
+    <h1 class="home-h1">Deterministic governance for every message your AI touches.</h1>
+    <p class="home-sub">No LLM in the engine. No probabilistic output. Span-level traceability. Same input, same output. Every time.</p>
+
+    <div class="home-pills">
+      <span class="home-pill"><span class="dot"></span>43 signals</span>
+      <span class="home-pill"><span class="dot"></span>~3ms response</span>
+      <span class="home-pill"><span class="dot"></span>Versioned</span>
+      <span class="home-pill"><span class="dot"></span>Auditable</span>
+      <span class="home-pill"><span class="dot"></span>No model dependency</span>
+    </div>
+
+    <div class="home-ctas">
+      <a href="/safecheck" class="home-btn primary">Try SafeCheck →</a>
+      <a href="/docs" class="home-btn secondary">API docs</a>
+      <a href="/examples" class="home-btn secondary">25 use cases</a>
+      <a href="/relay" class="home-btn secondary">Relay</a>
+      <a href="/ai" class="home-btn secondary">AI + savings</a>
     </div>
   </div>
-  <div class="tagline">Structural integrity scoring for any communication.<br><span style="color:var(--accent)">49% → 7%</span> false commitment rate. Rule-based. Zero LLM.<br><a href="/examples">But what do you actually do? See 25 real examples →</a></div>
-  <div class="results" id="results">
-    <div id="ntiResults"></div>
-    <div class="again" id="againBtn" style="display:none"><a onclick="reset()">Score another →</a></div>
-  </div>
-</div>
-<script src="/static/nti-score-component.js"></script>
-<script>
-const S={email:"I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.",contract:"The service provider shall use commercially reasonable efforts to maintain system availability at generally accepted industry standards. Modifications to pricing may occur upon reasonable notice. The client agrees to indemnify the provider against any and all claims arising from use of the service.",ai:"I'd be happy to help with that! There are several approaches you could consider, and each has its own merits. Generally speaking, the best practice would depend on your specific situation. Let me know if you'd like me to elaborate on any of these points or if there's anything else I can assist with!"};
-let _lastText='';
-function sample(k){document.getElementById('input').value=S[k];autoGrow(document.getElementById('input'))}
-function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';el.style.borderRadius=el.scrollHeight>60?'16px':'24px'}
-async function score(){const text=document.getElementById('input').value.trim();if(!text)return;_lastText=text;const btn=document.getElementById('scoreBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Scoring...';try{const r=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(d.error){alert(d.error);return}const el=document.getElementById('ntiResults');el.innerHTML='';el.appendChild(NTIScore.render(d,_lastText));document.getElementById('center').classList.add('scored');document.getElementById('results').classList.add('show');document.getElementById('againBtn').style.display='block'}catch(e){alert('Error: '+e.message)}finally{btn.disabled=false;btn.textContent='Score it'}}
-function reset(){document.getElementById('input').value='';document.getElementById('results').classList.remove('show');document.getElementById('center').classList.remove('scored');document.getElementById('ntiResults').innerHTML='';document.getElementById('againBtn').style.display='none';autoGrow(document.getElementById('input'));window.scrollTo(0,0)}
-</script>
-<script src="/static/az-nav.js"></script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+  <div class="home-metrics">
+    <div class="home-metric"><div class="home-metric-num">49% → 7%</div><div class="home-metric-label">False commitment rate</div></div>
+    <div class="home-metric"><div class="home-metric-num">63%</div><div class="home-metric-label">Token cost reduction</div></div>
+    <div class="home-metric"><div class="home-metric-num">413</div><div class="home-metric-label">Fortune 500 scored</div></div>
+    <div class="home-metric"><div class="home-metric-num">0</div><div class="home-metric-label">LLM calls in engine</div></div>
+  </div>
+
+  <div class="home-arch">
+    <div class="home-arch-title">Pipeline Architecture</div>
+    <div class="home-flow">
+      <span class="home-node">Human</span>
+      <span class="home-arrow">→</span>
+      <span class="home-node engine">V1 Score</span>
+      <span class="home-arrow">→</span>
+      <span class="home-node">LLM</span>
+      <span class="home-arrow">→</span>
+      <span class="home-node engine">V3 Stabilize</span>
+      <span class="home-arrow">→</span>
+      <span class="home-node">Human</span>
+    </div>
+  </div>
+
+  <div class="home-story">
+    <div class="home-story-quote">
+      Everyone has typed <span class="home-story-hl" id="perMyLast">"per my last email."</span> It has never once meant what it says. Not once. The engine knows why.
+    </div>
+    <div class="home-story-cta" id="stCta">tap "per my last email" ↓</div>
+    <div class="home-explain" id="stExplain">
+      "Per my last email" is passive aggression disguised as professionalism. It positions the sender as already-correct and the reader as negligent. The engine detects this as <strong>PASSIVE_AGGRESSION</strong> and <strong>DOMINANCE_ASSERTION</strong> — relational friction in five words. That's what structural enforcement does. It finds the words that break things before they leave the screen.
+    </div>
+  </div>
+
+  <div class="home-wedges">
+    <div class="home-wedges-title">Enterprise Integration Points</div>
+    <div class="home-wedge-grid">
+      <div class="home-wedge"><div class="home-wedge-ind">SECURITY</div>Pre-LLM prompt firewall</div>
+      <div class="home-wedge"><div class="home-wedge-ind">SECURITY</div>Post-LLM output validator</div>
+      <div class="home-wedge"><div class="home-wedge-ind">LEGAL</div>Contract drift detection</div>
+      <div class="home-wedge"><div class="home-wedge-ind">HEALTHCARE</div>Clinical note integrity</div>
+      <div class="home-wedge"><div class="home-wedge-ind">SALES</div>Commitment guardrails</div>
+      <div class="home-wedge"><div class="home-wedge-ind">INSURANCE</div>Claim narrative risk</div>
+      <div class="home-wedge"><div class="home-wedge-ind">COMPLIANCE</div>Policy draft scoring</div>
+      <div class="home-wedge"><div class="home-wedge-ind">AI/AGENTS</div>Agent tool-use gate</div>
+    </div>
+  </div>
+
+  <div class="home-bottom">
+    <div class="home-bottom-text">Designed to sit before and after model calls. No integration required to try it.</div>
+    <div class="home-ctas" style="justify-content:center">
+      <a href="/safecheck" class="home-btn primary">Score your text →</a>
+      <a href="/fortune500" class="home-btn secondary">See Fortune 500 scores</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(()=>{
+  'use strict';
+  const hl=document.getElementById('perMyLast');
+  const explain=document.getElementById('stExplain');
+  const cta=document.getElementById('stCta');
+  hl.addEventListener('click',()=>{
+    const showing=explain.classList.toggle('show');
+    cta.style.display=showing?'none':'';
+  });
+})();
+</script>
+{% endblock %}

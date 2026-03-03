@@ -1,0 +1,92 @@
+
+/* az-api.css — API page components (uses az-base.css tokens) */
+.page-api .az-hero,
+.page-use-cases .az-hero {
+  margin: 0 0 var(--az-8) 0;
+}
+
+.az-h1 { font: 700 28px/1.15 "DM Sans", system-ui, sans-serif; margin: 0 0 var(--az-3) 0; }
+.az-subhead { margin: 0; color: rgba(255,255,255,.78); max-width: 70ch; }
+
+.az-hero-badges { display: flex; flex-wrap: wrap; gap: var(--az-2); margin-top: var(--az-4); }
+.az-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px; font: 600 12px/1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: rgba(255,255,255,.82);
+}
+
+.az-grid { display: grid; gap: var(--az-6); grid-template-columns: 1fr; }
+@media (min-width: 960px) { .az-grid { grid-template-columns: 1fr 1fr; } }
+
+.az-card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  padding: var(--az-6);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+.az-section { margin-top: var(--az-6); }
+
+.az-h2 { font: 700 18px/1.2 "DM Sans", system-ui, sans-serif; margin: 0 0 var(--az-3) 0; }
+.az-h3 { font: 700 14px/1.2 "JetBrains Mono", ui-monospace, monospace; margin: var(--az-5) 0 var(--az-2) 0; color: rgba(255,255,255,.86); }
+.az-p { margin: 0 0 var(--az-3) 0; color: rgba(255,255,255,.82); }
+.az-note { margin: var(--az-3) 0 0 0; color: rgba(255,255,255,.70); font-size: 13px; }
+
+.az-list { margin: 0; padding-left: 18px; color: rgba(255,255,255,.82); }
+.az-list li { margin: 6px 0; }
+
+.az-inlinecode {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.12);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,.86);
+}
+
+.az-codeblock {
+  margin-top: var(--az-4);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.30);
+  overflow: hidden;
+}
+.az-codehdr {
+  padding: 10px 12px;
+  font: 700 12px/1 "JetBrains Mono", ui-monospace, monospace;
+  color: rgba(255,255,255,.78);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+}
+.az-codeblock pre { margin: 0; padding: 12px; overflow-x: auto; }
+.az-codeblock code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; color: rgba(255,255,255,.88); }
+
+.az-tablewrap { overflow-x: auto; }
+.az-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.az-table th, .az-table td {
+  text-align: left;
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.82);
+}
+.az-table th { color: rgba(255,255,255,.92); font-weight: 700; }
+.az-table td { vertical-align: top; }
+
+.az-mini { margin-top: var(--az-3); }
+.az-flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: var(--az-3) 0; }
+.az-node {
+  padding: 8px 10px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.03);
+  font: 700 12px/1 "JetBrains Mono", ui-monospace, monospace;
+  color: rgba(255,255,255,.86);
+}
+.az-arrow { color: rgba(255,255,255,.55); font: 700 12px/1 "JetBrains Mono", ui-monospace, monospace; }

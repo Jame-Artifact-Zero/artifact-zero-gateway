@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}AI + Savings — Artifact Zero{% endblock %}
+{% block body_class %}page-ai{% endblock %}
+
+{% block head %}
+<style>
+.ai-page{max-width:680px;margin:0 auto}
+.ai-eyebrow{font:700 11px/1 var(--mono);letter-spacing:3px;color:var(--accent);margin-bottom:16px}
+.ai-h1{font:700 clamp(22px,4vw,32px)/1.2 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.95);margin:0 0 12px}
+.ai-sub{font:400 15px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.65);margin:0 0 28px}
+.ai-section{margin-bottom:28px}
+.ai-section-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);text-transform:uppercase;margin-bottom:12px}
+.ai-text{font:400 15px/1.75 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.80);margin:0 0 14px}
+.ai-card{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;background:rgba(255,255,255,.02);margin-bottom:16px}
+.ai-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;margin-bottom:28px}
+.ai-metric{padding:16px;background:var(--bg,#0a0c10);text-align:center}
+.ai-metric-num{font:700 24px/1 var(--mono);color:var(--accent);margin-bottom:4px}
+.ai-metric-label{font:600 10px/1.3 var(--mono);letter-spacing:1.5px;color:rgba(255,255,255,.50);text-transform:uppercase}
+.ai-table{width:100%;border-collapse:collapse;margin-bottom:16px;font:400 13px/1.4 var(--mono)}
+.ai-table th{text-align:left;font-weight:700;color:rgba(255,255,255,.50);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.12)}
+.ai-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.78)}
+.ai-table .savings{color:var(--accent);font-weight:700}
+.ai-flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);margin-bottom:16px}
+.ai-node{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);font:700 12px/1 var(--mono);color:rgba(255,255,255,.86)}
+.ai-node.engine{border-color:var(--accent);color:var(--accent)}
+.ai-node.llm{border-color:var(--amber);color:var(--amber)}
+.ai-arrow{color:rgba(255,255,255,.35);font:700 14px/1 var(--mono)}
+.ai-ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+.ai-btn{padding:12px 20px;border-radius:8px;font:700 12px/1 var(--mono);letter-spacing:.5px;cursor:pointer;text-decoration:none;transition:all .15s;border:none}
+.ai-btn.primary{background:var(--accent);color:#000}
+.ai-btn.primary:hover{background:#00d48e}
+.ai-btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+.ai-btn.secondary:hover{border-color:rgba(255,255,255,.3)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="az-page ai-page">
+
+  <div class="ai-eyebrow">AI + SAVINGS</div>
+  <h1 class="ai-h1">The engine doesn't replace AI. It makes AI worth using.</h1>
+  <p class="ai-sub">No LLM in the engine means the analysis is deterministic. But LLMs are still essential for generation. The question is: how do you make every model call count?</p>
+
+  <div class="ai-section">
+    <div class="ai-section-title">The Problem</div>
+    <div class="ai-text">Every AI-assisted workflow today burns tokens on rework. A human sends vague input. The model guesses. The human clarifies. The model tries again. Three turns to do what one turn should accomplish.</div>
+    <div class="ai-text">This isn't a model quality problem — GPT-4.1, Claude Opus, Gemini 2.5 are all capable. It's a structural problem. The input was never scored before the model saw it. The output was never stabilized before the human saw it. Both sides of the conversation are ungoverned.</div>
+  </div>
+
+  <div class="ai-section">
+    <div class="ai-section-title">The Pipeline</div>
+    <div class="ai-flow">
+      <span class="ai-node">Human</span>
+      <span class="ai-arrow">→</span>
+      <span class="ai-node engine">V1 Score</span>
+      <span class="ai-arrow">→</span>
+      <span class="ai-node engine">V2 Gate</span>
+      <span class="ai-arrow">→</span>
+      <span class="ai-node llm">LLM</span>
+      <span class="ai-arrow">→</span>
+      <span class="ai-node engine">V3 Stabilize</span>
+      <span class="ai-arrow">→</span>
+      <span class="ai-node">Human</span>
+    </div>
+    <div class="ai-text"><strong style="color:var(--accent)">V1</strong> scores the human input. Detects hedges, missing objectives, ambiguity, structural drift. If the input fails the gate threshold (0.80), the human gets better words before the model ever sees it.</div>
+    <div class="ai-text"><strong style="color:var(--amber)">LLM</strong> generates. This is where the model does what models are built to do — create net-new language. But it only operates on governed, scored input.</div>
+    <div class="ai-text"><strong style="color:var(--accent)">V3</strong> stabilizes the output. Strips hedges, filler, duplicates. Anchors to the original objective. Enforces token ceiling. The human receives clean, structurally sound output.</div>
+  </div>
+
+  <div class="ai-section">
+    <div class="ai-section-title">The Savings</div>
+    <div class="ai-metrics">
+      <div class="ai-metric"><div class="ai-metric-num">63%</div><div class="ai-metric-label">Token cost reduction</div></div>
+      <div class="ai-metric"><div class="ai-metric-num">3 → 1</div><div class="ai-metric-label">Turns per task</div></div>
+      <div class="ai-metric"><div class="ai-metric-num">49% → 7%</div><div class="ai-metric-label">False commitment rate</div></div>
+    </div>
+    <div class="ai-text">Primary savings come from turn reduction — not token compression. When the input is governed, the model doesn't need to guess. When the output is stabilized, the human doesn't need to re-prompt. One turn instead of three.</div>
+
+    <div class="ai-card">
+      <table class="ai-table">
+        <thead><tr><th>Model</th><th>Baseline cost/yr</th><th>With NTI</th><th>Savings</th></tr></thead>
+        <tbody>
+          <tr><td>GPT-4.1 mini (Batch)</td><td>$9,600</td><td>$3,680</td><td class="savings">$5,920</td></tr>
+          <tr><td>GPT-4.1 (Batch)</td><td>$48,000</td><td>$18,400</td><td class="savings">$29,600</td></tr>
+          <tr><td>Claude Opus 4.6</td><td>$141,000</td><td>$54,000</td><td class="savings">$87,000</td></tr>
+          <tr><td>Gemini 2.5 Pro</td><td>$51,000</td><td>$19,500</td><td class="savings">$31,500</td></tr>
+          <tr><td>Gemini 2.5 Flash</td><td>$12,660</td><td>$4,840</td><td class="savings">$7,820</td></tr>
+        </tbody>
+      </table>
+      <div style="font:400 11px/1.4 var(--mono);color:rgba(255,255,255,.45)">Based on 2,000,000 requests/year. Sources: openai.com/api/pricing, platform.claude.com, ai.google.dev</div>
+    </div>
+  </div>
+
+  <div class="ai-section">
+    <div class="ai-section-title">Why No LLM in the Engine</div>
+    <div class="ai-text">The scoring engine is entirely rule-based. 43 signals. Deterministic. Same input produces the same score every time. This matters because governance cannot be probabilistic. If the guardrail hallucinates, it's not a guardrail.</div>
+    <div class="ai-text">LLMs are only needed when generating net-new language. The engine handles detection, scoring, classification, and structural cleanup without a single model call. Response time averages ~3ms. Zero inference cost.</div>
+  </div>
+
+  <div class="ai-section">
+    <div class="ai-section-title">The Gap in the Market</div>
+    <div class="ai-text">Guardrails AI validates outputs. Prompt engineering tools optimize inputs. Neither governs the structural integrity of the conversation itself — the words, the commitments, the drift, the relational dynamics between human and machine.</div>
+    <div class="ai-text">There is no tool today that sits at the interface layer and enforces structural governance on both sides of the AI conversation. That's what this is.</div>
+  </div>
+
+  <div class="ai-ctas">
+    <a href="/safecheck" class="ai-btn primary">Try SafeCheck →</a>
+    <a href="/docs" class="ai-btn secondary">API docs</a>
+    <a href="/relay" class="ai-btn secondary">Relay</a>
+    <a href="/fortune500" class="ai-btn secondary">Fortune 500 scores</a>
+  </div>
+
+</div>
+{% endblock %}

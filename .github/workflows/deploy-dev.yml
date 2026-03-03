@@ -1,0 +1,89 @@
+# ============================================
+# Artifact Zero — Deploy to Development
+# ============================================
+# Triggers: push to develop branch (after PR merge from dev/*)
+# Deploys to: dev.artifact0.com
+# ============================================
+
+name: Deploy to Dev
+
+on:
+  push:
+    branches: [develop]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: artifact-zero
+  ECS_CLUSTER: artifact-zero-cluster
+  ECS_SERVICE: artifact-zero-dev
+  ECS_TASK_DEFINITION: artifact-zero-dev-task
+
+jobs:
+  test:
+    name: Run Tests First
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt && pip install pytest
+      - run: python -m pytest tests/ -v --tb=short
+        env:
+          FLASK_SECRET_KEY: test-ci-key
+          AZ_SECRET: test-ci-az-secret
+          TESTING: "1"
+
+  deploy-dev:
+    name: Deploy to Dev Environment
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image (dev tag)
+        id: build
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: dev-${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition $ECS_TASK_DEFINITION \
+            --query taskDefinition > task-definition.json
+
+      - name: Update task definition image
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        id: render
+        with:
+          task-definition: task-definition.json
+          container-name: artifact-zero
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to dev ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

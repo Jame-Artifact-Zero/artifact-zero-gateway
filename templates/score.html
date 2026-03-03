@@ -1,217 +1,170 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Score — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Score — Artifact Zero{% endblock %}
+{% block body_class %}page-score{% endblock %}
+
+{% block content %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;--green:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-
-.topbar{
-  border-bottom:1px solid var(--border);padding:16px 24px;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.topbar .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.topbar nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;font-family:'JetBrains Mono',monospace}
-.topbar nav a:hover{color:var(--green)}
-.topbar nav a.active{color:var(--green)}
-
-.main{max-width:720px;margin:0 auto;padding:40px 20px 80px}
-
-h1{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:6px}
-.subtitle{color:var(--muted);font-size:14px;margin-bottom:30px}
-.free-badge{display:inline-block;background:rgba(0,232,156,.12);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;margin-left:8px}
-
-textarea{
-  width:100%;min-height:160px;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);padding:16px;border-radius:8px;font-family:'DM Sans',sans-serif;
-  font-size:15px;line-height:1.6;resize:vertical;outline:none;transition:border .2s;
-}
-textarea:focus{border-color:var(--accent)}
-textarea::placeholder{color:#3d4452}
-
-.controls{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
-.btn{padding:10px 24px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-score{background:var(--green);color:#000;font-size:15px;padding:12px 32px}
-.btn-score:hover{background:#16a34a}
-.btn-score:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.btn-sample{background:var(--surface2);color:var(--muted);font-size:12px;padding:8px 14px}
-.btn-sample:hover{color:var(--text);background:var(--border)}
-.char-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-
-.usage-bar{margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
-.usage-bar .label{color:var(--muted);font-family:'JetBrains Mono',monospace}
-.usage-bar .count{color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:600}
-.usage-bar a{color:var(--accent);text-decoration:none;font-family:'JetBrains Mono',monospace}
-
-/* Results */
-.results{display:none;margin-top:30px}
-.results.show{display:block;animation:fadeIn .3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-.score-hero{text-align:center;padding:30px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px}
-.score-number{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;line-height:1}
-.score-number.high{color:var(--green)}
-.score-number.mid{color:var(--amber)}
-.score-number.low{color:var(--red)}
-.score-number.crit{color:var(--red)}
-.score-label{font-family:'JetBrains Mono',monospace;font-size:13px;margin-top:6px;text-transform:uppercase;letter-spacing:2px}
-.score-label.high{color:var(--green)}
-.score-label.mid{color:var(--amber)}
-.score-label.low{color:var(--red)}
-.score-label.crit{color:var(--red)}
-
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-@media(max-width:500px){.detail-grid{grid-template-columns:1fr}}
-.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
-.detail-card h3{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.detail-card .value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
-.detail-card .value.green{color:var(--green)}
-.detail-card .value.red{color:var(--red)}
-.detail-card .value.amber{color:var(--amber)}
-
-.failure-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
-.failure-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
-.failure-badge.confirmed{background:#ef444422;color:var(--red)}
-.failure-badge.probable{background:#f59e0b22;color:var(--amber)}
-.failure-badge.false{background:rgba(0,232,156,.12);color:var(--green)}
-.failure-name{font-size:13px;color:var(--muted)}
-
-.tilt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.tilt-tag{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--amber)}
-
-.meta-row{display:flex;gap:16px;margin-top:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap}
-
-.footer{text-align:center;padding:40px;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);margin-top:60px}
+  .sc-input-card { background: var(--surface, #111113); border: 1px solid var(--border, #2a2a2e); border-radius: 12px; padding: 16px; }
+  .sc-input-card textarea { width: 100%; min-height: 100px; background: transparent; border: none; color: var(--text, #e5e7eb); font-family: var(--mono); font-size: 15px; line-height: 1.6; resize: none; outline: none; }
+  .sc-input-card textarea::placeholder { color: var(--muted, #6b7280); }
+  .sc-run-btn { display: block; width: 100%; margin-top: 14px; padding: 14px; border-radius: 10px; border: none; background: var(--accent, #00e89c); color: #000; font-family: var(--mono); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .sc-run-btn:disabled { opacity: 0.4; cursor: default; }
+  .sc-bottom { margin-top: 16px; min-height: 200px; }
+  .sc-results-card { background: var(--surface, #111113); border: 1px solid var(--border, #2a2a2e); border-radius: 12px; padding: 16px; }
+  .sc-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; color: var(--muted, #6b7280); text-align: center; }
+  .sc-empty .icon { font-size: 28px; margin-bottom: 12px; opacity: 0.4; }
+  .sc-empty .label { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
+  .az-pattern-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .az-signal-btn { background: transparent; padding: 7px 14px; border-radius: 999px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s; border: 1px solid var(--btn-color, #6b7280); color: var(--btn-color, #6b7280); }
+  .az-signal-btn:hover { opacity: 0.85; }
+  .az-signal-btn.active { background: var(--btn-color, #6b7280); color: #000; }
+  .sc-explainer { font-family: var(--mono); font-size: 12px; color: var(--muted, #6b7280); margin-bottom: 14px; border-left: 2px solid var(--explainer-color, var(--accent, #00e89c)); padding-left: 10px; line-height: 1.5; }
+  .sc-explainer.hidden { display: none; }
+  .sc-hl-text { line-height: 1.8; font-size: 15px; color: var(--text, #e5e7eb); padding: 14px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid var(--border, #2a2a2e); }
+  .az-hl { padding: 0 2px; border-radius: 3px; transition: all 0.25s ease; }
+  .az-hl.lit { font-weight: 700; }
+  .sc-score-block { margin-top: 18px; }
+  .sc-score-num { font-family: var(--mono); font-size: 36px; font-weight: 700; line-height: 1; }
+  .sc-score-label { font-family: var(--mono); font-size: 10px; color: var(--muted, #6b7280); letter-spacing: 1.5px; margin-top: 4px; }
+  .sc-section-title { font-family: var(--mono); font-size: 10px; color: var(--muted, #6b7280); letter-spacing: 1.5px; margin: 16px 0 6px; }
+  .sc-list { list-style: none; padding: 0; }
+  .sc-list li { font-family: var(--mono); font-size: 12px; line-height: 1.5; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .sc-list li:last-child { border-bottom: none; }
+  .sc-dim-row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; margin-bottom: 4px; }
+  .sc-dim-k { color: var(--muted, #6b7280); }
+  .sc-dim-v { font-weight: 700; }
 </style>
-</head>
-<body>
 
-<!-- topbar removed: az-shell.js -->
-<div class="main">
-
-<h1>Score your text <span class="free-badge">10 free / month</span></h1>
-<p class="subtitle">Paste any message, email, or AI output. Get a structural integrity score in milliseconds.</p>
-
-<textarea id="input" placeholder="Paste your text here...&#10;&#10;Example: &quot;I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually.&quot;"></textarea>
-
-<div class="controls">
-  <div>
-    <button class="btn btn-score" id="scoreBtn" onclick="scoreText()">Score this →</button>
-    <button class="btn btn-sample" onclick="loadSample()">Load sample</button>
+<div class="az-page">
+  <div id="scoreInputSection">
+    <div class="sc-input-card"><textarea id="scoreInput" placeholder="Paste what someone sent you..."></textarea></div>
+    <button class="sc-run-btn" id="scoreRunBtn">Score</button>
   </div>
-  <span class="char-count" id="charCount">0 / 50,000</span>
+  <div class="sc-bottom">
+    <div class="sc-results-card">
+      <div class="sc-empty" id="scoreEmpty"><div class="icon">↓</div><div class="label">RESULTS APPEAR HERE</div></div>
+      <div id="scoreFilled" style="display:none;">
+        <div id="scorePatternBar" class="az-pattern-bar"></div>
+        <div id="scoreExplainer" class="sc-explainer hidden"></div>
+        <div id="scoreHlText" class="sc-hl-text"></div>
+        <div class="sc-score-block"><div class="sc-score-num" id="scoreScoreNum"></div><div class="sc-score-label" id="scoreScoreLabel"></div></div>
+        <div id="scoreTiltSection"></div>
+        <div id="scoreFmSection"></div>
+        <div id="scoreDimSection"></div>
+        <div style="margin-top:16px;"><button class="sc-run-btn" style="background:transparent;color:var(--accent);border:1px solid var(--accent);" id="scoreNewBtn">New text</button></div>
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
-<div class="usage-bar" id="usageBar">
-  <span class="label">Free tier</span>
-  <span class="count" id="usageCount">— / 10 this month</span>
-  <a href="/docs#pricing">Upgrade →</a>
-</div>
-
-<div id="ntiResults"></div>
-
-</div>
-
-<script src="/static/nti-score-component.js"></script>
+{% block scripts %}
 <script>
-const input = document.getElementById('input');
-const charCount = document.getElementById('charCount');
-const scoreBtn = document.getElementById('scoreBtn');
+(() => {
+  'use strict';
 
-const SAMPLE = `I completely understand your concerns and I want to assure you that everything is fine. We've basically addressed all the issues and generally speaking the team is aligned. Don't worry about the timeline — we'll probably figure it out eventually. Rest assured we've got this covered.`;
+  const SIG_COLORS = { red:'#ef4444', crimson:'#dc2626', amber:'#f59e0b', purple:'#a78bfa', pink:'#ec4899', teal:'#2dd4bf', orange:'#f97316', blue:'#60a5fa', green:'#00e89c', gray:'#9b9b9b', lightgray:'#9b9b9b', yellow:'#eab308' };
+  function sigColor(sig){ const e=catalog[sig]; return e?(SIG_COLORS[e.color]||SIG_COLORS.gray):SIG_COLORS.gray; }
 
-input.addEventListener('input', () => {
-  charCount.textContent = input.value.length.toLocaleString() + ' / 50,000';
-});
+  const TILT = { T1_REASSURANCE_DRIFT:'They\'re reassuring instead of addressing the issue.', T2_CERTAINTY_INFLATION:'Certainty claimed without evidence.', T3_CONSENSUS_CLAIMS:'Broad consensus implied without proof.', T4_CAPABILITY_OVERREACH:'Capability overstated beyond constraints.', T5_ABSOLUTE_LANGUAGE:'Absolute language where nuance would be honest.', T6_CONSTRAINT_DEFERRAL:'Hard decisions pushed to later.', T7_CATEGORY_BLEND:'Categories blended to obscure specifics.', T8_PRESSURE_OPTIMIZATION:'Urgency manufactured to force a decision.', T9_SCOPE_EXPANSION:'Scope expanded without acknowledging the shift.', T10_AUTHORITY_IMPOSITION:'Authority asserted rather than explained.' };
+  const FM = { UDDS:{n:'Upstream Drift',d:'Agreement language before constraints are set.'}, DCE:{n:'Deferred Enforcement',d:'Hard decisions pushed to later.'}, CCA:{n:'Constraint Collapse',d:'Vague claims bundled to obscure gaps.'} };
 
-function loadSample() {
-  input.value = SAMPLE;
-  input.dispatchEvent(new Event('input'));
-}
-
-function getUsage() {
-  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
-  return parseInt(localStorage.getItem(key) || '0');
-}
-function addUsage() {
-  const key = 'az_free_usage_' + new Date().toISOString().slice(0, 7);
-  const n = getUsage() + 1;
-  localStorage.setItem(key, n);
-  return n;
-}
-function updateUsageDisplay() {
-  const used = getUsage();
-  document.getElementById('usageCount').textContent = used + ' / 10 this month';
-}
-updateUsageDisplay();
-
-async function scoreText() {
-  const text = input.value.trim();
-  if (!text) return;
-
-  if (getUsage() >= 10) {
-    alert('Free tier limit reached (10/month). Get an API key at /docs for more.');
-    return;
+  let text='',highlights=[],activeSignal=null,apiData=null,catalog={};
+  function esc(s){const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML;}
+  function scoreColor(n){return n>=80?'var(--accent)':n>=60?'var(--amber)':'var(--red)';}
+  function getSig(h){ return h.signal||h.pattern||'unknown'; }
+  function fmActive(pfm){
+    if(!pfm||typeof pfm!=='object')return[];
+    const out=[];
+    ['UDDS','DCE','CCA'].forEach(k=>{const obj=pfm[k];if(!obj)return;const st=String(obj[k.toLowerCase()+'_state']||'');if(st.includes('CONFIRMED')||st.includes('PROBABLE'))out.push({k,state:st});});
+    return out;
   }
 
-  scoreBtn.disabled = true;
-  scoreBtn.textContent = 'Scoring...';
+  const patternBar=document.getElementById('scorePatternBar');
+  const explainerEl=document.getElementById('scoreExplainer');
+  const hlTextEl=document.getElementById('scoreHlText');
 
-  try {
-    const resp = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+  function buildButtons(){
+    patternBar.innerHTML='';
+    const g={};
+    highlights.forEach(h=>{ const s=getSig(h); g[s]=(g[s]||0)+1; });
+    Object.keys(g).forEach(sig=>{
+      const entry=catalog[sig]||{};
+      const label=entry.label||sig.replace(/_/g,' ');
+      const color=sigColor(sig);
+      const btn=document.createElement('button');
+      btn.className='az-signal-btn'+(activeSignal===sig?' active':'');
+      btn.style.setProperty('--btn-color',color);
+      btn.textContent=label+' ('+g[sig]+')';
+      btn.addEventListener('click',()=>{ activeSignal=activeSignal===sig?null:sig; renderAll(false); });
+      patternBar.appendChild(btn);
     });
-    const data = await resp.json();
-    if (data.error) {
-      const el = document.getElementById('results');
-      el.innerHTML = '<div style="text-align:center;padding:24px;color:#f59e0b;font-family:\'JetBrains Mono\',monospace;font-size:13px">' + data.error + '</div>';
-      return;
-    }
-    addUsage();
-    updateUsageDisplay();
-    const el = document.getElementById('ntiResults');
-    el.innerHTML = '';
-    el.appendChild(NTIScore.render(data, text));
-  } catch (e) {
-    alert('Scoring failed: ' + e.message);
-  } finally {
-    scoreBtn.disabled = false;
-    scoreBtn.textContent = 'Score this →';
   }
-}
-</script>
 
-<script src="/static/az-nav.js"></script>
-
-<script src="/static/nti-engine.js"></script>
-
-<script>
-// Add rewrite capability to score page
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form') || document.querySelector('textarea');
-  if (form) {
-    const rw = document.createElement('div');
-    rw.id = 'score-rewrite-out';
-    rw.style.cssText = 'display:none;margin-top:16px;background:#12151b;border:1px solid #00e89c;border-radius:10px;padding:16px';
-    const ta = document.querySelector('textarea');
-    if (ta && ta.parentElement) {
-      ta.parentElement.appendChild(rw);
-      NTI.rewriteButton('textarea', '#score-rewrite-out');
-    }
+  function renderExplainer(){
+    if(!activeSignal){ explainerEl.classList.add('hidden'); return; }
+    explainerEl.classList.remove('hidden');
+    const entry=catalog[activeSignal];
+    explainerEl.style.setProperty('--explainer-color',sigColor(activeSignal));
+    explainerEl.textContent=entry?entry.explanation:'Pattern detected.';
   }
-});
-</script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+  function renderHL(progressive){
+    hlTextEl.innerHTML='';
+    const sorted=highlights.slice().sort((a,b)=>a.start-b.start);
+    let cursor=0,delay=0;
+    sorted.forEach(h=>{
+      if(h.start>cursor) hlTextEl.appendChild(document.createTextNode(text.slice(cursor,h.start)));
+      const sig=getSig(h);
+      const span=document.createElement('span');
+      span.textContent=text.slice(h.start,h.end);
+      span.className='az-hl';
+      span.dataset.signal=sig;
+      if(activeSignal&&sig===activeSignal){ span.style.color=sigColor(sig); span.classList.add('lit'); }
+      if(progressive){ span.style.opacity='0';span.style.transform='translateY(3px)'; const d=delay; setTimeout(()=>{span.style.opacity='1';span.style.transform='translateY(0)';span.style.transition='all 0.3s ease';},100+d*120); delay++; }
+      hlTextEl.appendChild(span); cursor=h.end;
+    });
+    if(cursor<text.length) hlTextEl.appendChild(document.createTextNode(text.slice(cursor)));
+  }
+
+  function renderReadout(){
+    if(!apiData) return;
+    const nii=apiData.nii&&apiData.nii.nii_score;const label=(apiData.nii&&apiData.nii.nii_label)||'';
+    const tiltTags=apiData.tilt_taxonomy||[];const fails=fmActive(apiData.parent_failure_modes);
+    if(nii!=null){document.getElementById('scoreScoreNum').textContent=nii;document.getElementById('scoreScoreNum').style.color=scoreColor(nii);document.getElementById('scoreScoreLabel').textContent=label+' · STRUCTURAL INTEGRITY';}
+    let th='';if(tiltTags.length){th+='<div class="sc-section-title">WHAT THE CORE DETECTED</div><ul class="sc-list">';tiltTags.forEach(t=>{th+='<li>'+esc(TILT[t]||t)+'</li>';});th+='</ul>';}document.getElementById('scoreTiltSection').innerHTML=th;
+    let fh='';if(fails.length){fh+='<div class="sc-section-title">STRUCTURAL RISKS</div><ul class="sc-list">';fails.forEach(f=>{const h=FM[f.k];fh+='<li>'+esc(h?h.n+' — '+h.d:f.k+': '+f.state)+'</li>';});fh+='</ul>';}document.getElementById('scoreFmSection').innerHTML=fh;
+    const dims=apiData.nii||{};const dimKeys=Object.keys(dims).filter(k=>k.startsWith('d')&&k.includes('_')&&typeof dims[k]==='number');
+    let dh='';if(dimKeys.length){dh+='<div class="sc-section-title">DIMENSIONS</div>';dimKeys.forEach(k=>{const pct=Math.round(dims[k]*100);dh+='<div class="sc-dim-row"><span class="sc-dim-k">'+esc(k)+'</span><span class="sc-dim-v" style="color:'+scoreColor(pct)+'">'+pct+'%</span></div>';});}document.getElementById('scoreDimSection').innerHTML=dh;
+  }
+
+  function renderAll(p){ buildButtons(); renderExplainer(); renderHL(p); renderReadout(); }
+
+  document.getElementById('scoreRunBtn').addEventListener('click',async()=>{
+    text=document.getElementById('scoreInput').value.trim();if(!text)return;
+    const btn=document.getElementById('scoreRunBtn');btn.disabled=true;btn.textContent='Scoring…';
+    try{
+      const res=await fetch('/nti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      apiData=await res.json();
+      if(apiData.error){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">'+esc(apiData.error)+'</div>';return;}
+      catalog=(apiData.signals&&apiData.signals.signal_catalog)||{};
+      highlights=((apiData.signals&&apiData.signals.highlights)||apiData.highlights||[]).map(h=>({...h}));
+      activeSignal=null;
+      document.getElementById('scoreEmpty').style.display='none';
+      document.getElementById('scoreFilled').style.display='';
+      renderAll(true);
+    }catch(e){document.getElementById('scoreEmpty').innerHTML='<div style="color:var(--red);font-size:13px;">Error: '+esc(e.message)+'</div>';}
+    finally{btn.disabled=false;btn.textContent='Score';}
+  });
+
+  document.getElementById('scoreNewBtn').addEventListener('click',()=>{
+    document.getElementById('scoreInput').value='';document.getElementById('scoreEmpty').style.display='';
+    document.getElementById('scoreEmpty').innerHTML='<div class="icon">↓</div><div class="label">RESULTS APPEAR HERE</div>';
+    document.getElementById('scoreFilled').style.display='none';activeSignal=null;catalog={};document.getElementById('scoreInput').focus();
+  });
+
+  /* Pick up demo text from home page */
+  try{ const demo=sessionStorage.getItem('az_demo_text'); if(demo){ sessionStorage.removeItem('az_demo_text'); document.getElementById('scoreInput').value=demo; document.getElementById('scoreRunBtn').click(); } }catch(e){}
+})();
+</script>
+{% endblock %}

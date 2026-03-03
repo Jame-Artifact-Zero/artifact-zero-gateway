@@ -1,18 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Developer Access — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Developer Access — Artifact Zero{% endblock %}
+{% block body_class %}page-developers{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 .wrap{max-width:520px;margin:0 auto;padding:100px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
 h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:6px}
 .sub{color:var(--muted);font-size:14px;margin-bottom:32px;line-height:1.5}
@@ -27,9 +18,9 @@ h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-
 .send-btn:disabled{opacity:.4;cursor:default}
 .err{color:var(--red);font-size:12px;margin-top:4px;font-family:'JetBrains Mono',monospace}
 </style>
-</head>
-<body>
+{% endblock %}
 
+{% block content %}
 <div class="wrap" id="formWrap">
   <h1>Developer & Vendor Access</h1>
   <p class="sub">NTI infrastructure is available to approved developers and integration partners. Tell us what you're building.</p>
@@ -48,7 +39,9 @@ h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-
   <button class="send-btn" id="sendBtn" onclick="submitDev()">Request access</button>
   <div class="err" id="errMsg"></div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 async function submitDev(){
   const name = document.getElementById('dName').value.trim();
@@ -95,6 +88,5 @@ async function submitDev(){
   }
 }
 </script>
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+
+{% endblock %}

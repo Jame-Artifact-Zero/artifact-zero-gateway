@@ -12,6 +12,27 @@ import db as database
 
 app = Flask(__name__)
 
+
+# ── Score JSON parsing helper ──
+def _parse_score_json(result):
+    """Parse score_json string and merge csi/nti into result dict."""
+    sj = result.pop("score_json", None)
+    if sj and isinstance(sj, str):
+        try:
+            parsed = json.loads(sj)
+            if "csi" in parsed:
+                result["csi"] = parsed["csi"]
+            if "nti" in parsed:
+                result["nti"] = parsed["nti"]
+        except (json.JSONDecodeError, TypeError):
+            pass
+    elif sj and isinstance(sj, dict):
+        if "csi" in sj:
+            result["csi"] = sj["csi"]
+        if "nti" in sj:
+            result["nti"] = sj["nti"]
+    return result
+
 # ── Session Security ──
 _secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
 if not _secret:
@@ -766,7 +787,38 @@ def wall_page():
 
 @app.route("/docs")
 def docs():
-    return render_template("docs.html")
+    return render_template("api.html")
+
+
+@app.route("/use-cases")
+def use_cases_page():
+    USE_CASES = [
+        {'title': 'Pre-LLM Prompt Firewall', 'industry': 'Security', 'wedge': 'Injection surface reduction', 'problem': 'Prompts carry hidden instructions, ambiguity, and adversarial framing into model calls.', 'breaks': 'Prompt injection, unsafe completions, non-deterministic behavior.', 'v1_detects': 'Injection-style framing, dominance directives, ambiguity carriers, scope drift, constraint absence.', 'v3_stabilizes': 'Strip hedges, enforce objective/constraints, normalize instruction structure.', 'model': 'Sell as a gateway middleware for any LLM product (per-request enforcement).'},
+        {'title': 'Post-LLM Output Validator', 'industry': 'Security', 'wedge': 'Governed output', 'problem': 'Generated text can include fabricated certainty, missing constraints, and risky commitments.', 'breaks': 'Compliance exposure, escalation, contractual promises.', 'v1_detects': 'Absolutes, implied commitments, missing actor/ownership, drift markers, failure modes (DCE/CCA/UDDS).', 'v3_stabilizes': 'Tighten claims to constraints, remove commitment risk, enforce assignment/timeline.', 'model': 'Add as a validator stage in agent pipelines; charge per validation.'},
+        {'title': 'AI Email Governance', 'industry': 'Productivity', 'wedge': 'Outbound control layer', 'problem': 'People send messages that escalate conflict or create hidden commitments.', 'breaks': 'Fires, churn, lawsuits, misalignment.', 'v1_detects': 'Hedges, blame, dominance, escalation words, structure gaps.', 'v3_stabilizes': 'Remove hedges/filler, anchor to objective, add timeline/owner.', 'model': 'Embed in email clients, CRMs, and outreach tools.'},
+        {'title': 'Slack/Teams Compliance Filter', 'industry': 'Enterprise IT', 'wedge': 'Realtime policy enforcement', 'problem': 'Sensitive or escalatory messages move fast in chat systems.', 'breaks': 'HR incidents, policy violations, leakage.', 'v1_detects': 'Escalation triggers, blame patterns, absolutes, dominance assertions.', 'v3_stabilizes': 'Rewrite into policy-compliant structure (optional).', 'model': 'Enterprise compliance add-on; per-message scanning.'},
+        {'title': 'Sales Commitment Guardrails', 'industry': 'Sales', 'wedge': 'Commitment risk control', 'problem': 'Reps over-promise in email and CRM notes.', 'breaks': 'Contract disputes, churn, refunds.', 'v1_detects': 'Implied/unbounded commitments, missing constraints, timeline vagueness (DCE).', 'v3_stabilizes': 'Bound commitments to scope, add timeline and owners, remove absolute language.', 'model': 'CRM plugin; per-score billing.'},
+        {'title': 'Contract Drift Detector', 'industry': 'Legal', 'wedge': 'Structural diff', 'problem': 'Negotiations drift and constraints get abstracted away.', 'breaks': 'Bad deals, missed obligations.', 'v1_detects': 'Constraint collapse (CCA), substitution drift (UDDS), missing enforcement (DCE).', 'v3_stabilizes': 'N/A (usually detect-only); generate structured drift report.', 'model': 'Law firm + procurement tooling; per-document scoring.'},
+        {'title': 'Insurance Claim Narrative Risk', 'industry': 'Insurance', 'wedge': 'Fraud/ambiguity triage', 'problem': 'Claims contain vague narratives and missing constraints.', 'breaks': 'Bad payouts, disputes, slow processing.', 'v1_detects': 'Hedge stacking, missing specifics, passive constructions, authority displacement.', 'v3_stabilizes': 'N/A; route to adjuster queues with evidence spans.', 'model': 'Per-claim scoring + routing.'},
+        {'title': 'Healthcare Documentation Risk Layer', 'industry': 'Healthcare', 'wedge': 'Clinical note integrity', 'problem': 'Notes contain ambiguity, missing actions, and unclear responsibility.', 'breaks': 'Billing issues, care errors, compliance problems.', 'v1_detects': 'Missing actor, passive voice, vague quantifiers, DCE patterns.', 'v3_stabilizes': 'Optional stabilization into clearer constraints/ownership (non-clinical).', 'model': 'Hospital compliance layer; enterprise contract.'},
+        {'title': 'Agent Tool-Use Gate', 'industry': 'AI/Agents', 'wedge': 'Deterministic gating', 'problem': 'Agents choose tools under vague intent and drift.', 'breaks': 'Bad actions, unnecessary calls, cost blowups.', 'v1_detects': 'Objective ambiguity, scope creep markers, unbounded commitments.', 'v3_stabilizes': 'Normalize objective/constraints before tool selection.', 'model': 'Sell to agent framework vendors; per-run enforcement.'},
+        {'title': 'Customer Support Escalation Predictor', 'industry': 'Support', 'wedge': 'Escalation prevention', 'problem': 'Support replies accidentally escalate tension.', 'breaks': 'Churn, refunds, reputation hits.', 'v1_detects': 'Dominance/absolutes, blame language, passive aggression triggers.', 'v3_stabilizes': 'Remove edge, add resolution path, clarify next action.', 'model': 'Helpdesk integration; per-ticket scoring.'},
+        {'title': 'HR/People Ops Message Safety', 'industry': 'HR', 'wedge': 'Policy-aligned comms', 'problem': 'Sensitive HR messages must be precise and non-escalatory.', 'breaks': 'Legal exposure, employee relations incidents.', 'v1_detects': 'Directive language, absolutes, dominance, missing resolution path.', 'v3_stabilizes': 'Structure into neutral, bounded statements with clear steps.', 'model': 'Enterprise HR suite add-on.'},
+        {'title': 'Procurement Vendor Communication Guardrails', 'industry': 'Procurement', 'wedge': 'Commitment control', 'problem': 'Vendor comms often include vague commitments and scope drift.', 'breaks': 'Delays, disputes.', 'v1_detects': 'DCE, UDDS, hedge stacking, missing constraints.', 'v3_stabilizes': 'Add constraints, owners, timeline.', 'model': 'Procurement platform plugin.'},
+        {'title': 'Policy Draft Integrity Scoring', 'industry': 'Compliance', 'wedge': 'Policy clarity', 'problem': 'Policies get written in vague, non-enforceable language.', 'breaks': 'Non-compliance, unenforceable standards.', 'v1_detects': 'Ambiguity carriers, missing actor, passive voice, weak constraints.', 'v3_stabilizes': 'Reframe into enforceable clauses (optional).', 'model': 'Compliance authoring tool.'},
+        {'title': 'Financial Advisory Email Risk', 'industry': 'Finance', 'wedge': 'Reg-safe language', 'problem': 'Advisors send emails that imply guarantees.', 'breaks': 'Regulatory action, lawsuits.', 'v1_detects': 'Guarantee/absolute language, implied certainty, missing qualifiers.', 'v3_stabilizes': 'Bound claims, remove absolutes, add required disclaimers.', 'model': 'Broker-dealer compliance integration.'},
+        {'title': 'Executive Comms Stabilizer', 'industry': 'Executive', 'wedge': 'Tone + structure', 'problem': 'High-stakes comms get distorted by tone and drift.', 'breaks': 'Escalation, reputational harm.', 'v1_detects': 'Dominance posture, escalation triggers, reputation framing.', 'v3_stabilizes': 'Trim, clarify objective, reduce edge.', 'model': 'Private exec tool; subscription.'},
+        {'title': 'Meeting Notes Action Integrity', 'industry': 'Ops', 'wedge': 'Actionability enforcement', 'problem': 'Meeting notes lack ownership/timelines.', 'breaks': 'No execution, misalignment.', 'v1_detects': 'Missing actor, no next action, DCE deferral language.', 'v3_stabilizes': 'Convert into assignments with dates (optional).', 'model': 'PM suite integration.'},
+        {'title': 'RFP Response Constraint Integrity', 'industry': 'B2B', 'wedge': 'Bid discipline', 'problem': 'Teams answer RFPs with vague claims.', 'breaks': 'Lost deals, scope problems.', 'v1_detects': 'Vague quantifiers, hedges, missing constraints.', 'v3_stabilizes': 'Clarify commitments, add constraints and definitions.', 'model': 'RFP tooling add-on.'},
+        {'title': 'Legal Intake Triage', 'industry': 'Legal', 'wedge': 'High-signal intake', 'problem': 'Client messages are messy; triage is slow.', 'breaks': 'Wrong routing, delays.', 'v1_detects': 'Objective ambiguity, missing facts, escalation language.', 'v3_stabilizes': 'N/A; structured intake summary output optional in higher tier.', 'model': 'Law firm intake pipeline.'},
+        {'title': 'Vendor SLA Drift Monitor', 'industry': 'Enterprise', 'wedge': 'SLA enforcement', 'problem': 'Service conversations drift away from SLA terms.', 'breaks': 'Hidden risk, missed obligations.', 'v1_detects': 'UDDS substitution drift, DCE deferrals, constraint loss.', 'v3_stabilizes': 'N/A; generate drift alerts with spans.', 'model': 'Enterprise contract monitoring.'},
+        {'title': 'Code Review Comment Stabilizer', 'industry': 'Engineering', 'wedge': 'Team velocity', 'problem': 'Code review comments escalate and waste cycles.', 'breaks': 'Conflict, churn.', 'v1_detects': 'Blame framing, dominance phrases, absolutes.', 'v3_stabilizes': 'Rewrite into neutral, actionable requests.', 'model': 'Dev tooling plugin.'},
+        {'title': 'Fraud Narrative Consistency Checks', 'industry': 'Risk', 'wedge': 'Narrative integrity', 'problem': 'Fraud often shows as vague or inconsistent narratives.', 'breaks': 'Bad payouts.', 'v1_detects': 'Ambiguity carriers, passive voice, missing specifics.', 'v3_stabilizes': 'N/A; risk scoring + routing.', 'model': 'Risk engine integration.'},
+        {'title': 'Public Relations Draft Risk', 'industry': 'PR', 'wedge': 'Reputational protection', 'problem': 'Drafts include absolutes and unbounded commitments.', 'breaks': 'PR crises.', 'v1_detects': 'Absolutes, dominance, resolution closure, reputation protection patterns.', 'v3_stabilizes': 'Bound claims, clarify what is known vs not known.', 'model': 'PR workflow tool.'},
+        {'title': 'AI Policy Gate for Employees', 'industry': 'Security', 'wedge': 'Org-wide enforcement', 'problem': 'Employees paste sensitive content into AI tools.', 'breaks': 'Leakage, compliance violations.', 'v1_detects': 'Sensitive-pattern prefilters + structural risk signals (optional).', 'v3_stabilizes': 'N/A; allow/block + user feedback.', 'model': 'Enterprise gateway; seat or volume.'},
+        {'title': 'Underwriter Decision Support Clarity', 'industry': 'Insurance', 'wedge': 'Decision integrity', 'problem': 'Underwriting notes contain vague reasoning and hidden deferrals.', 'breaks': 'Bad risk decisions.', 'v1_detects': 'Causal justification, missing constraints, DCE, CCA.', 'v3_stabilizes': 'N/A; evidence highlighting.', 'model': 'Carrier integration; enterprise.'},
+    ]
+    return render_template("use_cases.html", use_cases=USE_CASES)
 
 
 @app.route("/score")
@@ -774,9 +826,41 @@ def score_page():
     return render_template("score.html")
 
 
+@app.route("/relay")
+def relay_page():
+    return render_template("relay.html")
+
+
+@app.route("/security")
+def security_page():
+    return render_template("security.html")
+
+
+@app.route("/ai")
+def ai_page():
+    return render_template("ai.html")
+
+
 @app.route("/safecheck")
 def safecheck_page():
     return render_template("safecheck.html")
+
+
+@app.route("/glossary")
+def glossary_page():
+    return render_template("glossary.html")
+
+
+@app.route("/engine-bench")
+def engine_bench():
+    return render_template("engine-bench.html")
+
+
+@app.route("/voice")
+def voice_page():
+    return render_template("voice.html",
+                           logged_in=session.get('logged_in', False),
+                           user_id=session.get('user_id'))
 
 
 @app.route("/fortune500")
@@ -788,6 +872,22 @@ def fortune500_page():
 @app.route("/scored/<slug>")
 def scored_page(slug):
     return render_template("scored.html")
+
+
+@app.route("/knoxville")
+def knoxville_page():
+    return render_template("knoxville.html")
+
+
+@app.route("/birkbeck")
+def birkbeck_page():
+    return render_template("birkbeck.html")
+
+
+@app.route("/anderson")
+@app.route("/anderson-county")
+def anderson_page():
+    return render_template("anderson.html")
 
 
 @app.route("/api/fortune500", methods=["GET"])
@@ -821,9 +921,9 @@ def api_fortune500_detail(slug):
                 if row:
                     cols = [d[0] for d in cur.description]
                     result = dict(zip(cols, row))
-                    # Normalize: vc table has fund_name, f500 has company_name
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
+                    result = _parse_score_json(result)
                     conn.close()
                     return jsonify(result)
             else:
@@ -833,6 +933,7 @@ def api_fortune500_detail(slug):
                     result = dict(row)
                     if "fund_name" in result and "company_name" not in result:
                         result["company_name"] = result["fund_name"]
+                    result = _parse_score_json(result)
                     conn.close()
                     return jsonify(result)
         conn.close()
@@ -884,6 +985,7 @@ def api_vc_fund_detail(slug):
                 conn.close()
                 return jsonify({"error": "Not found"}), 404
             result = dict(row)
+        result = _parse_score_json(result)
         conn.close()
         return jsonify(result)
     except Exception as e:
@@ -918,8 +1020,37 @@ def api_score_free():
         l0 = detect_l0_constraints(text)
         obj = objective_extract(text)
         tilt = classify_tilt(text)
+
+        # Highlights: backend owns spans, frontend only renders
+        framing = detect_l2_framing(text)
+        try:
+            from highlight_map import get_highlights
+            axis2, highlights = get_highlights(text, framing=framing)
+        except Exception:
+            axis2, highlights = None, []
+
         dbc = detect_downstream_before_constraint("", text, l0)
         nii = compute_nii("", text, l0, dbc, tilt)
+
+        # NTI signal detection (deterministic taxonomy)
+        try:
+            from core_engine.nti_signals import detect_signals
+            signals = detect_signals(text)
+            # Promote parent failure modes into signal summary
+            _d = nii.get("detail", {})
+            if "CONFIRMED" in str(_d.get("cca", "")) or "PROBABLE" in str(_d.get("cca", "")):
+                signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+            if "CONFIRMED" in str(_d.get("dce", "")) or "PROBABLE" in str(_d.get("dce", "")):
+                signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+            if "CONFIRMED" in str(_d.get("udds", "")) or "PROBABLE" in str(_d.get("udds", "")):
+                signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+            tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+            for code in (tilt or []):
+                _sig = tilt_to_signal.get(code)
+                if _sig:
+                    signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+        except Exception:
+            signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
         # Failure modes already computed inside compute_nii — read from detail
         detail = nii.get("detail", {})
@@ -955,6 +1086,10 @@ def api_score_free():
             "dominance": dominance
         },
         "tilt": {"tags": tilt, "count": len(tilt)},
+        "signals": signals,
+        "highlights": highlights,
+        "axis2": axis2,
+        "framing": framing,
         "meta": {
             "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
             "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
@@ -979,6 +1114,7 @@ def api_score_free():
 
 
 @app.route("/health")
+@app.route("/api/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
@@ -1180,6 +1316,13 @@ def nti_run():
 
     framing = detect_l2_framing(text)
 
+    # Highlights: backend owns spans, frontend only renders
+    try:
+        from highlight_map import get_highlights
+        axis2, highlights = get_highlights(text, framing=framing)
+    except Exception:
+        axis2, highlights = None, []
+
     # tilt taxonomy (now uses prompt+answer for scope expansion detection)
     tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
 
@@ -1189,6 +1332,24 @@ def nti_run():
 
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
     nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
+
+    # NTI signal detection (deterministic taxonomy)
+    try:
+        from core_engine.nti_signals import detect_signals
+        signals = detect_signals(text)
+        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+            signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+            signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+            signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+        tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+        for code in (tilt or []):
+            _sig = tilt_to_signal.get(code)
+            if _sig:
+                signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+    except Exception:
+        signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
     dominance: List[str] = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
@@ -1233,7 +1394,10 @@ def nti_run():
         },
         "interaction_matrix": interaction,
         "nii": nii,
-        "tilt_taxonomy": tilt
+        "tilt_taxonomy": tilt,
+        "signals": signals,
+        "highlights": highlights,
+        "axis2": axis2
     }
 
     latency_ms = int((time.time() - t0) * 1000)
@@ -1888,11 +2052,14 @@ def api_rewrite():
 
     # 5. Run V3 enforcement on LLM output
     from core_engine.v3_enforcement import enforce
+    llm_words = len(llm_text.split())
     v3_result = enforce(llm_text, objective=obj.get("objective_text"))
     final = v3_result["final_output"]
 
     original_words = len(text.split())
     rewrite_words = len(final.split())
+    # Compression = what V3 cut from the LLM output, not from user input
+    v3_compression = abs(llm_words - rewrite_words) / max(llm_words, 1) * 100
 
     return jsonify({
         "rewrite": final,
@@ -1900,11 +2067,13 @@ def api_rewrite():
         "model_color": model["color"],
         "method": "llm_v3",
         "original_words": original_words,
+        "llm_words": llm_words,
         "rewrite_words": rewrite_words,
-        "compression": f"{abs(original_words - rewrite_words) / max(original_words, 1) * 100:.0f}%",
+        "compression": f"{v3_compression:.0f}%",
         "nii_score": nii_score,
         "issues": issues,
         "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
+        "llm_raw": llm_text,
         "latency_ms": int((time.time() - t0) * 1000)
     })
 

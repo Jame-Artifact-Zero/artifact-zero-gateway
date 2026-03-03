@@ -1,28 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Contact — Artifact Zero</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Contact — Artifact Zero{% endblock %}
+{% block body_class %}page-contact{% endblock %}
+
+{% block head %}
 <style>
-:root{
-  --bg:#0a0c10;--surface:#12151b;--surface2:#1a1e27;--border:#252a35;
-  --text:#e8eaf0;--muted:#6b7280;--accent:#00e89c;
-  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+
 
 /* NAV */
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);background:rgba(10,12,16,.85);border-bottom:1px solid var(--border)}
-.nav-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--accent);text-decoration:none}
-.nav-links{display:flex;gap:20px}
-.nav-links a{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:none}
-.nav-links a:hover{color:var(--accent)}
 
 /* CONTACT FORM */
 .form-wrap{max-width:520px;margin:0 auto;padding:40px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
@@ -95,7 +79,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   color:var(--accent);text-transform:uppercase;letter-spacing:2px;
   margin:24px 0 16px;
 }
-.card .card-body{font-size:14px;line-height:1.7;color:var(--text)}
+.card .card-
 .card .card-body.message{
   background:var(--surface2);border-radius:8px;padding:16px;
   font-style:italic;color:var(--muted);
@@ -143,11 +127,9 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   .deck-track{justify-content:flex-start;padding-left:calc(50% - 320px)}
 }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- nav removed: az-shell.js -->
-
+{% block content %}
 <!-- CONTACT FORM -->
 <div class="form-wrap" id="formWrap">
   <h1>Contact us</h1>
@@ -185,8 +167,11 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;point
   <div class="dots" id="dots"></div>
   <div class="swipe-hint">Swipe to reveal <span class="arrow">→</span></div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="/static/nti-score-component.js"></script>
+
 <script>
 let currentCard = 0;
 let totalCards = 8;
@@ -333,9 +318,11 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
   const rwIssues = v3Rewrite ? (v3Rewrite.issues || []) : [];
   const rwActions = v3Rewrite ? (v3Rewrite.v3_actions || []) : [];
   const rwOrigWords = v3Rewrite ? (v3Rewrite.original_words || 0) : 0;
+  const rwLlmWords = v3Rewrite ? (v3Rewrite.llm_words || 0) : 0;
   const rwNewWords = v3Rewrite ? (v3Rewrite.rewrite_words || 0) : 0;
   const rwCompression = v3Rewrite ? (v3Rewrite.compression || '0%') : '0%';
   const rwLatency = v3Rewrite ? (v3Rewrite.latency_ms || 0) : 0;
+  const rwLlmRaw = v3Rewrite ? (v3Rewrite.llm_raw || '') : '';
 
   totalCards = 8;
 
@@ -387,13 +374,13 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
       <h2>AI Response</h2>
       <div class="model-reveal">
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px">YOUR WORDS SELECTED</div>
-        <div class="model-name">${model}</div>
+        <div class="model-name">${rwModel || model}</div>
         <div class="model-reason">First model name spelled by your message characters</div>
       </div>
-      <div class="response-text" style="margin-top:16px" id="aiResponse">
-        <span style="color:var(--muted);font-style:italic">Thank you for reaching out, ${escHtml(name)}. I appreciate you taking the time to share what you're working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I'd be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!</span>
+      <div class="response-text" style="margin-top:16px">
+        <span style="color:var(--muted);font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : 'Thank you for reaching out, ' + escHtml(name) + '. I appreciate you taking the time to share what you\'re working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I\'d be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!'}</span>
       </div>
-      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization</div>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
     </div>`,
 
     // Card 6: V3 findings
@@ -416,7 +403,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
           : ''
         }
         <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
-          ${rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
+          ${rwLlmWords || rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
         </div>
       </div>
     </div>`,
@@ -546,8 +533,5 @@ function closeDeck() {
   document.getElementById('sendBtn').textContent = 'Send message';
 }
 </script>
-<script src="/static/az-nav.js"></script>
 
-<script src="/static/az-shell.js"></script>
-</body>
-</html>
+{% endblock %}
