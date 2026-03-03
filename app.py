@@ -826,6 +826,16 @@ def score_page():
     return render_template("score.html")
 
 
+@app.route("/relay")
+def relay_page():
+    return render_template("relay.html")
+
+
+@app.route("/ai")
+def ai_page():
+    return render_template("ai.html")
+
+
 @app.route("/safecheck")
 def safecheck_page():
     return render_template("safecheck.html")
