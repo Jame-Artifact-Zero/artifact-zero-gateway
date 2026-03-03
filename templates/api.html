@@ -1,252 +1,174 @@
 {% extends "base.html" %}
-
-{% block title %}API — Artifact Zero{% endblock %}
+{% block title %}API Docs — Artifact Zero{% endblock %}
 {% block body_class %}page-api{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/static/az-api.css">
+<style>
+.api-page{max-width:680px;margin:0 auto}
+.api-eyebrow{font:700 11px/1 var(--mono);letter-spacing:3px;color:var(--accent);margin-bottom:16px}
+.api-h1{font:700 clamp(22px,4vw,32px)/1.2 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.95);margin:0 0 12px}
+.api-sub{font:400 15px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.65);margin:0 0 28px}
+.api-section{margin-bottom:28px}
+.api-section-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);text-transform:uppercase;margin-bottom:12px}
+.api-text{font:400 15px/1.75 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.80);margin:0 0 14px}
+.api-card{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;background:rgba(255,255,255,.02);margin-bottom:12px}
+.api-card-title{font:700 13px/1 var(--mono);color:var(--accent);margin-bottom:10px}
+.api-card-text{font:400 13px/1.6 var(--mono);color:rgba(255,255,255,.70)}
+.api-code{margin:12px 0;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.30);overflow:hidden}
+.api-code-hdr{padding:8px 12px;font:700 11px/1 var(--mono);color:rgba(255,255,255,.60);border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);letter-spacing:1px;text-transform:uppercase}
+.api-code pre{margin:0;padding:12px;overflow-x:auto;font:400 12px/1.6 var(--mono);color:rgba(255,255,255,.85)}
+.api-inline{display:inline-block;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.10);font:400 12px/1.4 var(--mono);color:rgba(255,255,255,.85)}
+.api-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.api-pill{padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;font:600 11px/1 var(--mono);color:rgba(255,255,255,.75)}
+.api-table{width:100%;border-collapse:collapse;margin:12px 0;font:400 13px/1.4 var(--mono)}
+.api-table th{text-align:left;font-weight:700;color:rgba(255,255,255,.50);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.12)}
+.api-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.78)}
+.api-flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);margin-bottom:16px}
+.api-node{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);font:700 12px/1 var(--mono);color:rgba(255,255,255,.86)}
+.api-node.engine{border-color:var(--accent);color:var(--accent)}
+.api-arrow{color:rgba(255,255,255,.35);font:700 14px/1 var(--mono)}
+.api-ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+.api-btn{padding:12px 20px;border-radius:8px;font:700 12px/1 var(--mono);letter-spacing:.5px;cursor:pointer;text-decoration:none;transition:all .15s;border:none}
+.api-btn.primary{background:var(--accent);color:#000}
+.api-btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+</style>
 {% endblock %}
 
 {% block content %}
-<section class="az-hero">
-  <h1 class="az-h1">API</h1>
-  <p class="az-subhead">
-    Deterministic structural enforcement for AI pipelines.
-    No LLM in the engine. No probabilistic output. Span-level traceability. ~3ms avg response.
-  </p>
-  <div class="az-hero-badges">
-    <span class="az-pill">Same input → same output</span>
-    <span class="az-pill">Versioned</span>
-    <span class="az-pill">Auditable</span>
-    <span class="az-pill">Replayable</span>
+<div class="az-page api-page">
+
+  <div class="api-eyebrow">API</div>
+  <h1 class="api-h1">Deterministic structural enforcement for AI pipelines.</h1>
+  <p class="api-sub">No LLM in the engine. No probabilistic output. Span-level traceability. ~3ms response.</p>
+
+  <div class="api-pills">
+    <span class="api-pill">Same input, same output</span>
+    <span class="api-pill">Versioned</span>
+    <span class="api-pill">Auditable</span>
+    <span class="api-pill">Replayable</span>
   </div>
-</section>
 
-<section class="az-grid">
-  <div class="az-card">
-    <h2 class="az-h2">Quick Start</h2>
-
-    <div class="az-codeblock">
-      <div class="az-codehdr">Create API key</div>
-      <pre><code>curl -X POST https://artifact0.com/api/v1/keys \
-  -H "Content-Type: application/json" \
-  -d '{"email": "you@company.com"}'</code></pre>
-    </div>
-
-    <div class="az-codeblock">
-      <div class="az-codehdr">Score text</div>
-      <pre><code>curl -X POST https://artifact0.com/api/v1/score \
+  <div class="api-section">
+    <div class="api-section-title">Quick Start</div>
+    <div class="api-code">
+      <div class="api-code-hdr">Score text</div>
+      <pre>curl -X POST https://artifact0.com/api/v1/score \
   -H "Content-Type: application/json" \
   -H "X-API-Key: az_your_key_here" \
-  -d '{"text": "Your text to score"}'</code></pre>
+  -d '{"text": "Your text to score"}'</pre>
     </div>
-
-    <div class="az-codeblock">
-      <div class="az-codehdr">Check usage</div>
-      <pre><code>curl -X GET https://artifact0.com/api/v1/keys/usage \
-  -H "X-API-Key: az_your_key_here"</code></pre>
-    </div>
-  </div>
-
-  <div class="az-card">
-    <h2 class="az-h2">Designed For</h2>
-    <ul class="az-list">
-      <li>Pre-LLM prompt enforcement</li>
-      <li>Post-LLM output validation</li>
-      <li>AI SaaS safety layers</li>
-      <li>Slack / Teams compliance filters</li>
-      <li>CRM commitment enforcement</li>
-      <li>Contract drift detection</li>
-      <li>Healthcare documentation risk layer</li>
-      <li>Prompt injection prefiltering</li>
-      <li>Governance pipelines (H → V2 → AI → V3 → H)</li>
-    </ul>
-
-    <h3 class="az-h3">Architecture</h3>
-    <div class="az-mini">
-      <div class="az-flow">
-        <span class="az-node">Client</span>
-        <span class="az-arrow">→</span>
-        <span class="az-node">V1 (Score)</span>
-        <span class="az-arrow">→</span>
-        <span class="az-node">LLM</span>
-        <span class="az-arrow">→</span>
-        <span class="az-node">V3 (Stabilize)</span>
-        <span class="az-arrow">→</span>
-        <span class="az-node">Output</span>
-      </div>
-      <p class="az-note">V1 can also run as an allow/block gate (no model involved).</p>
+    <div class="api-code">
+      <div class="api-code-hdr">Free tier (no key required)</div>
+      <pre>curl -X POST https://artifact0.com/api/v1/score/free \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Your text to score"}'</pre>
     </div>
   </div>
-</section>
 
-<section class="az-card az-section">
-  <h2 class="az-h2">Base URL</h2>
-  <div class="az-inlinecode">https://artifact0.com/api/v1</div>
-
-  <h2 class="az-h2">Authentication</h2>
-  <p class="az-p">Pass your API key in the <span class="az-inlinecode">X-API-Key</span> header.</p>
-  <div class="az-codeblock">
-    <pre><code>X-API-Key: az_your_key_here</code></pre>
+  <div class="api-section">
+    <div class="api-section-title">Base URL and Auth</div>
+    <div class="api-text"><span class="api-inline">https://artifact0.com/api/v1</span></div>
+    <div class="api-text">Pass your API key in the <span class="api-inline">X-API-Key</span> header. Free tier requires no key.</div>
   </div>
-</section>
 
-<section class="az-card az-section">
-  <h2 class="az-h2">Endpoints</h2>
-
-  <div class="az-tablewrap">
-    <table class="az-table">
-      <thead>
-        <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>POST</td><td><span class="az-inlinecode">/score</span></td><td>Score text for structural integrity</td></tr>
-        <tr><td>POST</td><td><span class="az-inlinecode">/keys</span></td><td>Create a new API key (no auth)</td></tr>
-        <tr><td>GET</td><td><span class="az-inlinecode">/keys/usage</span></td><td>Usage for current billing period</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="az-grid">
-  <div class="az-card">
-    <h2 class="az-h2">POST /api/v1/score</h2>
-    <p class="az-p">Scores text for structural integrity. Returns NII score, failure modes, tilt tags, and deterministic signals.</p>
-
-    <h3 class="az-h3">Request Body</h3>
-    <div class="az-tablewrap">
-      <table class="az-table">
-        <thead>
-          <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
-        </thead>
+  <div class="api-section">
+    <div class="api-section-title">Endpoints</div>
+    <div class="api-card">
+      <table class="api-table">
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>text</td><td>string</td><td>Yes</td><td>Text to score (max 50,000 characters)</td></tr>
+          <tr><td>POST</td><td>/score</td><td>Full detection + 4 scoring lenses</td></tr>
+          <tr><td>POST</td><td>/score/free</td><td>Free tier scoring (no key)</td></tr>
+          <tr><td>GET</td><td>/keys/usage</td><td>Credit balance and history</td></tr>
+          <tr><td>GET</td><td>/health</td><td>Service health</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <div class="az-card">
-    <h2 class="az-h2">Response Shape</h2>
-    <div class="az-codeblock">
-      <pre><code>{
-  "status": "ok",
-  "version": "canonical-nti-v2.0",
-  "score": {
-    "nii": 0.33,
-    "nii_label": "LOW_INTEGRITY"
-  },
-  "failure_modes": {
-    "UDDS": "UDDS_CONFIRMED",
-    "DCE": "DCE_FALSE",
-    "CCA": "CCA_PROBABLE"
-  },
-  "tilt": {
-    "tags": ["T1_VAGUE_ASSURANCE", "T4_FALSE_COMPLETION"],
-    "count": 2
-  },
-  "signals": {
-    "highlights": [
-      {"start": 14, "end": 28, "signal": "AMBIGUITY_HEDGE", "css_class": "hedge"}
-    ],
-    "summary": {"AMBIGUITY_HEDGE": 2, "DOMINANCE_ASSERTION": 1}
-  },
-  "meta": {
-    "latency_ms": 3,
-    "word_count": 41,
-    "text_length": 245
-  }
-}</code></pre>
+  <div class="api-section">
+    <div class="api-section-title">Response</div>
+    <div class="api-code">
+      <div class="api-code-hdr">Score response</div>
+      <pre>{
+  "nii": 0.82,
+  "nti": 85.6,
+  "csi": 72.3,
+  "hcs": 91.0,
+  "issues": 3,
+  "tilt": ["T3_CONSENSUS_CLAIMS"],
+  "signals": [
+    {"signal": "hedge_maybe", "span": [14, 19], "text": "maybe"},
+    {"signal": "filler_basically", "span": [45, 54], "text": "basically"}
+  ],
+  "failure_modes": [],
+  "engine_version": "3.1.0"
+}</pre>
     </div>
-    <p class="az-note">
-      <strong>Highlights</strong> include span offsets. UI can color the exact triggering words without client-side inference.
-    </p>
-  </div>
-</section>
-
-<section class="az-grid">
-  <div class="az-card">
-    <h2 class="az-h2">Score Interpretation</h2>
-    <div class="az-tablewrap">
-      <table class="az-table">
-        <thead><tr><th>NII Range</th><th>Label</th><th>Meaning</th></tr></thead>
-        <tbody>
-          <tr><td>0.80 – 1.00</td><td>HIGH_INTEGRITY</td><td>Clear objective, constraints honored</td></tr>
-          <tr><td>0.50 – 0.79</td><td>MODERATE</td><td>Some structural gaps</td></tr>
-          <tr><td>0.20 – 0.49</td><td>LOW_INTEGRITY</td><td>Likely to cause miscommunication</td></tr>
-          <tr><td>0.00 – 0.19</td><td>CRITICAL</td><td>Structurally compromised</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3 class="az-h3">Failure Modes</h3>
-    <ul class="az-list">
-      <li><strong>UDDS</strong> — assumes downstream stability without verifying constraints</li>
-      <li><strong>DCE</strong> — pushes hard requirements later, creating hidden risk</li>
-      <li><strong>CCA</strong> — replaces specifics with abstraction (constraint collapse)</li>
-    </ul>
   </div>
 
-  <div class="az-card">
-    <h2 class="az-h2">Deterministic Guarantee</h2>
-    <ul class="az-list">
-      <li>No LLM dependency</li>
-      <li>No prompt injection surface inside the scoring engine</li>
-      <li>No model drift</li>
-      <li>Repeatable results</li>
-      <li>Versioned scoring</li>
-      <li>Span-level auditability</li>
-    </ul>
-
-    <h2 class="az-h2">Rate Limits</h2>
-    <div class="az-tablewrap">
-      <table class="az-table">
-        <thead><tr><th>Tier</th><th>Requests / Minute</th></tr></thead>
+  <div class="api-section">
+    <div class="api-section-title">Scoring Lenses</div>
+    <div class="api-card">
+      <table class="api-table">
+        <thead><tr><th>Lens</th><th>Range</th><th>Measures</th></tr></thead>
         <tbody>
-          <tr><td>Free</td><td>10</td></tr>
-          <tr><td>API</td><td>60</td></tr>
-          <tr><td>Core Plus</td><td>300</td></tr>
-          <tr><td>Enterprise</td><td>1,000</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h2 class="az-h2">Errors</h2>
-    <div class="az-tablewrap">
-      <table class="az-table">
-        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
-        <tbody>
-          <tr><td>200</td><td>Success</td></tr>
-          <tr><td>400</td><td>Invalid request body</td></tr>
-          <tr><td>401</td><td>Missing/invalid API key</td></tr>
-          <tr><td>403</td><td>API key deactivated</td></tr>
-          <tr><td>429</td><td>Rate limit or monthly limit exceeded</td></tr>
-          <tr><td>500</td><td>Server error</td></tr>
+          <tr><td>NII</td><td>0.0 - 1.0</td><td>Structural integrity (primary)</td></tr>
+          <tr><td>NTI</td><td>0 - 100</td><td>Tilt exposure</td></tr>
+          <tr><td>CSI</td><td>0 - 100</td><td>Corporate structure index</td></tr>
+          <tr><td>HCS</td><td>0 - 100</td><td>Human communication score</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-</section>
 
-<section class="az-card az-section">
-  <h2 class="az-h2">Pricing (API)</h2>
-  <div class="az-tablewrap">
-    <table class="az-table">
-      <thead><tr><th>Product</th><th>Price</th><th>Unit</th><th>Notes</th></tr></thead>
-      <tbody>
-        <tr><td>Score API</td><td>$0.01</td><td>per score</td><td>JSON in / JSON out</td></tr>
-        <tr><td>Dashboard</td><td>$0.04</td><td>per score</td><td>Compose, history, billing UI</td></tr>
-        <tr><td>Enterprise</td><td>Custom</td><td>annual</td><td>BAA / SOC2 / SLA / VPC option</td></tr>
-      </tbody>
-    </table>
+  <div class="api-section">
+    <div class="api-section-title">Detection</div>
+    <div class="api-text">43 deterministic signals across 6 axes. 3 parent failure modes (CCA, DCE, UDDS). 10 tilt taxonomy categories. Every finding includes character-level span positions.</div>
   </div>
-  <p class="az-note">V2 (inbound stabilization) and V3 (output stabilization) are separate engines available at higher tiers.</p>
-</section>
 
-{% endblock %}
+  <div class="api-section">
+    <div class="api-section-title">Pipeline Architecture</div>
+    <div class="api-flow">
+      <span class="api-node">Client</span>
+      <span class="api-arrow">&#8594;</span>
+      <span class="api-node engine">V1 Score</span>
+      <span class="api-arrow">&#8594;</span>
+      <span class="api-node">LLM</span>
+      <span class="api-arrow">&#8594;</span>
+      <span class="api-node engine">V3 Stabilize</span>
+      <span class="api-arrow">&#8594;</span>
+      <span class="api-node">Output</span>
+    </div>
+    <div class="api-text">V1 runs as a pre-LLM gate. V3 stabilizes post-LLM output. Both are deterministic with zero model calls.</div>
+  </div>
 
-{% block scripts %}
-<script>
-  // No JS required for the API page.
-</script>
+  <div class="api-section">
+    <div class="api-section-title">Use Cases</div>
+    <div class="api-card">
+      <div class="api-card-title">Pre-LLM Gateway</div>
+      <div class="api-card-text">Score and gate prompts before model execution. Block structurally unsafe inputs.</div>
+    </div>
+    <div class="api-card">
+      <div class="api-card-title">Post-LLM Validator</div>
+      <div class="api-card-text">Score model outputs before delivery. Detect fabricated certainty and commitment risk.</div>
+    </div>
+    <div class="api-card">
+      <div class="api-card-title">Compliance Layer</div>
+      <div class="api-card-text">Slack, Teams, CRM, email. Real-time structural enforcement on every message.</div>
+    </div>
+    <div class="api-card">
+      <div class="api-card-title">Agent Tool-Use Gate</div>
+      <div class="api-card-text">Score agent outputs before tool execution. Prevent scope expansion and commitment drift.</div>
+    </div>
+  </div>
+
+  <div class="api-ctas">
+    <a href="/safecheck" class="api-btn primary">Try SafeCheck &#8594;</a>
+    <a href="/use-cases" class="api-btn secondary">25 use cases</a>
+    <a href="/ai" class="api-btn secondary">AI + savings</a>
+    <a href="/security" class="api-btn secondary">Security</a>
+  </div>
+
+</div>
 {% endblock %}
