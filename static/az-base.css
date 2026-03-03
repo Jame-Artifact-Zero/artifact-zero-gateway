@@ -17,6 +17,11 @@
   --az-red: #ef4444;
   --az-amber: #f59e0b;
   --az-purple: #a78bfa;
+  --az-blue: #3b82f6;
+  --az-pink: #ec4899;
+  --az-orange: #ff8844;
+  --az-teal: #14b8a6;
+  --az-cyan: #06b6d4;
 
   /* Legacy aliases — page CSS uses these */
   --bg: var(--az-bg);
@@ -30,11 +35,22 @@
   --amber: var(--az-amber);
   --purple: var(--az-purple);
   --green: var(--az-accent);
-  --teal: #14b8a6;
-  --cyan: #22d3ee;
-  --pink: #ec4899;
-  --orange: #f97316;
-  --blue: #3b82f6;
+  --blue: var(--az-blue);
+  --pink: var(--az-pink);
+  --orange: var(--az-orange);
+  --teal: var(--az-teal);
+  --cyan: var(--az-cyan);
+
+  /* Dim/transparent variants for backgrounds behind colored text */
+  --green-dim: rgba(34,197,94,0.10);
+  --blue-dim: rgba(59,130,246,0.10);
+  --purple-dim: rgba(167,139,250,0.10);
+  --amber-dim: rgba(245,158,11,0.10);
+  --red-dim: rgba(239,68,68,0.10);
+  --pink-dim: rgba(236,72,153,0.10);
+  --orange-dim: rgba(255,136,68,0.10);
+  --teal-dim: rgba(20,184,166,0.10);
+  --cyan-dim: rgba(6,182,212,0.10);
 
   --az-topbar-h: 48px;
   --az-bottom-h: 56px;
