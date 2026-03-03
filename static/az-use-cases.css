@@ -1,0 +1,45 @@
+
+/* az-use-cases.css — Use case blueprints page */
+.page-use-cases .az-usecase-grid {
+  display: grid;
+  gap: var(--az-6);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 960px) {
+  .page-use-cases .az-usecase-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.az-uc-card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  padding: var(--az-6);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+.az-uc-hdr { display: flex; flex-direction: column; gap: 10px; margin-bottom: var(--az-4); }
+.az-uc-title { margin: 0; font: 800 18px/1.2 "DM Sans", system-ui, sans-serif; color: rgba(255,255,255,.94); }
+
+.az-uc-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.az-tag {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.25);
+  font: 700 12px/1 "JetBrains Mono", ui-monospace, monospace;
+  color: rgba(255,255,255,.82);
+}
+.az-tag-muted { color: rgba(255,255,255,.68); }
+
+.az-uc-body { display: grid; gap: 10px; }
+.az-uc-row { display: grid; grid-template-columns: 140px 1fr; gap: 12px; align-items: start; }
+@media (max-width: 520px) { .az-uc-row { grid-template-columns: 1fr; } }
+
+.az-uc-k {
+  font: 800 12px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  color: rgba(255,255,255,.70);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.az-uc-v { color: rgba(255,255,255,.84); line-height: 1.45; }
+

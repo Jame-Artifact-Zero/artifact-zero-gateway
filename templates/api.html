@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}API — Artifact Zero{% endblock %}
+{% block body_class %}page-api{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/az-api.css">
+{% endblock %}
+
+{% block content %}
+<section class="az-hero">
+  <h1 class="az-h1">API</h1>
+  <p class="az-subhead">
+    Deterministic structural enforcement for AI pipelines.
+    No LLM in the engine. No probabilistic output. Span-level traceability. ~3ms avg response.
+  </p>
+  <div class="az-hero-badges">
+    <span class="az-pill">Same input → same output</span>
+    <span class="az-pill">Versioned</span>
+    <span class="az-pill">Auditable</span>
+    <span class="az-pill">Replayable</span>
+  </div>
+</section>
+
+<section class="az-grid">
+  <div class="az-card">
+    <h2 class="az-h2">Quick Start</h2>
+
+    <div class="az-codeblock">
+      <div class="az-codehdr">Create API key</div>
+      <pre><code>curl -X POST https://artifact0.com/api/v1/keys \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@company.com"}'</code></pre>
+    </div>
+
+    <div class="az-codeblock">
+      <div class="az-codehdr">Score text</div>
+      <pre><code>curl -X POST https://artifact0.com/api/v1/score \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: az_your_key_here" \
+  -d '{"text": "Your text to score"}'</code></pre>
+    </div>
+
+    <div class="az-codeblock">
+      <div class="az-codehdr">Check usage</div>
+      <pre><code>curl -X GET https://artifact0.com/api/v1/keys/usage \
+  -H "X-API-Key: az_your_key_here"</code></pre>
+    </div>
+  </div>
+
+  <div class="az-card">
+    <h2 class="az-h2">Designed For</h2>
+    <ul class="az-list">
+      <li>Pre-LLM prompt enforcement</li>
+      <li>Post-LLM output validation</li>
+      <li>AI SaaS safety layers</li>
+      <li>Slack / Teams compliance filters</li>
+      <li>CRM commitment enforcement</li>
+      <li>Contract drift detection</li>
+      <li>Healthcare documentation risk layer</li>
+      <li>Prompt injection prefiltering</li>
+      <li>Governance pipelines (H → V2 → AI → V3 → H)</li>
+    </ul>
+
+    <h3 class="az-h3">Architecture</h3>
+    <div class="az-mini">
+      <div class="az-flow">
+        <span class="az-node">Client</span>
+        <span class="az-arrow">→</span>
+        <span class="az-node">V1 (Score)</span>
+        <span class="az-arrow">→</span>
+        <span class="az-node">LLM</span>
+        <span class="az-arrow">→</span>
+        <span class="az-node">V3 (Stabilize)</span>
+        <span class="az-arrow">→</span>
+        <span class="az-node">Output</span>
+      </div>
+      <p class="az-note">V1 can also run as an allow/block gate (no model involved).</p>
+    </div>
+  </div>
+</section>
+
+<section class="az-card az-section">
+  <h2 class="az-h2">Base URL</h2>
+  <div class="az-inlinecode">https://artifact0.com/api/v1</div>
+
+  <h2 class="az-h2">Authentication</h2>
+  <p class="az-p">Pass your API key in the <span class="az-inlinecode">X-API-Key</span> header.</p>
+  <div class="az-codeblock">
+    <pre><code>X-API-Key: az_your_key_here</code></pre>
+  </div>
+</section>
+
+<section class="az-card az-section">
+  <h2 class="az-h2">Endpoints</h2>
+
+  <div class="az-tablewrap">
+    <table class="az-table">
+      <thead>
+        <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>POST</td><td><span class="az-inlinecode">/score</span></td><td>Score text for structural integrity</td></tr>
+        <tr><td>POST</td><td><span class="az-inlinecode">/keys</span></td><td>Create a new API key (no auth)</td></tr>
+        <tr><td>GET</td><td><span class="az-inlinecode">/keys/usage</span></td><td>Usage for current billing period</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="az-grid">
+  <div class="az-card">
+    <h2 class="az-h2">POST /api/v1/score</h2>
+    <p class="az-p">Scores text for structural integrity. Returns NII score, failure modes, tilt tags, and deterministic signals.</p>
+
+    <h3 class="az-h3">Request Body</h3>
+    <div class="az-tablewrap">
+      <table class="az-table">
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>text</td><td>string</td><td>Yes</td><td>Text to score (max 50,000 characters)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="az-card">
+    <h2 class="az-h2">Response Shape</h2>
+    <div class="az-codeblock">
+      <pre><code>{
+  "status": "ok",
+  "version": "canonical-nti-v2.0",
+  "score": {
+    "nii": 0.33,
+    "nii_label": "LOW_INTEGRITY"
+  },
+  "failure_modes": {
+    "UDDS": "UDDS_CONFIRMED",
+    "DCE": "DCE_FALSE",
+    "CCA": "CCA_PROBABLE"
+  },
+  "tilt": {
+    "tags": ["T1_VAGUE_ASSURANCE", "T4_FALSE_COMPLETION"],
+    "count": 2
+  },
+  "signals": {
+    "highlights": [
+      {"start": 14, "end": 28, "signal": "AMBIGUITY_HEDGE", "css_class": "hedge"}
+    ],
+    "summary": {"AMBIGUITY_HEDGE": 2, "DOMINANCE_ASSERTION": 1}
+  },
+  "meta": {
+    "latency_ms": 3,
+    "word_count": 41,
+    "text_length": 245
+  }
+}</code></pre>
+    </div>
+    <p class="az-note">
+      <strong>Highlights</strong> include span offsets. UI can color the exact triggering words without client-side inference.
+    </p>
+  </div>
+</section>
+
+<section class="az-grid">
+  <div class="az-card">
+    <h2 class="az-h2">Score Interpretation</h2>
+    <div class="az-tablewrap">
+      <table class="az-table">
+        <thead><tr><th>NII Range</th><th>Label</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>0.80 – 1.00</td><td>HIGH_INTEGRITY</td><td>Clear objective, constraints honored</td></tr>
+          <tr><td>0.50 – 0.79</td><td>MODERATE</td><td>Some structural gaps</td></tr>
+          <tr><td>0.20 – 0.49</td><td>LOW_INTEGRITY</td><td>Likely to cause miscommunication</td></tr>
+          <tr><td>0.00 – 0.19</td><td>CRITICAL</td><td>Structurally compromised</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="az-h3">Failure Modes</h3>
+    <ul class="az-list">
+      <li><strong>UDDS</strong> — assumes downstream stability without verifying constraints</li>
+      <li><strong>DCE</strong> — pushes hard requirements later, creating hidden risk</li>
+      <li><strong>CCA</strong> — replaces specifics with abstraction (constraint collapse)</li>
+    </ul>
+  </div>
+
+  <div class="az-card">
+    <h2 class="az-h2">Deterministic Guarantee</h2>
+    <ul class="az-list">
+      <li>No LLM dependency</li>
+      <li>No prompt injection surface inside the scoring engine</li>
+      <li>No model drift</li>
+      <li>Repeatable results</li>
+      <li>Versioned scoring</li>
+      <li>Span-level auditability</li>
+    </ul>
+
+    <h2 class="az-h2">Rate Limits</h2>
+    <div class="az-tablewrap">
+      <table class="az-table">
+        <thead><tr><th>Tier</th><th>Requests / Minute</th></tr></thead>
+        <tbody>
+          <tr><td>Free</td><td>10</td></tr>
+          <tr><td>API</td><td>60</td></tr>
+          <tr><td>Core Plus</td><td>300</td></tr>
+          <tr><td>Enterprise</td><td>1,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="az-h2">Errors</h2>
+    <div class="az-tablewrap">
+      <table class="az-table">
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>200</td><td>Success</td></tr>
+          <tr><td>400</td><td>Invalid request body</td></tr>
+          <tr><td>401</td><td>Missing/invalid API key</td></tr>
+          <tr><td>403</td><td>API key deactivated</td></tr>
+          <tr><td>429</td><td>Rate limit or monthly limit exceeded</td></tr>
+          <tr><td>500</td><td>Server error</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="az-card az-section">
+  <h2 class="az-h2">Pricing (API)</h2>
+  <div class="az-tablewrap">
+    <table class="az-table">
+      <thead><tr><th>Product</th><th>Price</th><th>Unit</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Score API</td><td>$0.01</td><td>per score</td><td>JSON in / JSON out</td></tr>
+        <tr><td>Dashboard</td><td>$0.04</td><td>per score</td><td>Compose, history, billing UI</td></tr>
+        <tr><td>Enterprise</td><td>Custom</td><td>annual</td><td>BAA / SOC2 / SLA / VPC option</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="az-note">V2 (inbound stabilization) and V3 (output stabilization) are separate engines available at higher tiers.</p>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // No JS required for the API page.
+</script>
+{% endblock %}
