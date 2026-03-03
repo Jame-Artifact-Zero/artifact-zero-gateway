@@ -174,8 +174,7 @@ body::before {
 
 /* ── MAIN CONTENT ── */
 .az-main {
-  padding: var(--az-6) var(--az-4);
-  padding-top: calc(var(--az-topbar-h) + var(--az-4));
+  padding: var(--az-4) var(--az-4);
 }
 
 /* ── BOTTOM NAV (mobile only) ── */
@@ -231,14 +230,8 @@ body::before {
   .az-nav-desktop { display: none; }
   .az-hamburger { display: block; }
   .az-bottomnav { display: flex; }
-  .az-main { padding-bottom: calc(var(--az-bottom-h) + var(--az-6)); }
-  .az-footer {
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
-    padding: 12px var(--az-4);
-  }
-  .az-footer-right { flex-wrap: wrap; justify-content: center; }
+  .az-main { padding-bottom: calc(var(--az-bottom-h) + var(--az-4)); }
+  .az-footer { display: none; }
 }
 
 /* ──────────────────────────────────────────────────────────

@@ -4,139 +4,46 @@
 
 {% block head %}
 <style>
-.home-hero{
-  max-width:720px;margin:0 auto;padding:20px 0 0;
-}
-.home-eyebrow{
-  font:700 11px/1 var(--mono);letter-spacing:3px;
-  color:var(--accent);margin-bottom:20px;
-}
-.home-h1{
-  font:700 clamp(24px,4vw,36px)/1.2 "DM Sans",system-ui,sans-serif;
-  color:rgba(255,255,255,.95);margin:0 0 16px;
-}
-.home-sub{
-  font:400 15px/1.7 "DM Sans",system-ui,sans-serif;
-  color:rgba(255,255,255,.70);max-width:56ch;margin:0 0 24px;
-}
-.home-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px}
-.home-pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 12px;border:1px solid rgba(255,255,255,.12);
-  border-radius:999px;font:600 11px/1 var(--mono);
-  color:rgba(255,255,255,.78);
-}
+.home-hero{max-width:720px;margin:0 auto;padding:8px 0 0}
+.home-eyebrow{font:700 11px/1 var(--mono);letter-spacing:3px;color:var(--accent);margin-bottom:16px}
+.home-h1{font:700 clamp(22px,4vw,36px)/1.2 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.95);margin:0 0 12px}
+.home-sub{font:400 15px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.70);max-width:56ch;margin:0 0 20px}
+.home-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.home-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;font:600 11px/1 var(--mono);color:rgba(255,255,255,.78)}
 .home-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
-
-.home-ctas{display:flex;gap:12px;margin-bottom:40px;flex-wrap:wrap}
-.home-btn{
-  padding:12px 24px;border-radius:8px;font:700 13px/1 var(--mono);
-  letter-spacing:.5px;cursor:pointer;text-decoration:none;
-  transition:all .15s;border:none;
-}
+.home-ctas{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.home-btn{padding:12px 20px;border-radius:8px;font:700 12px/1 var(--mono);letter-spacing:.5px;cursor:pointer;text-decoration:none;transition:all .15s;border:none}
 .home-btn.primary{background:var(--accent);color:#000}
 .home-btn.primary:hover{background:#00d48e}
 .home-btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
 .home-btn.secondary:hover{border-color:rgba(255,255,255,.3)}
-
-.home-metrics{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-  gap:1px;background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.08);border-radius:14px;
-  overflow:hidden;margin-bottom:40px;
-}
-.home-metric{
-  padding:20px;background:var(--bg,#0a0c10);text-align:center;
-}
-.home-metric-num{
-  font:700 28px/1 var(--mono);color:var(--accent);margin-bottom:6px;
-}
-.home-metric-label{
-  font:600 10px/1.3 var(--mono);letter-spacing:1.5px;
-  color:rgba(255,255,255,.50);text-transform:uppercase;
-}
-
-.home-arch{margin-bottom:40px}
-.home-arch-title{
-  font:700 11px/1 var(--mono);letter-spacing:2px;
-  color:rgba(255,255,255,.50);margin-bottom:16px;text-transform:uppercase;
-}
-.home-flow{
-  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-  padding:20px;border:1px solid rgba(255,255,255,.08);
-  border-radius:14px;background:rgba(255,255,255,.02);
-}
-.home-node{
-  padding:10px 14px;border-radius:10px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.03);
-  font:700 12px/1 var(--mono);color:rgba(255,255,255,.86);
-}
+.home-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;margin-bottom:28px}
+.home-metric{padding:16px;background:var(--bg,#0a0c10);text-align:center}
+.home-metric-num{font:700 26px/1 var(--mono);color:var(--accent);margin-bottom:4px}
+.home-metric-label{font:600 10px/1.3 var(--mono);letter-spacing:1.5px;color:rgba(255,255,255,.50);text-transform:uppercase}
+.home-arch{margin-bottom:28px}
+.home-arch-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);margin-bottom:12px;text-transform:uppercase}
+.home-flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02)}
+.home-node{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);font:700 12px/1 var(--mono);color:rgba(255,255,255,.86)}
 .home-node.engine{border-color:var(--accent);color:var(--accent)}
 .home-arrow{color:rgba(255,255,255,.35);font:700 14px/1 var(--mono)}
-
-.home-story{
-  border:1px solid rgba(255,255,255,.08);border-radius:14px;
-  padding:24px;margin-bottom:40px;background:rgba(255,255,255,.02);
-}
-.home-story-quote{
-  font:400 16px/1.7 "DM Sans",system-ui,sans-serif;
-  color:rgba(255,255,255,.85);margin:0 0 12px;
-}
-.home-story-hl{
-  color:var(--amber,#f59e0b);font-weight:700;
-  border-bottom:2px dashed var(--amber);cursor:pointer;
-  transition:color .2s;
-}
+.home-story{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;margin-bottom:28px;background:rgba(255,255,255,.02)}
+.home-story-quote{font:400 16px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.85);margin:0 0 10px}
+.home-story-hl{color:var(--amber,#f59e0b);font-weight:700;border-bottom:2px dashed var(--amber);cursor:pointer;transition:color .2s}
 .home-story-hl:hover{color:#fbbf24}
-.home-story-cta{
-  font:500 11px/1 var(--mono);color:var(--accent);
-  margin-top:6px;letter-spacing:.3px;
-}
-.home-explain{
-  margin-top:16px;font:400 13px/1.6 var(--mono);
-  color:rgba(255,255,255,.65);
-  border-left:2px solid var(--amber);padding-left:14px;
-  display:none;
-}
+.home-story-cta{font:500 11px/1 var(--mono);color:var(--accent);margin-top:6px;letter-spacing:.3px}
+.home-explain{margin-top:14px;font:400 13px/1.6 var(--mono);color:rgba(255,255,255,.65);border-left:2px solid var(--amber);padding-left:14px;display:none}
 .home-explain.show{display:block}
 .home-explain strong{color:var(--red,#ef4444)}
-
-.home-wedges{margin-bottom:40px}
-.home-wedges-title{
-  font:700 11px/1 var(--mono);letter-spacing:2px;
-  color:rgba(255,255,255,.50);margin-bottom:16px;text-transform:uppercase;
-}
-.home-wedge-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:10px;
-}
-.home-wedge{
-  padding:14px;border:1px solid rgba(255,255,255,.08);
-  border-radius:10px;background:rgba(255,255,255,.02);
-  font:500 12px/1.4 var(--mono);color:rgba(255,255,255,.78);
-  transition:border-color .15s;
-}
+.home-wedges{margin-bottom:28px}
+.home-wedges-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);margin-bottom:12px;text-transform:uppercase}
+.home-wedge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.home-wedge{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.02);font:500 12px/1.4 var(--mono);color:rgba(255,255,255,.78);transition:border-color .15s}
 .home-wedge:hover{border-color:rgba(255,255,255,.2)}
-.home-wedge-ind{
-  font:700 10px/1 var(--mono);color:rgba(255,255,255,.45);
-  letter-spacing:1px;margin-bottom:6px;
-}
-
-.home-bottom{
-  text-align:center;padding:20px 0 40px;
-  border-top:1px solid rgba(255,255,255,.06);
-}
-.home-bottom-text{
-  font:400 14px/1.6 "DM Sans",system-ui,sans-serif;
-  color:rgba(255,255,255,.60);margin-bottom:16px;
-}
-
-@media(max-width:600px){
-  .home-flow{gap:6px}
-  .home-node{padding:8px 10px;font-size:10px}
-  .home-metrics{grid-template-columns:1fr 1fr}
-}
+.home-wedge-ind{font:700 10px/1 var(--mono);color:rgba(255,255,255,.45);letter-spacing:1px;margin-bottom:6px}
+.home-bottom{text-align:center;padding:16px 0 24px;border-top:1px solid rgba(255,255,255,.06)}
+.home-bottom-text{font:400 14px/1.6 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.60);margin-bottom:14px}
+@media(max-width:600px){.home-flow{gap:6px}.home-node{padding:8px 10px;font-size:10px}.home-metrics{grid-template-columns:1fr 1fr}}
 </style>
 {% endblock %}
 
@@ -158,28 +65,18 @@
 
     <div class="home-ctas">
       <a href="/safecheck" class="home-btn primary">Try SafeCheck →</a>
-      <a href="/docs" class="home-btn secondary">Read the API docs</a>
-      <a href="/examples" class="home-btn secondary">See 25 use cases</a>
+      <a href="/docs" class="home-btn secondary">API docs</a>
+      <a href="/examples" class="home-btn secondary">25 use cases</a>
+      <a href="/relay" class="home-btn secondary">Relay</a>
+      <a href="/ai" class="home-btn secondary">AI + savings</a>
     </div>
   </div>
 
   <div class="home-metrics">
-    <div class="home-metric">
-      <div class="home-metric-num">49% → 7%</div>
-      <div class="home-metric-label">False commitment rate</div>
-    </div>
-    <div class="home-metric">
-      <div class="home-metric-num">63%</div>
-      <div class="home-metric-label">Token cost reduction</div>
-    </div>
-    <div class="home-metric">
-      <div class="home-metric-num">413</div>
-      <div class="home-metric-label">Fortune 500 scored</div>
-    </div>
-    <div class="home-metric">
-      <div class="home-metric-num">0</div>
-      <div class="home-metric-label">LLM calls in engine</div>
-    </div>
+    <div class="home-metric"><div class="home-metric-num">49% → 7%</div><div class="home-metric-label">False commitment rate</div></div>
+    <div class="home-metric"><div class="home-metric-num">63%</div><div class="home-metric-label">Token cost reduction</div></div>
+    <div class="home-metric"><div class="home-metric-num">413</div><div class="home-metric-label">Fortune 500 scored</div></div>
+    <div class="home-metric"><div class="home-metric-num">0</div><div class="home-metric-label">LLM calls in engine</div></div>
   </div>
 
   <div class="home-arch">
@@ -199,11 +96,11 @@
 
   <div class="home-story">
     <div class="home-story-quote">
-      I used to tell my wife <span class="home-story-hl" id="calmDown">"calm down."</span> It never once accomplished what I wanted it to accomplish. Not once. So I stopped. Then I built the thing that shows you why.
+      Everyone has typed <span class="home-story-hl" id="perMyLast">"per my last email."</span> It has never once meant what it says. Not once. The engine knows why.
     </div>
-    <div class="home-story-cta" id="calmCta">tap "calm down" ↓</div>
-    <div class="home-explain" id="calmExplain">
-      "Calm down" is a dominance pattern. It positions the speaker as rational and the listener as irrational. It doesn't de-escalate — it escalates. The engine detects this as <strong>DOMINANCE_ASSERTION</strong> and <strong>EMOTION_DISMISSAL</strong>. Two structural failures in two words. That's what the engine does — it finds the words that break things.
+    <div class="home-story-cta" id="stCta">tap "per my last email" ↓</div>
+    <div class="home-explain" id="stExplain">
+      "Per my last email" is passive aggression disguised as professionalism. It positions the sender as already-correct and the reader as negligent. The engine detects this as <strong>PASSIVE_AGGRESSION</strong> and <strong>DOMINANCE_ASSERTION</strong> — relational friction in five words. That's what structural enforcement does. It finds the words that break things before they leave the screen.
     </div>
   </div>
 
@@ -225,7 +122,7 @@
     <div class="home-bottom-text">Designed to sit before and after model calls. No integration required to try it.</div>
     <div class="home-ctas" style="justify-content:center">
       <a href="/safecheck" class="home-btn primary">Score your text →</a>
-      <a href="/live" class="home-btn secondary">See Fortune 500 scores</a>
+      <a href="/fortune500" class="home-btn secondary">See Fortune 500 scores</a>
     </div>
   </div>
 
@@ -236,9 +133,9 @@
 <script>
 (()=>{
   'use strict';
-  const hl=document.getElementById('calmDown');
-  const explain=document.getElementById('calmExplain');
-  const cta=document.getElementById('calmCta');
+  const hl=document.getElementById('perMyLast');
+  const explain=document.getElementById('stExplain');
+  const cta=document.getElementById('stCta');
   hl.addEventListener('click',()=>{
     const showing=explain.classList.toggle('show');
     cta.style.display=showing?'none':'';
