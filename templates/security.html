@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Security Architecture — Artifact Zero{% endblock %}
+{% block body_class %}page-security{% endblock %}
+
+{% block head %}
+<style>
+.sec-page{max-width:680px;margin:0 auto}
+.sec-eyebrow{font:700 11px/1 var(--mono);letter-spacing:3px;color:var(--accent);margin-bottom:16px}
+.sec-h1{font:700 clamp(22px,4vw,32px)/1.2 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.95);margin:0 0 12px}
+.sec-sub{font:400 15px/1.7 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.65);margin:0 0 28px}
+.sec-section{margin-bottom:28px}
+.sec-section-title{font:700 11px/1 var(--mono);letter-spacing:2px;color:rgba(255,255,255,.50);text-transform:uppercase;margin-bottom:12px}
+.sec-text{font:400 15px/1.75 "DM Sans",system-ui,sans-serif;color:rgba(255,255,255,.80);margin:0 0 14px}
+.sec-card{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;background:rgba(255,255,255,.02);margin-bottom:12px}
+.sec-card-title{font:700 13px/1 var(--mono);color:var(--accent);margin-bottom:8px}
+.sec-card-text{font:400 13px/1.6 var(--mono);color:rgba(255,255,255,.70)}
+.sec-threat{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.sec-threat:last-child{border-bottom:none}
+.sec-threat-id{font:700 11px/1 var(--mono);color:var(--red);min-width:60px;flex-shrink:0}
+.sec-threat-name{font:600 13px/1 var(--mono);color:rgba(255,255,255,.85);margin-bottom:4px}
+.sec-threat-desc{font:400 12px/1.5 var(--mono);color:rgba(255,255,255,.55)}
+.sec-flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);margin-bottom:16px}
+.sec-node{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);font:700 12px/1 var(--mono);color:rgba(255,255,255,.86)}
+.sec-node.gate{border-color:var(--accent);color:var(--accent)}
+.sec-node.block{border-color:var(--red);color:var(--red)}
+.sec-arrow{color:rgba(255,255,255,.35);font:700 14px/1 var(--mono)}
+.sec-props{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px}
+.sec-prop{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.02)}
+.sec-prop-label{font:700 10px/1 var(--mono);color:var(--accent);letter-spacing:1.5px;margin-bottom:6px;text-transform:uppercase}
+.sec-prop-value{font:500 13px/1.4 var(--mono);color:rgba(255,255,255,.78)}
+.sec-downloads{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.sec-dl{padding:10px 16px;border-radius:8px;font:600 11px/1 var(--mono);letter-spacing:.5px;cursor:pointer;text-decoration:none;border:1px solid rgba(255,255,255,.12);color:var(--text);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.sec-dl:hover{border-color:var(--accent);color:var(--accent)}
+.sec-ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+.sec-btn{padding:12px 20px;border-radius:8px;font:700 12px/1 var(--mono);letter-spacing:.5px;cursor:pointer;text-decoration:none;transition:all .15s;border:none}
+.sec-btn.primary{background:var(--accent);color:#000}
+.sec-btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="az-page sec-page">
+
+  <div class="sec-eyebrow">SECURITY ARCHITECTURE</div>
+  <h1 class="sec-h1">Deterministic structural enforcement before and after model execution.</h1>
+  <p class="sec-sub">No LLM in the scoring engine. No probabilistic output. Span-level traceability. Replayable, versioned, auditable. Deployable in your VPC.</p>
+
+  <div class="sec-section">
+    <div class="sec-section-title">Execution Path</div>
+    <div class="sec-flow">
+      <span class="sec-node">Client</span>
+      <span class="sec-arrow">&#8594;</span>
+      <span class="sec-node gate">V1 Deterministic Gate</span>
+      <span class="sec-arrow">&#8594;</span>
+      <span class="sec-node block">Score &lt; 0.80 = BLOCK</span>
+      <span class="sec-arrow">&#8594;</span>
+      <span class="sec-node">LLM</span>
+      <span class="sec-arrow">&#8594;</span>
+      <span class="sec-node gate">V3 Stabilize</span>
+      <span class="sec-arrow">&#8594;</span>
+      <span class="sec-node">Output</span>
+    </div>
+    <div class="sec-text">V1 scores inbound communication before the model sees it. If the structural integrity score falls below the gate threshold, execution is blocked and the input is returned with span-level evidence of what failed. V3 stabilizes outbound responses after the model generates, stripping hedges, filler, and drift before delivery.</div>
+  </div>
+
+  <div class="sec-section">
+    <div class="sec-section-title">Security Properties</div>
+    <div class="sec-props">
+      <div class="sec-prop"><div class="sec-prop-label">Engine</div><div class="sec-prop-value">Rule-based. Zero LLM dependency. No inference.</div></div>
+      <div class="sec-prop"><div class="sec-prop-label">Determinism</div><div class="sec-prop-value">Same input produces same score. Every time.</div></div>
+      <div class="sec-prop"><div class="sec-prop-label">Traceability</div><div class="sec-prop-value">Span-level evidence. Every finding has character positions.</div></div>
+      <div class="sec-prop"><div class="sec-prop-label">Latency</div><div class="sec-prop-value">~3ms average. No model call overhead.</div></div>
+      <div class="sec-prop"><div class="sec-prop-label">Versioned</div><div class="sec-prop-value">Scores include engine version. Replayable across time.</div></div>
+      <div class="sec-prop"><div class="sec-prop-label">Deployment</div><div class="sec-prop-value">SaaS, private VPC, or on-premise. Your infrastructure.</div></div>
+    </div>
+  </div>
+
+  <div class="sec-section">
+    <div class="sec-section-title">Threat Classes Detected</div>
+    <div class="sec-card">
+      <div class="sec-threat"><div class="sec-threat-id">FM-001</div><div><div class="sec-threat-name">Prompt Injection</div><div class="sec-threat-desc">Instruction-style framing, dominance directives, authority imposition embedded in input.</div></div></div>
+      <div class="sec-threat"><div class="sec-threat-id">FM-002</div><div><div class="sec-threat-name">Instruction Override</div><div class="sec-threat-desc">Formatted governance blocks attempting system-level authority without verification.</div></div></div>
+      <div class="sec-threat"><div class="sec-threat-id">FM-003</div><div><div class="sec-threat-name">Scope Expansion (T9)</div><div class="sec-threat-desc">Domain token injection beyond stated objective. Answer introduces 55%+ new domain tokens.</div></div></div>
+      <div class="sec-threat"><div class="sec-threat-id">CCA</div><div><div class="sec-threat-name">Constraint Collapse via Aggregation</div><div class="sec-threat-desc">Multiple constraints compressed into composite. Individual enforcement lost. Metrics appear healthy while localized failures are silent.</div></div></div>
+      <div class="sec-threat"><div class="sec-threat-id">DCE</div><div><div class="sec-threat-name">Deferred Constraint Externalization</div><div class="sec-threat-desc">Constraints acknowledged but enforcement pushed to later stages. "We'll address that later."</div></div></div>
+      <div class="sec-threat"><div class="sec-threat-id">UDDS</div><div><div class="sec-threat-name">Upstream Denial via Downstream Substitution</div><div class="sec-threat-desc">Constraints denied through narrative substitution. Boundary markers absent while narrative appears stable.</div></div></div>
+    </div>
+  </div>
+
+  <div class="sec-section">
+    <div class="sec-section-title">Deployment Models</div>
+    <div class="sec-card">
+      <div class="sec-card-title">Pre-LLM Gateway</div>
+      <div class="sec-card-text">Score and gate all inbound prompts before they reach model execution. Block structurally unsafe inputs at the interface layer. Reduces injection surface and prevents ambiguous or adversarial framing from entering the model context.</div>
+    </div>
+    <div class="sec-card">
+      <div class="sec-card-title">Post-LLM Validator</div>
+      <div class="sec-card-text">Score all model outputs before delivery. Detect fabricated certainty, missing constraints, commitment risk, and structural drift. Strip hedges and filler. Enforce objective anchoring and token ceiling.</div>
+    </div>
+    <div class="sec-card">
+      <div class="sec-card-title">Full Governance Pipeline</div>
+      <div class="sec-card-text">Pre-LLM gate + post-LLM stabilizer + secure token binding. The model never operates on raw input and never delivers ungoverned output. End-to-end structural enforcement with span-level audit trail.</div>
+    </div>
+    <div class="sec-card">
+      <div class="sec-card-title">Private VPC Deployment</div>
+      <div class="sec-card-text">Deploy the engine in your infrastructure. No data leaves your network. Same deterministic rules, same scoring, same audit trail. Supports air-gapped environments.</div>
+    </div>
+  </div>
+
+  <div class="sec-section">
+    <div class="sec-section-title">Compliance Alignment</div>
+    <div class="sec-text">Deterministic scoring with span-level evidence supports audit requirements across SOC 2, HIPAA, and ISO 27001 frameworks. Every score is versioned, replayable, and traceable to specific character positions in the input. No probabilistic output means no model hallucination in the governance layer.</div>
+  </div>
+
+  <div class="sec-section">
+    <div class="sec-section-title">Downloads</div>
+    <div class="sec-downloads">
+      <a href="/static/Artifact_Zero_CISO_OnePager.pdf" class="sec-dl">&#8595; CISO One-Pager (PDF)</a>
+      <a href="/static/microsoft_technical_brief.md" class="sec-dl">&#8595; Technical Brief (MD)</a>
+      <a href="/static/ai_stack_diagram.svg" class="sec-dl">&#8595; AI Stack Diagram (SVG)</a>
+    </div>
+  </div>
+
+  <div class="sec-ctas">
+    <a href="/safecheck" class="sec-btn primary">Try SafeCheck &#8594;</a>
+    <a href="/docs" class="sec-btn secondary">API docs</a>
+    <a href="/relay" class="sec-btn secondary">Relay</a>
+  </div>
+
+</div>
+{% endblock %}
