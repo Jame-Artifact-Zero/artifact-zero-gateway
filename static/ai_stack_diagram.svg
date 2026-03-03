@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" width="960" height="320">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12151b"/>
+      <stop offset="100%" stop-color="#0a0c10"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="320" fill="#0a0c10" rx="12"/>
+  <text x="480" y="32" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="10" letter-spacing="3">ARTIFACT ZERO GOVERNANCE PIPELINE</text>
+  <rect x="30" y="90" width="110" height="60" rx="8" fill="url(#g1)" stroke="#252a35" stroke-width="1.5"/>
+  <text x="85" y="117" text-anchor="middle" fill="#9ca3af" font-family="monospace" font-size="10" font-weight="bold">CLIENT</text>
+  <text x="85" y="133" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="8">Human Input</text>
+  <rect x="185" y="90" width="140" height="60" rx="8" fill="url(#g1)" stroke="#00e89c" stroke-width="2"/>
+  <text x="255" y="112" text-anchor="middle" fill="#00e89c" font-family="monospace" font-size="10" font-weight="bold">V1 DETERMINISTIC</text>
+  <text x="255" y="126" text-anchor="middle" fill="#00e89c" font-family="monospace" font-size="10" font-weight="bold">GATE</text>
+  <text x="255" y="142" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="8">Score + Block</text>
+  <rect x="370" y="90" width="110" height="60" rx="8" fill="url(#g1)" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="425" y="115" text-anchor="middle" fill="#ef4444" font-family="monospace" font-size="10" font-weight="bold">NII &lt; 0.80</text>
+  <text x="425" y="133" text-anchor="middle" fill="#ef4444" font-family="monospace" font-size="9">BLOCK</text>
+  <rect x="525" y="90" width="110" height="60" rx="8" fill="url(#g1)" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="580" y="117" text-anchor="middle" fill="#3b82f6" font-family="monospace" font-size="10" font-weight="bold">LLM</text>
+  <text x="580" y="133" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="8">Model Execution</text>
+  <rect x="680" y="90" width="140" height="60" rx="8" fill="url(#g1)" stroke="#00e89c" stroke-width="2"/>
+  <text x="750" y="112" text-anchor="middle" fill="#00e89c" font-family="monospace" font-size="10" font-weight="bold">V3 STABILIZE</text>
+  <text x="750" y="126" text-anchor="middle" fill="#00e89c" font-family="monospace" font-size="10" font-weight="bold">+ ENFORCE</text>
+  <text x="750" y="142" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="8">Strip + Anchor</text>
+  <rect x="865" y="90" width="70" height="60" rx="8" fill="url(#g1)" stroke="#252a35" stroke-width="1.5"/>
+  <text x="900" y="117" text-anchor="middle" fill="#9ca3af" font-family="monospace" font-size="10" font-weight="bold">OUTPUT</text>
+  <text x="900" y="133" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="8">Governed</text>
+  <polygon points="185,120 178,116 178,124" fill="#3d4452"/>
+  <polygon points="370,120 363,116 363,124" fill="#00e89c"/>
+  <polygon points="525,120 518,116 518,124" fill="#3d4452"/>
+  <polygon points="680,120 673,116 673,124" fill="#3d4452"/>
+  <polygon points="865,120 858,116 858,124" fill="#00e89c"/>
+  <line x1="140" y1="120" x2="178" y2="120" stroke="#3d4452" stroke-width="1.5"/>
+  <line x1="325" y1="120" x2="363" y2="120" stroke="#00e89c" stroke-width="1.5"/>
+  <line x1="480" y1="120" x2="518" y2="120" stroke="#3d4452" stroke-width="1.5"/>
+  <line x1="635" y1="120" x2="673" y2="120" stroke="#3d4452" stroke-width="1.5"/>
+  <line x1="820" y1="120" x2="858" y2="120" stroke="#00e89c" stroke-width="1.5"/>
+  <path d="M 425,150 L 425,175 L 85,175 L 85,150" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="255" y="190" text-anchor="middle" fill="#ef4444" font-family="monospace" font-size="8">Return with span-level evidence</text>
+  <text x="255" y="170" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">43 signals | 6 axes | 3 failure modes</text>
+  <rect x="100" y="220" width="200" height="55" rx="8" fill="url(#g1)" stroke="#a78bfa" stroke-width="1"/>
+  <text x="200" y="243" text-anchor="middle" fill="#a78bfa" font-family="monospace" font-size="9" font-weight="bold">DETECTION ENGINE</text>
+  <text x="200" y="258" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">Signals | Tilt | Failure Modes</text>
+  <text x="200" y="269" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">Deterministic | ~3ms</text>
+  <rect x="380" y="220" width="200" height="55" rx="8" fill="url(#g1)" stroke="#f59e0b" stroke-width="1"/>
+  <text x="480" y="243" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="9" font-weight="bold">SCORING ENGINE</text>
+  <text x="480" y="258" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">NII | NTI | CSI | HCS</text>
+  <text x="480" y="269" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">4 lenses | 1 detection map</text>
+  <rect x="660" y="220" width="200" height="55" rx="8" fill="url(#g1)" stroke="#3b82f6" stroke-width="1"/>
+  <text x="760" y="243" text-anchor="middle" fill="#3b82f6" font-family="monospace" font-size="9" font-weight="bold">STORAGE ENGINE</text>
+  <text x="760" y="258" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">Snapshots | Diffs | Prices</text>
+  <text x="760" y="269" text-anchor="middle" fill="#6b7280" font-family="monospace" font-size="7">Change detection | Versioned</text>
+  <line x1="255" y1="150" x2="200" y2="220" stroke="#252a35" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="255" y1="150" x2="480" y2="220" stroke="#252a35" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="750" y1="150" x2="760" y2="220" stroke="#252a35" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="480" y="305" text-anchor="middle" fill="#3d4452" font-family="monospace" font-size="8">artifact0.com | Deterministic. Auditable. Infrastructure-grade.</text>
+</svg>
