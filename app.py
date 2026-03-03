@@ -831,6 +831,11 @@ def relay_page():
     return render_template("relay.html")
 
 
+@app.route("/security")
+def security_page():
+    return render_template("security.html")
+
+
 @app.route("/ai")
 def ai_page():
     return render_template("ai.html")
