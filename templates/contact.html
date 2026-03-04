@@ -337,11 +337,54 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
       </div>
     </div>`,
 
-    // Card 2: V1 Score (shared component)
+    // Card 2: V1 Score — rendered from server response
     `<div class="card">
       <span class="card-num">2</span><span class="card-suit">♦</span>
       <h2>V1 — Structural Score</h2>
-      <div id="card2_nti"></div>
+      <div class="card-body">
+        ${(() => {
+          const nii = score.nii || {};
+          const sc = nii.nii_score ?? 0;
+          const label = nii.nii_label || '';
+          const fm = score.parent_failure_modes || {};
+          const udds = (fm.UDDS || {}).state || 'NONE';
+          const dce  = (fm.DCE  || {}).state || 'NONE';
+          const cca  = (fm.CCA  || {}).state || 'NONE';
+          const tilt = score.tilt_taxonomy || [];
+          const lat  = score.telemetry?.latency_ms || '—';
+          const scoreColor = sc >= 0.85 ? '#00e89c' : sc >= 0.65 ? '#f59e0b' : '#ef4444';
+          const fmBadge = (state) => {
+            if (state.includes('CONFIRMED')) return '<span class="tag red">' + state + '</span>';
+            if (state.includes('PROBABLE'))  return '<span class="tag amber">' + state + '</span>';
+            return '<span class="tag green">CLEAR</span>';
+          };
+          return \`
+            <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px">
+              <span style="font-size:48px;font-weight:700;font-family:'JetBrains Mono',monospace;color:\${scoreColor}">\${Math.round(sc * 100)}</span>
+              <span style="font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace">\${label.replace(/_/g,' ')}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+              <div style="padding:10px;background:var(--surface2);border-radius:6px;text-align:center">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px">UDDS</div>
+                \${fmBadge(udds)}
+              </div>
+              <div style="padding:10px;background:var(--surface2);border-radius:6px;text-align:center">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px">DCE</div>
+                \${fmBadge(dce)}
+              </div>
+              <div style="padding:10px;background:var(--surface2);border-radius:6px;text-align:center">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px">CCA</div>
+                \${fmBadge(cca)}
+              </div>
+            </div>
+            \${tilt.length > 0
+              ? '<div style="margin-bottom:12px">' + tilt.map(t => '<span class="tag amber" style="margin:2px;font-size:11px">' + t + '</span>').join('') + '</div>'
+              : '<div class="tag green" style="margin-bottom:12px">No tilt patterns detected</div>'
+            }
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">\${lat}ms · canonical-nti-v3.0</div>
+          \`;
+        })()}
+      </div>
     </div>`,
 
     // Card 3: V2 Audit
@@ -378,7 +421,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
         <div class="model-reason">First model name spelled by your message characters</div>
       </div>
       <div class="response-text" style="margin-top:16px">
-        <span style="color:${rwLlmRaw ? 'var(--muted)' : 'var(--muted)'};font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : '<span style=\"color:var(--muted)\">Model unavailable — V3 enforced directly.</span>'}</span>
+        <span style="color:var(--muted);font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : '<em style="color:var(--muted)">Model unavailable.</em>'}</span>
       </div>
       <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
     </div>`,
@@ -445,9 +488,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
 
   document.getElementById('track').innerHTML = cards.join('');
 
-  // Mount NTI component into Card 2
-  const card2 = document.getElementById('card2_nti');
-  if (card2) card2.appendChild(NTIScore.render(score, message));
+  // Card 2 renders inline from server score data
 
   // Build dots
   let dotsHtml = '';
