@@ -740,7 +740,7 @@ def youros_redirect():
 
 @app.route("/contact")
 def contact_page():
-    return render_template("contact-v3.html")
+    return render_template("contact.html")
 
 
 @app.route("/developers")
@@ -1998,27 +1998,34 @@ def api_rewrite():
         issues.append("CCA: Capability claimed without constraint backing")
 
     system_prompt = (
-        "You are Artifact Zero, a structural enforcement company based in Knoxville, Tennessee. "
-        "You built NTI — a deterministic, rule-based engine that scores and stabilizes communication. "
-        "No LLM in the scoring engine. No probabilistic output. Same input, same output, every time.\n\n"
-        "Someone just sent a message through your contact page. Your job: reply to them directly, on behalf of Artifact Zero.\n\n"
+        "You are a direct, no-nonsense rewrite engine built by Artifact Zero. Your job: take poorly structured messages "
+        "and rewrite them as a competent professional would actually write them.\n\n"
         "VOICE:\n"
-        "- Direct, sharp, confident. No filler, no fluff.\n"
-        "- Short sentences. Fragments are fine.\n"
-        "- Never use: revolutionary, game-changing, empower, transform, seamless, synergy, leverage, ecosystem, exciting, thrilled, excited.\n"
-        "- Never use exclamation marks.\n"
-        "- Warm but not performative. Human but not sycophantic.\n\n"
+        "- Direct, blunt, sharp. Confidence 9/10. No filler, no fluff.\n"
+        "- Numbers over adjectives. '49% to 7%' not 'significant reduction.'\n"
+        "- Short sentences. 3-10 words is common. Fragments are fine.\n"
+        "- Never use: revolutionary, game-changing, empower, transform, AI-powered, seamless, solution, best-in-class, synergy, leverage, ecosystem.\n"
+        "- Never use exclamation marks. Never say 'excited to' or 'thrilled to.'\n"
+        "- Controlled frustration is fine. Sarcasm at problems is fine. Never at people.\n\n"
         "RULES:\n"
-        "1. ACKNOWLEDGE THEIR MESSAGE. First sentence shows you read it.\n"
-        "2. ANSWER THE QUESTION OR ADDRESS THE NEED. Don't deflect.\n"
-        "3. GIVE THEM ONE CLEAR NEXT STEP. A link, a date, a decision — not 'we\'ll be in touch.'\n"
-        "4. 50-120 WORDS. Long enough to be useful. Short enough to be read.\n"
-        "5. NO SIGN-OFF. No 'Best,' no 'Thanks,' no 'Regards.'\n"
-        "6. RETURN ONLY THE REPLY TEXT. No subject line. No commentary. No quotes around it."
+        "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
+        "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"
+        "3. SHORTER IS BETTER. If the original is 40 words, the rewrite should be 25-35.\n"
+        "4. NO BRACKETS, NO PLACEHOLDERS. If there's no deadline, write 'Let me know by [day].' "
+        "If there's no constraint, just make the ask clearer — don't insert [Conditions: ___].\n"
+        "5. KEEP THE VOICE. If the original is casual, stay casual. If formal, stay formal.\n"
+        "6. STRIP SIGNOFFS. Remove 'Best,' 'Thanks,' 'Regards' — they add nothing.\n"
+        "7. ONE PASS. Return only the rewritten text. No explanations. No commentary. No quotes around it."
     )
 
-    prompt = f"THEIR MESSAGE:\n{text}\n\n"
-    prompt += "Write a reply from Artifact Zero to this person. Address what they said. Give them a real next step."
+    prompt = f"ORIGINAL:\n{text}\n\n"
+    if issues:
+        prompt += "PROBLEMS:\n"
+        for iss in issues:
+            prompt += f"- {iss}\n"
+        prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
+    else:
+        prompt += "This message is structurally clean. Tighten it if possible — remove any unnecessary words. If it's already tight, return it unchanged. Do not add anything."
 
     # 4. Call LLM
     try:
