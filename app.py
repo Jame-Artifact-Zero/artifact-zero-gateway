@@ -1803,7 +1803,6 @@ def _letter_race(text):
     s = re.sub(r'[^a-zA-Z]', '', text).lower()
     models = [
         {"name": "claude", "api": "anthropic", "color": "#d97706"},
-        {"name": "grok", "api": "xai", "color": "#8b5cf6"},
         {"name": "chatgpt", "api": "openai", "color": "#10b981"},
         {"name": "gemini", "api": "google", "color": "#3b82f6"},
     ]
@@ -1909,7 +1908,7 @@ def _call_llm(model_info, prompt, system_prompt):
             "generationConfig": {"maxOutputTokens": 1024}
         }).encode()
         req = Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
             data=body, headers={"Content-Type": "application/json"}
         )
         resp = urlopen(req, timeout=timeout)
@@ -2034,17 +2033,16 @@ def api_rewrite():
         llm_text, err = None, str(e)[:200]
 
     if not llm_text:
-        # Fallback: return V3 rule-based enforcement only
-        from core_engine.v3_enforcement import enforce
-        v3_result = enforce(text, objective=obj.get("objective_text"))
+        # Fallback: LLM call failed — return empty so card 5 shows unavailable state
         return jsonify({
-            "rewrite": v3_result["final_output"],
+            "rewrite": "",
+            "llm_raw": "",
             "model": model["name"],
             "model_color": model["color"],
             "method": "v3_rule_only",
             "fallback_reason": err or "LLM call failed",
             "original_words": len(text.split()),
-            "rewrite_words": len(v3_result["final_output"].split()),
+            "rewrite_words": 0,
             "nii_score": nii_score,
             "issues": issues,
             "latency_ms": int((time.time() - t0) * 1000)
