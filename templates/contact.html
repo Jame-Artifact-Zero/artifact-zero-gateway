@@ -380,7 +380,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
       <div class="response-text" style="margin-top:16px">
         <span style="color:var(--muted);font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : 'Thank you for reaching out, ' + escHtml(name) + '. I appreciate you taking the time to share what you\'re working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I\'d be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!'}</span>
       </div>
-      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw Gemini reply before V3 enforcement${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
     </div>`,
 
     // Card 6: V3 findings
@@ -388,7 +388,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
       <span class="card-num">6</span><span class="card-suit">♦</span>
       <h2>V3 — Stabilization Findings</h2>
       <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">V3 analyzed ${rwModel ? 'the ' + rwModel + ' response' : 'the AI response'} and found:</p>
+        <p style="color:var(--muted);margin-bottom:16px">V3 analyzed the Gemini reply and found:</p>
         ${rwIssues.length > 0
           ? rwIssues.map(i => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag red">FLAGGED</span> <span style="font-size:13px">${escHtml(i)}</span></div>`).join('')
           : '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ No structural issues detected</div>'
@@ -413,7 +413,7 @@ function buildDeck(name, email, message, score, model, v3Rewrite) {
       <span class="card-num">7</span><span class="card-suit">♣</span>
       <h2>V3 — Final Output</h2>
       <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">After V3 governance, this is what gets delivered. No filler. No false commitments. Structurally clean.</p>
+        <p style="color:var(--muted);margin-bottom:16px">After V3 enforcement, this is the reply Artifact Zero sends. Gemini wrote it. NTI made it clean.</p>
         <div class="response-text" style="color:var(--accent);font-size:15px;line-height:1.6;padding:16px;background:rgba(0,232,156,.04);border:1px solid rgba(0,232,156,.15);border-radius:8px">
           ${rwText ? escHtml(rwText) : '<span style="color:var(--muted)">V3 rewrite unavailable — try again with a longer message.</span>'}
         </div>

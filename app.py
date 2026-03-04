@@ -740,7 +740,7 @@ def youros_redirect():
 
 @app.route("/contact")
 def contact_page():
-    return render_template("contact.html")
+    return render_template("contact-v3.html")
 
 
 @app.route("/developers")
@@ -1659,97 +1659,6 @@ def api_score():
     })
 
 
-@app.route("/api/v1/score/batch", methods=["POST"])
-@require_api_key
-def api_score_batch():
-    """Batch scoring — up to 100 texts per request. Returns results in input order."""
-    t0 = time.time()
-    payload = request.get_json() or {}
-    texts = payload.get("texts", [])
-
-    if not texts or not isinstance(texts, list):
-        return jsonify({"error": "Missing 'texts' array"}), 400
-    if len(texts) > 100:
-        return jsonify({"error": "Maximum 100 texts per batch request"}), 400
-    if len(texts) == 0:
-        return jsonify({"error": "'texts' array is empty"}), 400
-
-    results = []
-    for i, text in enumerate(texts):
-        if not isinstance(text, str) or not text.strip():
-            results.append({"index": i, "error": "Empty or invalid text", "nii": None})
-            continue
-        text = text.strip()
-        if len(text) > 50000:
-            results.append({"index": i, "error": "Text exceeds 50,000 character limit", "nii": None})
-            continue
-
-        try:
-            l0 = detect_l0_constraints(text)
-            obj = objective_extract(text)
-            tilt = classify_tilt(text)
-            udds = detect_udds("", text, l0)
-            dce = detect_dce(text, l0)
-            cca = detect_cca("", text)
-            dbc = detect_downstream_before_constraint("", text, l0)
-            nii = compute_nii("", text, l0, dbc, tilt)
-
-            dominance = []
-            if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-                dominance.append("CCA")
-            if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
-                dominance.append("UDDS")
-            if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
-                dominance.append("DCE")
-            if not dominance:
-                dominance = ["NONE"]
-
-            results.append({
-                "index": i,
-                "nii": nii.get("nii_score"),
-                "nii_label": nii.get("nii_label"),
-                "failure_modes": {
-                    "UDDS": udds["udds_state"],
-                    "DCE": dce["dce_state"],
-                    "CCA": cca["cca_state"],
-                },
-                "dominance": dominance,
-                "tilt_tags": tilt,
-                "word_count": len(text.split()),
-            })
-        except Exception as e:
-            results.append({"index": i, "error": str(e), "nii": None})
-
-    latency_ms = int((time.time() - t0) * 1000)
-
-    # Deduct credits for successful scores (paid tiers)
-    scored_count = sum(1 for r in results if r.get("nii") is not None)
-    if hasattr(request, '_credit_user_id') and request._credit_user_id and scored_count > 0:
-        try:
-            from credits import deduct_credit
-            for _ in range(scored_count):
-                deduct_credit(request._credit_user_id, "api", request._api_key_id)
-        except Exception:
-            pass
-
-    # Record usage
-    usage_id = str(uuid.uuid4())
-    database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score/batch", latency_ms, 200)
-
-    return jsonify({
-        "status": "ok",
-        "count": len(texts),
-        "scored": scored_count,
-        "results": results,
-        "meta": {
-            "latency_ms": latency_ms,
-            "count": len(texts),
-            "scored": scored_count,
-            "tier": request._api_tier,
-        }
-    })
-
-
 @app.route("/api/v1/keys", methods=["POST"])
 def api_create_key():
     payload = request.get_json() or {}
@@ -2089,34 +1998,27 @@ def api_rewrite():
         issues.append("CCA: Capability claimed without constraint backing")
 
     system_prompt = (
-        "You are a direct, no-nonsense rewrite engine built by Artifact Zero. Your job: take poorly structured messages "
-        "and rewrite them as a competent professional would actually write them.\n\n"
+        "You are Artifact Zero, a structural enforcement company based in Knoxville, Tennessee. "
+        "You built NTI — a deterministic, rule-based engine that scores and stabilizes communication. "
+        "No LLM in the scoring engine. No probabilistic output. Same input, same output, every time.\n\n"
+        "Someone just sent a message through your contact page. Your job: reply to them directly, on behalf of Artifact Zero.\n\n"
         "VOICE:\n"
-        "- Direct, blunt, sharp. Confidence 9/10. No filler, no fluff.\n"
-        "- Numbers over adjectives. '49% to 7%' not 'significant reduction.'\n"
-        "- Short sentences. 3-10 words is common. Fragments are fine.\n"
-        "- Never use: revolutionary, game-changing, empower, transform, AI-powered, seamless, solution, best-in-class, synergy, leverage, ecosystem.\n"
-        "- Never use exclamation marks. Never say 'excited to' or 'thrilled to.'\n"
-        "- Controlled frustration is fine. Sarcasm at problems is fine. Never at people.\n\n"
+        "- Direct, sharp, confident. No filler, no fluff.\n"
+        "- Short sentences. Fragments are fine.\n"
+        "- Never use: revolutionary, game-changing, empower, transform, seamless, synergy, leverage, ecosystem, exciting, thrilled, excited.\n"
+        "- Never use exclamation marks.\n"
+        "- Warm but not performative. Human but not sycophantic.\n\n"
         "RULES:\n"
-        "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
-        "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"
-        "3. SHORTER IS BETTER. If the original is 40 words, the rewrite should be 25-35.\n"
-        "4. NO BRACKETS, NO PLACEHOLDERS. If there's no deadline, write 'Let me know by [day].' "
-        "If there's no constraint, just make the ask clearer — don't insert [Conditions: ___].\n"
-        "5. KEEP THE VOICE. If the original is casual, stay casual. If formal, stay formal.\n"
-        "6. STRIP SIGNOFFS. Remove 'Best,' 'Thanks,' 'Regards' — they add nothing.\n"
-        "7. ONE PASS. Return only the rewritten text. No explanations. No commentary. No quotes around it."
+        "1. ACKNOWLEDGE THEIR MESSAGE. First sentence shows you read it.\n"
+        "2. ANSWER THE QUESTION OR ADDRESS THE NEED. Don't deflect.\n"
+        "3. GIVE THEM ONE CLEAR NEXT STEP. A link, a date, a decision — not 'we\'ll be in touch.'\n"
+        "4. 50-120 WORDS. Long enough to be useful. Short enough to be read.\n"
+        "5. NO SIGN-OFF. No 'Best,' no 'Thanks,' no 'Regards.'\n"
+        "6. RETURN ONLY THE REPLY TEXT. No subject line. No commentary. No quotes around it."
     )
 
-    prompt = f"ORIGINAL:\n{text}\n\n"
-    if issues:
-        prompt += "PROBLEMS:\n"
-        for iss in issues:
-            prompt += f"- {iss}\n"
-        prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
-    else:
-        prompt += "This message is structurally clean. Tighten it if possible — remove any unnecessary words. If it's already tight, return it unchanged. Do not add anything."
+    prompt = f"THEIR MESSAGE:\n{text}\n\n"
+    prompt += "Write a reply from Artifact Zero to this person. Address what they said. Give them a real next step."
 
     # 4. Call LLM
     try:
