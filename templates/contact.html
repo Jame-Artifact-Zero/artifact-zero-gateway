@@ -384,7 +384,7 @@
     // Fire score + rewrite in parallel
     Promise.all([
       fetch('/nti', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg}) }).then(function(r){ return r.json(); }),
-      fetch('/api/v1/rewrite', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg}) }).then(function(r){ return r.json(); }).catch(function(){ return null; })
+      fetch('/api/v1/rewrite', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg, contact_demo:true}) }).then(function(r){ return r.json(); }).catch(function(){ return null; })
     ]).then(function(results) {
       var score   = results[0];
       var rewrite = results[1];
@@ -422,7 +422,9 @@
     var rwOrigWords  = rw ? (rw.original_words || 0) : 0;
     var rwNewWords   = rw ? (rw.rewrite_words || 0) : 0;
     var rwLatency    = rw ? (rw.latency_ms || 0) : 0;
-    var rwFallback   = rw ? (rw.fallback_reason || '') : '';
+    var rwFallback      = rw ? (rw.fallback_reason || '') : '';
+    var rwUngoverned    = rw ? (rw.llm_raw || '') : '';
+    var rwUngWords      = rwUngoverned ? rwUngoverned.split(/\s+/).filter(Boolean).length : 0;
 
     // Card 4 – what AI receives
     var v2flags = [];
@@ -502,7 +504,7 @@
             rwActions.map(function(a){ return '<div><span class="ct-tag ct-tag-amber">' + esc(a) + '</span></div>'; }).join('') +
             '</div>' +
             '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-top:12px">' +
-              rwOrigWords + ' \u2192 ' + rwNewWords + ' words after enforcement \u00B7 ' + rwLatency + 'ms' +
+              rwUngWords + ' ungoverned \u2192 ' + rwNewWords + ' words after NTI \u00B7 ' + rwLatency + 'ms' +
             '</div>'
           : '<div style="background:rgba(0,232,156,0.08);border:1px solid rgba(0,232,156,0.2);border-radius:6px;padding:12px 14px;">' +
             '<span class="ct-tag ct-tag-green">\u2713 No structural issues detected in ungoverned output</span>' +
