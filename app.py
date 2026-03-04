@@ -740,7 +740,7 @@ def youros_redirect():
 
 @app.route("/contact")
 def contact_page():
-    return render_template("contact-v3.html")
+    return render_template("contact.html")
 
 
 @app.route("/developers")
@@ -1656,6 +1656,97 @@ def api_score():
             "tier": request._api_tier
         },
         **({"credits": credit_info} if credit_info else {})
+    })
+
+
+@app.route("/api/v1/score/batch", methods=["POST"])
+@require_api_key
+def api_score_batch():
+    """Batch scoring — up to 100 texts per request. Returns results in input order."""
+    t0 = time.time()
+    payload = request.get_json() or {}
+    texts = payload.get("texts", [])
+
+    if not texts or not isinstance(texts, list):
+        return jsonify({"error": "Missing 'texts' array"}), 400
+    if len(texts) > 100:
+        return jsonify({"error": "Maximum 100 texts per batch request"}), 400
+    if len(texts) == 0:
+        return jsonify({"error": "'texts' array is empty"}), 400
+
+    results = []
+    for i, text in enumerate(texts):
+        if not isinstance(text, str) or not text.strip():
+            results.append({"index": i, "error": "Empty or invalid text", "nii": None})
+            continue
+        text = text.strip()
+        if len(text) > 50000:
+            results.append({"index": i, "error": "Text exceeds 50,000 character limit", "nii": None})
+            continue
+
+        try:
+            l0 = detect_l0_constraints(text)
+            obj = objective_extract(text)
+            tilt = classify_tilt(text)
+            udds = detect_udds("", text, l0)
+            dce = detect_dce(text, l0)
+            cca = detect_cca("", text)
+            dbc = detect_downstream_before_constraint("", text, l0)
+            nii = compute_nii("", text, l0, dbc, tilt)
+
+            dominance = []
+            if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+                dominance.append("CCA")
+            if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+                dominance.append("UDDS")
+            if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+                dominance.append("DCE")
+            if not dominance:
+                dominance = ["NONE"]
+
+            results.append({
+                "index": i,
+                "nii": nii.get("nii_score"),
+                "nii_label": nii.get("nii_label"),
+                "failure_modes": {
+                    "UDDS": udds["udds_state"],
+                    "DCE": dce["dce_state"],
+                    "CCA": cca["cca_state"],
+                },
+                "dominance": dominance,
+                "tilt_tags": tilt,
+                "word_count": len(text.split()),
+            })
+        except Exception as e:
+            results.append({"index": i, "error": str(e), "nii": None})
+
+    latency_ms = int((time.time() - t0) * 1000)
+
+    # Deduct credits for successful scores (paid tiers)
+    scored_count = sum(1 for r in results if r.get("nii") is not None)
+    if hasattr(request, '_credit_user_id') and request._credit_user_id and scored_count > 0:
+        try:
+            from credits import deduct_credit
+            for _ in range(scored_count):
+                deduct_credit(request._credit_user_id, "api", request._api_key_id)
+        except Exception:
+            pass
+
+    # Record usage
+    usage_id = str(uuid.uuid4())
+    database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score/batch", latency_ms, 200)
+
+    return jsonify({
+        "status": "ok",
+        "count": len(texts),
+        "scored": scored_count,
+        "results": results,
+        "meta": {
+            "latency_ms": latency_ms,
+            "count": len(texts),
+            "scored": scored_count,
+            "tier": request._api_tier,
+        }
     })
 
 
