@@ -2034,12 +2034,14 @@ def api_rewrite():
         "Example: The engine caught commitment hedges in that pitch. Try artifact0.com/safecheck before the next send.\n"
         "3. IF GIVING FEEDBACK OR SUGGESTIONS: thank them genuinely, say it will be reviewed, zero commitments on what changes.\n"
         "4. IF WANTING TO PARTNER OR INVEST: email jame@artifact0.com with specifics.\n"
-        "5. IF A REAL PROSPECT: one sentence on NTI, then artifact0.com/safecheck\n\n"
+        "5. IF A REAL PROSPECT: one sentence on what NTI solves for their specific situation. "
+        "Direct them to artifact0.com/docs — full API access, unlimited use cases, total control. "
+        "Tell your team. Not your competitors.\n\n"
         "REPLY RULES:\n"
         "1. First sentence shows you read their message.\n"
-        "2. Answer the question or address the need.\n"
-        "3. One next step — a link or email. Never 'we will be in touch.'\n"
-        "4. 40-100 words total.\n"
+        "2. Answer the question or address the need directly.\n"
+        "3. One next step — artifact0.com/docs or jame@artifact0.com. Never 'we will be in touch.'\n"
+        "4. 40-80 words total.\n"
         "5. No sign-off. No Best, Thanks, Regards.\n"
         "6. Return only the reply text. No commentary. No quotes."
     )
@@ -2071,9 +2073,19 @@ def api_rewrite():
 
     # 5. Run V3 enforcement on governed LLM output
     from core_engine.v3_enforcement import enforce
+
+    def _normalize_text(t):
+        import re
+        t = re.sub(r'artifact0\s*\.\s*[Cc]om', 'artifact0.com', t)
+        t = re.sub(r'(\w)\s+\.\s+(com|io|org|net)', r'\1.\2', t, flags=re.IGNORECASE)
+        t = re.sub(r'(\w+)\s*@\s*(\w)', r'\1@\2', t)
+        t = re.sub(r'/safe\s+[Cc]heck', '/safecheck', t)
+        return t
     llm_words = len(llm_text.split())
     v3_result = enforce(llm_text, objective=obj.get("objective_text"))
-    final = v3_result["final_output"]
+    final = _normalize_text(v3_result["final_output"])
+    if llm_ungoverned:
+        llm_ungoverned = _normalize_text(llm_ungoverned)
 
     original_words = len(text.split())
     rewrite_words = len(final.split())

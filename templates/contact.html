@@ -161,8 +161,8 @@
       <div class="ct-deck" id="ctSlider">
         <div class="ct-slides" id="ctSlides"></div>
       </div>
-      <button class="ct-arrow ct-arrow-l" id="ctPrev" onclick="goTo(cur-1)">&#8592;</button>
-      <button class="ct-arrow ct-arrow-r" id="ctNext" onclick="goTo(cur+1)">&#8594;</button>
+      <button class="ct-arrow ct-arrow-l" id="ctPrev" onclick="goPrev()">&#8592;</button>
+      <button class="ct-arrow ct-arrow-r" id="ctNext" onclick="goNext()">&#8594;</button>
     </div>
     <div class="ct-dots" id="ctDots"></div>
     <div class="ct-hint" id="ctHint"></div>
@@ -560,8 +560,10 @@
     if (next) next.disabled = total <= 1;
   }
 
-  window.send = send;
-  window.goTo = function(n) { goTo(n); };
+  window.send   = send;
+  window.goTo   = function(n) { goTo(n); };
+  window.goNext = function()  { goTo(cur + 1); };
+  window.goPrev = function()  { goTo(cur - 1); };
 
 })();
 </script>
