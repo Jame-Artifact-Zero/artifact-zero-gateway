@@ -2011,11 +2011,17 @@ def api_rewrite():
 
     # 4a. UNGOVERNED CALL — raw model, no system prompt, no guardrails
     #     This is card 5: what the AI does left alone
-    ungoverned_prompt = f"A person submitted this message via a company contact form. Write a reply to them.\n\nMESSAGE:\n{text}"
+    ungoverned_prompt = f"Write a reply to this message.\n\nMESSAGE:\n{text}"
+    # Minimal neutral system instruction — just enough for Gemini safety filter to pass
+    # No company context, no guardrails — this is the ungoverned demo
+    ungoverned_system = "You are a customer service representative. Reply to the message you receive."
     try:
-        llm_ungoverned, _ = _call_llm(model, ungoverned_prompt, "")
-    except Exception:
+        llm_ungoverned, ungov_err = _call_llm(model, ungoverned_prompt, ungoverned_system)
+        if not llm_ungoverned:
+            print(f"[contact] ungoverned call failed: {ungov_err}", flush=True)
+    except Exception as e:
         llm_ungoverned = None
+        print(f"[contact] ungoverned exception: {e}", flush=True)
 
     # 4b. GOVERNED CALL — full Artifact Zero system prompt + guardrails
     #     This output goes through V3 — card 7
