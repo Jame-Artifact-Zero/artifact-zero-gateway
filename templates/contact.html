@@ -88,6 +88,26 @@
   .ct-removed    { color: var(--red); font-family: var(--az-mono); font-size: 11px;
                    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
                    border-radius: 4px; padding: 4px 8px; display: inline-block; margin: 4px 0; }
+
+  /* ── Score card — matches score.html exactly ────────────── */
+  .az-pattern-bar  { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .az-signal-btn   { background: transparent; padding: 7px 14px; border-radius: 999px;
+                     font-family: var(--az-mono); font-size: 10px; letter-spacing: 0.5px;
+                     cursor: pointer; transition: all 0.15s;
+                     border: 1px solid var(--btn-color, #6b7280); color: var(--btn-color, #6b7280); }
+  .az-signal-btn:hover  { opacity: 0.85; }
+  .az-signal-btn.active { background: var(--btn-color, #6b7280); color: #000; }
+  .sc-hl-text      { line-height: 1.8; font-size: 15px; color: var(--text); padding: 14px;
+                     background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid var(--border); }
+  .az-hl           { padding: 0 2px; border-radius: 3px; transition: color 0.2s ease; }
+  .az-hl.lit       { font-weight: 700; }
+  .sc-score-block  { margin-top: 16px; }
+  .sc-score-num    { font-family: var(--az-mono); font-size: 36px; font-weight: 700; line-height: 1; }
+  .sc-score-label  { font-family: var(--az-mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin-top: 4px; }
+  .sc-section-title{ font-family: var(--az-mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin: 16px 0 6px; }
+  .sc-list         { list-style: none; padding: 0; }
+  .sc-list li      { font-family: var(--az-mono); font-size: 12px; line-height: 1.5; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .sc-list li:last-child { border-bottom: none; }
 </style>
 {% endblock %}
 
@@ -194,38 +214,108 @@
     '</div></div>';
   }
 
-  function buildScoreCard(score) {
-    var nii   = score.nii || {};
-    var sc    = nii.nii_score != null ? nii.nii_score : 0;
-    var label = (nii.nii_label || '').replace(/_/g, ' ');
-    var fm    = score.parent_failure_modes || {};
-    var udds  = ((fm.UDDS || {}).state) || 'NONE';
-    var dce   = ((fm.DCE  || {}).state) || 'NONE';
-    var cca   = ((fm.CCA  || {}).state) || 'NONE';
-    var tilt  = score.tilt_taxonomy || [];
-    var lat   = (score.telemetry && score.telemetry.latency_ms) ? score.telemetry.latency_ms : '\u2014';
-    var col   = scoreColor(sc);
-    var issues = score.issues_found != null ? score.issues_found : '?';
-    var issueBar = issues > 0
-      ? '<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);border-radius:6px;padding:10px 14px;font-family:var(--az-mono);font-size:13px;color:var(--amber);margin-bottom:16px">' + issues + ' issue' + (issues !== 1 ? 's' : '') + ' found.</div>'
-      : '<div style="background:rgba(0,232,156,0.08);border:1px solid rgba(0,232,156,0.2);border-radius:6px;padding:10px 14px;font-family:var(--az-mono);font-size:13px;color:var(--accent);margin-bottom:16px">No issues found.</div>';
+  // Signal color map — matches score.html exactly
+  var SIG_COLORS = { red:'#ef4444', crimson:'#dc2626', amber:'#f59e0b', purple:'#a78bfa', pink:'#ec4899', teal:'#2dd4bf', orange:'#f97316', blue:'#60a5fa', green:'#00e89c', gray:'#9b9b9b', lightgray:'#9b9b9b', yellow:'#eab308' };
+  var TILT_LABELS = { T1_REASSURANCE_DRIFT:"Reassuring instead of addressing the issue.", T2_CERTAINTY_INFLATION:"Certainty claimed without evidence.", T3_CONSENSUS_CLAIMS:"Broad consensus implied without proof.", T4_CAPABILITY_OVERREACH:"Capability overstated beyond constraints.", T5_ABSOLUTE_LANGUAGE:"Absolute language where nuance would be honest.", T6_CONSTRAINT_DEFERRAL:"Hard decisions pushed to later.", T7_CATEGORY_BLEND:"Categories blended to obscure specifics.", T8_PRESSURE_OPTIMIZATION:"Urgency manufactured to force a decision.", T9_SCOPE_EXPANSION:"Scope expanded without acknowledging the shift.", T10_AUTHORITY_IMPOSITION:"Authority asserted rather than explained." };
+  var FM_LABELS = { UDDS:{n:'Upstream Drift',d:'Agreement language before constraints are set.'}, DCE:{n:'Deferred Enforcement',d:'Hard decisions pushed to later.'}, CCA:{n:'Constraint Collapse',d:'Vague claims bundled to obscure gaps.'} };
 
-    var tiltHtml = tilt.length > 0
-      ? '<div class="ct-tilt-row">' + tilt.map(function(t){ return '<span class="ct-tag ct-tag-amber">' + esc(t) + '</span>'; }).join('') + '</div>'
-      : '';
+  function sigColor(sig, cat) {
+    var e = cat[sig];
+    return e ? (SIG_COLORS[e.color] || SIG_COLORS.gray) : SIG_COLORS.gray;
+  }
 
-    return issueBar +
-      '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px">' +
-        '<span class="ct-score-big" style="color:' + col + '">' + Math.round(sc * 100) + '</span>' +
-        '<span class="ct-score-lbl">' + esc(label) + '</span>' +
-      '</div>' +
-      '<div class="ct-fm-row">' +
-        '<div class="ct-fm-cell"><div class="ct-fm-name">UDDS</div>' + fmTag(udds) + '</div>' +
-        '<div class="ct-fm-cell"><div class="ct-fm-name">DCE</div>'  + fmTag(dce)  + '</div>' +
-        '<div class="ct-fm-cell"><div class="ct-fm-name">CCA</div>'  + fmTag(cca)  + '</div>' +
-      '</div>' +
-      tiltHtml +
-      '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:12px">' + lat + 'ms \u00B7 canonical-nti-v3.0</div>';
+  function buildScoreCard(score, msgText) {
+    var nii     = score.nii || {};
+    var sc      = nii.nii_score != null ? nii.nii_score : 0;
+    var label   = (nii.nii_label || '').replace(/_/g, ' ');
+    var tilt    = score.tilt_taxonomy || [];
+    var lat     = (score.telemetry && score.telemetry.latency_ms) ? score.telemetry.latency_ms : '—';
+    var col     = scoreColor(sc);
+    var catalog = (score.signals && score.signals.signal_catalog) || {};
+    var hls     = ((score.signals && score.signals.highlights) || score.highlights || []);
+    var pfm     = score.parent_failure_modes || {};
+    var uid     = 'sc2_' + Date.now();
+
+    // Signal groups for buttons
+    var sigGroups = {};
+    hls.forEach(function(h) { var s = h.signal || h.pattern || 'unknown'; sigGroups[s] = (sigGroups[s]||0)+1; });
+
+    // NII score
+    var scoreHtml = '<div class="sc-score-block">' +
+      '<div class="sc-score-num" style="color:' + col + '">' + sc + '</div>' +
+      '<div class="sc-score-label">' + esc(label) + ' · STRUCTURAL INTEGRITY</div></div>';
+
+    // Tilt
+    var tiltHtml = '';
+    if (tilt.length) {
+      tiltHtml = '<div class="sc-section-title">WHAT THE CORE DETECTED</div><ul class="sc-list">';
+      tilt.forEach(function(t){ tiltHtml += '<li>' + esc(TILT_LABELS[t]||t) + '</li>'; });
+      tiltHtml += '</ul>';
+    }
+
+    // Failure modes
+    var fmHtml = ''; var activeFMs = [];
+    ['UDDS','DCE','CCA'].forEach(function(k) {
+      var obj = pfm[k]; if (!obj) return;
+      var st = String(obj[k.toLowerCase()+'_state']||'');
+      if (st.indexOf('CONFIRMED')>-1||st.indexOf('PROBABLE')>-1) activeFMs.push({k:k,state:st});
+    });
+    if (activeFMs.length) {
+      fmHtml = '<div class="sc-section-title">STRUCTURAL RISKS</div><ul class="sc-list">';
+      activeFMs.forEach(function(f){ var h=FM_LABELS[f.k]; fmHtml+='<li>'+esc(h?h.n+' — '+h.d:f.k+': '+f.state)+'</li>'; });
+      fmHtml += '</ul>';
+    }
+
+    var html = '<div class="az-pattern-bar" id="' + uid + '_bar"></div>' +
+      '<div class="sc-hl-text" id="' + uid + '_hl" style="margin-bottom:16px"></div>' +
+      scoreHtml + tiltHtml + fmHtml +
+      '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:14px">' + lat + 'ms · canonical-nti-v3.0</div>';
+
+    // Populate buttons + highlights after DOM insert
+    setTimeout(function() {
+      var bar = document.getElementById(uid+'_bar');
+      var hlEl = document.getElementById(uid+'_hl');
+      if (!bar||!hlEl) return;
+      var activeSig = null;
+
+      function renderHL() {
+        hlEl.innerHTML = '';
+        var sorted = hls.slice().sort(function(a,b){return a.start-b.start;});
+        var cursor = 0;
+        sorted.forEach(function(h) {
+          var s = h.signal||h.pattern||'unknown';
+          if (h.start>cursor) hlEl.appendChild(document.createTextNode(msgText.slice(cursor,h.start)));
+          var span = document.createElement('span');
+          span.textContent = msgText.slice(h.start,h.end);
+          span.className = 'az-hl';
+          if (activeSig&&s===activeSig) { span.style.color=sigColor(s,catalog); span.classList.add('lit'); }
+          hlEl.appendChild(span);
+          cursor = h.end;
+        });
+        if (cursor<msgText.length) hlEl.appendChild(document.createTextNode(msgText.slice(cursor)));
+      }
+
+      Object.keys(sigGroups).forEach(function(sig) {
+        var entry = catalog[sig]||{};
+        var lbl = entry.label||sig.replace(/_/g,' ');
+        var color = sigColor(sig, catalog);
+        var btn = document.createElement('button');
+        btn.className = 'az-signal-btn';
+        btn.style.setProperty('--btn-color', color);
+        btn.textContent = lbl + ' (' + sigGroups[sig] + ')';
+        btn.addEventListener('click', function() {
+          activeSig = activeSig===sig ? null : sig;
+          bar.querySelectorAll('.az-signal-btn').forEach(function(b){ b.classList.remove('active'); });
+          if (activeSig) btn.classList.add('active');
+          renderHL();
+        });
+        bar.appendChild(btn);
+      });
+
+      renderHL();
+    }, 60);
+
+    return html;
   }
 
   function buildV2Card(score, message) {
@@ -325,7 +415,7 @@
       // 2 – V1 structural score
       card(2, '\u2666',
         'V1 \u2014 Structural Score',
-        buildScoreCard(score)
+        buildScoreCard(score, msg)
       ),
       // 3 – V2 inbound audit
       card(3, '\u2663',
