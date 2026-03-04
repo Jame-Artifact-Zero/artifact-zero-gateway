@@ -52,6 +52,17 @@
   .ct-dot        { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
   .ct-dot.active { background: var(--accent); }
   .ct-hint       { font-family: var(--az-mono); font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 8px; }
+  .ct-arrow      { position: absolute; top: 50%; transform: translateY(-50%); background: var(--surface2);
+                   border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px;
+                   color: var(--text); font-size: 16px; cursor: pointer; z-index: 10;
+                   display: flex; align-items: center; justify-content: center;
+                   transition: background 0.15s; line-height: 1; }
+  .ct-arrow:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+  .ct-arrow:disabled { opacity: 0.2; cursor: default; }
+  .ct-arrow:disabled:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+  .ct-arrow-l    { left: -18px; }
+  .ct-arrow-r    { right: -18px; }
+  @media (max-width: 600px) { .ct-arrow-l { left: 4px; } .ct-arrow-r { right: 4px; } }
 
   /* ── Score card internals ────────────────────────────────── */
   .ct-score-big  { font-family: var(--az-mono); font-size: 52px; font-weight: 700; line-height: 1; }
@@ -146,11 +157,15 @@
   <!-- DECK STATE -->
   <div class="ct-deck-wrap" id="ctDeck">
     <div class="ct-banner" id="ctBanner"></div>
-    <div class="ct-deck" id="ctSlider">
-      <div class="ct-slides" id="ctSlides"></div>
+    <div style="position:relative">
+      <div class="ct-deck" id="ctSlider">
+        <div class="ct-slides" id="ctSlides"></div>
+      </div>
+      <button class="ct-arrow ct-arrow-l" id="ctPrev" onclick="goTo(cur-1)">&#8592;</button>
+      <button class="ct-arrow ct-arrow-r" id="ctNext" onclick="goTo(cur+1)">&#8594;</button>
     </div>
     <div class="ct-dots" id="ctDots"></div>
-    <div class="ct-hint" id="ctHint">Swipe to reveal →</div>
+    <div class="ct-hint" id="ctHint"></div>
   </div>
 
 </div>
@@ -197,12 +212,23 @@
   }
 
   function goTo(n) {
+    if (n < 0 || n >= total) return;
     cur = n;
     document.getElementById('ctSlides').style.transform = 'translateX(-' + (cur * 100) + '%)';
     var dots = document.getElementById('ctDots').querySelectorAll('.ct-dot');
     dots.forEach(function(d, i) { d.classList.toggle('active', i === cur); });
-    document.getElementById('ctHint').textContent = cur < total - 1 ? 'Swipe to reveal \u2192' : '';
+    var prev = document.getElementById('ctPrev');
+    var next = document.getElementById('ctNext');
+    if (prev) prev.disabled = cur === 0;
+    if (next) next.disabled = cur === total - 1;
   }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    if (!document.getElementById('ctDeck').classList.contains('active')) return;
+    if (e.key === 'ArrowRight') goTo(cur + 1);
+    if (e.key === 'ArrowLeft')  goTo(cur - 1);
+  });
 
   // ── Card builders ─────────────────────────────────────────
   function card(num, suit, title, body) {
@@ -418,17 +444,38 @@
         'V1 \u2014 Structural Score',
         buildScoreCard(score, msg)
       ),
-      // 3 – V2 inbound audit
+      // 3 – Outbound use case — what NTI does for teams
       card(3, '\u2663',
-        'V2 \u2014 Inbound Audit',
-        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Before we read your message, V2 scanned it for structural completeness.</p>' +
-        buildV2Card(score, msg)
+        'What Teams Use This For',
+        '<p style="color:var(--dim);font-size:14px;line-height:1.7;margin-bottom:16px">' +
+          'Before this message reached us, NTI scanned it. Same engine your team would use on outbound.' +
+        '</p>' +
+        '<div style="background:var(--surface2);border-radius:8px;padding:16px;margin-bottom:16px">' +
+          '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:12px">COMMON CONFIGURATIONS</div>' +
+          '<div style="display:flex;flex-direction:column;gap:10px">' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-family:var(--az-mono);font-size:11px;background:rgba(0,232,156,0.1);border:1px solid rgba(0,232,156,0.25);border-radius:4px;padding:3px 8px;color:var(--accent);white-space:nowrap">HOLD IF &lt; 0.85</span>' +
+              '<span style="font-size:13px;color:var(--dim)">Block send until score clears threshold</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-family:var(--az-mono);font-size:11px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:3px 8px;color:var(--amber);white-space:nowrap">ALL AI RESPONSES</span>' +
+              '<span style="font-size:13px;color:var(--dim)">Enforce V3 on every AI-generated reply</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-family:var(--az-mono);font-size:11px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:4px;padding:3px 8px;color:var(--blue);white-space:nowrap">TEAM AUDIT LOG</span>' +
+              '<span style="font-size:13px;color:var(--dim)">Every sent message scored and stored</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p style="font-family:var(--az-mono);font-size:11px;color:var(--muted);line-height:1.6">' +
+          'Outlook add-in \u00B7 API integration \u00B7 Power Automate connector' +
+        '</p>'
       ),
-      // 4 – What AI receives
+      // 4 – V2 audit on inbound — what the engine found in their message
       card(4, '\u2665',
-        'What the AI Receives',
-        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">After V2 processing, this is the structurally cleaned input that reaches the AI model.</p>' +
-        '<div style="background:var(--surface2);border-radius:8px;padding:14px;font-size:14px;color:var(--text);line-height:1.6">' + esc(msg) + '</div>' +
+        'V2 \u2014 What the Engine Found',
+        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Before routing to AI, V2 scanned your message for structural completeness.</p>' +
+        buildV2Card(score, msg) +
         appendedNote
       ),
       // 5 – UNGOVERNED AI — no system prompt, no guardrails, raw model
@@ -507,9 +554,14 @@
 
     cur = 0;
     initSwipe();
+    var prev = document.getElementById('ctPrev');
+    var next = document.getElementById('ctNext');
+    if (prev) prev.disabled = true;  // start at card 0, can't go back
+    if (next) next.disabled = total <= 1;
   }
 
   window.send = send;
+  window.goTo = function(n) { goTo(n); };
 
 })();
 </script>

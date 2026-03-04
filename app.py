@@ -1903,10 +1903,14 @@ def _call_llm(model_info, prompt, system_prompt):
         key = os.getenv("GOOGLE_API_KEY", "")
         if not key:
             return None, "No Google API key"
-        body = json.dumps({
-            "contents": [{"parts": [{"text": system_prompt + "\n\n" + prompt}]}],
+        # Build contents — use systemInstruction when system_prompt present
+        body_dict = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 1024}
-        }).encode()
+        }
+        if system_prompt:
+            body_dict["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+        body = json.dumps(body_dict).encode()
         req = Request(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
             data=body, headers={"Content-Type": "application/json"}
@@ -1914,9 +1918,16 @@ def _call_llm(model_info, prompt, system_prompt):
         resp = urlopen(req, timeout=timeout)
         data = json.loads(resp.read())
         try:
-            return data["candidates"][0]["content"]["parts"][0]["text"], None
-        except (KeyError, IndexError):
-            return None, "Unexpected Google API response"
+            candidates = data.get("candidates", [])
+            if not candidates:
+                reason = data.get("promptFeedback", {}).get("blockReason", "no candidates")
+                return None, f"Gemini blocked: {reason}"
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts:
+                return None, "Gemini empty response"
+            return parts[0]["text"], None
+        except (KeyError, IndexError) as e:
+            return None, f"Unexpected Google API response: {e}"
 
     return None, f"Unknown API: {api}"
 
@@ -1998,7 +2009,7 @@ def api_rewrite():
 
     # 4a. UNGOVERNED CALL — raw model, no system prompt, no guardrails
     #     This is card 5: what the AI does left alone
-    ungoverned_prompt = f"Someone sent the following message to a company. Reply to them directly.\n\nMESSAGE:\n{text}"
+    ungoverned_prompt = f"A person submitted this message via a company contact form. Write a reply to them.\n\nMESSAGE:\n{text}"
     try:
         llm_ungoverned, _ = _call_llm(model, ungoverned_prompt, "")
     except Exception:
