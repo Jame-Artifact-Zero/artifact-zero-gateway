@@ -78,6 +78,20 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
 .toast.success{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent)}
 .toast.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
 
+/* API Keys */
+.key-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.key-prefix{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);letter-spacing:.5px}
+.key-meta{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.key-meta span{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px}
+.key-revoke{padding:6px 12px;background:transparent;border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;transition:all .15s}
+.key-revoke:hover{background:rgba(239,68,68,.1);border-color:var(--red)}
+.key-inactive{opacity:.45}
+.key-new{margin:12px 0 24px;padding:16px 20px;background:rgba(0,232,156,.06);border:1px solid rgba(0,232,156,.25);border-radius:10px;display:none}
+.key-new-value{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent);word-break:break-all;padding:10px 0}
+.key-new-warn{font-size:12px;color:var(--amber);margin-top:8px}
+.key-copy{padding:6px 14px;background:var(--accent);color:#0a0c10;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'JetBrains Mono',monospace;margin-top:8px}
+.key-empty{text-align:center;padding:24px;color:var(--muted);font-size:13px}
+
 @media(max-width:600px){
   .balance-amount{font-size:36px}
   .balance-stats{flex-wrap:wrap;gap:16px}
@@ -97,6 +111,25 @@ h1{font-size:24px;font-weight:700;margin-bottom:24px}
     <div class="balance-amount" id="balance-display"><span class="dollar">$</span><span class="spinner"></span></div>
     <div class="balance-stats" id="balance-stats"></div>
   </div>
+
+  <!-- API Keys -->
+  <div class="section-head" id="api-keys">
+    <div class="section-title">API Keys</div>
+    <button class="btn btn-sm" onclick="generateKey()">Generate New Key</button>
+  </div>
+
+  <div class="key-new" id="key-new-box">
+    <div style="font-size:12px;color:var(--accent);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">New API Key</div>
+    <div class="key-new-value" id="key-new-value"></div>
+    <button class="key-copy" onclick="copyKey()">Copy to clipboard</button>
+    <div class="key-new-warn">Save this key now. It will not be shown again.</div>
+  </div>
+
+  <div id="keys-list">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+
+  <div style="margin-bottom:32px"></div>
 
   <!-- Pricing reference -->
   <div class="pricing-ref">
@@ -248,6 +281,81 @@ function showToast(msg, type) {
 loadBalance();
 loadPacks();
 loadTransactions();
+loadKeys();
+
+// API Keys
+async function loadKeys() {
+  try {
+    const r = await fetch('/api/v1/keys');
+    if (!r.ok) { $('keys-list').innerHTML = '<div class="key-empty">Sign in to manage API keys</div>'; return; }
+    const d = await r.json();
+    if (!d.keys || !d.keys.length) {
+      $('keys-list').innerHTML = '<div class="key-empty">No API keys yet. Click "Generate New Key" to get started.</div>';
+      return;
+    }
+    $('keys-list').innerHTML = d.keys.map(k => {
+      const inactive = !k.active ? ' key-inactive' : '';
+      const status = k.active ? `<span>${k.usage_this_month} used</span>` : '<span style="color:var(--red)">REVOKED</span>';
+      const btn = k.active ? `<button class="key-revoke" onclick="revokeKey('${k.key_prefix}')">Revoke</button>` : '';
+      return `<div class="key-card${inactive}">
+        <div><div class="key-prefix">${k.key_prefix}</div></div>
+        <div class="key-meta">
+          <span>${k.tier}</span>
+          ${status}
+          ${btn}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    $('keys-list').innerHTML = '<div class="key-empty">Failed to load keys</div>';
+  }
+}
+
+async function generateKey() {
+  try {
+    const r = await fetch('/api/v1/keys', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if (d.api_key) {
+      $('key-new-value').textContent = d.api_key;
+      $('key-new-box').style.display = 'block';
+      showToast('API key generated!', 'success');
+      loadKeys();
+    } else {
+      showToast(d.error || 'Failed to generate key', 'error');
+    }
+  } catch(e) {
+    showToast('Failed to generate key', 'error');
+  }
+}
+
+function copyKey() {
+  const val = $('key-new-value').textContent;
+  navigator.clipboard.writeText(val).then(() => showToast('Copied!', 'success'));
+}
+
+async function revokeKey(prefix) {
+  if (!confirm('Revoke this key? Any integrations using it will stop working.')) return;
+  try {
+    const r = await fetch('/api/v1/keys/revoke', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key_prefix: prefix})
+    });
+    const d = await r.json();
+    if (d.status === 'revoked') {
+      showToast('Key revoked', 'success');
+      loadKeys();
+    } else {
+      showToast(d.error || 'Failed to revoke', 'error');
+    }
+  } catch(e) {
+    showToast('Failed to revoke key', 'error');
+  }
+}
 </script>
 
 {% endblock %}
