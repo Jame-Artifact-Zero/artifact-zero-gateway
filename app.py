@@ -740,7 +740,7 @@ def youros_redirect():
 
 @app.route("/contact")
 def contact_page():
-    return render_template("contact.html")
+    return render_template("contact-v3.html")
 
 
 @app.route("/developers")
@@ -1659,85 +1659,30 @@ def api_score():
     })
 
 
-@app.route("/api/v1/keys", methods=["GET", "POST"])
-def api_keys_endpoint():
-    """GET = list keys for logged-in user. POST = create new key."""
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"error": "Login required", "login": "/login"}), 401
+@app.route("/api/v1/keys", methods=["POST"])
+def api_create_key():
+    payload = request.get_json() or {}
+    email = payload.get("email", "").strip().lower()
+    tier = payload.get("tier", "free").strip().lower()
 
-    if request.method == "GET":
-        # List all keys for this user
-        try:
-            conn = database.db_connect()
-            cur = conn.cursor()
-            if database.USE_PG:
-                cur.execute("SELECT id, created_at, tier, monthly_limit, active FROM api_keys WHERE owner_user_id=%s ORDER BY created_at DESC", (user_id,))
-                rows = cur.fetchall()
-                keys = [{"key_prefix": r[0][:12] + "...", "key_id": r[0], "created_at": str(r[1]), "tier": r[2], "monthly_limit": r[3], "active": r[4]} for r in rows]
-            else:
-                cur.execute("SELECT id, created_at, tier, monthly_limit, active FROM api_keys WHERE owner_user_id=? ORDER BY created_at DESC", (user_id,))
-                rows = cur.fetchall()
-                keys = [{"key_prefix": row["id"][:12] + "...", "key_id": row["id"], "created_at": row["created_at"], "tier": row["tier"], "monthly_limit": row["monthly_limit"], "active": bool(row["active"])} for row in rows]
-            conn.close()
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email required"}), 400
+    if tier not in _TIER_LIMITS:
+        return jsonify({"error": f"Invalid tier. Options: {list(_TIER_LIMITS.keys())}"}), 400
 
-            # Get usage counts for each key
-            for k in keys:
-                k["usage_this_month"] = database.get_api_usage_count(k["key_id"], _month_start())
-                # Mask the full key in the response
-                k.pop("key_id")
-
-            return jsonify({"keys": keys})
-        except Exception as e:
-            print(f"[api] Key list error: {e}", flush=True)
-            return jsonify({"keys": []})
-
-    # POST — create new key
-    # Look up user email
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT email FROM users WHERE id=%s", (user_id,))
-        else:
-            cur.execute("SELECT email FROM users WHERE id=?", (user_id,))
-        row = cur.fetchone()
-        conn.close()
-        if not row:
-            return jsonify({"error": "User not found"}), 404
-        email = row[0] if database.USE_PG else row["email"]
-    except Exception as e:
-        return jsonify({"error": "Database error"}), 500
-
-    tier = "free"
     key_id = f"az_{_secrets.token_hex(24)}"
     monthly_limit = _TIER_LIMITS[tier]["monthly"]
     now = utc_now_iso()
 
-    # Check if user already has 5 keys (prevent abuse)
     try:
         conn = database.db_connect()
         cur = conn.cursor()
         if database.USE_PG:
-            cur.execute("SELECT COUNT(*) FROM api_keys WHERE owner_user_id=%s AND active=TRUE", (user_id,))
+            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (%s, %s, %s, %s, %s, TRUE)",
+                        (key_id, now, email, tier, monthly_limit))
         else:
-            cur.execute("SELECT COUNT(*) FROM api_keys WHERE owner_user_id=? AND active=1", (user_id,))
-        count = cur.fetchone()[0]
-        conn.close()
-        if count >= 5:
-            return jsonify({"error": "Maximum 5 active API keys per account"}), 400
-    except Exception:
-        pass
-
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, owner_user_id, tier, monthly_limit, active) VALUES (%s, %s, %s, %s, %s, %s, TRUE)",
-                        (key_id, now, email, user_id, tier, monthly_limit))
-        else:
-            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, owner_user_id, tier, monthly_limit, active) VALUES (?, ?, ?, ?, ?, ?, 1)",
-                        (key_id, now, email, user_id, tier, monthly_limit))
+            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (?, ?, ?, ?, ?, 1)",
+                        (key_id, now, email, tier, monthly_limit))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -1746,37 +1691,6 @@ def api_keys_endpoint():
 
     return jsonify({"api_key": key_id, "tier": tier, "monthly_limit": monthly_limit, "email": email,
                     "message": "Store this key securely. It will not be shown again."}), 201
-
-
-@app.route("/api/v1/keys/revoke", methods=["POST"])
-def api_revoke_key():
-    """Revoke an API key. Requires session auth + ownership."""
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"error": "Login required"}), 401
-
-    payload = request.get_json() or {}
-    key_prefix = payload.get("key_prefix", "").strip()
-    if not key_prefix:
-        return jsonify({"error": "key_prefix required"}), 400
-
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        # Find key by prefix, verify ownership
-        if database.USE_PG:
-            cur.execute("UPDATE api_keys SET active=FALSE WHERE id LIKE %s AND owner_user_id=%s AND active=TRUE", (key_prefix.rstrip('.') + '%', user_id))
-        else:
-            cur.execute("UPDATE api_keys SET active=0 WHERE id LIKE ? AND owner_user_id=? AND active=1", (key_prefix.rstrip('.') + '%', user_id))
-        affected = cur.rowcount
-        conn.commit()
-        conn.close()
-        if affected == 0:
-            return jsonify({"error": "Key not found or already revoked"}), 404
-        return jsonify({"status": "revoked"})
-    except Exception as e:
-        print(f"[api] Revoke error: {e}", flush=True)
-        return jsonify({"error": "Failed to revoke key"}), 500
 
 
 @app.route("/api/v1/keys/usage", methods=["GET"])
