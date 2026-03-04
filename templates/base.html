@@ -17,6 +17,14 @@
     <a href="/safecheck"{% if request.path.startswith('/safecheck') %} class="active"{% endif %}>SAFECHECK</a>
     <a href="/score"{% if request.path.startswith('/score') %} class="active"{% endif %}>SCORE</a>
     <a href="/live"{% if request.path.startswith('/live') %} class="active"{% endif %}>LIVE</a>
+    <div class="az-nav-dropdown{% if request.path in ['/fortune500', '/vc-funds', '/knoxville'] %} active{% endif %}">
+      <span class="az-nav-dropdown-trigger{% if request.path in ['/fortune500', '/vc-funds', '/knoxville'] %} active{% endif %}">SCOREBOARDS &#9662;</span>
+      <div class="az-nav-dropdown-menu">
+        <a href="/fortune500"{% if request.path == '/fortune500' %} class="active"{% endif %}>Fortune 500</a>
+        <a href="/vc-funds"{% if request.path == '/vc-funds' %} class="active"{% endif %}>VC Funds</a>
+        <a href="/knoxville"{% if request.path == '/knoxville' %} class="active"{% endif %}>Knox County 2026</a>
+      </div>
+    </div>
     <a href="/examples"{% if request.path == '/examples' %} class="active"{% endif %}>EXAMPLES</a>
     <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
     <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>
@@ -30,6 +38,10 @@
   <a href="/safecheck"{% if request.path.startswith('/safecheck') %} class="active"{% endif %}>SAFECHECK</a>
   <a href="/score"{% if request.path.startswith('/score') %} class="active"{% endif %}>SCORE</a>
   <a href="/live"{% if request.path.startswith('/live') %} class="active"{% endif %}>LIVE</a>
+  <div class="az-mobile-section-label">SCOREBOARDS</div>
+  <a href="/fortune500"{% if request.path == '/fortune500' %} class="active"{% endif %}>Fortune 500</a>
+  <a href="/vc-funds"{% if request.path == '/vc-funds' %} class="active"{% endif %}>VC Funds</a>
+  <a href="/knoxville"{% if request.path == '/knoxville' %} class="active"{% endif %}>Knox County 2026</a>
   <a href="/examples"{% if request.path == '/examples' %} class="active"{% endif %}>EXAMPLES</a>
   <a href="/docs"{% if request.path == '/docs' %} class="active"{% endif %}>API</a>
   <a href="/contact"{% if request.path == '/contact' %} class="active"{% endif %}>CONTACT</a>

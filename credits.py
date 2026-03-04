@@ -245,13 +245,24 @@ def get_user_id_for_api_key(api_key_id):
     """Look up the user_id that owns an API key."""
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT owner_email FROM api_keys WHERE id=%s" if database.USE_PG else "SELECT owner_email FROM api_keys WHERE id=?"
+    # Try owner_user_id first (new column), fall back to email lookup
+    q = "SELECT owner_user_id, owner_email FROM api_keys WHERE id=%s" if database.USE_PG else "SELECT owner_user_id, owner_email FROM api_keys WHERE id=?"
     cur.execute(q, (api_key_id,))
     row = cur.fetchone()
     conn.close()
     if not row: return None
-    email = row[0] if database.USE_PG else row["owner_email"]
-    # Look up user by email
+
+    if database.USE_PG:
+        owner_uid, email = row[0], row[1]
+    else:
+        owner_uid, email = row["owner_user_id"], row["owner_email"]
+
+    # Direct lookup if owner_user_id is set
+    if owner_uid:
+        return owner_uid
+
+    # Legacy fallback: find user by email
+    if not email: return None
     q2 = "SELECT id FROM users WHERE email=%s" if database.USE_PG else "SELECT id FROM users WHERE email=?"
     conn = database.db_connect()
     cur = conn.cursor()

@@ -1,0 +1,110 @@
+# ============================================
+# Artifact Zero — Pre-Deploy Test
+# ============================================
+# Runs ONLY on PRs targeting main branch
+# Produces the "Pre-Deploy Test" status check
+# required by branch protection rules
+# ============================================
+
+name: Pre-Deploy Test
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pre-deploy-test:
+    name: Pre-Deploy Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Python syntax check — app.py
+        run: python -m py_compile app.py
+
+      - name: Python syntax check — db.py
+        run: python -m py_compile db.py
+
+      - name: Python syntax check — all engine files
+        run: |
+          python -m py_compile pre_score_gate.py
+          python -m py_compile csrf.py
+          python -m py_compile highlight_map.py
+          for f in core_engine/*.py; do
+            echo "Checking $f"
+            python -m py_compile "$f"
+          done
+
+      - name: Verify critical templates exist
+        run: |
+          MISSING=0
+          for t in base.html index.html safecheck.html score.html scored.html \
+                   fortune500.html vc_funds.html relay.html security.html \
+                   ai.html api.html contact.html live-feed.html; do
+            if [ ! -f "templates/$t" ]; then
+              echo "MISSING: templates/$t"
+              MISSING=1
+            else
+              echo "OK: templates/$t"
+            fi
+          done
+          if [ $MISSING -eq 1 ]; then
+            echo "::error::Critical templates missing"
+            exit 1
+          fi
+
+      - name: Verify critical static files exist
+        run: |
+          MISSING=0
+          for f in az-base.css az-shell-auth.js favicon.svg; do
+            if [ ! -f "static/$f" ]; then
+              echo "MISSING: static/$f"
+              MISSING=1
+            else
+              echo "OK: static/$f"
+            fi
+          done
+          if [ $MISSING -eq 1 ]; then
+            echo "::error::Critical static files missing"
+            exit 1
+          fi
+
+      - name: Verify health route exists in app.py
+        run: |
+          if grep -q '@app.route("/health")' app.py; then
+            echo "OK: /health route found"
+          else
+            echo "::error::/health route missing from app.py"
+            exit 1
+          fi
+
+      - name: Docker build test
+        run: docker build -t artifact-zero-test .
+
+      - name: Container health check
+        run: |
+          docker run -d --name az-test -p 10000:10000 \
+            -e DATABASE_URL="sqlite:///test.db" \
+            artifact-zero-test
+          echo "Waiting 10s for container startup..."
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/health || echo "000")
+          echo "Health check returned: $STATUS"
+          docker logs az-test
+          docker stop az-test
+          if [ "$STATUS" = "200" ]; then
+            echo "Container health check PASSED"
+          else
+            echo "::error::Container health check FAILED (HTTP $STATUS)"
+            exit 1
+          fi

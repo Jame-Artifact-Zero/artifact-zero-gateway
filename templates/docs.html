@@ -30,6 +30,15 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains
 .tier-card .price{font-size:20px;font-weight:700;margin-bottom:4px}
 .tier-card .detail{font-size:12px;color:var(--muted)}
 .tier-card .engine{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-top:6px;padding:2px 6px;background:rgba(0,232,156,.08);border-radius:3px;display:inline-block}
+@media(max-width:640px){
+  .main{padding:24px 16px 60px}
+  h1{font-size:22px}
+  h2{font-size:15px}
+  pre{font-size:11px;padding:10px 12px;word-break:break-all}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tier-grid{grid-template-columns:1fr 1fr}
+  .endpoint{padding:14px}
+}
 </style>
 {% endblock %}
 
