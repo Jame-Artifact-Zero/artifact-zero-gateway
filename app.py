@@ -1996,7 +1996,17 @@ def api_rewrite():
     if "CONFIRMED" in str(failure_modes.get("CCA", "")):
         issues.append("CCA: Capability claimed without constraint backing")
 
-    system_prompt = (
+    # 4a. UNGOVERNED CALL — raw model, no system prompt, no guardrails
+    #     This is card 5: what the AI does left alone
+    ungoverned_prompt = f"Someone sent the following message to a company. Reply to them directly.\n\nMESSAGE:\n{text}"
+    try:
+        llm_ungoverned, _ = _call_llm(model, ungoverned_prompt, "")
+    except Exception:
+        llm_ungoverned = None
+
+    # 4b. GOVERNED CALL — full Artifact Zero system prompt + guardrails
+    #     This output goes through V3 — card 7
+    governed_system = (
         "You are Artifact Zero, a structural enforcement company in Knoxville, Tennessee. "
         "You built NTI — a deterministic engine that scores and stabilizes communication. "
         "No LLM in the scoring. Same input, same output, every time.\n\n"
@@ -2010,7 +2020,7 @@ def api_rewrite():
         "1. NEVER schedule or promise a meeting or call. For connection: direct them to jame@artifact0.com\n"
         "2. IF SELLING SOMETHING (warranties, SEO, software, services, anything): acknowledge with dry humor, "
         "then suggest they run their pitch through the API. "
-        "Example: The engine caught three commitment hedges in that pitch. Try artifact0.com/safecheck before the next send.\n"
+        "Example: The engine caught commitment hedges in that pitch. Try artifact0.com/safecheck before the next send.\n"
         "3. IF GIVING FEEDBACK OR SUGGESTIONS: thank them genuinely, say it will be reviewed, zero commitments on what changes.\n"
         "4. IF WANTING TO PARTNER OR INVEST: email jame@artifact0.com with specifics.\n"
         "5. IF A REAL PROSPECT: one sentence on NTI, then artifact0.com/safecheck\n\n"
@@ -2022,19 +2032,21 @@ def api_rewrite():
         "5. No sign-off. No Best, Thanks, Regards.\n"
         "6. Return only the reply text. No commentary. No quotes."
     )
+    governed_prompt = f"THEIR MESSAGE:\n{text}\n\nWrite a reply from Artifact Zero to this person."
 
-    prompt = f"THEIR MESSAGE:\n{text}\n\nWrite a reply from Artifact Zero to this person."
-
-    # 4. Call LLM
     try:
-        llm_text, err = _call_llm(model, prompt, system_prompt)
+        llm_governed, err = _call_llm(model, governed_prompt, governed_system)
     except Exception as e:
-        llm_text, err = None, str(e)[:200]
+        llm_governed, err = None, str(e)[:200]
+
+    # Use ungoverned as llm_raw (card 5), governed as input to V3 (card 7)
+    llm_text = llm_governed  # V3 enforces the governed output
 
     if not llm_text:
         return jsonify({
             "rewrite": "",
-            "llm_raw": "",
+            "llm_raw": llm_ungoverned or "",
+            "llm_ungoverned": llm_ungoverned or "",
             "model": model["name"],
             "model_color": model["color"],
             "method": "v3_rule_only",
@@ -2046,7 +2058,7 @@ def api_rewrite():
             "latency_ms": int((time.time() - t0) * 1000)
         })
 
-    # 5. Run V3 enforcement on LLM output
+    # 5. Run V3 enforcement on governed LLM output
     from core_engine.v3_enforcement import enforce
     llm_words = len(llm_text.split())
     v3_result = enforce(llm_text, objective=obj.get("objective_text"))
@@ -2054,11 +2066,12 @@ def api_rewrite():
 
     original_words = len(text.split())
     rewrite_words = len(final.split())
-    # Compression = what V3 cut from the LLM output, not from user input
     v3_compression = abs(llm_words - rewrite_words) / max(llm_words, 1) * 100
 
     return jsonify({
         "rewrite": final,
+        "llm_raw": llm_ungoverned or "",       # card 5 — ungoverned, what AI does alone
+        "llm_governed": llm_text,              # governed input before V3
         "model": model["name"],
         "model_color": model["color"],
         "method": "llm_v3",
@@ -2069,7 +2082,6 @@ def api_rewrite():
         "nii_score": nii_score,
         "issues": issues,
         "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
-        "llm_raw": llm_text,
         "latency_ms": int((time.time() - t0) * 1000)
     })
 
