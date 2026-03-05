@@ -381,14 +381,15 @@
 
     var name = first + ' ' + last;
 
-    // Fire score + rewrite in parallel
-    Promise.all([
-      fetch('/nti', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg}) }).then(function(r){ return r.json(); }),
-      fetch('/api/v1/rewrite', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg}) }).then(function(r){ return r.json(); }).catch(function(){ return null; })
-    ]).then(function(results) {
-      var score   = results[0];
-      var rewrite = results[1];
+    // Fire score + rewrite in parallel — show deck as soon as score returns
+    var rewritePromise = fetch('/api/v1/rewrite', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:msg})
+    }).then(function(r){ return r.json(); }).catch(function(){ return null; });
 
+    fetch('/nti', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg}) })
+    .then(function(r){ return r.json(); })
+    .then(function(score) {
       if (score.status === 'rejected' || score.gate) {
         err.textContent = score.error || 'That message could not be processed. Please try again.';
         btn.disabled = false;
@@ -402,7 +403,13 @@
         body:JSON.stringify({name:name, email:email, message:msg, type:'contact_form'})
       }).catch(function(){});
 
-      buildDeck(name, email, msg, score, rewrite);
+      // Show deck immediately with score data — cards 5-7 show loading state
+      buildDeck(name, email, msg, score, null);
+
+      // Populate cards 5-7 when rewrite arrives
+      rewritePromise.then(function(rewrite) {
+        populateRewriteCards(rewrite, msg);
+      });
 
     }).catch(function(e) {
       err.textContent = 'Error: ' + e.message;
@@ -412,6 +419,85 @@
   }
 
   // ── Build deck ───────────────────────────────────────────
+  function loadingSkeleton(label) {
+    return '<div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">' +
+      '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);text-align:center;padding:20px 0">' +
+        '<div style="margin-bottom:8px;opacity:0.5">&#9679; &#9679; &#9679;</div>' +
+        esc(label) +
+      '</div>' +
+    '</div>';
+  }
+
+  function populateRewriteCards(rw, msg) {
+    if (!rw) return;
+    // Re-render only the slides for cards 5, 6, 7
+    // Find slides by data-card attribute and replace innerHTML
+    var slides = document.querySelectorAll('.ct-slide');
+    var rwModel     = rw.model || 'AI';
+    var rwColor     = rw.model_color || 'var(--accent)';
+    var rwLlmRaw    = rw.llm_raw || rw.llm_ungoverned || '';
+    var rwFinal     = rw.rewrite || '';
+    var rwActions   = rw.v3_actions || [];
+    var rwOrigWords = rw.original_words || 0;
+    var rwNewWords  = rw.rewrite_words || 0;
+    var rwLatency   = rw.latency_ms || 0;
+    var rwUngWords  = rwLlmRaw ? rwLlmRaw.split(/\s+/).filter(Boolean).length : 0;
+
+    function fmTag2(state) {
+      var s = String(state||'');
+      if (s.includes('CONFIRMED')) return '<span class="ct-tag ct-tag-red">CONFIRMED</span>';
+      if (s.includes('PROBABLE'))  return '<span class="ct-tag ct-tag-amber">PROBABLE</span>';
+      return '<span class="ct-tag ct-tag-green">CLEAR</span>';
+    }
+
+    // Card 5 — ungoverned
+    if (slides[4]) {
+      var h5 =
+        '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--red);padding-left:10px;line-height:1.6">' +
+          'This is what ' + esc(rwModel) + ' generates with zero governance \u2014 no system prompt, no constraints, no NTI. This is what every company using raw AI is sending.' +
+        '</div>' +
+        (rwLlmRaw
+          ? '<div class="ct-response" style="border-left:2px solid var(--red)">' + esc(rwLlmRaw) + '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:10px;color:var(--red);margin-top:8px">\u26a0 Ungoverned output \u00B7 no constraints applied</div>'
+          : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">Ungoverned call failed.</div>'
+        );
+      slides[4].querySelector('.ct-card-body').innerHTML = h5;
+    }
+
+    // Card 6 — V3 findings
+    if (slides[5]) {
+      var h6 =
+        '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--amber);padding-left:10px;line-height:1.6">' +
+          'V3 scanned the ungoverned ' + esc(rwModel) + ' reply. Here is what it detected before enforcement.' +
+        '</div>' +
+        (rwActions.length > 0
+          ? '<div class="ct-flag-list">' +
+            rwActions.map(function(a){ return '<div><span class="ct-tag ct-tag-amber">' + esc(a) + '</span></div>'; }).join('') +
+            '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-top:12px">' +
+              rwUngWords + ' ungoverned \u2192 ' + rwNewWords + ' words after NTI \u00B7 ' + rwLatency + 'ms' +
+            '</div>'
+          : '<div style="background:rgba(0,232,156,0.08);border:1px solid rgba(0,232,156,0.2);border-radius:6px;padding:12px 14px;">' +
+            '<span class="ct-tag ct-tag-green">\u2713 No structural issues detected in ungoverned output</span>' +
+            '<p style="font-family:var(--az-mono);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">The ungoverned reply happened to be clean. V3 passed it through. This is rare.</p>' +
+            '</div>'
+        );
+      slides[5].querySelector('.ct-card-body').innerHTML = h6;
+    }
+
+    // Card 7 — final output
+    if (slides[6]) {
+      var h7 =
+        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Governed system prompt + V3 enforcement. Same model, different constraints. This is what actually gets sent.</p>' +
+        (rwFinal
+          ? '<div class="ct-response">' + esc(rwFinal) + '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:8px">Model: ' + esc(rwModel) + ' \u00B7 Enforced by NTI V3 \u00B7 ' + rwLatency + 'ms</div>'
+          : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">No output generated.</div>'
+        );
+      slides[6].querySelector('.ct-card-body').innerHTML = h7;
+    }
+  }
+
   function buildDeck(name, email, msg, score, rw) {
     var rwModel      = rw ? (rw.model || 'AI') : 'AI';
     var rwColor      = rw ? (rw.model_color || 'var(--accent)') : 'var(--accent)';
@@ -482,23 +568,26 @@
       ),
       // 5 – UNGOVERNED AI — no system prompt, no guardrails, raw model
       card(5, '\u2660',
-        esc(rwModel) + ' — No Guardrails',
+        (rw ? esc(rwModel) : 'AI') + ' — No Guardrails',
         '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--red);padding-left:10px;line-height:1.6">' +
           'This is what ' + esc(rwModel) + ' generates with zero governance — no system prompt, no constraints, no NTI. ' +
           'This is what every company using raw AI is sending.' +
         '</div>' +
-        (rwLlmRaw
-          ? '<div class="ct-response" style="border-left:2px solid var(--red)">' + esc(rwLlmRaw) + '</div>' +
-            '<div style="font-family:var(--az-mono);font-size:10px;color:var(--red);margin-top:8px">\u26a0 Ungoverned output \u00B7 no constraints applied</div>'
-          : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">Ungoverned call failed.</div>'
+        (!rw
+          ? loadingSkeleton('Waiting for AI response\u2026')
+          : rwLlmRaw
+            ? '<div class="ct-response" style="border-left:2px solid var(--red)">' + esc(rwLlmRaw) + '</div>' +
+              '<div style="font-family:var(--az-mono);font-size:10px;color:var(--red);margin-top:8px">\u26a0 Ungoverned output \u00B7 no constraints applied</div>'
+            : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">Ungoverned call failed.</div>'
         )
       ),
       // 6 – V3 findings against the ungoverned output
       card(6, '\u2666',
-        'V3 \u2014 What NTI Found',
+        rw ? 'V3 \u2014 What NTI Found' : 'V3 \u2014 Analyzing\u2026',
+        (!rw ? loadingSkeleton('Running V3 scan\u2026') :
         '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--amber);padding-left:10px;line-height:1.6">' +
           'V3 scanned the ungoverned ' + esc(rwModel) + ' reply. Here is what it detected before enforcement.' +
-        '</div>' +
+        '</div>') +
         (rwActions.length > 0
           ? '<div class="ct-flag-list">' +
             rwActions.map(function(a){ return '<div><span class="ct-tag ct-tag-amber">' + esc(a) + '</span></div>'; }).join('') +
