@@ -1804,7 +1804,6 @@ def _letter_race(text):
     models = [
         {"name": "claude", "api": "anthropic", "color": "#d97706"},
         {"name": "chatgpt", "api": "openai", "color": "#10b981"},
-        {"name": "gemini", "api": "google", "color": "#3b82f6"},
     ]
     for i in range(len(s)):
         for m in models:
@@ -1933,12 +1932,6 @@ def _call_llm(model_info, prompt, system_prompt):
 
 
 
-def _letter_race_with_guard(text):
-    """Letter race with Gemini 30-char minimum guard."""
-    model = _letter_race(text)
-    if model["api"] == "google" and len(text.strip()) < 30:
-        return {"name": "chatgpt", "api": "openai", "color": "#10b981"}
-    return model
 @app.route("/api/v1/rewrite", methods=["POST"])
 def api_rewrite():
     """LLM-powered structural rewrite. Letter-race selects model, V3 enforces output."""
@@ -1977,7 +1970,7 @@ def api_rewrite():
     }
 
     # 2. Letter-race model selection
-    model = _letter_race_with_guard(text)
+    model = _letter_race(text)
 
     # 3. Build rewrite prompt from NTI findings
     # Smart issue detection: short/simple messages don't need enterprise-level constraints
