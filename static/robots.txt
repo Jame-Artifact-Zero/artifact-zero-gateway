@@ -1,0 +1,29 @@
+User-agent: GPTBot
+Disallow: /api/
+Disallow: /admin/
+Disallow: /api/v1/
+Allow: /
+
+User-agent: ChatGPT-User
+Disallow: /api/
+Disallow: /admin/
+Disallow: /api/v1/
+Allow: /
+
+User-agent: ClaudeBot
+Disallow: /api/
+Disallow: /admin/
+Disallow: /api/v1/
+Allow: /
+
+User-agent: anthropic-ai
+Disallow: /api/
+Disallow: /admin/
+Disallow: /api/v1/
+Allow: /
+
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /api/v1/
+Allow: /
