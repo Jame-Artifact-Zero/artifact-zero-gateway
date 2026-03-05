@@ -4,534 +4,661 @@
 
 {% block head %}
 <style>
+  /* ── Layout ─────────────────────────────────────────────── */
+  .ct-wrap       { max-width: 560px; margin: 0 auto; padding: 32px 16px 80px; }
+  .ct-heading    { font-family: var(--az-mono); font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .ct-sub        { font-size: 15px; color: var(--dim); margin-bottom: 28px; line-height: 1.5; }
 
+  /* ── Form ────────────────────────────────────────────────── */
+  .ct-form       { display: flex; flex-direction: column; gap: 16px; }
+  .ct-row        { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ct-field      { display: flex; flex-direction: column; gap: 6px; }
+  .ct-label      { font-family: var(--az-mono); font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .ct-input,
+  .ct-textarea   { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+                   padding: 12px 14px; color: var(--text); font-family: var(--az-sans); font-size: 15px;
+                   outline: none; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
+  .ct-input:focus,
+  .ct-textarea:focus { border-color: var(--accent); }
+  .ct-textarea   { min-height: 120px; resize: vertical; line-height: 1.6; }
+  .ct-input::placeholder,
+  .ct-textarea::placeholder { color: var(--muted); }
+  .ct-submit     { background: var(--accent); color: #000; font-family: var(--az-mono); font-size: 14px;
+                   font-weight: 700; letter-spacing: 1px; border: none; border-radius: 8px;
+                   padding: 14px; cursor: pointer; transition: background 0.15s; margin-top: 4px; }
+  .ct-submit:hover   { background: #00d48c; }
+  .ct-submit:disabled { opacity: 0.4; cursor: default; }
+  .ct-error      { font-family: var(--az-mono); font-size: 12px; color: var(--red); min-height: 16px; }
 
-/* NAV */
+  /* ── Deck ────────────────────────────────────────────────── */
+  .ct-deck-wrap  { display: none; }
+  .ct-deck-wrap.active { display: block; }
+  .ct-banner     { font-family: var(--az-mono); font-size: 13px; color: var(--accent);
+                   text-align: center; padding: 16px 0 20px; letter-spacing: 0.5px; }
+  .ct-deck       { position: relative; overflow: hidden; touch-action: pan-y; }
+  .ct-slides     { display: flex; transition: transform 0.3s ease; }
+  .ct-slide      { min-width: 100%; padding: 0 4px; box-sizing: border-box; }
+  .ct-card       { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+                   padding: 24px; min-height: 360px; position: relative; box-sizing: border-box; }
+  .ct-card-num   { font-family: var(--az-mono); font-size: 11px; color: var(--muted); position: absolute; top: 16px; left: 20px; }
+  .ct-card-suit  { font-size: 13px; color: var(--muted); position: absolute; top: 14px; right: 18px; }
+  .ct-card-title { font-family: var(--az-mono); font-size: 13px; font-weight: 600; letter-spacing: 1px;
+                   color: var(--accent); text-transform: uppercase; margin: 24px 0 16px; }
+  .ct-card-body  { font-size: 15px; line-height: 1.6; color: var(--text); }
+  .ct-card-meta  { font-family: var(--az-mono); font-size: 11px; color: var(--muted); margin-top: 16px; }
 
-/* CONTACT FORM */
-.form-wrap{max-width:520px;margin:0 auto;padding:40px 20px 60px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
-.form-wrap.hidden{display:none}
-.form-wrap h1{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:6px}
-.form-wrap .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
-.field{margin-bottom:16px}
-.field label{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-.field input,.field textarea{
-  width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border .2s;
-}
-.field input:focus,.field textarea:focus{border-color:var(--accent)}
-.field textarea{min-height:120px;resize:vertical;line-height:1.6}
-.field input::placeholder,.field textarea::placeholder{color:#3d4452}
-.send-btn{
-  width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#000;
-  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:8px;
-}
-.send-btn:hover{background:#00d48c}
-.send-btn:disabled{background:var(--surface2);color:var(--muted);cursor:default}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
+  /* ── Dots + nav ──────────────────────────────────────────── */
+  .ct-dots       { display: flex; justify-content: center; gap: 6px; padding: 16px 0 8px; }
+  .ct-dot        { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
+  .ct-dot.active { background: var(--accent); }
+  .ct-hint       { font-family: var(--az-mono); font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 8px; }
+  .ct-arrow      { position: absolute; top: 50%; transform: translateY(-50%); background: var(--surface2);
+                   border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px;
+                   color: var(--text); font-size: 16px; cursor: pointer; z-index: 10;
+                   display: flex; align-items: center; justify-content: center;
+                   transition: background 0.15s; line-height: 1; }
+  .ct-arrow:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+  .ct-arrow:disabled { opacity: 0.2; cursor: default; }
+  .ct-arrow:disabled:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+  .ct-arrow-l    { left: -18px; }
+  .ct-arrow-r    { right: -18px; }
+  @media (max-width: 600px) { .ct-arrow-l { left: 4px; } .ct-arrow-r { right: 4px; } }
 
-/* CARD DECK */
-.deck-wrap{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:150;background:var(--bg)}
-.deck-wrap.active{display:flex;flex-direction:column}
+  /* ── Score card internals ────────────────────────────────── */
+  .ct-score-big  { font-family: var(--az-mono); font-size: 52px; font-weight: 700; line-height: 1; }
+  .ct-score-lbl  { font-family: var(--az-mono); font-size: 11px; letter-spacing: 1.5px; color: var(--muted); margin-top: 4px; }
+  .ct-fm-row     { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 16px 0; }
+  .ct-fm-cell    { background: var(--surface2); border-radius: 6px; padding: 10px 8px; text-align: center; }
+  .ct-fm-name    { font-family: var(--az-mono); font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+  .ct-tag        { display: inline-block; font-family: var(--az-mono); font-size: 11px;
+                   padding: 3px 8px; border-radius: 4px; border: 1px solid; }
+  .ct-tag-green  { color: var(--accent); background: rgba(0,232,156,0.10); border-color: rgba(0,232,156,0.25); }
+  .ct-tag-amber  { color: var(--amber); background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.25); }
+  .ct-tag-red    { color: var(--red); background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.25); }
+  .ct-tag-purple { color: var(--purple); background: rgba(167,139,250,0.10); border-color: rgba(167,139,250,0.25); }
+  .ct-tilt-row   { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
-.deck-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
-.deck-counter{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
-.deck-close{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none}
-.deck-close:hover{color:var(--accent)}
+  /* ── V2 flags ────────────────────────────────────────────── */
+  .ct-flag-list  { display: flex; flex-direction: column; gap: 8px; }
+  .ct-flag       { font-family: var(--az-mono); font-size: 12px; }
 
-.deck-banner{
-  text-align:center;padding:12px 20px;flex-shrink:0;
-  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
-  color:var(--accent);letter-spacing:1px;
-  animation:bannerIn .6s ease;
-}
-@keyframes bannerIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  /* ── AI response ─────────────────────────────────────────── */
+  .ct-model-name { font-family: var(--az-mono); font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .ct-model-sub  { font-family: var(--az-mono); font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .ct-response   { background: var(--surface2); border-radius: 8px; padding: 16px; font-size: 14px;
+                   line-height: 1.7; color: var(--dim); font-style: italic; }
 
-.deck-viewport{flex:1;position:relative;overflow:hidden;touch-action:pan-y}
+  /* ── Final card ──────────────────────────────────────────── */
+  .ct-final-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .ct-btn-accent { background: var(--accent); color: #000; font-family: var(--az-mono); font-size: 13px;
+                   font-weight: 700; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; }
+  .ct-btn-outline{ background: transparent; color: var(--accent); font-family: var(--az-mono); font-size: 13px;
+                   border: 1px solid var(--accent); border-radius: 8px; padding: 12px 20px; cursor: pointer; }
 
-.deck-track{
-  display:flex;height:100%;transition:transform .35s cubic-bezier(.25,.46,.45,.94);
-  will-change:transform;
-}
+  /* ── V3 removed badge ────────────────────────────────────── */
+  .ct-removed    { color: var(--red); font-family: var(--az-mono); font-size: 11px;
+                   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+                   border-radius: 4px; padding: 4px 8px; display: inline-block; margin: 4px 0; }
 
-.card{
-  flex:0 0 calc(100% - 40px);margin:0 20px;height:calc(100% - 40px);margin-top:20px;
-  background:var(--surface);border:1px solid var(--border);border-radius:16px;
-  overflow-y:auto;padding:24px;position:relative;
-  box-shadow:0 4px 24px rgba(0,0,0,.3);
-}
-
-/* Card corner number */
-.card-num{
-  position:absolute;top:12px;left:16px;
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);
-  opacity:.5;
-}
-.card-suit{
-  position:absolute;top:12px;right:16px;
-  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);
-  opacity:.5;
-}
-
-.card h2{
-  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
-  color:var(--accent);text-transform:uppercase;letter-spacing:2px;
-  margin:24px 0 16px;
-}
-.card .card-
-.card .card-body.message{
-  background:var(--surface2);border-radius:8px;padding:16px;
-  font-style:italic;color:var(--muted);
-}
-
-/* Score display on cards */
-.card-score{text-align:center;padding:20px 0}
-.card-score .big{font-family:'JetBrains Mono',monospace;font-size:56px;font-weight:700}
-.card-score .big.high{color:var(--accent)}.card-score .big.mid{color:var(--amber)}.card-score .big.low{color:var(--red)}
-.card-score .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px}
-
-.fm-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
-.fm-row:last-child{border-bottom:none}
-.tag{font-family:'JetBrains Mono',monospace;font-size:11px;display:inline-block;padding:3px 8px;border-radius:4px;margin:2px}
-.tag.green{background:#00e89c22;color:var(--accent)}
-.tag.red{background:#ef444422;color:var(--red)}
-.tag.amber{background:#f59e0b22;color:var(--amber)}
-.tag.purple{background:#a78bfa22;color:var(--purple)}
-
-.model-reveal{text-align:center;padding:16px 0}
-.model-reveal .model-name{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--accent)}
-.model-reveal .model-reason{font-size:12px;color:var(--muted);margin-top:4px}
-
-.response-text{background:var(--surface2);border-radius:8px;padding:16px;line-height:1.7;font-size:14px}
-.strikethrough{text-decoration:line-through;color:var(--red);opacity:.6}
-.inserted{color:var(--accent);font-weight:600}
-
-/* Swipe hint */
-.swipe-hint{
-  text-align:center;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
-  flex-shrink:0;
-}
-.swipe-hint .arrow{color:var(--accent);font-size:14px}
-
-/* Dots */
-.dots{display:flex;justify-content:center;gap:6px;padding:10px;flex-shrink:0}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .2s}
-.dot.active{background:var(--accent);width:20px;border-radius:4px}
-
-@media(min-width:768px){
-  .card{flex:0 0 calc(100% - 200px);margin:0 100px;margin-top:20px;height:calc(100% - 40px)}
-}
-@media(min-width:1024px){
-  .card{flex:0 0 600px;margin:0 20px;margin-top:20px}
-  .deck-track{justify-content:flex-start;padding-left:calc(50% - 320px)}
-}
+  /* ── Score card — matches score.html exactly ────────────── */
+  .az-pattern-bar  { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .az-signal-btn   { background: transparent; padding: 7px 14px; border-radius: 999px;
+                     font-family: var(--az-mono); font-size: 10px; letter-spacing: 0.5px;
+                     cursor: pointer; transition: all 0.15s;
+                     border: 1px solid var(--btn-color, #6b7280); color: var(--btn-color, #6b7280); }
+  .az-signal-btn:hover  { opacity: 0.85; }
+  .az-signal-btn.active { background: var(--btn-color, #6b7280); color: #000; }
+  .sc-hl-text      { line-height: 1.8; font-size: 15px; color: var(--text); padding: 14px;
+                     background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid var(--border); }
+  .az-hl           { padding: 0 2px; border-radius: 3px; transition: color 0.2s ease; }
+  .az-hl.lit       { font-weight: 700; }
+  .sc-score-block  { margin-top: 16px; }
+  .sc-score-num    { font-family: var(--az-mono); font-size: 36px; font-weight: 700; line-height: 1; }
+  .sc-score-label  { font-family: var(--az-mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin-top: 4px; }
+  .sc-section-title{ font-family: var(--az-mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin: 16px 0 6px; }
+  .sc-list         { list-style: none; padding: 0; }
+  .sc-list li      { font-family: var(--az-mono); font-size: 12px; line-height: 1.5; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .sc-list li:last-child { border-bottom: none; }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- CONTACT FORM -->
-<div class="form-wrap" id="formWrap">
-  <h1>Contact us</h1>
-  <p class="sub">Tell us what you're working on. We'll show you what we see.</p>
-  <div class="field">
-    <label>First Name</label>
-    <input type="text" id="ffirst" placeholder="First name" required>
-  </div>
-  <div class="field">
-    <label>Last Name</label>
-    <input type="text" id="flast" placeholder="Last name" required>
-  </div>
-  <div class="field">
-    <label>Email</label>
-    <input type="email" id="femail" placeholder="you@company.com" required>
-  </div>
-  <div class="field">
-    <label>Message</label>
-    <textarea id="fmessage" placeholder="What are you working on? What problem are you trying to solve?"></textarea>
-  </div>
-  <button class="send-btn" id="sendBtn" onclick="send()">Send message</button>
-  <div id="formErr" style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px"></div>
-</div>
+<div class="ct-wrap">
 
-<!-- CARD DECK -->
-<div class="deck-wrap" id="deck">
-  <div class="deck-header">
-    <span class="deck-counter" id="deckCounter">1 / 7</span>
-    <a class="deck-close" onclick="closeDeck()">✕ Close</a>
+  <!-- FORM STATE -->
+  <div id="ctForm">
+    <h1 class="ct-heading">Contact us</h1>
+    <p class="ct-sub">Tell us what you're working on. We'll show you what we see.</p>
+
+    <div class="ct-form">
+      <div class="ct-row">
+        <div class="ct-field">
+          <label class="ct-label" for="ctFirst">First name</label>
+          <input class="ct-input" id="ctFirst" type="text" autocomplete="given-name">
+        </div>
+        <div class="ct-field">
+          <label class="ct-label" for="ctLast">Last name</label>
+          <input class="ct-input" id="ctLast" type="text" autocomplete="family-name">
+        </div>
+      </div>
+      <div class="ct-field">
+        <label class="ct-label" for="ctEmail">Email</label>
+        <input class="ct-input" id="ctEmail" type="email" autocomplete="email">
+      </div>
+      <div class="ct-field">
+        <label class="ct-label" for="ctMsg">Message</label>
+        <textarea class="ct-textarea" id="ctMsg" placeholder="What are you working on? What problem are you trying to solve?"></textarea>
+      </div>
+      <div class="ct-error" id="ctError"></div>
+      <button class="ct-submit" id="ctSubmit" onclick="send()">Send message</button>
+    </div>
   </div>
-  <div class="deck-banner" id="deckBanner"></div>
-  <div class="deck-viewport" id="viewport">
-    <div class="deck-track" id="track"></div>
+
+  <!-- DECK STATE -->
+  <div class="ct-deck-wrap" id="ctDeck">
+    <div class="ct-banner" id="ctBanner"></div>
+    <div style="position:relative">
+      <div class="ct-deck" id="ctSlider">
+        <div class="ct-slides" id="ctSlides"></div>
+      </div>
+      <button class="ct-arrow ct-arrow-l" id="ctPrev" onclick="goPrev()">&#8592;</button>
+      <button class="ct-arrow ct-arrow-r" id="ctNext" onclick="goNext()">&#8594;</button>
+    </div>
+    <div class="ct-dots" id="ctDots"></div>
+    <div class="ct-hint" id="ctHint"></div>
   </div>
-  <div class="dots" id="dots"></div>
-  <div class="swipe-hint">Swipe to reveal <span class="arrow">→</span></div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/nti-score-component.js"></script>
-
 <script>
-let currentCard = 0;
-let totalCards = 8;
-let startX = 0;
-let currentX = 0;
-let isDragging = false;
+(function() {
 
-// LLM race
-function pickModel(text) {
-  const s = text.replace(/[^a-zA-Z]/g, '').toLowerCase();
-  const models = [
-    { name: 'Claude', letters: 'claude' },
-    { name: 'Grok', letters: 'grok' },
-    { name: 'ChatGPT', letters: 'chatgpt' },
-    { name: 'Gemini', letters: 'gemini' }
-  ];
-  
-  let results = models.map(m => {
-    let pos = 0;
-    for (let i = 0; i < s.length && pos < m.letters.length; i++) {
-      if (s[i] === m.letters[pos]) pos++;
-    }
-    return { name: m.name, found: pos, needed: m.letters.length, complete: pos >= m.letters.length };
-  });
-  
-  // Find first complete
-  for (let i = 0; i < s.length; i++) {
-    let winners = models.map(m => {
-      let pos = 0;
-      for (let j = 0; j <= i && pos < m.letters.length; j++) {
-        if (s[j] === m.letters[pos]) pos++;
-      }
-      return { name: m.name, complete: pos >= m.letters.length, pos: pos };
-    }).filter(r => r.complete);
-    
-    if (winners.length > 0) {
-      return winners[0].name;
-    }
+  var cur = 0;
+  var total = 0;
+  var startX = 0;
+
+  // ── Helpers ──────────────────────────────────────────────
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  
-  // None completed — pick the one with most progress
-  let best = results.reduce((a, b) => (a.found / a.needed) > (b.found / b.needed) ? a : b);
-  return best.name;
-}
 
-function scoreClass(n) { return n >= .8 ? 'high' : n >= .5 ? 'mid' : 'low'; }
-function scoreLabel(n) { return n >= .8 ? 'HIGH INTEGRITY' : n >= .5 ? 'MODERATE' : n >= .2 ? 'LOW INTEGRITY' : 'CRITICAL'; }
-function fmColor(s) { return s.includes('CONFIRMED') ? 'red' : s.includes('PROBABLE') ? 'amber' : 'green'; }
-function fmLabel(s) { return s.includes('CONFIRMED') ? 'DETECTED' : s.includes('PROBABLE') ? 'PROBABLE' : 'CLEAR'; }
+  function scoreColor(n) {
+    if (n >= 0.90) return '#00e89c';
+    if (n >= 0.80) return '#22c55e';
+    if (n >= 0.70) return '#8bc34a';
+    if (n >= 0.60) return '#ffc107';
+    if (n >= 0.50) return '#ff9800';
+    return '#f44336';
+  }
 
-async function send() {
-  const first = document.getElementById('ffirst').value.trim();
-  const last = document.getElementById('flast').value.trim();
-  const email = document.getElementById('femail').value.trim();
-  const message = document.getElementById('fmessage').value.trim();
-  const err = document.getElementById('formErr');
-  err.textContent = '';
+  function fmTag(state) {
+    if (!state || state === 'NONE') return '<span class="ct-tag ct-tag-green">CLEAR</span>';
+    if (state.indexOf('CONFIRMED') > -1) return '<span class="ct-tag ct-tag-red">' + esc(state) + '</span>';
+    if (state.indexOf('PROBABLE') > -1)  return '<span class="ct-tag ct-tag-amber">' + esc(state) + '</span>';
+    return '<span class="ct-tag ct-tag-green">CLEAR</span>';
+  }
 
-  if (!first) { err.textContent = 'First name required.'; return; }
-  if (!last) { err.textContent = 'Last name required.'; return; }
-  if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { err.textContent = 'Valid email required.'; return; }
-  if (!message) { err.textContent = 'Message required.'; return; }
+  // ── Swipe ────────────────────────────────────────────────
+  function initSwipe() {
+    var slider = document.getElementById('ctSlider');
+    slider.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, {passive:true});
+    slider.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - startX;
+      if (dx < -40 && cur < total - 1) goTo(cur + 1);
+      if (dx >  40 && cur > 0)         goTo(cur - 1);
+    }, {passive:true});
+  }
 
-  const name = first + ' ' + last;
-  const btn = document.getElementById('sendBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Processing your message...';
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    cur = n;
+    document.getElementById('ctSlides').style.transform = 'translateX(-' + (cur * 100) + '%)';
+    var dots = document.getElementById('ctDots').querySelectorAll('.ct-dot');
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === cur); });
+    var prev = document.getElementById('ctPrev');
+    var next = document.getElementById('ctNext');
+    if (prev) prev.disabled = cur === 0;
+    if (next) next.disabled = cur === total - 1;
+  }
 
-  try {
-    // V2 PRE-SCORE GATE — score via /nti first
-    const res = await fetch('/nti', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: message })
+  // Keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    if (!document.getElementById('ctDeck').classList.contains('active')) return;
+    if (e.key === 'ArrowRight') goTo(cur + 1);
+    if (e.key === 'ArrowLeft')  goTo(cur - 1);
+  });
+
+  // ── Card builders ─────────────────────────────────────────
+  function card(num, suit, title, body) {
+    return '<div class="ct-slide"><div class="ct-card">' +
+      '<span class="ct-card-num">' + num + '</span>' +
+      '<span class="ct-card-suit">' + suit + '</span>' +
+      '<div class="ct-card-title">' + title + '</div>' +
+      '<div class="ct-card-body">' + body + '</div>' +
+    '</div></div>';
+  }
+
+  // Signal color map — matches score.html exactly
+  var SIG_COLORS = { red:'#ef4444', crimson:'#dc2626', amber:'#f59e0b', purple:'#a78bfa', pink:'#ec4899', teal:'#2dd4bf', orange:'#f97316', blue:'#60a5fa', green:'#00e89c', gray:'#9b9b9b', lightgray:'#9b9b9b', yellow:'#eab308' };
+  var TILT_LABELS = { T1_REASSURANCE_DRIFT:"Reassuring instead of addressing the issue.", T2_CERTAINTY_INFLATION:"Certainty claimed without evidence.", T3_CONSENSUS_CLAIMS:"Broad consensus implied without proof.", T4_CAPABILITY_OVERREACH:"Capability overstated beyond constraints.", T5_ABSOLUTE_LANGUAGE:"Absolute language where nuance would be honest.", T6_CONSTRAINT_DEFERRAL:"Hard decisions pushed to later.", T7_CATEGORY_BLEND:"Categories blended to obscure specifics.", T8_PRESSURE_OPTIMIZATION:"Urgency manufactured to force a decision.", T9_SCOPE_EXPANSION:"Scope expanded without acknowledging the shift.", T10_AUTHORITY_IMPOSITION:"Authority asserted rather than explained." };
+  var FM_LABELS = { UDDS:{n:'Upstream Drift',d:'Agreement language before constraints are set.'}, DCE:{n:'Deferred Enforcement',d:'Hard decisions pushed to later.'}, CCA:{n:'Constraint Collapse',d:'Vague claims bundled to obscure gaps.'} };
+
+  function sigColor(sig, cat) {
+    var e = cat[sig];
+    return e ? (SIG_COLORS[e.color] || SIG_COLORS.gray) : SIG_COLORS.gray;
+  }
+
+  function buildScoreCard(score, msgText) {
+    var nii     = score.nii || {};
+    var sc      = nii.nii_score != null ? nii.nii_score : 0;
+    var label   = (nii.nii_label || '').replace(/_/g, ' ');
+    var tilt    = score.tilt_taxonomy || [];
+    var lat     = (score.telemetry && score.telemetry.latency_ms) ? score.telemetry.latency_ms : '—';
+    var col     = scoreColor(sc);
+    var catalog = (score.signals && score.signals.signal_catalog) || {};
+    var hls     = ((score.signals && score.signals.highlights) || score.highlights || []);
+    var pfm     = score.parent_failure_modes || {};
+    var uid     = 'sc2_' + Date.now();
+
+    // Signal groups for buttons
+    var sigGroups = {};
+    hls.forEach(function(h) { var s = h.signal || h.pattern || 'unknown'; sigGroups[s] = (sigGroups[s]||0)+1; });
+
+    // NII score
+    var scoreHtml = '<div class="sc-score-block">' +
+      '<div class="sc-score-num" style="color:' + col + '">' + sc + '</div>' +
+      '<div class="sc-score-label">' + esc(label) + ' · STRUCTURAL INTEGRITY</div></div>';
+
+    // Tilt
+    var tiltHtml = '';
+    if (tilt.length) {
+      tiltHtml = '<div class="sc-section-title">WHAT THE CORE DETECTED</div><ul class="sc-list">';
+      tilt.forEach(function(t){ tiltHtml += '<li>' + esc(TILT_LABELS[t]||t) + '</li>'; });
+      tiltHtml += '</ul>';
+    }
+
+    // Failure modes
+    var fmHtml = ''; var activeFMs = [];
+    ['UDDS','DCE','CCA'].forEach(function(k) {
+      var obj = pfm[k]; if (!obj) return;
+      var st = String(obj[k.toLowerCase()+'_state']||'');
+      if (st.indexOf('CONFIRMED')>-1||st.indexOf('PROBABLE')>-1) activeFMs.push({k:k,state:st});
     });
-    const score = await res.json();
+    if (activeFMs.length) {
+      fmHtml = '<div class="sc-section-title">STRUCTURAL RISKS</div><ul class="sc-list">';
+      activeFMs.forEach(function(f){ var h=FM_LABELS[f.k]; fmHtml+='<li>'+esc(h?h.n+' — '+h.d:f.k+': '+f.state)+'</li>'; });
+      fmHtml += '</ul>';
+    }
 
-    // V2 gate: if the API rejected it as gibberish, don't proceed
-    if (score.status === 'rejected' || score.gate) {
-      err.textContent = score.error || 'That does not look like a real message. Try again with a real business inquiry.';
+    var html = '<div class="az-pattern-bar" id="' + uid + '_bar"></div>' +
+      '<div class="sc-hl-text" id="' + uid + '_hl" style="margin-bottom:16px"></div>' +
+      scoreHtml + tiltHtml + fmHtml +
+      '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:14px">' + lat + 'ms · canonical-nti-v3.0</div>';
+
+    // Populate buttons + highlights after DOM insert
+    setTimeout(function() {
+      var bar = document.getElementById(uid+'_bar');
+      var hlEl = document.getElementById(uid+'_hl');
+      if (!bar||!hlEl) return;
+      var activeSig = null;
+
+      function renderHL() {
+        hlEl.innerHTML = '';
+        var sorted = hls.slice().sort(function(a,b){return a.start-b.start;});
+        var cursor = 0;
+        sorted.forEach(function(h) {
+          var s = h.signal||h.pattern||'unknown';
+          if (h.start>cursor) hlEl.appendChild(document.createTextNode(msgText.slice(cursor,h.start)));
+          var span = document.createElement('span');
+          span.textContent = msgText.slice(h.start,h.end);
+          span.className = 'az-hl';
+          if (activeSig&&s===activeSig) { span.style.color=sigColor(s,catalog); span.classList.add('lit'); }
+          hlEl.appendChild(span);
+          cursor = h.end;
+        });
+        if (cursor<msgText.length) hlEl.appendChild(document.createTextNode(msgText.slice(cursor)));
+      }
+
+      Object.keys(sigGroups).forEach(function(sig) {
+        var entry = catalog[sig]||{};
+        var lbl = entry.label||sig.replace(/_/g,' ');
+        var color = sigColor(sig, catalog);
+        var btn = document.createElement('button');
+        btn.className = 'az-signal-btn';
+        btn.style.setProperty('--btn-color', color);
+        btn.textContent = lbl + ' (' + sigGroups[sig] + ')';
+        btn.addEventListener('click', function() {
+          activeSig = activeSig===sig ? null : sig;
+          bar.querySelectorAll('.az-signal-btn').forEach(function(b){ b.classList.remove('active'); });
+          if (activeSig) btn.classList.add('active');
+          renderHL();
+        });
+        bar.appendChild(btn);
+      });
+
+      renderHL();
+    }, 60);
+
+    return html;
+  }
+
+  function buildV2Card(score, message) {
+    var v2flags = [];
+    if (!message.match(/\b(need|want|require|looking for|interested in)\b/i)) v2flags.push({code:'MISSING_OBJECTIVE', note:'No clear objective stated.'});
+    if (!message.match(/\b(by|before|within|deadline|timeline|date)\b/i)) v2flags.push({code:'NO_TIMELINE_CONSTRAINT', note:'No time constraint specified.'});
+    if (message.length < 50) v2flags.push({code:'LOW_SPECIFICITY', note:'Message too short to evaluate context.'});
+
+    if (v2flags.length === 0) {
+      return '<span class="ct-tag ct-tag-green">\u2713 Message passed structural gate</span>';
+    }
+    return '<div class="ct-flag-list">' +
+      v2flags.map(function(f) {
+        return '<div><span class="ct-tag ct-tag-amber">' + esc(f.code) + '</span>' +
+          '<span style="color:var(--muted);font-size:13px;margin-left:8px">' + esc(f.note) + '</span></div>';
+      }).join('') +
+      '</div>' +
+      '<p style="color:var(--muted);font-size:13px;margin-top:16px;line-height:1.6">These flags would trigger a revision prompt before routing to an AI agent in a production NTI pipeline.</p>';
+  }
+
+  // ── Send ─────────────────────────────────────────────────
+  function send() {
+    var first = document.getElementById('ctFirst').value.trim();
+    var last  = document.getElementById('ctLast').value.trim();
+    var email = document.getElementById('ctEmail').value.trim();
+    var msg   = document.getElementById('ctMsg').value.trim();
+    var err   = document.getElementById('ctError');
+    var btn   = document.getElementById('ctSubmit');
+
+    if (!first || !last) { err.textContent = 'Please enter your name.'; return; }
+    if (!email || email.indexOf('@') < 0) { err.textContent = 'Please enter a valid email.'; return; }
+    if (!msg || msg.length < 10) { err.textContent = 'Please write a message (at least 10 characters).'; return; }
+
+    err.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Sending\u2026';
+
+    var name = first + ' ' + last;
+
+    // Fire score + rewrite in parallel — show deck as soon as score returns
+    var rewritePromise = fetch('/api/v1/rewrite', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:msg})
+    }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+
+    fetch('/nti', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:msg}) })
+    .then(function(r){ return r.json(); })
+    .then(function(score) {
+      if (score.status === 'rejected' || score.gate) {
+        err.textContent = score.error || 'That message could not be processed. Please try again.';
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+        return;
+      }
+
+      // Log contact
+      fetch('/api/developer-apply', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:name, email:email, message:msg, type:'contact_form'})
+      }).catch(function(){});
+
+      // Show deck immediately with score data — cards 5-7 show loading state
+      buildDeck(name, email, msg, score, null);
+
+      // Populate cards 5-7 when rewrite arrives
+      rewritePromise.then(function(rewrite) {
+        populateRewriteCards(rewrite, msg);
+      });
+
+    }).catch(function(e) {
+      err.textContent = 'Error: ' + e.message;
       btn.disabled = false;
       btn.textContent = 'Send message';
-      return;
+    });
+  }
+
+  // ── Build deck ───────────────────────────────────────────
+  function loadingSkeleton(label) {
+    return '<div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">' +
+      '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);text-align:center;padding:20px 0">' +
+        '<div style="margin-bottom:8px;opacity:0.5">&#9679; &#9679; &#9679;</div>' +
+        esc(label) +
+      '</div>' +
+    '</div>';
+  }
+
+  function populateRewriteCards(rw, msg) {
+    if (!rw) return;
+    // Re-render only the slides for cards 5, 6, 7
+    // Find slides by data-card attribute and replace innerHTML
+    var slides = document.querySelectorAll('.ct-slide');
+    var rwModel     = rw.model || 'AI';
+    var rwColor     = rw.model_color || 'var(--accent)';
+    var rwLlmRaw    = rw.llm_raw || rw.llm_ungoverned || '';
+    var rwFinal     = rw.rewrite || '';
+    var rwActions   = rw.v3_actions || [];
+    var rwOrigWords = rw.original_words || 0;
+    var rwNewWords  = rw.rewrite_words || 0;
+    var rwLatency   = rw.latency_ms || 0;
+    var rwUngWords  = rwLlmRaw ? rwLlmRaw.split(/\s+/).filter(Boolean).length : 0;
+
+    function fmTag2(state) {
+      var s = String(state||'');
+      if (s.includes('CONFIRMED')) return '<span class="ct-tag ct-tag-red">CONFIRMED</span>';
+      if (s.includes('PROBABLE'))  return '<span class="ct-tag ct-tag-amber">PROBABLE</span>';
+      return '<span class="ct-tag ct-tag-green">CLEAR</span>';
     }
 
-    // Pick model
-    const model = pickModel(message);
+    // Card 5 — ungoverned
+    if (slides[4]) {
+      // Update title to show actual model name
+      var t5 = slides[4].querySelector('.ct-card-title');
+      if (t5) t5.textContent = esc(rwModel) + ' — No Guardrails';
+      var h5 =
+        '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--red);padding-left:10px;line-height:1.6">' +
+          'This is what ' + esc(rwModel) + ' generates with zero governance \u2014 no system prompt, no constraints, no NTI. This is what every company using raw AI is sending.' +
+        '</div>' +
+        (rwLlmRaw
+          ? '<div class="ct-response" style="border-left:2px solid var(--red)">' + esc(rwLlmRaw) + '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:10px;color:var(--red);margin-top:8px">\u26a0 Ungoverned output \u00B7 no constraints applied</div>'
+          : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">Ungoverned call failed.</div>'
+        );
+      slides[4].querySelector('.ct-card-body').innerHTML = h5;
+    }
 
-    // Fire V3 rewrite in parallel
-    let v3Rewrite = null;
-    try {
-      const rwRes = await fetch('/api/v1/rewrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: message })
-      });
-      v3Rewrite = await rwRes.json();
-    } catch(e) { /* rewrite failed, continue without */ }
+    // Card 6 — V3 findings
+    if (slides[5]) {
+      var h6 =
+        '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--amber);padding-left:10px;line-height:1.6">' +
+          'V3 scanned the ungoverned ' + esc(rwModel) + ' reply. Here is what it detected before enforcement.' +
+        '</div>' +
+        (rwActions.length > 0
+          ? '<div class="ct-flag-list">' +
+            rwActions.map(function(a){ return '<div><span class="ct-tag ct-tag-amber">' + esc(a) + '</span></div>'; }).join('') +
+            '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-top:12px">' +
+              rwUngWords + ' ungoverned \u2192 ' + rwNewWords + ' words after NTI \u00B7 ' + rwLatency + 'ms' +
+            '</div>'
+          : '<div style="background:rgba(0,232,156,0.08);border:1px solid rgba(0,232,156,0.2);border-radius:6px;padding:12px 14px;">' +
+            '<span class="ct-tag ct-tag-green">\u2713 No structural issues detected in ungoverned output</span>' +
+            '<p style="font-family:var(--az-mono);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">The ungoverned reply happened to be clean. V3 passed it through. This is rare.</p>' +
+            '</div>'
+        );
+      slides[5].querySelector('.ct-card-body').innerHTML = h6;
+    }
 
-    // Build cards
-    buildDeck(name, email, message, score, model, v3Rewrite);
+    // Card 7 — final output
+    if (slides[6]) {
+      var h7 =
+        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Governed system prompt + V3 enforcement. Same model, different constraints. This is what actually gets sent.</p>' +
+        (rwFinal
+          ? '<div class="ct-response">' + esc(rwFinal) + '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:8px">Model: ' + esc(rwModel) + ' \u00B7 Enforced by NTI V3 \u00B7 ' + rwLatency + 'ms</div>'
+          : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">No output generated.</div>'
+        );
+      slides[6].querySelector('.ct-card-body').innerHTML = h7;
+    }
+  }
 
-    // Store the contact submission
-    fetch('/api/developer-apply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, message, type: 'contact_form' })
-    }).catch(() => {});
+  function buildDeck(name, email, msg, score, rw) {
+    var rwModel      = rw ? (rw.model || 'AI') : 'AI';
+    var rwColor      = rw ? (rw.model_color || 'var(--accent)') : 'var(--accent)';
+    var rwLlmRaw     = rw ? (rw.llm_raw || rw.llm_ungoverned || '') : '';   // ungoverned — card 5
+    var rwLlmGov     = rw ? (rw.llm_governed || rw.rewrite || '') : '';     // governed — V3 input
+    var rwFinal      = rw ? (rw.rewrite || '') : '';                        // V3 final — card 7
+    var rwActions    = rw ? (rw.v3_actions || []) : [];
+    var rwOrigWords  = rw ? (rw.original_words || 0) : 0;
+    var rwNewWords   = rw ? (rw.rewrite_words || 0) : 0;
+    var rwLatency    = rw ? (rw.latency_ms || 0) : 0;
+    var rwFallback      = rw ? (rw.fallback_reason || '') : '';
+    var rwUngoverned    = rw ? (rw.llm_raw || '') : '';
+    var rwUngWords      = rwUngoverned ? rwUngoverned.split(/\s+/).filter(Boolean).length : 0;
 
-    // Switch to deck
-    document.getElementById('formWrap').classList.add('hidden');
-    document.getElementById('deckBanner').textContent = name + ', this is happening. These are your words.';
-    document.getElementById('deck').classList.add('active');
+    // Card 4 – what AI receives
+    var v2flags = [];
+    if (!msg.match(/\b(need|want|require|looking for|interested in)\b/i)) v2flags.push('MISSING_OBJECTIVE');
+    if (!msg.match(/\b(by|before|within|deadline|timeline|date)\b/i)) v2flags.push('NO_TIMELINE_CONSTRAINT');
+    var appendedNote = v2flags.length > 0
+      ? '<div style="margin-top:12px;padding:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-family:var(--az-mono);font-size:11px;color:var(--amber)">[V2 appended: Structural flags \u2014 ' + v2flags.join(', ') + '. Respond with specificity.]</div>'
+      : '';
+
+    var slides = [
+      // 1 – Your message
+      card(1, '\u2660',
+        'Your Message',
+        '<div style="font-size:16px;line-height:1.7;color:var(--text)">\u201C' + esc(msg) + '\u201D</div>' +
+        '<div class="ct-card-meta">' + msg.split(/\s+/).length + ' words \u00B7 ' + msg.length + ' characters \u00B7 from ' + esc(name) + '</div>'
+      ),
+      // 2 – V1 structural score
+      card(2, '\u2666',
+        'V1 \u2014 Structural Score',
+        buildScoreCard(score, msg)
+      ),
+      // 3 – Outbound use case — what NTI does for teams
+      card(3, '\u2663',
+        'What Teams Use This For',
+        '<p style="color:var(--dim);font-size:14px;line-height:1.7;margin-bottom:16px">' +
+          'Before this message reached us, NTI scanned it. Same engine your team would use on outbound.' +
+        '</p>' +
+        '<div style="background:var(--surface2);border-radius:8px;padding:16px;margin-bottom:16px">' +
+          '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:12px">COMMON CONFIGURATIONS</div>' +
+          '<div style="display:flex;flex-direction:column;gap:10px">' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-family:var(--az-mono);font-size:11px;background:rgba(0,232,156,0.1);border:1px solid rgba(0,232,156,0.25);border-radius:4px;padding:3px 8px;color:var(--accent);white-space:nowrap">HOLD IF &lt; 0.85</span>' +
+              '<span style="font-size:13px;color:var(--dim)">Block send until score clears threshold</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-family:var(--az-mono);font-size:11px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:3px 8px;color:var(--amber);white-space:nowrap">ALL AI RESPONSES</span>' +
+              '<span style="font-size:13px;color:var(--dim)">Enforce V3 on every AI-generated reply</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-family:var(--az-mono);font-size:11px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:4px;padding:3px 8px;color:var(--blue);white-space:nowrap">TEAM AUDIT LOG</span>' +
+              '<span style="font-size:13px;color:var(--dim)">Every sent message scored and stored</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p style="font-family:var(--az-mono);font-size:11px;color:var(--muted);line-height:1.6">' +
+          'Outlook add-in \u00B7 API integration \u00B7 Power Automate connector' +
+        '</p>'
+      ),
+      // 4 – V2 audit on inbound — what the engine found in their message
+      card(4, '\u2665',
+        'V2 \u2014 What the Engine Found',
+        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Before routing to AI, V2 scanned your message for structural completeness.</p>' +
+        buildV2Card(score, msg) +
+        appendedNote
+      ),
+      // 5 – UNGOVERNED AI — no system prompt, no guardrails, raw model
+      card(5, '\u2660',
+        (rw ? esc(rwModel) : 'AI') + ' — No Guardrails',
+        '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--red);padding-left:10px;line-height:1.6">' +
+          'This is what ' + esc(rwModel) + ' generates with zero governance — no system prompt, no constraints, no NTI. ' +
+          'This is what every company using raw AI is sending.' +
+        '</div>' +
+        (!rw
+          ? loadingSkeleton('Waiting for AI response\u2026')
+          : rwLlmRaw
+            ? '<div class="ct-response" style="border-left:2px solid var(--red)">' + esc(rwLlmRaw) + '</div>' +
+              '<div style="font-family:var(--az-mono);font-size:10px;color:var(--red);margin-top:8px">\u26a0 Ungoverned output \u00B7 no constraints applied</div>'
+            : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px;text-align:center">Ungoverned call failed.</div>'
+        )
+      ),
+      // 6 – V3 findings against the ungoverned output
+      card(6, '\u2666',
+        rw ? 'V3 \u2014 What NTI Found' : 'V3 \u2014 Analyzing\u2026',
+        (!rw ? loadingSkeleton('Running V3 scan\u2026') :
+        '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--amber);padding-left:10px;line-height:1.6">' +
+          'V3 scanned the ungoverned ' + esc(rwModel) + ' reply. Here is what it detected before enforcement.' +
+        '</div>') +
+        (rwActions.length > 0
+          ? '<div class="ct-flag-list">' +
+            rwActions.map(function(a){ return '<div><span class="ct-tag ct-tag-amber">' + esc(a) + '</span></div>'; }).join('') +
+            '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-top:12px">' +
+              rwUngWords + ' ungoverned \u2192 ' + rwNewWords + ' words after NTI \u00B7 ' + rwLatency + 'ms' +
+            '</div>'
+          : '<div style="background:rgba(0,232,156,0.08);border:1px solid rgba(0,232,156,0.2);border-radius:6px;padding:12px 14px;">' +
+            '<span class="ct-tag ct-tag-green">\u2713 No structural issues detected in ungoverned output</span>' +
+            '<p style="font-family:var(--az-mono);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">' +
+              'The ungoverned reply happened to be clean. V3 passed it through. This is rare.' +
+            '</p></div>'
+        )
+      ),
+      // 7 – V3 final output
+      card(7, '\u2663',
+        'V3 \u2014 Final Output',
+        '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Governed system prompt + V3 enforcement. Same model, different constraints. This is what actually gets sent.</p>' +
+        (rwFinal
+          ? '<div style="background:var(--surface2);border-radius:8px;padding:16px;font-size:15px;color:var(--text);line-height:1.7">' + esc(rwFinal) + '</div>' +
+            '<div style="font-family:var(--az-mono);font-size:10px;color:var(--muted);margin-top:10px">Model: ' + esc(rwModel) + ' \u00B7 Enforced by NTI V3 \u00B7 ' + rwLatency + 'ms</div>'
+          : '<div style="font-family:var(--az-mono);font-size:12px;color:var(--muted);padding:16px">No output generated.</div>'
+        )
+      ),
+      // 8 – We got it
+      card(8, '\u2665',
+        'We Got It.',
+        '<p style="font-size:15px;line-height:1.7;color:var(--text);margin-bottom:20px">' +
+          esc(name) + ', your message hit HQ. That was the full NTI pipeline on your own words \u2014 eight cards, three engines, zero LLM in the scoring.' +
+        '</p>' +
+        '<p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">' +
+          'V1 scored it. V2 audited the inbound. V3 stabilized the response. That\'s what every message gets \u2014 emails, contracts, AI outputs, all of it.' +
+        '</p>' +
+        '<div class="ct-final-btns">' +
+          '<button class="ct-btn-accent" onclick="window.location=\'/safecheck\'">Score something \u2192</button>' +
+          '<button class="ct-btn-outline" onclick="window.location=\'/docs\'">API docs \u2192</button>' +
+          '<button class="ct-btn-outline" onclick="window.location=\'/docs#access\'">Developer access \u2192</button>' +
+        '</div>'
+      )
+    ];
+
+    total = slides.length;
+
+    var slidesEl = document.getElementById('ctSlides');
+    slidesEl.innerHTML = slides.join('');
+
+    var dotsEl = document.getElementById('ctDots');
+    dotsEl.innerHTML = slides.map(function(_, i) {
+      return '<span class="ct-dot' + (i === 0 ? ' active' : '') + '"></span>';
+    }).join('');
+
+    document.getElementById('ctBanner').textContent = name + ', this is happening. These are your words.';
+    document.getElementById('ctForm').style.display = 'none';
+    document.getElementById('ctDeck').classList.add('active');
+
+    cur = 0;
     initSwipe();
-    updateDots();
-
-  } catch (e) {
-    err.textContent = 'Error: ' + e.message;
-    btn.disabled = false;
-    btn.textContent = 'Send message';
+    var prev = document.getElementById('ctPrev');
+    var next = document.getElementById('ctNext');
+    if (prev) prev.disabled = true;  // start at card 0, can't go back
+    if (next) next.disabled = total <= 1;
   }
-}
 
-function buildDeck(name, email, message, score, model, v3Rewrite) {
-  const nii = score.nii || {};
-  const s = nii.nii_score ?? 0;
-  const fm = score.parent_failure_modes || {};
-  const tilt = score.tilt_taxonomy || [];
-  const matrix = score.interaction_matrix || {};
-  const dom = matrix.dominance_detected || ['NONE'];
-  const lat = score.telemetry?.latency_ms || '—';
+  window.send   = send;
+  window.goTo   = function(n) { goTo(n); };
+  window.goNext = function()  { goTo(cur + 1); };
+  window.goPrev = function()  { goTo(cur - 1); };
 
-  // V2 flags (from V1 data)
-  const v2flags = [];
-  if (!message.match(/\b(need|want|require|looking for|interested in)\b/i)) v2flags.push('MISSING_OBJECTIVE');
-  if (message.match(/\b(maybe|possibly|perhaps|might|could)\b/gi)?.length > 1) v2flags.push('HEDGE_DENSITY');
-  if (!message.match(/\b(by|before|within|deadline|timeline|date)\b/i)) v2flags.push('NO_TIMELINE_CONSTRAINT');
-  if (message.length < 50) v2flags.push('LOW_SPECIFICITY');
-
-  // V3 rewrite data
-  const rwText = v3Rewrite ? (v3Rewrite.rewrite || '') : '';
-  const rwModel = v3Rewrite ? (v3Rewrite.model || 'Claude') : '';
-  const rwModelColor = v3Rewrite ? (v3Rewrite.model_color || '#00e89c') : '#00e89c';
-  const rwIssues = v3Rewrite ? (v3Rewrite.issues || []) : [];
-  const rwActions = v3Rewrite ? (v3Rewrite.v3_actions || []) : [];
-  const rwOrigWords = v3Rewrite ? (v3Rewrite.original_words || 0) : 0;
-  const rwLlmWords = v3Rewrite ? (v3Rewrite.llm_words || 0) : 0;
-  const rwNewWords = v3Rewrite ? (v3Rewrite.rewrite_words || 0) : 0;
-  const rwCompression = v3Rewrite ? (v3Rewrite.compression || '0%') : '0%';
-  const rwLatency = v3Rewrite ? (v3Rewrite.latency_ms || 0) : 0;
-  const rwLlmRaw = v3Rewrite ? (v3Rewrite.llm_raw || '') : '';
-
-  totalCards = 8;
-
-  const cards = [
-    // Card 1: Your message
-    `<div class="card">
-      <span class="card-num">1</span><span class="card-suit">♠</span>
-      <h2>Your Message</h2>
-      <div class="card-body message">"${escHtml(message)}"</div>
-      <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
-        ${message.split(/\s+/).length} words · ${message.length} characters · from ${escHtml(name)}
-      </div>
-    </div>`,
-
-    // Card 2: V1 Score (shared component)
-    `<div class="card">
-      <span class="card-num">2</span><span class="card-suit">♦</span>
-      <h2>V1 — Structural Score</h2>
-      <div id="card2_nti"></div>
-    </div>`,
-
-    // Card 3: V2 Audit
-    `<div class="card">
-      <span class="card-num">3</span><span class="card-suit">♣</span>
-      <h2>V2 — Inbound Audit</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">Before we read your message, V2 scanned it for structural completeness.</p>
-        ${v2flags.length === 0
-          ? '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ Message passed structural gate</div>'
-          : v2flags.map(f => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag amber">${f}</span></div>`).join('')
-        }
-        ${v2flags.length > 0 ? '<p style="color:var(--muted);margin-top:16px;font-size:13px">These flags would trigger a revision prompt before routing to an AI agent in a production NTI pipeline.</p>' : ''}
-      </div>
-    </div>`,
-
-    // Card 4: What the AI sees
-    `<div class="card">
-      <span class="card-num">4</span><span class="card-suit">♥</span>
-      <h2>What the AI Receives</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">After V2 processing, this is the structurally cleaned input that reaches the AI model.</p>
-        <div class="response-text">${escHtml(message)}${v2flags.length > 0 ? '<br><br><span style="color:var(--accent);font-size:12px">[V2 appended: Structural flags — '+v2flags.join(', ')+'. Respond with specificity.]</span>' : ''}</div>
-      </div>
-    </div>`,
-
-    // Card 5: Model selection + AI response
-    `<div class="card">
-      <span class="card-num">5</span><span class="card-suit">♠</span>
-      <h2>AI Response</h2>
-      <div class="model-reveal">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">YOUR WORDS SELECTED</div>
-        <div class="model-name">${rwModel || model}</div>
-        <div class="model-reason">First model name spelled by your message characters</div>
-      </div>
-      <div class="response-text" style="margin-top:16px">
-        <span style="color:var(--muted);font-style:italic">${rwLlmRaw ? escHtml(rwLlmRaw) : 'Thank you for reaching out, ' + escHtml(name) + '. I appreciate you taking the time to share what you\'re working on. There are definitely several ways we could potentially help with that, and I think there might be some really interesting synergies here. I\'d be happy to explore some options and maybe we could set up a call sometime to discuss further. Looking forward to connecting!'}</span>
-      </div>
-      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ Raw AI output before V3 stabilization${rwLlmWords ? ' · ' + rwLlmWords + ' words' : ''}</div>
-    </div>`,
-
-    // Card 6: V3 findings
-    `<div class="card">
-      <span class="card-num">6</span><span class="card-suit">♦</span>
-      <h2>V3 — Stabilization Findings</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">V3 analyzed ${rwModel ? 'the ' + rwModel + ' response' : 'the AI response'} and found:</p>
-        ${rwIssues.length > 0
-          ? rwIssues.map(i => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="tag red">FLAGGED</span> <span style="font-size:13px">${escHtml(i)}</span></div>`).join('')
-          : '<div class="tag green" style="font-size:14px;padding:8px 14px">✓ No structural issues detected</div>'
-        }
-        ${rwActions.length > 0
-          ? '<div style="margin-top:12px">' + rwActions.map(a => {
-              const detail = typeof a === 'string' ? a : (a.detail || a.check + ': ' + a.action);
-              const actionType = typeof a === 'object' ? a.action : 'applied';
-              const tagCls = actionType === 'removed' ? 'red' : actionType === 'flagged' ? 'amber' : 'green';
-              return '<div style="padding:6px 0;border-bottom:1px solid var(--border)"><span class="tag ' + tagCls + '">' + (actionType || 'APPLIED').toUpperCase() + '</span> <span style="font-size:12px">' + escHtml(detail) + '</span></div>';
-            }).join('') + '</div>'
-          : ''
-        }
-        <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
-          ${rwLlmWords || rwOrigWords} → ${rwNewWords} words · ${rwCompression} compression · ${rwLatency}ms
-        </div>
-      </div>
-    </div>`,
-
-    // Card 7: V3 FINAL OUTPUT — the actual rewritten message
-    `<div class="card">
-      <span class="card-num">7</span><span class="card-suit">♣</span>
-      <h2>V3 — Final Output</h2>
-      <div class="card-body">
-        <p style="color:var(--muted);margin-bottom:16px">After V3 governance, this is what gets delivered. No filler. No false commitments. Structurally clean.</p>
-        <div class="response-text" style="color:var(--accent);font-size:15px;line-height:1.6;padding:16px;background:rgba(0,232,156,.04);border:1px solid rgba(0,232,156,.15);border-radius:8px">
-          ${rwText ? escHtml(rwText) : '<span style="color:var(--muted)">V3 rewrite unavailable — try again with a longer message.</span>'}
-        </div>
-        <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">
-          Model: ${rwModel || '—'} · Enforced by NTI V3 · ${rwLatency}ms
-        </div>
-      </div>
-    </div>`,
-
-    // Card 8: Confirmation + next steps
-    `<div class="card">
-      <span class="card-num">8</span><span class="card-suit">♥</span>
-      <h2>We got it.</h2>
-      <div class="card-body">
-        <p style="color:var(--text);margin-bottom:16px;font-size:15px">
-          ${escHtml(name)}, your message hit HQ. That was the full NTI pipeline on your own words — eight cards, three engines, zero LLM in the scoring.
-        </p>
-        <p style="color:var(--muted);margin-bottom:24px;font-size:13px">
-          V1 scored it. V2 audited the inbound. V3 stabilized the response. That's what every message gets — emails, contracts, AI outputs, all of it.
-        </p>
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-          <a href="/score" style="padding:10px 20px;background:var(--accent);color:#000;font-weight:700;border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">Score something →</a>
-          <a href="/docs" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">API docs →</a>
-          <a href="/developers" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px;font-family:'JetBrains Mono',monospace">Developer access →</a>
-        </div>
-      </div>
-    </div>`
-  ];
-
-  document.getElementById('track').innerHTML = cards.join('');
-
-  // Mount NTI component into Card 2
-  const card2 = document.getElementById('card2_nti');
-  if (card2) card2.appendChild(NTIScore.render(score, message));
-
-  // Build dots
-  let dotsHtml = '';
-  for (let i = 0; i < totalCards; i++) {
-    dotsHtml += `<div class="dot ${i === 0 ? 'active' : ''}" onclick="goTo(${i})"></div>`;
-  }
-  document.getElementById('dots').innerHTML = dotsHtml;
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function goTo(i) {
-  currentCard = Math.max(0, Math.min(i, totalCards - 1));
-  updatePosition();
-  updateDots();
-}
-
-function updatePosition(offset) {
-  const vw = document.getElementById('viewport').offsetWidth;
-  const cardWidth = vw - 40; // card width with margins
-  const x = -(currentCard * vw) + (offset || 0);
-  document.getElementById('track').style.transform = `translateX(${x}px)`;
-}
-
-function updateDots() {
-  document.querySelectorAll('.dot').forEach((d, i) => {
-    d.classList.toggle('active', i === currentCard);
-  });
-  document.getElementById('deckCounter').textContent = `${currentCard + 1} / ${totalCards}`;
-}
-
-function initSwipe() {
-  const vp = document.getElementById('viewport');
-  
-  vp.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    isDragging = true;
-    document.getElementById('track').style.transition = 'none';
-  }, { passive: true });
-  
-  vp.addEventListener('touchmove', e => {
-    if (!isDragging) return;
-    currentX = e.touches[0].clientX - startX;
-    updatePosition(currentX);
-  }, { passive: true });
-  
-  vp.addEventListener('touchend', () => {
-    if (!isDragging) return;
-    isDragging = false;
-    document.getElementById('track').style.transition = 'transform .35s cubic-bezier(.25,.46,.45,.94)';
-    
-    if (currentX < -50 && currentCard < totalCards - 1) {
-      currentCard++;
-    } else if (currentX > 50 && currentCard > 0) {
-      currentCard--;
-    }
-    currentX = 0;
-    updatePosition();
-    updateDots();
-  });
-  
-  // Desktop: arrow keys
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' && currentCard < totalCards - 1) { currentCard++; updatePosition(); updateDots(); }
-    if (e.key === 'ArrowLeft' && currentCard > 0) { currentCard--; updatePosition(); updateDots(); }
-  });
-  
-  // Desktop: click sides
-  vp.addEventListener('click', e => {
-    const rect = vp.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x > rect.width * 0.7 && currentCard < totalCards - 1) { currentCard++; updatePosition(); updateDots(); }
-    else if (x < rect.width * 0.3 && currentCard > 0) { currentCard--; updatePosition(); updateDots(); }
-  });
-}
-
-function closeDeck() {
-  document.getElementById('deck').classList.remove('active');
-  document.getElementById('formWrap').classList.remove('hidden');
-  document.getElementById('sendBtn').disabled = false;
-  document.getElementById('sendBtn').textContent = 'Send message';
-}
+})();
 </script>
-
 {% endblock %}

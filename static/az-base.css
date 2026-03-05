@@ -17,6 +17,11 @@
   --az-red: #ef4444;
   --az-amber: #f59e0b;
   --az-purple: #a78bfa;
+  --az-blue: #3b82f6;
+  --az-pink: #ec4899;
+  --az-orange: #ff8844;
+  --az-teal: #14b8a6;
+  --az-cyan: #06b6d4;
 
   /* Legacy aliases — page CSS uses these */
   --bg: var(--az-bg);
@@ -30,11 +35,22 @@
   --amber: var(--az-amber);
   --purple: var(--az-purple);
   --green: var(--az-accent);
-  --teal: #14b8a6;
-  --cyan: #22d3ee;
-  --pink: #ec4899;
-  --orange: #f97316;
-  --blue: #3b82f6;
+  --blue: var(--az-blue);
+  --pink: var(--az-pink);
+  --orange: var(--az-orange);
+  --teal: var(--az-teal);
+  --cyan: var(--az-cyan);
+
+  /* Dim/transparent variants for backgrounds behind colored text */
+  --green-dim: rgba(34,197,94,0.10);
+  --blue-dim: rgba(59,130,246,0.10);
+  --purple-dim: rgba(167,139,250,0.10);
+  --amber-dim: rgba(245,158,11,0.10);
+  --red-dim: rgba(239,68,68,0.10);
+  --pink-dim: rgba(236,72,153,0.10);
+  --orange-dim: rgba(255,136,68,0.10);
+  --teal-dim: rgba(20,184,166,0.10);
+  --cyan-dim: rgba(6,182,212,0.10);
 
   --az-topbar-h: 48px;
   --az-bottom-h: 56px;
@@ -127,6 +143,70 @@ body::before {
 }
 .az-nav-desktop a:hover { color: var(--az-text); }
 .az-nav-desktop a.active { color: var(--az-accent); }
+
+/* ── SCOREBOARDS DROPDOWN ── */
+.az-nav-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.az-nav-dropdown-trigger {
+  font-family: var(--az-mono);
+  font-size: 10px;
+  color: var(--az-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 0;
+  white-space: nowrap;
+  transition: color .15s;
+  user-select: none;
+}
+.az-nav-dropdown:hover .az-nav-dropdown-trigger,
+.az-nav-dropdown-trigger.active { color: var(--az-accent); }
+.az-nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 12, 16, .98);
+  border: 1px solid rgba(37, 42, 53, .8);
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 180px;
+  z-index: 9001;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.az-nav-dropdown:hover .az-nav-dropdown-menu { display: block; }
+.az-nav-dropdown-menu a {
+  display: block;
+  font-family: var(--az-mono);
+  font-size: 10px;
+  color: var(--az-muted);
+  text-decoration: none;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+}
+.az-nav-dropdown-menu a:hover { color: var(--az-text); background: rgba(255,255,255,.04); }
+.az-nav-dropdown-menu a.active { color: var(--az-accent); }
+
+/* ── MOBILE SECTION LABEL ── */
+.az-mobile-section-label {
+  font-family: var(--az-mono);
+  font-size: 9px;
+  color: rgba(255,255,255,.25);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 4px 0 0;
+  border-top: 1px solid rgba(255,255,255,.06);
+  width: 160px;
+  text-align: center;
+}
 
 /* ── HAMBURGER ── */
 .az-hamburger {

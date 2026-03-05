@@ -127,11 +127,17 @@ def db_init():
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
             owner_email TEXT NOT NULL,
+            owner_user_id TEXT,
             tier TEXT NOT NULL DEFAULT 'free',
             monthly_limit INTEGER NOT NULL DEFAULT 10,
             active BOOLEAN NOT NULL DEFAULT TRUE
         )
         """)
+        # Migration: add owner_user_id if missing
+        try:
+            cur.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT")
+        except Exception:
+            conn.rollback()
         cur.execute("""
         CREATE TABLE IF NOT EXISTS api_usage (
             id TEXT PRIMARY KEY,
@@ -196,11 +202,17 @@ def db_init():
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
             owner_email TEXT NOT NULL,
+            owner_user_id TEXT,
             tier TEXT NOT NULL DEFAULT 'free',
             monthly_limit INTEGER NOT NULL DEFAULT 10,
             active INTEGER NOT NULL DEFAULT 1
         )
         """)
+        # Migration: add owner_user_id if missing
+        try:
+            cur.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT")
+        except Exception:
+            pass
         cur.execute("""
         CREATE TABLE IF NOT EXISTS api_usage (
             id TEXT PRIMARY KEY,

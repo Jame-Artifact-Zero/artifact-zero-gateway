@@ -1803,9 +1803,7 @@ def _letter_race(text):
     s = re.sub(r'[^a-zA-Z]', '', text).lower()
     models = [
         {"name": "claude", "api": "anthropic", "color": "#d97706"},
-        {"name": "grok", "api": "xai", "color": "#8b5cf6"},
         {"name": "chatgpt", "api": "openai", "color": "#10b981"},
-        {"name": "gemini", "api": "google", "color": "#3b82f6"},
     ]
     for i in range(len(s)):
         for m in models:
@@ -1904,22 +1902,34 @@ def _call_llm(model_info, prompt, system_prompt):
         key = os.getenv("GOOGLE_API_KEY", "")
         if not key:
             return None, "No Google API key"
-        body = json.dumps({
-            "contents": [{"parts": [{"text": system_prompt + "\n\n" + prompt}]}],
+        # Build contents — use systemInstruction when system_prompt present
+        body_dict = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 1024}
-        }).encode()
+        }
+        if system_prompt:
+            body_dict["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+        body = json.dumps(body_dict).encode()
         req = Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
             data=body, headers={"Content-Type": "application/json"}
         )
         resp = urlopen(req, timeout=timeout)
         data = json.loads(resp.read())
         try:
-            return data["candidates"][0]["content"]["parts"][0]["text"], None
-        except (KeyError, IndexError):
-            return None, "Unexpected Google API response"
+            candidates = data.get("candidates", [])
+            if not candidates:
+                reason = data.get("promptFeedback", {}).get("blockReason", "no candidates")
+                return None, f"Gemini blocked: {reason}"
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts:
+                return None, "Gemini empty response"
+            return parts[0]["text"], None
+        except (KeyError, IndexError) as e:
+            return None, f"Unexpected Google API response: {e}"
 
     return None, f"Unknown API: {api}"
+
 
 
 @app.route("/api/v1/rewrite", methods=["POST"])
@@ -1938,17 +1948,8 @@ def api_rewrite():
     if not gate["pass"]:
         return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
 
-    # Convergence gate — block AI for deterministic-routable inputs
-    try:
-        from convergence_gate import enforce as cg_enforce
-        trace = {}
-        ai_allowed, cg_response = cg_enforce({"text": text}, trace)
-        if not ai_allowed:
-            cg_response["latency_ms"] = int((time.time() - t0) * 1000)
-            cg_response["version"] = NTI_VERSION
-            return jsonify(cg_response)
-    except Exception:
-        pass
+    # Convergence gate removed from /api/v1/rewrite — rewrite is always an AI call.
+    # Gate belongs on /nti (scoring), not here.
 
     # 1. Score with V1
     l0 = detect_l0_constraints(text)
@@ -1997,72 +1998,110 @@ def api_rewrite():
     if "CONFIRMED" in str(failure_modes.get("CCA", "")):
         issues.append("CCA: Capability claimed without constraint backing")
 
-    system_prompt = (
-        "You are a direct, no-nonsense rewrite engine built by Artifact Zero. Your job: take poorly structured messages "
-        "and rewrite them as a competent professional would actually write them.\n\n"
+    # 4a+4b. UNGOVERNED + GOVERNED — run in parallel to halve latency
+    ungoverned_prompt = f"Write a reply to this message.\n\nMESSAGE:\n{text}"
+    ungoverned_system = "You are a customer service representative. Reply to the message you receive."
+
+    # 4b. GOVERNED CALL — full Artifact Zero system prompt + guardrails
+    #     This output goes through V3 — card 7
+    governed_system = (
+        "You are Artifact Zero, a structural enforcement company in Knoxville, Tennessee. "
+        "You built NTI — a deterministic engine that scores and stabilizes communication. "
+        "No LLM in the scoring. Same input, same output, every time.\n\n"
+        "Someone sent a message through the contact page. Reply directly on behalf of Artifact Zero.\n\n"
         "VOICE:\n"
-        "- Direct, blunt, sharp. Confidence 9/10. No filler, no fluff.\n"
-        "- Numbers over adjectives. '49% to 7%' not 'significant reduction.'\n"
-        "- Short sentences. 3-10 words is common. Fragments are fine.\n"
-        "- Never use: revolutionary, game-changing, empower, transform, AI-powered, seamless, solution, best-in-class, synergy, leverage, ecosystem.\n"
-        "- Never use exclamation marks. Never say 'excited to' or 'thrilled to.'\n"
-        "- Controlled frustration is fine. Sarcasm at problems is fine. Never at people.\n\n"
-        "RULES:\n"
-        "1. LEAD WITH THE ASK. First sentence = what you want from them.\n"
-        "2. CONTEXT SECOND. Only the context they need to respond. Cut everything else.\n"
-        "3. SHORTER IS BETTER. If the original is 40 words, the rewrite should be 25-35.\n"
-        "4. NO BRACKETS, NO PLACEHOLDERS. If there's no deadline, write 'Let me know by [day].' "
-        "If there's no constraint, just make the ask clearer — don't insert [Conditions: ___].\n"
-        "5. KEEP THE VOICE. If the original is casual, stay casual. If formal, stay formal.\n"
-        "6. STRIP SIGNOFFS. Remove 'Best,' 'Thanks,' 'Regards' — they add nothing.\n"
-        "7. ONE PASS. Return only the rewritten text. No explanations. No commentary. No quotes around it."
+        "- Direct, sharp, confident. No filler.\n"
+        "- Short sentences. Fragments fine.\n"
+        "- Never: revolutionary, game-changing, synergy, seamless, excited, thrilled, ecosystem.\n"
+        "- No exclamation marks. Warm but not performative.\n\n"
+        "HARD RULES — these override everything else:\n"
+        "1. NEVER schedule or promise a meeting or call. NEVER give out any email address. Direct all connection to artifact0.com/docs\n"
+        "2. IF SELLING SOMETHING (warranties, SEO, software, services, anything): acknowledge with dry humor, "
+        "then suggest they run their pitch through the API. "
+        "Example: The engine caught commitment hedges in that pitch. Try artifact0.com/safecheck before the next send.\n"
+        "3. IF GIVING FEEDBACK OR SUGGESTIONS: thank them genuinely, say it will be reviewed, zero commitments on what changes.\n"
+        "4. IF WANTING TO PARTNER OR INVEST: direct to artifact0.com/docs for API access and contact info.\n"
+        "5. IF A REAL PROSPECT: one sentence on what NTI solves for their specific situation. "
+        "Direct them to artifact0.com/docs — full API access, unlimited use cases, total control. "
+        "Tell your team. Not your competitors.\n\n"
+        "REPLY RULES:\n"
+        "1. First sentence shows you read their message.\n"
+        "2. Answer the question or address the need directly.\n"
+        "3. One next step — artifact0.com/docs. Never give an email address. Never 'we will be in touch.'\n"
+        "4. 40-80 words total.\n"
+        "5. No sign-off. No Best, Thanks, Regards.\n"
+        "6. Return only the reply text. No commentary. No quotes."
     )
+    governed_prompt = f"THEIR MESSAGE:\n{text}\n\nWrite a reply from Artifact Zero to this person."
 
-    prompt = f"ORIGINAL:\n{text}\n\n"
-    if issues:
-        prompt += "PROBLEMS:\n"
-        for iss in issues:
-            prompt += f"- {iss}\n"
-        prompt += "\nRewrite this message so a busy person reads it and immediately knows what you want."
-    else:
-        prompt += "This message is structurally clean. Tighten it if possible — remove any unnecessary words. If it's already tight, return it unchanged. Do not add anything."
+    # Run both LLM calls in parallel — cuts total latency roughly in half
+    from concurrent.futures import ThreadPoolExecutor
+    def _call_ungov():
+        try:
+            result, err = _call_llm(model, ungoverned_prompt, ungoverned_system)
+            if not result:
+                print(f"[contact] ungoverned failed: {err}", flush=True)
+            return result
+        except Exception as e:
+            print(f"[contact] ungoverned exception: {e}", flush=True)
+            return None
 
-    # 4. Call LLM
-    try:
-        llm_text, err = _call_llm(model, prompt, system_prompt)
-    except Exception as e:
-        llm_text, err = None, str(e)[:200]
+    def _call_gov():
+        try:
+            result, err = _call_llm(model, governed_prompt, governed_system)
+            return result, err
+        except Exception as e:
+            return None, str(e)[:200]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        fut_ungov = executor.submit(_call_ungov)
+        fut_gov   = executor.submit(_call_gov)
+        llm_ungoverned = fut_ungov.result()
+        llm_governed, err = fut_gov.result()
+
+    # Use ungoverned as llm_raw (card 5), governed as input to V3 (card 7)
+    llm_text = llm_governed  # V3 enforces the governed output
 
     if not llm_text:
-        # Fallback: return V3 rule-based enforcement only
-        from core_engine.v3_enforcement import enforce
-        v3_result = enforce(text, objective=obj.get("objective_text"))
         return jsonify({
-            "rewrite": v3_result["final_output"],
+            "rewrite": "",
+            "llm_raw": llm_ungoverned or "",
+            "llm_ungoverned": llm_ungoverned or "",
             "model": model["name"],
             "model_color": model["color"],
             "method": "v3_rule_only",
             "fallback_reason": err or "LLM call failed",
             "original_words": len(text.split()),
-            "rewrite_words": len(v3_result["final_output"].split()),
+            "rewrite_words": 0,
             "nii_score": nii_score,
             "issues": issues,
             "latency_ms": int((time.time() - t0) * 1000)
         })
 
-    # 5. Run V3 enforcement on LLM output
+    # 5. Run V3 enforcement on governed LLM output
     from core_engine.v3_enforcement import enforce
+
+    def _normalize_text(t):
+        import re
+        t = re.sub(r'artifact0\s*\.\s*[Cc]om', 'artifact0.com', t)
+        t = re.sub(r'(\w)\s+\.\s+(com|io|org|net)', r'\1.\2', t, flags=re.IGNORECASE)
+        t = re.sub(r'(\w+)\s*@\s*(\w)', r'\1@\2', t)
+        t = re.sub(r'/safe\s+[Cc]heck', '/safecheck', t)
+        return t
     llm_words = len(llm_text.split())
     v3_result = enforce(llm_text, objective=obj.get("objective_text"))
-    final = v3_result["final_output"]
+    final = _normalize_text(v3_result["final_output"])
+    if llm_ungoverned:
+        llm_ungoverned = _normalize_text(llm_ungoverned)
 
     original_words = len(text.split())
     rewrite_words = len(final.split())
-    # Compression = what V3 cut from the LLM output, not from user input
     v3_compression = abs(llm_words - rewrite_words) / max(llm_words, 1) * 100
 
     return jsonify({
         "rewrite": final,
+        "llm_raw": llm_ungoverned or "",       # card 5 — ungoverned, what AI does alone
+        "llm_governed": llm_text,              # governed input before V3
         "model": model["name"],
         "model_color": model["color"],
         "method": "llm_v3",
@@ -2073,7 +2112,6 @@ def api_rewrite():
         "nii_score": nii_score,
         "issues": issues,
         "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
-        "llm_raw": llm_text,
         "latency_ms": int((time.time() - t0) * 1000)
     })
 
