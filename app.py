@@ -127,20 +127,6 @@ except ImportError:
     print("[app] nti_log_routes not found, skipping", flush=True)
 
 try:
-    from nti_stamp_routes import stamp_bp
-    app.register_blueprint(stamp_bp)
-    print("[app] nti_stamp loaded", flush=True)
-except ImportError:
-    print("[app] nti_stamp_routes not found, skipping", flush=True)
-
-try:
-    from nti_gateway_routes import gateway_bp
-    app.register_blueprint(gateway_bp)
-    print("[app] nti_gateway loaded", flush=True)
-except ImportError:
-    print("[app] nti_gateway_routes not found, skipping", flush=True)
-
-try:
     from ccs_routes import init_ccs
     init_ccs(app)
 except ImportError:
@@ -1137,6 +1123,12 @@ def api_score_free():
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    return app.send_static_file("robots.txt")
+
 
 
 # ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
