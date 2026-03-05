@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NTI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;600&display=swap');
+  :root{
+    --bg:#0b1120;--surface:#111827;--border:rgba(255,255,255,.08);
+    --accent:#00ff88;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+    --text:rgba(255,255,255,.88);--dim:rgba(255,255,255,.45);
+    --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;padding:16px;min-height:100vh;}
+  .logo{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--accent);margin-bottom:16px;}
+  .mode-badge{display:inline-block;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:2px;padding:2px 6px;border-radius:3px;margin-bottom:12px;}
+  .mode-badge.compose{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--accent);}
+  .mode-badge.read{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);color:var(--blue);}
+
+  /* Score display */
+  .score-ring{text-align:center;padding:16px 0;}
+  .score-number{font-family:var(--mono);font-size:42px;font-weight:700;line-height:1;}
+  .score-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;margin-top:4px;}
+  .score-number.green{color:var(--accent);}
+  .score-number.amber{color:var(--amber);}
+  .score-number.red{color:var(--red);}
+  .score-label.green{color:var(--accent);}
+  .score-label.amber{color:var(--amber);}
+  .score-label.red{color:var(--red);}
+
+  /* Findings */
+  .findings{margin:12px 0;}
+  .finding{display:flex;align-items:flex-start;gap:8px;padding:8px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:6px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.75);}
+  .finding-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:3px;}
+  .no-findings{padding:10px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:6px;font-family:var(--mono);font-size:10px;color:var(--accent);text-align:center;}
+
+  /* Buttons */
+  .btn{width:100%;padding:10px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border:none;margin-top:8px;transition:opacity .15s;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:var(--accent);color:#0b1120;}
+  .btn-primary:hover:not(:disabled){opacity:.85;}
+  .btn-secondary{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);}
+  .btn-secondary:hover:not(:disabled){background:rgba(255,255,255,.1);}
+  .btn-stamp{background:rgba(0,255,136,.12);color:var(--accent);border:1px solid rgba(0,255,136,.3);}
+  .btn-stamp:hover:not(:disabled){background:rgba(0,255,136,.2);}
+  .btn-draft{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.3);}
+  .btn-draft:hover:not(:disabled){background:rgba(59,130,246,.2);}
+
+  /* Status messages */
+  .status{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;padding:8px;border-radius:6px;text-align:center;margin-top:8px;}
+  .status.checking{background:rgba(255,255,255,.04);color:var(--dim);}
+  .status.stamped{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--accent);}
+  .status.error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);}
+
+  /* Draft panel */
+  .draft-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;}
+  .draft-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:8px;}
+  .draft-text{font-size:12px;line-height:1.6;color:var(--text);white-space:pre-wrap;max-height:200px;overflow-y:auto;}
+
+  /* Idle state */
+  .idle{text-align:center;padding:24px 0;color:var(--dim);}
+  .idle-icon{font-size:28px;margin-bottom:8px;}
+  .idle-text{font-size:12px;}
+
+  .divider{border:none;border-top:1px solid var(--border);margin:12px 0;}
+  .meta{font-family:var(--mono);font-size:9px;color:var(--dim);text-align:center;margin-top:12px;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="logo">ARTIFACT ZERO</div>
+<div id="mode-badge" class="mode-badge compose">COMPOSE MODE</div>
+
+<!-- IDLE STATE -->
+<div id="idle-state" class="idle">
+  <div class="idle-icon">✦</div>
+  <div class="idle-text" id="idle-text">Click CHECK to score this email</div>
+</div>
+
+<!-- RESULT STATE -->
+<div id="result-state" class="hidden">
+  <div class="score-ring">
+    <div class="score-number" id="score-number">—</div>
+    <div class="score-label" id="score-label">CHECKING</div>
+  </div>
+  <div class="findings" id="findings"></div>
+  <div id="stamp-status" class="hidden"></div>
+  <div id="draft-panel" class="hidden">
+    <div class="draft-panel">
+      <div class="draft-label">GOVERNED DRAFT REPLY</div>
+      <div class="draft-text" id="draft-text"></div>
+    </div>
+    <button class="btn btn-draft" id="open-reply-btn" onclick="openReply()">OPEN AS REPLY</button>
+  </div>
+</div>
+
+<!-- BUTTONS -->
+<button class="btn btn-primary" id="check-btn" onclick="runCheck()">CHECK</button>
+<button class="btn btn-stamp hidden" id="stamp-btn" onclick="appendStamp()">✦ STAMP &amp; SEND</button>
+<button class="btn btn-draft hidden" id="draft-btn" onclick="draftReply()">DRAFT REPLY</button>
+<button class="btn btn-secondary hidden" id="check-again-btn" onclick="resetCheck()">CHECK AGAIN</button>
+
+<div class="meta" id="meta-line"></div>
+
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<script>
+const API_BASE = 'https://artifact0.com';
+const API_KEY  = ''; // set per deployment or read from Office settings
+
+let currentMode = 'compose';
+let currentRequestId = null;
+let currentScore = 0;
+let draftText = '';
+
+// ── MODE DETECTION ──────────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+if (params.get('mode') === 'read') {
+  currentMode = 'read';
+}
+
+Office.onReady(function(info) {
+  if (currentMode === 'read') {
+    document.getElementById('mode-badge').textContent = 'READ MODE';
+    document.getElementById('mode-badge').className = 'mode-badge read';
+    document.getElementById('idle-text').textContent = 'Click CHECK to analyze this email';
+    document.getElementById('check-btn').textContent = 'ANALYZE';
+    document.getElementById('draft-btn').classList.remove('hidden');
+    document.getElementById('stamp-btn').classList.add('hidden');
+  }
+});
+
+// ── COMPOSE MODE: CHECK ─────────────────────────────────────────────────────
+async function runCheck() {
+  document.getElementById('check-btn').disabled = true;
+  document.getElementById('idle-state').classList.remove('hidden');
+  document.getElementById('result-state').classList.add('hidden');
+  document.getElementById('idle-text').textContent = 'Scoring…';
+
+  try {
+    const text = await getEmailBody();
+    if (!text || text.trim().length < 10) {
+      showError('Email body is empty or too short to score.');
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/api/v1/score/free`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({ text, surface: currentMode === 'read' ? 'outlook_read' : 'outlook_compose' })
+    });
+    const data = await res.json();
+
+    currentScore = data.score?.nii ?? data.nii ?? 0;
+    currentRequestId = data.telemetry?.request_id || data.request_id || generateId();
+
+    showResult(currentScore, data);
+    document.getElementById('meta-line').textContent =
+      `ID: ${currentRequestId.slice(0,8)}… · v${(data.version || 'v3').split('-').pop()}`;
+
+  } catch(e) {
+    showError('Check failed. Verify connection.');
+  }
+}
+
+function showResult(score, data) {
+  document.getElementById('idle-state').classList.add('hidden');
+  document.getElementById('result-state').classList.remove('hidden');
+  document.getElementById('check-again-btn').classList.remove('hidden');
+  document.getElementById('check-btn').classList.add('hidden');
+
+  const num = document.getElementById('score-number');
+  const lbl = document.getElementById('score-label');
+  num.textContent = score;
+
+  let cls, labelText;
+  if (currentMode === 'read') {
+    if (score >= 75) { cls = 'green'; labelText = 'LOW STRUCTURAL RISK'; }
+    else if (score >= 50) { cls = 'amber'; labelText = 'REVIEW BEFORE REPLYING'; }
+    else { cls = 'red'; labelText = 'HIGH STRUCTURAL RISK'; }
+  } else {
+    if (score >= 80) { cls = 'green'; labelText = 'STRUCTURALLY SOLID'; }
+    else if (score >= 60) { cls = 'amber'; labelText = 'REVIEW RECOMMENDED'; }
+    else { cls = 'red'; labelText = 'HIGH RISK'; }
+  }
+  num.className = `score-number ${cls}`;
+  lbl.className = `score-label ${cls}`;
+  lbl.textContent = labelText;
+
+  // Findings
+  const findingsEl = document.getElementById('findings');
+  const signals = data.signals?.signals_detected || data.tilt?.tags || [];
+  const tilt = data.tilt?.tags || [];
+  const issues = [...new Set([...signals, ...tilt])].slice(0, 5);
+
+  if (issues.length === 0) {
+    findingsEl.innerHTML = '<div class="no-findings">✓ NO FLAGS DETECTED</div>';
+  } else {
+    findingsEl.innerHTML = issues.map(s =>
+      `<div class="finding"><div class="finding-dot"></div>${s.replace(/_/g,' ')}</div>`
+    ).join('');
+  }
+
+  // Show stamp button in compose mode for clean checks
+  if (currentMode === 'compose' && score >= 80) {
+    document.getElementById('stamp-btn').classList.remove('hidden');
+  }
+}
+
+// ── STAMP & SEND ─────────────────────────────────────────────────────────────
+async function appendStamp() {
+  document.getElementById('stamp-btn').disabled = true;
+  const statusEl = document.getElementById('stamp-status');
+  statusEl.classList.remove('hidden');
+  statusEl.className = 'status checking';
+  statusEl.textContent = 'APPENDING STAMP…';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/stamp/append`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({
+        request_id: currentRequestId,
+        score: currentScore,
+        variant: 'plain'
+      })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      // Append stamp text to email body
+      Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, function(result) {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          const newBody = result.value + data.stamp_text;
+          Office.context.mailbox.item.body.setAsync(newBody, { coercionType: Office.CoercionType.Text });
+        }
+      });
+      statusEl.className = 'status stamped';
+      statusEl.textContent = '✦ STAMP APPENDED — VERIFY LINK ACTIVE';
+      document.getElementById('stamp-btn').disabled = true;
+    } else {
+      statusEl.className = 'status error';
+      statusEl.textContent = data.reason || 'STAMP FAILED';
+      document.getElementById('stamp-btn').disabled = false;
+    }
+  } catch(e) {
+    statusEl.className = 'status error';
+    statusEl.textContent = 'CONNECTION ERROR';
+    document.getElementById('stamp-btn').disabled = false;
+  }
+}
+
+// ── READ MODE: DRAFT REPLY ───────────────────────────────────────────────────
+async function draftReply() {
+  document.getElementById('draft-btn').disabled = true;
+  document.getElementById('draft-btn').textContent = 'DRAFTING…';
+
+  try {
+    const text = await getEmailBody();
+    const res = await fetch(`${API_BASE}/api/v1/rewrite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({ text, surface: 'outlook_read_reply' })
+    });
+    const data = await res.json();
+    draftText = data.rewrite || data.llm_governed || '';
+
+    if (draftText) {
+      document.getElementById('draft-text').textContent = draftText;
+      document.getElementById('draft-panel').classList.remove('hidden');
+    }
+  } catch(e) {
+    showError('Draft reply failed.');
+  } finally {
+    document.getElementById('draft-btn').disabled = false;
+    document.getElementById('draft-btn').textContent = 'DRAFT REPLY';
+  }
+}
+
+function openReply() {
+  if (!draftText) return;
+  Office.context.mailbox.item.displayReplyAllForm({ htmlBody: `<p>${draftText.replace(/\n/g,'<br>')}</p>` });
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function getEmailBody() {
+  return new Promise((resolve, reject) => {
+    Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, function(result) {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        resolve(result.value);
+      } else {
+        reject(new Error('Failed to get email body'));
+      }
+    });
+  });
+}
+
+function showError(msg) {
+  document.getElementById('idle-state').classList.remove('hidden');
+  document.getElementById('idle-text').textContent = msg;
+  document.getElementById('result-state').classList.add('hidden');
+  document.getElementById('check-btn').disabled = false;
+  document.getElementById('check-btn').classList.remove('hidden');
+}
+
+function resetCheck() {
+  document.getElementById('result-state').classList.add('hidden');
+  document.getElementById('idle-state').classList.remove('hidden');
+  document.getElementById('idle-text').textContent = currentMode === 'read' ? 'Click ANALYZE to score this email' : 'Click CHECK to score this email';
+  document.getElementById('check-btn').classList.remove('hidden');
+  document.getElementById('check-btn').disabled = false;
+  document.getElementById('check-again-btn').classList.add('hidden');
+  document.getElementById('stamp-btn').classList.add('hidden');
+  document.getElementById('stamp-btn').disabled = false;
+  document.getElementById('draft-panel').classList.add('hidden');
+  document.getElementById('stamp-status').classList.add('hidden');
+  document.getElementById('meta-line').textContent = '';
+  currentRequestId = null;
+}
+
+function generateId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+</script>
+</body>
+</html>
