@@ -452,6 +452,9 @@
 
     // Card 5 — ungoverned
     if (slides[4]) {
+      // Update title to show actual model name
+      var t5 = slides[4].querySelector('.ct-card-title');
+      if (t5) t5.textContent = esc(rwModel) + ' — No Guardrails';
       var h5 =
         '<div style="font-family:var(--az-mono);font-size:11px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--red);padding-left:10px;line-height:1.6">' +
           'This is what ' + esc(rwModel) + ' generates with zero governance \u2014 no system prompt, no constraints, no NTI. This is what every company using raw AI is sending.' +

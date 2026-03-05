@@ -1932,6 +1932,13 @@ def _call_llm(model_info, prompt, system_prompt):
     return None, f"Unknown API: {api}"
 
 
+
+def _letter_race_with_guard(text):
+    """Letter race with Gemini 30-char minimum guard."""
+    model = _letter_race(text)
+    if model["api"] == "google" and len(text.strip()) < 30:
+        return {"name": "chatgpt", "api": "openai", "color": "#10b981"}
+    return model
 @app.route("/api/v1/rewrite", methods=["POST"])
 def api_rewrite():
     """LLM-powered structural rewrite. Letter-race selects model, V3 enforces output."""
@@ -1970,7 +1977,7 @@ def api_rewrite():
     }
 
     # 2. Letter-race model selection
-    model = _letter_race(text)
+    model = _letter_race_with_guard(text)
 
     # 3. Build rewrite prompt from NTI findings
     # Smart issue detection: short/simple messages don't need enterprise-level constraints
@@ -1998,19 +2005,9 @@ def api_rewrite():
     if "CONFIRMED" in str(failure_modes.get("CCA", "")):
         issues.append("CCA: Capability claimed without constraint backing")
 
-    # 4a. UNGOVERNED CALL — raw model, no system prompt, no guardrails
-    #     This is card 5: what the AI does left alone
+    # 4a+4b. UNGOVERNED + GOVERNED — run in parallel to halve latency
     ungoverned_prompt = f"Write a reply to this message.\n\nMESSAGE:\n{text}"
-    # Minimal neutral system instruction — just enough for Gemini safety filter to pass
-    # No company context, no guardrails — this is the ungoverned demo
     ungoverned_system = "You are a customer service representative. Reply to the message you receive."
-    try:
-        llm_ungoverned, ungov_err = _call_llm(model, ungoverned_prompt, ungoverned_system)
-        if not llm_ungoverned:
-            print(f"[contact] ungoverned call failed: {ungov_err}", flush=True)
-    except Exception as e:
-        llm_ungoverned = None
-        print(f"[contact] ungoverned exception: {e}", flush=True)
 
     # 4b. GOVERNED CALL — full Artifact Zero system prompt + guardrails
     #     This output goes through V3 — card 7
@@ -2025,29 +2022,49 @@ def api_rewrite():
         "- Never: revolutionary, game-changing, synergy, seamless, excited, thrilled, ecosystem.\n"
         "- No exclamation marks. Warm but not performative.\n\n"
         "HARD RULES — these override everything else:\n"
-        "1. NEVER schedule or promise a meeting or call. For connection: direct them to jame@artifact0.com\n"
+        "1. NEVER schedule or promise a meeting or call. NEVER give out any email address. Direct all connection to artifact0.com/docs\n"
         "2. IF SELLING SOMETHING (warranties, SEO, software, services, anything): acknowledge with dry humor, "
         "then suggest they run their pitch through the API. "
         "Example: The engine caught commitment hedges in that pitch. Try artifact0.com/safecheck before the next send.\n"
         "3. IF GIVING FEEDBACK OR SUGGESTIONS: thank them genuinely, say it will be reviewed, zero commitments on what changes.\n"
-        "4. IF WANTING TO PARTNER OR INVEST: email jame@artifact0.com with specifics.\n"
+        "4. IF WANTING TO PARTNER OR INVEST: direct to artifact0.com/docs for API access and contact info.\n"
         "5. IF A REAL PROSPECT: one sentence on what NTI solves for their specific situation. "
         "Direct them to artifact0.com/docs — full API access, unlimited use cases, total control. "
         "Tell your team. Not your competitors.\n\n"
         "REPLY RULES:\n"
         "1. First sentence shows you read their message.\n"
         "2. Answer the question or address the need directly.\n"
-        "3. One next step — artifact0.com/docs or jame@artifact0.com. Never 'we will be in touch.'\n"
+        "3. One next step — artifact0.com/docs. Never give an email address. Never 'we will be in touch.'\n"
         "4. 40-80 words total.\n"
         "5. No sign-off. No Best, Thanks, Regards.\n"
         "6. Return only the reply text. No commentary. No quotes."
     )
     governed_prompt = f"THEIR MESSAGE:\n{text}\n\nWrite a reply from Artifact Zero to this person."
 
-    try:
-        llm_governed, err = _call_llm(model, governed_prompt, governed_system)
-    except Exception as e:
-        llm_governed, err = None, str(e)[:200]
+    # Run both LLM calls in parallel — cuts total latency roughly in half
+    from concurrent.futures import ThreadPoolExecutor
+    def _call_ungov():
+        try:
+            result, err = _call_llm(model, ungoverned_prompt, ungoverned_system)
+            if not result:
+                print(f"[contact] ungoverned failed: {err}", flush=True)
+            return result
+        except Exception as e:
+            print(f"[contact] ungoverned exception: {e}", flush=True)
+            return None
+
+    def _call_gov():
+        try:
+            result, err = _call_llm(model, governed_prompt, governed_system)
+            return result, err
+        except Exception as e:
+            return None, str(e)[:200]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        fut_ungov = executor.submit(_call_ungov)
+        fut_gov   = executor.submit(_call_gov)
+        llm_ungoverned = fut_ungov.result()
+        llm_governed, err = fut_gov.result()
 
     # Use ungoverned as llm_raw (card 5), governed as input to V3 (card 7)
     llm_text = llm_governed  # V3 enforces the governed output
