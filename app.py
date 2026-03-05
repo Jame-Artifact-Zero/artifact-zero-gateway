@@ -1948,19 +1948,8 @@ def api_rewrite():
     if not gate["pass"]:
         return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
 
-    # Convergence gate — skip for contact_demo (always runs full two-call pipeline)
-    is_contact_demo = bool(data.get("contact_demo", False))
-    if not is_contact_demo:
-        try:
-            from convergence_gate import enforce as cg_enforce
-            trace = {}
-            ai_allowed, cg_response = cg_enforce({"text": text}, trace)
-            if not ai_allowed:
-                cg_response["latency_ms"] = int((time.time() - t0) * 1000)
-                cg_response["version"] = NTI_VERSION
-                return jsonify(cg_response)
-        except Exception:
-            pass
+    # Convergence gate removed from /api/v1/rewrite — rewrite is always an AI call.
+    # Gate belongs on /nti (scoring), not here.
 
     # 1. Score with V1
     l0 = detect_l0_constraints(text)
