@@ -127,6 +127,13 @@ except ImportError:
     print("[app] nti_log_routes not found, skipping", flush=True)
 
 try:
+    from nti_stamp_routes import stamp_bp
+    app.register_blueprint(stamp_bp)
+    print("[app] nti_stamp loaded", flush=True)
+except ImportError:
+    print("[app] nti_stamp_routes not found, skipping", flush=True)
+
+try:
     from ccs_routes import init_ccs
     init_ccs(app)
 except ImportError:
