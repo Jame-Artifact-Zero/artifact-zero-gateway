@@ -126,6 +126,13 @@ try:
 except ImportError:
     print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
 
+try:
+    from nti_log_routes import log_bp
+    app.register_blueprint(log_bp)
+    print("[app] nti_log loaded", flush=True)
+except ImportError:
+    print("[app] nti_log_routes not found, skipping", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
