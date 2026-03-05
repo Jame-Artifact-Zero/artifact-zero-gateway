@@ -119,19 +119,18 @@ try:
     init_admin(app)
 except ImportError:
     print("[app] admin_dashboard not found, skipping", flush=True)
-
-try:
-    from ccs_routes import init_ccs
-    init_ccs(app)
-except ImportError:
-    print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
-
 try:
     from nti_log_routes import log_bp
     app.register_blueprint(log_bp)
     print("[app] nti_log loaded", flush=True)
 except ImportError:
     print("[app] nti_log_routes not found, skipping", flush=True)
+
+try:
+    from ccs_routes import init_ccs
+    init_ccs(app)
+except ImportError:
+    print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
 
 
 # ============================================================
