@@ -269,5 +269,38 @@ curl -X GET https://artifact0.com/api/v1/keys/usage \
 
 <div class="note"><strong>Zero LLM dependency.</strong> Every score is computed by rule-based structural analysis. No AI models in the engine. Deterministic, transparent, auditable. Average response time: 3ms.</div>
 
+
+<h2>Outlook Add-In</h2>
+<p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Install NTI directly into Microsoft Outlook. Score emails before you send — no copy-paste, no tab switching.</p>
+
+<div class="note">
+  <strong>Requirements:</strong> Microsoft 365 account &nbsp;·&nbsp; Outlook on Windows, Mac, or Web &nbsp;·&nbsp; Admin access not required for personal install
+</div>
+
+<div class="endpoint" style="margin-top:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);margin-bottom:4px;">NTI for Outlook</div>
+      <div style="font-size:13px;color:var(--muted);">manifest.xml &nbsp;·&nbsp; v1.1.0 &nbsp;·&nbsp; PNG icons included</div>
+    </div>
+    <a href="/static/manifest.xml" download="nti-manifest.xml"
+       style="display:inline-block;background:var(--accent);color:#000;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;padding:10px 20px;border-radius:6px;text-decoration:none;white-space:nowrap;">
+      Download manifest.xml
+    </a>
+  </div>
+</div>
+
+<h2 style="font-size:15px;margin-top:32px;margin-bottom:12px;">Install Steps</h2>
+<table>
+  <tr><th>#</th><th>Step</th></tr>
+  <tr><td>1</td><td>Download <code>manifest.xml</code> using the button above</td></tr>
+  <tr><td>2</td><td>Open Outlook on the web at <code>outlook.office365.com</code></td></tr>
+  <tr><td>3</td><td>Click the gear icon → <strong>Add-Ins</strong> → <strong>My add-ins</strong></td></tr>
+  <tr><td>4</td><td>Scroll to <strong>Custom Add-ins</strong> → click <strong>+ Add a custom add-in</strong> → <strong>Add from file</strong></td></tr>
+  <tr><td>5</td><td>Select the downloaded <code>manifest.xml</code> → click <strong>Install</strong></td></tr>
+</table>
+
+<div class="note" style="margin-top:16px;">After install, open any email or compose window. The <strong>NTI</strong> button appears in the Outlook toolbar. Click it to open the scoring panel.</div>
+
 </div>
 {% endblock %}
