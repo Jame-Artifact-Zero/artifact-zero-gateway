@@ -1130,6 +1130,28 @@ def robots_txt():
     return app.send_static_file("robots.txt")
 
 
+@app.route("/static/manifest.xml")
+def manifest_xml():
+    from flask import send_from_directory
+    return send_from_directory(
+        app.static_folder,
+        "manifest.xml",
+        mimetype="application/xml",
+        as_attachment=False
+    )
+
+
+@app.route("/manifest.xml")
+def manifest_xml_root():
+    from flask import send_from_directory
+    return send_from_directory(
+        app.static_folder,
+        "manifest.xml",
+        mimetype="application/xml",
+        as_attachment=False
+    )
+
+
 
 # ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
 @app.route("/api/promote-admin", methods=["POST"])
