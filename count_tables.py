@@ -1,0 +1,12 @@
+﻿import psycopg2, os
+c = psycopg2.connect(os.getenv('DATABASE_URL'))
+cur = c.cursor()
+cur.execute("SELECT COUNT(*) FROM companies")
+print('companies:', cur.fetchone()[0])
+cur.execute("SELECT COUNT(*) FROM fortune500_pages")
+print('fortune500_pages:', cur.fetchone()[0])
+cur.execute("SELECT COUNT(*) FROM company_pages")
+print('company_pages:', cur.fetchone()[0])
+cur.execute("SELECT COUNT(*) FROM fortune500_scores")
+print('fortune500_scores:', cur.fetchone()[0])
+c.close()
