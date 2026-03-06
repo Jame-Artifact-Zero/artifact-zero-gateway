@@ -3,6 +3,9 @@
 *.db-wal
 *.db-shm
 
+# Local startup scripts with credentials — never commit
+az_start.bat
+
 # Python
 __pycache__/
 *.pyc
