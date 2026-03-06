@@ -40,7 +40,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 def _get_conn():
     """Return a DB connection. Postgres in production, SQLite for local dev."""
-    if DATABASE_URL:
+    if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
         try:
             import psycopg2
             import psycopg2.extras
