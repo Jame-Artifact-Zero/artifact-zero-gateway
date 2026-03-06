@@ -1,0 +1,19 @@
+# SQLite databases — never commit, causes CI lock failures
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
