@@ -74,6 +74,12 @@ def auth_status():
 try:
     from auth import auth_bp
     app.register_blueprint(auth_bp)
+    try:
+        from account import account_bp
+        app.register_blueprint(account_bp)
+        print("[app] account_bp registered", flush=True)
+    except Exception as e:
+        print(f"[app] account_bp failed: {e}", flush=True)
 except ImportError:
     print("[app] auth not found, skipping", flush=True)
 
@@ -1596,6 +1602,12 @@ def require_api_key(f):
 
         request._api_key_id = key_id
         request._api_tier = tier
+        # Update last_used_at and usage_count
+        try:
+            from account import _update_key_last_used
+            _update_key_last_used(key_id)
+        except Exception:
+            pass
         return f(*args, **kwargs)
     return wrapper
 
@@ -1693,58 +1705,11 @@ def api_score():
     })
 
 
-@app.route("/api/v1/keys", methods=["POST"])
-def api_create_key():
-    payload = request.get_json() or {}
-    email = payload.get("email", "").strip().lower()
-    tier = payload.get("tier", "free").strip().lower()
-
-    if not email or "@" not in email:
-        return jsonify({"error": "Valid email required"}), 400
-    if tier not in _TIER_LIMITS:
-        return jsonify({"error": f"Invalid tier. Options: {list(_TIER_LIMITS.keys())}"}), 400
-
-    key_id = f"az_{_secrets.token_hex(24)}"
-    monthly_limit = _TIER_LIMITS[tier]["monthly"]
-    now = utc_now_iso()
-
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (%s, %s, %s, %s, %s, TRUE)",
-                        (key_id, now, email, tier, monthly_limit))
-        else:
-            cur.execute("INSERT INTO api_keys (id, created_at, owner_email, tier, monthly_limit, active) VALUES (?, ?, ?, ?, ?, 1)",
-                        (key_id, now, email, tier, monthly_limit))
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"[api] Key creation error: {e}", flush=True)
-        return jsonify({"error": "Failed to create key", "detail": str(e)}), 500
-
-    return jsonify({"api_key": key_id, "tier": tier, "monthly_limit": monthly_limit, "email": email,
-                    "message": "Store this key securely. It will not be shown again."}), 201
+# POST /api/v1/keys — MOVED to account_bp (account.py). Session-aware, no email required.
+# This route is intentionally removed. account_bp registers the replacement.
 
 
-@app.route("/api/v1/keys/usage", methods=["GET"])
-@require_api_key
-def api_usage():
-    usage_count = database.get_api_usage_count(request._api_key_id, _month_start())
-    result = {
-        "api_key": request._api_key_id[:8] + "...",
-        "tier": request._api_tier,
-        "usage_this_month": usage_count,
-    }
-    # Add credit balance if available
-    try:
-        from credits import get_user_id_for_api_key, get_balance_info
-        uid = get_user_id_for_api_key(request._api_key_id)
-        if uid:
-            result["credits"] = get_balance_info(uid)
-    except ImportError:
-        pass
-    return jsonify(result)
+# GET /api/v1/keys/usage — MOVED to account_bp as /api/v1/keys/<key_id>/usage
 
 
 # ═══════════════════════════════════════

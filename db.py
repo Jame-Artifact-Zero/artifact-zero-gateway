@@ -166,6 +166,142 @@ def db_init():
             last_changed TEXT
         )
         """)
+
+        # ── ACCOUNTS ────────────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS accounts (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            name TEXT NOT NULL DEFAULT '',
+            owner_user_id TEXT,
+            plan TEXT NOT NULL DEFAULT 'free',
+            active BOOLEAN NOT NULL DEFAULT TRUE,
+            stripe_customer_id TEXT
+        )
+        """)
+
+        # ── USERS MIGRATIONS ────────────────────────────────────────────────
+        for col, defn in [
+            ("account_id",        "TEXT"),
+            ("email_verified_at", "TIMESTAMPTZ"),
+            ("last_login_at",     "TIMESTAMPTZ"),
+            ("login_count",       "INTEGER NOT NULL DEFAULT 0"),
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE users ADD COLUMN {col} {defn}")
+            except Exception:
+                conn.rollback()
+
+        # ── LOGIN HISTORY ────────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS login_history (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            user_id TEXT NOT NULL REFERENCES users(id),
+            ip TEXT,
+            user_agent TEXT,
+            success BOOLEAN NOT NULL DEFAULT TRUE
+        )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_login_user ON login_history(user_id)")
+
+        # ── API KEYS MIGRATIONS ──────────────────────────────────────────────
+        for col, defn in [
+            ("account_id",   "TEXT"),
+            ("name",         "TEXT NOT NULL DEFAULT ''"),
+            ("key_type",     "TEXT NOT NULL DEFAULT 'live'"),
+            ("last_used_at", "TIMESTAMPTZ"),
+            ("expires_at",   "TIMESTAMPTZ"),
+            ("revoked_at",   "TIMESTAMPTZ"),
+            ("usage_count",  "INTEGER NOT NULL DEFAULT 0"),
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE api_keys ADD COLUMN {col} {defn}")
+            except Exception:
+                conn.rollback()
+
+        # ── API USAGE MIGRATIONS ─────────────────────────────────────────────
+        for col, defn in [
+            ("user_id",    "TEXT"),
+            ("account_id", "TEXT"),
+            ("key_type",   "TEXT"),
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE api_usage ADD COLUMN {col} {defn}")
+            except Exception:
+                conn.rollback()
+
+        # ── WEBHOOKS ─────────────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS webhooks (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            account_id TEXT NOT NULL,
+            user_id TEXT NOT NULL REFERENCES users(id),
+            url TEXT NOT NULL,
+            secret_hash TEXT NOT NULL,
+            events TEXT NOT NULL DEFAULT '[]',
+            active BOOLEAN NOT NULL DEFAULT TRUE,
+            last_triggered_at TIMESTAMPTZ,
+            failure_count INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_webhooks_account ON webhooks(account_id)")
+
+        # ── WEBHOOK DELIVERIES ───────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS webhook_deliveries (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            webhook_id TEXT NOT NULL REFERENCES webhooks(id),
+            request_id TEXT,
+            payload_json TEXT,
+            response_code INTEGER,
+            response_body TEXT,
+            latency_ms INTEGER,
+            success BOOLEAN NOT NULL DEFAULT FALSE,
+            retry_count INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_wdel_webhook ON webhook_deliveries(webhook_id)")
+
+        # ── CREDIT TRANSACTIONS MIGRATIONS ───────────────────────────────────
+        for col, defn in [
+            ("account_id", "TEXT"),
+            ("key_type",   "TEXT NOT NULL DEFAULT 'live'"),
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE credit_transactions ADD COLUMN {col} {defn}")
+            except Exception:
+                conn.rollback()
+
+        # ── SPEND ALERTS ──────────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS spend_alerts (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            account_id TEXT NOT NULL,
+            threshold_cents INTEGER NOT NULL DEFAULT 100,
+            notify_email TEXT NOT NULL,
+            last_triggered_at TIMESTAMPTZ,
+            active BOOLEAN NOT NULL DEFAULT TRUE
+        )
+        """)
+
+        # ── AUTO RECHARGE ─────────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS auto_recharge (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            account_id TEXT NOT NULL UNIQUE,
+            trigger_cents INTEGER NOT NULL DEFAULT 100,
+            recharge_cents INTEGER NOT NULL DEFAULT 1000,
+            stripe_payment_method_id TEXT,
+            active BOOLEAN NOT NULL DEFAULT FALSE,
+            last_triggered_at TIMESTAMPTZ
+        )
+        """)
+
     else:
         cur.execute("""
         CREATE TABLE IF NOT EXISTS requests (
@@ -238,6 +374,107 @@ def db_init():
             last_changed TEXT
         )
         """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS accounts (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            name TEXT NOT NULL DEFAULT \'\',
+            owner_user_id TEXT,
+            plan TEXT NOT NULL DEFAULT \'free\',
+            active INTEGER NOT NULL DEFAULT 1,
+            stripe_customer_id TEXT
+        )
+        """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS login_history (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            ip TEXT,
+            user_agent TEXT,
+            success INTEGER NOT NULL DEFAULT 1
+        )
+        """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS webhooks (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            account_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            url TEXT NOT NULL,
+            secret_hash TEXT NOT NULL,
+            events TEXT NOT NULL DEFAULT \'[]\',
+            active INTEGER NOT NULL DEFAULT 1,
+            last_triggered_at TEXT,
+            failure_count INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS webhook_deliveries (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            webhook_id TEXT NOT NULL,
+            request_id TEXT,
+            payload_json TEXT,
+            response_code INTEGER,
+            response_body TEXT,
+            latency_ms INTEGER,
+            success INTEGER NOT NULL DEFAULT 0,
+            retry_count INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS spend_alerts (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            account_id TEXT NOT NULL,
+            threshold_cents INTEGER NOT NULL DEFAULT 100,
+            notify_email TEXT NOT NULL,
+            last_triggered_at TEXT,
+            active INTEGER NOT NULL DEFAULT 1
+        )
+        """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS auto_recharge (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            account_id TEXT NOT NULL UNIQUE,
+            trigger_cents INTEGER NOT NULL DEFAULT 100,
+            recharge_cents INTEGER NOT NULL DEFAULT 1000,
+            stripe_payment_method_id TEXT,
+            active INTEGER NOT NULL DEFAULT 0,
+            last_triggered_at TEXT
+        )
+        """)
+
+        for table, col, defn in [
+            ("users",               "account_id",        "TEXT"),
+            ("users",               "email_verified_at", "TEXT"),
+            ("users",               "last_login_at",     "TEXT"),
+            ("users",               "login_count",       "INTEGER NOT NULL DEFAULT 0"),
+            ("api_keys",            "account_id",        "TEXT"),
+            ("api_keys",            "name",              "TEXT NOT NULL DEFAULT \'\'"),
+            ("api_keys",            "key_type",          "TEXT NOT NULL DEFAULT \'live\'"),
+            ("api_keys",            "last_used_at",      "TEXT"),
+            ("api_keys",            "expires_at",        "TEXT"),
+            ("api_keys",            "revoked_at",        "TEXT"),
+            ("api_keys",            "usage_count",       "INTEGER NOT NULL DEFAULT 0"),
+            ("api_usage",           "user_id",           "TEXT"),
+            ("api_usage",           "account_id",        "TEXT"),
+            ("api_usage",           "key_type",          "TEXT"),
+            ("credit_transactions", "account_id",        "TEXT"),
+            ("credit_transactions", "key_type",          "TEXT NOT NULL DEFAULT \'live\'"),
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
 
     conn.commit()
     conn.close()
