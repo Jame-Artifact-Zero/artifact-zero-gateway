@@ -287,7 +287,7 @@ loadKeys();
 async function loadKeys() {
   try {
     const r = await fetch('/api/v1/keys');
-    if (!r.ok) { $('keys-list').innerHTML = '<div class="key-empty">Sign in to manage API keys</div>'; return; }
+    if (!r.ok) { $('keys-list').innerHTML = '<div class="key-empty">Could not load API keys. Please refresh.</div>'; return; }
     const d = await r.json();
     if (!d.keys || !d.keys.length) {
       $('keys-list').innerHTML = '<div class="key-empty">No API keys yet. Click "Generate New Key" to get started.</div>';
@@ -295,15 +295,21 @@ async function loadKeys() {
     }
     $('keys-list').innerHTML = d.keys.map(k => {
       const inactive = !k.active ? ' key-inactive' : '';
-      const status = k.active ? `<span>${k.usage_this_month} used</span>` : '<span style="color:var(--red)">REVOKED</span>';
-      const btn = k.active ? `<button class="key-revoke" onclick="revokeKey('${k.key_prefix}')">Revoke</button>` : '';
+      const badge = k.key_type === 'test' ? '<span style="color:var(--amber);font-size:11px;margin-left:6px">TEST</span>' : '';
+      const lastUsed = k.last_used_at ? `Last used ${new Date(k.last_used_at).toLocaleDateString()}` : 'Never used';
+      const status = k.active
+        ? `<span>${k.usage_count || 0} total calls</span><span>${lastUsed}</span>`
+        : '<span style="color:var(--red)">REVOKED</span>';
+      const btn = k.active
+        ? `<button class="key-revoke" onclick="revokeKey('${k.id}')">Revoke</button>`
+        : '';
+      const label = k.name || 'Unnamed Key';
       return `<div class="key-card${inactive}">
-        <div><div class="key-prefix">${k.key_prefix}</div></div>
-        <div class="key-meta">
-          <span>${k.tier}</span>
-          ${status}
-          ${btn}
+        <div>
+          <div class="key-prefix">${k.key_preview}${badge}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${label} &mdash; ${k.tier}</div>
         </div>
+        <div class="key-meta">${status}${btn}</div>
       </div>`;
     }).join('');
   } catch(e) {
@@ -312,17 +318,19 @@ async function loadKeys() {
 }
 
 async function generateKey() {
+  const name = prompt('Key label (optional):', 'My Key') ?? 'My Key';
+  const keyType = confirm('Create as TEST key? (OK = test, Cancel = live)') ? 'test' : 'live';
   try {
     const r = await fetch('/api/v1/keys', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({})
+      body: JSON.stringify({name: name.trim() || 'My Key', key_type: keyType})
     });
     const d = await r.json();
     if (d.api_key) {
       $('key-new-value').textContent = d.api_key;
       $('key-new-box').style.display = 'block';
-      showToast('API key generated!', 'success');
+      showToast(`${keyType.toUpperCase()} key generated!`, 'success');
       loadKeys();
     } else {
       showToast(d.error || 'Failed to generate key', 'error');
@@ -337,16 +345,16 @@ function copyKey() {
   navigator.clipboard.writeText(val).then(() => showToast('Copied!', 'success'));
 }
 
-async function revokeKey(prefix) {
+async function revokeKey(keyId) {
   if (!confirm('Revoke this key? Any integrations using it will stop working.')) return;
   try {
     const r = await fetch('/api/v1/keys/revoke', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({key_prefix: prefix})
+      body: JSON.stringify({key_id: keyId})
     });
     const d = await r.json();
-    if (d.status === 'revoked') {
+    if (d.revoked) {
       showToast('Key revoked', 'success');
       loadKeys();
     } else {
