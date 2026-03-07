@@ -113,6 +113,44 @@ def _update_password(uid, new_pw):
     conn.commit()
     conn.close()
 
+def _update_last_login(uid):
+    conn = database.db_connect()
+    cur = conn.cursor()
+    if database.USE_PG:
+        cur.execute(
+            "UPDATE users SET last_login_at=NOW(), login_count=COALESCE(login_count,0)+1 WHERE id=%s",
+            (uid,)
+        )
+    else:
+        cur.execute(
+            "UPDATE users SET last_login_at=datetime('now'), login_count=COALESCE(login_count,0)+1 WHERE id=?",
+            (uid,)
+        )
+    conn.commit()
+    conn.close()
+
+
+def _record_login_history(user_id, ip, user_agent, success=True):
+    if not user_id:
+        return
+    import uuid as _uuid
+    hid = "lh_" + _uuid.uuid4().hex[:16]
+    conn = database.db_connect()
+    cur = conn.cursor()
+    if database.USE_PG:
+        cur.execute(
+            "INSERT INTO login_history (id, user_id, ip, user_agent, success) VALUES (%s, %s, %s, %s, %s)",
+            (hid, user_id, ip[:64] if ip else "", user_agent[:512] if user_agent else "", success)
+        )
+    else:
+        cur.execute(
+            "INSERT INTO login_history (id, created_at, user_id, ip, user_agent, success) VALUES (?, datetime('now'), ?, ?, ?, ?)",
+            (hid, user_id, ip[:64] if ip else "", user_agent[:512] if user_agent else "", 1 if success else 0)
+        )
+    conn.commit()
+    conn.close()
+
+
 def _update_stripe(uid, cust_id, sub_id, tier):
     conn = database.db_connect()
     cur = conn.cursor()
@@ -217,10 +255,18 @@ def login():
     email = (data.get("email") or "").strip()
     pw = data.get("password") or ""
     user = _user_by_email(email)
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+    ua = request.headers.get("User-Agent", "")[:512]
+
     if not user or not verify_password(pw, user["password_hash"]):
+        # Record failed attempt
+        _record_login_history(user["id"] if user else None, ip, ua, success=False)
         return render_template("login.html", error="Invalid email or password."), 401
+
     session["user_id"] = user["id"]
     session["role"] = user.get("role", "user")
+    _record_login_history(user["id"], ip, ua, success=True)
+    _update_last_login(user["id"])
     return redirect("/dashboard")
 
 @auth_bp.route("/logout")
