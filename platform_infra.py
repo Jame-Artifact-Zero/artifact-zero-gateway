@@ -28,9 +28,17 @@ def init_platform(app):
         "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
         "connect-src": "'self' https://api.stripe.com https://api.anthropic.com https://api.openai.com",
     }
+    # force_https_permanent=False ensures redirects use 302 not 301 (safer for webhooks).
+    # Stripe webhook must be exempt — Talisman's HTTP→HTTPS redirect strips the POST body
+    # and signature, causing 302 errors on checkout.session.completed delivery.
+    def _exempt_stripe_webhook():
+        return request.path == "/api/stripe/webhook"
+
     Talisman(app, force_https=os.getenv("ENVIRONMENT") == "production",
+        force_https_permanent=False,
         strict_transport_security=True, strict_transport_security_max_age=31536000,
-        content_security_policy=csp, session_cookie_secure=True, session_cookie_http_only=True)
+        content_security_policy=csp, session_cookie_secure=True, session_cookie_http_only=True,
+        force_https_exempt=_exempt_stripe_webhook)
 
     CORS(app, resources={r"/api/*": {"origins": os.getenv("CORS_ORIGINS", "*").split(",")}})
 
