@@ -171,7 +171,23 @@ def add_credits(user_id, amount_cents, description, stripe_session_id=None):
 
 
 def deduct_credit(user_id, cost_type, api_key_id=None):
-    """Deduct one score from balance. Returns (success, new_balance_cents) or (False, 0)."""
+    """Deduct one score from balance. Returns (success, new_balance_cents) or (False, 0).
+    Test keys (key_type='test') are never charged."""
+    # Test key = no charge
+    if api_key_id:
+        try:
+            conn0 = database.db_connect()
+            cur0 = conn0.cursor()
+            p0 = "%s" if database.USE_PG else "?"
+            cur0.execute(f"SELECT key_type FROM api_keys WHERE id={p0}", (api_key_id,))
+            kt_row = cur0.fetchone()
+            conn0.close()
+            if kt_row:
+                kt = kt_row[0] if database.USE_PG else kt_row["key_type"]
+                if kt == "test":
+                    return True, -1  # -1 = test mode, not charged
+        except Exception:
+            pass
     cost_cents = int(COST_PER_SCORE.get(cost_type, 0.01) * 100)
     conn = database.db_connect()
     cur = conn.cursor()
