@@ -162,7 +162,9 @@ function renderList(funds){
     const nii = c.nii_score || 0;
     const cls = scoreClass(nii);
     const issues = c.issue_count || 0;
-    const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString() : '';
+    const checkedDate = c.last_checked ? new Date(c.last_checked) : null;
+    const daysSince = checkedDate ? Math.floor((Date.now() - checkedDate) / 86400000) : 999;
+    const checked = checkedDate && daysSince <= 7 ? checkedDate.toLocaleDateString() : '';
     return `
       <a class="company-card" href="/scored/${c.slug}" data-nii="${nii}" data-issues="${issues}">
         <div class="card-rank">${c.rank || '—'}</div>
