@@ -1,0 +1,33 @@
+# AZ Line Ending Rules
+# Ensures consistent line endings across all machines and environments
+# Eliminates silent CRLF warnings on every commit
+
+# Default: normalize all text files to LF in repo, convert to CRLF on Windows checkout
+* text=auto eol=lf
+
+# Windows batch files must use CRLF — CMD requires it
+*.bat text eol=crlf
+
+# Explicitly text files
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+
+# Binary files — never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.zip binary
+*.pyc binary
