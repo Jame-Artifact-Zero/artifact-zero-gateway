@@ -1,517 +1,210 @@
 {% extends "base.html" %}
 {% block title %}Anderson County Political Pulse — NTI Structural Analysis{% endblock %}
-{% block body_class %}page-anderson{% endblock %}
 
 {% block head %}
 <style>
-/* TOPBAR */
-
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* HERO */
-.hero{text-align:center;padding:48px 24px 32px;max-width:720px;margin:0 auto}
-.hero .county-tag{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin-bottom:12px}
-.hero h1{font-family:var(--serif);font-size:clamp(28px,5vw,44px);font-weight:400;line-height:1.15;margin-bottom:12px;color:var(--text)}
-.hero h1 .accent{color:var(--green)}
-.hero .sub{font-size:14px;color:var(--dim);line-height:1.5;max-width:520px;margin:0 auto}
-.hero .race-info{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:16px;display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
-.hero .race-info span{display:flex;align-items:center;gap:6px}
-
-/* LENS TABS */
-.lens-bar{display:flex;gap:8px;justify-content:center;padding:0 20px;margin:8px auto 24px;flex-wrap:wrap}
-.lens-tab{font-family:var(--mono);font-size:11px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .2s;letter-spacing:.5px}
-.lens-tab:hover{border-color:var(--border-bright);color:var(--text)}
-.lens-tab.active{background:var(--green);color:#000;border-color:var(--green);font-weight:700}
-
-/* CANDIDATE GRID */
-.candidates{max-width:900px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
-
-/* CANDIDATE CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
-.card:hover{border-color:var(--border-bright)}
-.card-header{padding:20px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)}
-.card-name{font-family:var(--serif);font-size:22px;font-weight:400;color:var(--text)}
-.card-role{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
-.card-party{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:1px}
-.party-r{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,68,102,.15)}
-
-/* SCORE RING */
-.score-section{padding:20px;text-align:center}
-.score-ring{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 12px;position:relative}
-.score-ring::before{content:'';position:absolute;inset:0;border-radius:50%;border:3px solid var(--border)}
-.score-ring .score-num{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1}
-.score-ring .score-label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-top:2px}
-
-.ring-green .score-num{color:var(--green)}
-.ring-green::before{border-color:var(--green)}
-.ring-amber .score-num{color:var(--amber)}
-.ring-amber::before{border-color:var(--amber)}
-.ring-red .score-num{color:var(--red)}
-.ring-red::before{border-color:var(--red)}
-
-.score-meta{display:flex;gap:16px;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--dim)}
-.score-meta span{display:flex;align-items:center;gap:4px}
-
-/* STATEMENTS */
-.statements{padding:0 20px 20px}
-.stmt{padding:12px 0;border-bottom:1px solid var(--border)}
-.stmt:last-child{border-bottom:none}
-.stmt-score{font-family:var(--mono);font-size:12px;font-weight:700;display:inline-block;min-width:32px;margin-right:8px}
-.stmt-text{font-size:13px;color:var(--dim);line-height:1.5;display:inline}
-.stmt-tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
-.stmt-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;letter-spacing:.5px}
-.tag-tilt{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(251,191,36,.15)}
-.tag-clean{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,232,156,.15)}
-
-/* COMPARE BAR */
-.compare-bar{max-width:900px;margin:32px auto;padding:0 20px}
-.compare-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
-.compare-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
-.compare-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.compare-row:last-child{margin-bottom:0}
-.compare-label{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:80px}
-.compare-bars{flex:1;display:flex;gap:8px;align-items:center}
-.compare-fill{height:8px;border-radius:4px;transition:width .4s ease}
-.compare-val{font-family:var(--mono);font-size:11px;font-weight:700;min-width:28px;text-align:right}
-
-/* DISCLAIMER */
-.disclaimer{max-width:720px;margin:32px auto;padding:0 20px;text-align:center}
-.disclaimer p{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6}
-
-/* METHODOLOGY */
-.methodology{max-width:900px;margin:32px auto;padding:0 20px}
-.method-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
-.method-title{font-family:var(--mono);font-size:12px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:16px}
-.method-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px}
-.method-item{padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
-.method-item-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:4px}
-.method-item-desc{font-size:12px;color:var(--dim);line-height:1.4}
-.method-item-weight{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px}
-.glossary{max-width:900px;margin:24px auto;padding:0 20px}
-.glossary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
-.glossary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px}
-.glossary-item{display:flex;gap:10px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
-.glossary-term{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);min-width:60px;flex-shrink:0}
-.glossary-def{font-size:12px;color:var(--dim);line-height:1.4}
-
-/* FOOTER */
-
-@media(max-width:480px){
-  .candidates{grid-template-columns:1fr}
-  .hero h1{font-size:26px}
-  .score-ring{width:80px;height:80px}
-  .score-ring .score-num{font-size:26px}
+:root {
+  --dim: #9ca3af;
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.10);
 }
+.pp-wrap { max-width:1100px; margin:0 auto; padding:var(--az-6) var(--az-4) 80px; }
+.pp-header { border-bottom:1px solid var(--border); padding-bottom:var(--az-5); margin-bottom:var(--az-6); }
+.pp-eyebrow { font-family:var(--az-mono); font-size:10px; letter-spacing:2px; color:var(--accent); text-transform:uppercase; margin-bottom:var(--az-2); }
+.pp-title { font-family:var(--az-mono); font-size:22px; font-weight:700; color:var(--az-text); margin:0 0 var(--az-2); }
+.pp-subtitle { font-family:var(--az-sans); font-size:13px; color:var(--dim); }
+.pp-meta { display:flex; gap:var(--az-4); margin-top:var(--az-4); flex-wrap:wrap; }
+.pp-meta-item { font-family:var(--az-mono); font-size:11px; color:var(--az-muted); }
+.pp-meta-item span { color:var(--az-text); }
+.pp-race-links { display:flex; gap:var(--az-3); margin-bottom:var(--az-6); flex-wrap:wrap; }
+.pp-race-link { font-family:var(--az-mono); font-size:11px; letter-spacing:1px; padding:6px 14px; border-radius:4px; border:1px solid var(--border); color:var(--dim); text-decoration:none; transition:border-color 0.15s,color 0.15s; }
+.pp-race-link:hover { border-color:var(--accent); color:var(--az-text); }
+.pp-race-link.active { border-color:var(--accent); color:var(--accent); }
+.pp-loading { text-align:center; padding:80px 0; font-family:var(--az-mono); font-size:13px; color:var(--az-muted); }
+.pp-loading::after { content:''; display:inline-block; width:6px; height:6px; background:var(--accent); border-radius:50%; margin-left:8px; animation:blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.pp-lens-bar { display:flex; gap:var(--az-2); margin-bottom:var(--az-5); overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.pp-lens-bar::-webkit-scrollbar { display:none; }
+.pp-lens-btn { font-family:var(--az-mono); font-size:11px; letter-spacing:1px; padding:6px 14px; border-radius:4px; border:1px solid var(--border); background:var(--surface); color:var(--az-muted); cursor:pointer; white-space:nowrap; transition:all 0.15s; flex-shrink:0; }
+.pp-lens-btn:hover { border-color:var(--az-border); color:var(--az-text); }
+.pp-lens-btn.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:700; }
+.pp-candidates { display:grid; grid-template-columns:repeat(auto-fill,minmax(480px,1fr)); gap:var(--az-5); }
+@media(max-width:600px){ .pp-candidates { grid-template-columns:1fr; } }
+.pp-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.pp-card-header { padding:var(--az-5); border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:var(--az-4); }
+.pp-avatar { width:44px; height:44px; border-radius:50%; background:var(--surface2); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:var(--az-mono); font-size:14px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.pp-card-name { font-family:var(--az-mono); font-size:15px; font-weight:700; color:var(--az-text); margin-bottom:3px; }
+.pp-card-role { font-family:var(--az-sans); font-size:12px; color:var(--dim); margin-bottom:var(--az-2); }
+.pp-card-badges { display:flex; gap:var(--az-2); flex-wrap:wrap; align-items:center; }
+.pp-badge { font-family:var(--az-mono); font-size:10px; padding:2px 8px; border-radius:3px; border:1px solid; }
+.pp-badge-r { color:#f87171; background:rgba(248,113,113,0.10); border-color:rgba(248,113,113,0.25); }
+.pp-badge-d { color:var(--blue); background:var(--blue-dim); border-color:rgba(59,130,246,0.25); }
+.pp-raised { font-family:var(--az-mono); font-size:10px; color:var(--az-muted); }
+.pp-score-band { padding:var(--az-4) var(--az-5); border-bottom:1px solid var(--border); }
+.pp-score-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--az-2); }
+.pp-score-label { font-family:var(--az-mono); font-size:11px; color:var(--az-muted); letter-spacing:1px; }
+.pp-score-value { font-family:var(--az-mono); font-size:20px; font-weight:700; }
+.pp-score-bar-track { height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+.pp-score-bar-fill { height:100%; border-radius:2px; transition:width 0.6s ease; }
+.pp-statements { padding:var(--az-4) var(--az-5); }
+.pp-stmt-header { font-family:var(--az-mono); font-size:10px; letter-spacing:1.5px; color:var(--az-muted); text-transform:uppercase; margin-bottom:var(--az-3); }
+.pp-stmt { font-family:var(--az-sans); font-size:13px; line-height:1.6; color:var(--dim); padding:var(--az-3) 0; border-bottom:1px solid var(--border); }
+.pp-stmt:last-child { border-bottom:none; }
+.pp-stmt-source { font-family:var(--az-mono); font-size:10px; color:var(--az-muted); margin-top:4px; }
+.pp-disclaimer { margin-top:var(--az-7); padding:var(--az-5); background:var(--surface); border:1px solid var(--border); border-radius:8px; font-family:var(--az-sans); font-size:12px; color:var(--az-muted); line-height:1.6; }
+.pp-disclaimer strong { font-family:var(--az-mono); font-size:10px; letter-spacing:1px; color:var(--dim); }
+.pp-error { padding:var(--az-6); text-align:center; font-family:var(--az-mono); font-size:13px; color:var(--az-red); }
 </style>
 {% endblock %}
 
 {% block content %}
-
-</div>
-
-<div class="hero">
-  <div class="county-tag">Anderson County, Tennessee</div>
-  <h1>Political <span class="accent">Pulse</span></h1>
-  <div class="sub">Structural analysis of candidate language. Same words, measured differently. We don't say correct. We say different. You decide.</div>
-  <div class="race-info">
-    <span>📅 May 5, 2026 — GOP Primary</span>
-    <span>🏛️ County Mayor</span>
-    <span>👥 2 Candidates</span>
-  </div>
-</div>
-
-<div class="lens-bar">
-  <div class="lens-tab active" onclick="switchLens('composite')">COMPOSITE</div>
-  <div class="lens-tab" onclick="switchLens('clarity')">CLARITY</div>
-  <div class="lens-tab" onclick="switchLens('accountability')">ACCOUNTABILITY</div>
-  <div class="lens-tab" onclick="switchLens('substance')">SUBSTANCE</div>
-  <div class="lens-tab" onclick="switchLens('authenticity')">AUTHENTICITY</div>
-</div>
-
-<div class="candidates" id="candidateGrid"></div>
-<div class="compare-bar" id="compareBar"></div>
-
-<div class="methodology">
-  <div class="method-card">
-    <div class="method-title">◆ HOW THE HUMAN CLARITY SCORE (HCS) WORKS</div>
-    <p style="font-size:13px;color:var(--dim);line-height:1.6">Every public statement is scored 0–100 by analyzing six structural dimensions. No AI opinion. No sentiment analysis. Pure structural measurement of what was said and how it was said.</p>
-    <div class="method-grid">
-      <div class="method-item">
-        <div class="method-item-name" style="color:var(--red)">VAGUENESS</div>
-        <div class="method-item-desc">Platitude words (values, opportunity, incredible, families, freedom). More fluff = lower score.</div>
-        <div class="method-item-weight">Penalty: -3 per word</div>
-      </div>
-      <div class="method-item">
-        <div class="method-item-name" style="color:var(--green)">SPECIFICITY</div>
-        <div class="method-item-desc">Concrete policy words (budget, tax, build, invest, plan, vote). Substance raises your score.</div>
-        <div class="method-item-weight">Bonus: +4 per word</div>
-      </div>
-      <div class="method-item">
-        <div class="method-item-name" style="color:var(--amber)">PROMISE BALANCE</div>
-        <div class="method-item-desc">Unbounded promises ("I will never") get penalized. Hedged aspirations ("I want to") get rewarded.</div>
-        <div class="method-item-weight">-4 unbounded / +3 hedged</div>
-      </div>
-      <div class="method-item">
-        <div class="method-item-name" style="color:var(--purple)">EMOTIONAL CHARGE</div>
-        <div class="method-item-desc">Density of emotionally loaded language. Lower charge = clearer structural integrity.</div>
-        <div class="method-item-weight">Penalty: -0.2 per %</div>
-      </div>
-      <div class="method-item">
-        <div class="method-item-name" style="color:var(--amber)">TILT PATTERNS</div>
-        <div class="method-item-desc">Structural manipulation: certainty inflation, absolute language, manufactured consensus, pressure tactics.</div>
-        <div class="method-item-weight">Penalty: -7 per tag</div>
-      </div>
-      <div class="method-item">
-        <div class="method-item-name" style="color:var(--blue)">DATA DENSITY</div>
-        <div class="method-item-desc">Numbers, names, dates, percentages, dollar amounts. Facts in the text = credibility bonus.</div>
-        <div class="method-item-weight">Bonus: +3 per fact</div>
-      </div>
+<div class="pp-wrap">
+  <div class="pp-header">
+    <div class="pp-eyebrow">NTI POLITICAL PULSE</div>
+    <h1 class="pp-title">Anderson County Mayor 2026</h1>
+    <div class="pp-subtitle">Republican Primary · May 5, 2026 · Anderson County, Tennessee</div>
+    <div class="pp-meta">
+      <div class="pp-meta-item">ENGINE <span>NTI v3</span></div>
+      <div class="pp-meta-item">METHOD <span>HCS 10-Dimension</span></div>
+      <div class="pp-meta-item">SOURCE <span>Public Record Only</span></div>
+      <div class="pp-meta-item">BIAS <span>None — Structural Only</span></div>
     </div>
   </div>
-</div>
 
-<div class="glossary">
-  <div class="glossary-card">
-    <div class="method-title">◆ DEFINITIONS & ABBREVIATIONS</div>
-    <div class="glossary-grid">
-      <div class="glossary-item">
-        <div class="glossary-term">HCS</div>
-        <div class="glossary-def">Human Clarity Score. Composite 0–100 rating of structural integrity across all six dimensions.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">NTI</div>
-        <div class="glossary-def">No-Tilt Interface. The rule-based engine that measures communication structure without AI opinion.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">TILT</div>
-        <div class="glossary-def">A structural pattern that distorts clarity — absolute claims, manufactured urgency, certainty inflation, or emotional pressure.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">COMPOSITE</div>
-        <div class="glossary-def">Balanced view across all scoring dimensions. The default lens — weights every factor equally.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">CLARITY</div>
-        <div class="glossary-def">How clear and readable is the statement? Penalizes complexity. Rewards plain language.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">ACCOUNT&shy;ABILITY</div>
-        <div class="glossary-def">Does the candidate make verifiable commitments? Penalizes unbounded promises and vague pledges.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">SUBSTANCE</div>
-        <div class="glossary-def">How much real content is in the statement? Rewards specifics, data, and policy. Penalizes filler.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">AUTHEN&shy;TICITY</div>
-        <div class="glossary-def">Does it sound like a person or a press release? Penalizes emotional manipulation and manufactured language.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">R</div>
-        <div class="glossary-def">Republican. Party affiliation shown on candidate cards.</div>
-      </div>
-      <div class="glossary-item">
-        <div class="glossary-term">BEST / WORST</div>
-        <div class="glossary-def">Highest and lowest individual statement scores for that candidate under the active lens.</div>
-      </div>
-    </div>
+  <div class="pp-race-links">
+    <a href="/live/knoxville" class="pp-race-link">KNOX CO MAYOR</a>
+    <a href="/live/anderson-county" class="pp-race-link active">ANDERSON CO MAYOR</a>
+    <a href="/live/birkbeck" class="pp-race-link">BIRKBECK — SCHOOL BOARD D2</a>
+    <a href="/live" class="pp-race-link">ALL FEEDS</a>
   </div>
-</div>
 
-<div class="disclaimer">
-  <p>NTI analyzes structural patterns in public statements — not political positions, ideology, or character. All statements sourced from public records, campaign materials, and news coverage. Nonpartisan. Rule-based. Zero AI opinion.</p>
+  <div class="pp-lens-bar" id="lens-bar">
+    <button class="pp-lens-btn active" data-lens="all">ALL STATEMENTS</button>
+    <button class="pp-lens-btn" data-lens="commitment">COMMITMENT</button>
+    <button class="pp-lens-btn" data-lens="specificity">SPECIFICITY</button>
+    <button class="pp-lens-btn" data-lens="accountability">ACCOUNTABILITY</button>
+    <button class="pp-lens-btn" data-lens="hedge">HEDGE DENSITY</button>
+  </div>
+
+  <div class="pp-loading" id="loading">Loading race data</div>
+  <div class="pp-candidates" id="candidates" style="display:none"></div>
+  <div class="pp-error" id="error" style="display:none"></div>
+
+  <div class="pp-disclaimer">
+    <strong>METHODOLOGY NOTE</strong><br>
+    NTI analyzes structural patterns in public statements — not political positions, ideology, or character. Scores reflect communication clarity, commitment specificity, and accountability language. All statements sourced from public records, campaign materials, and news coverage. Nonpartisan. Rule-based. Zero AI opinion.
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ══════════════════════════════════════
-// CANDIDATE DATA
-// ══════════════════════════════════════
-const CANDIDATES = [
-  {
-    name: "Terry Frank",
-    party: "R",
-    role: "Incumbent · County Mayor since 2012",
-    statements: [
-      "I can say without a doubt that I believe my job is serving people and I am enormously thankful for the opportunity I have had to work for the people of Anderson County.",
-      "But we can't stop our work recruiting business and industry that can help our citizens increase their wages and household income.",
-      "As we try to balance moderate growth with preservation of our vital rural farm areas.",
-      "The county opioid abatement committee awarded almost $430,000 to nonprofits and organizations in the county.",
-      "From sheriff's vehicles and pavement to ambulances, highway equipment, investments in water improvements, to additional funding for fire department equipment.",
-      "People in this county may not like my politics, my dress, my method of tackling problems, my governance, but there is one accusation that will never stick, and that is that I would abuse your tax dollars for my own personal enrichment.",
-      "I believe in the people of this county, and together, we can continue our work making Anderson County the best it can be.",
-      "The goal is to improve transparency and community involvement as the shelter expands services in 2026.",
-      "Anderson County partnered with both Highland Communications and Comcast on prior grants, but there remain many citizens in our county who want service.",
-    ]
+const HCS = {
+  score(statements) {
+    if (!statements || !statements.length) return { total: 0, dims: {} };
+    let totals = { d1:0,d2:0,d3:0,d4:0,d5:0,d6:0,d7:0,d8:0,d9:0,d10:0 };
+    statements.forEach(s => {
+      const t = s.text || '';
+      totals.d1 += this._specificity(t); totals.d2 += this._commitment(t);
+      totals.d3 += this._clarity(t); totals.d4 += this._hedgeDensity(t);
+      totals.d5 += this._tiltExposure(t); totals.d6 += this._emptyCommitments(t);
+      totals.d7 += this._objectiveAnchor(t); totals.d8 += this._accountability(t);
+      totals.d9 += this._redundancy(t); totals.d10 += this._differentiation(t);
+    });
+    const n = statements.length;
+    const dims = {};
+    Object.keys(totals).forEach(k => dims[k] = Math.min(100, totals[k]/n));
+    const weights = [0.15,0.12,0.10,0.10,0.12,0.12,0.08,0.08,0.08,0.05];
+    const dimArr = Object.values(dims);
+    const total = Math.round(dimArr.reduce((a,v,i) => a + v * weights[i], 0));
+    return { total, dims };
   },
-  {
-    name: "Joshua Anderson",
-    party: "R",
-    role: "Challenger · District 3 Commissioner",
-    statements: [
-      "After two terms serving as your county commissioner, I would be honored to serve as your county mayor.",
-      "I am committed to listening to our communities as we make planning and zoning decisions regarding the future development of our county.",
-      "I'm committed to making positive changes to our animal shelter and animal welfare situation in our county.",
-      "If elected, I pledge to serve no more than two terms.",
-      "I'm concerned Andersonville will end up like Emory Road or Kingston Pike if we don't plan well.",
-      "The expansion of the nuclear industry in Oak Ridge is huge, and will require a huge workforce.",
-      "We have a unique opportunity to train and educate our students to be part of that workforce, so our kids can afford to stay here when they graduate high school or college.",
-      "Supporting our already strong career and technical education in our school system will ensure our kids' resumes are at the top of the stack.",
-      "I'm not an expert on animal shelters or animal control by any means, but I'm committed to finding solutions and I'm willing to assemble a team of volunteers and experts who can improve the animal shelter situation.",
-    ]
-  }
-];
-
-// ══════════════════════════════════════
-// HCS v3 — Credit Score Model (same as Knox County)
-// ══════════════════════════════════════
-function countSyllables(word) {
-  word = word.toLowerCase().replace(/[^a-z]/g,'');
-  if(word.length<=2) return 1;
-  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'');
-  word = word.replace(/^y/,'');
-  const m = word.match(/[aeiouy]{1,2}/g);
-  return m ? m.length : 1;
-}
-
-const EMO_HIGH = ['slammed','devastating','outrage','fury','shocking','horrifying','terrifying','explosive','catastrophic','nightmare','brutal','crushed','destroyed','chaos','panic','crisis','tragic','heartbreaking','alarming','dire','desperate','rage','furious','bombshell','firestorm'];
-const EMO_MOD = ['concerns','tensions','controversial','criticized','warned','demanded','clashed','accused','rejected','condemned','fears','threatened','escalated','sparked','triggered','struggling','embattled','contentious','divisive','heated','pressured','proud','incredibly','enormously','thankful','humbled','honored','blessed','excited','thrilled','amazing','wonderful'];
-const HEDGE = ['maybe','might','could','perhaps','generally','often','usually','likely','approximately','around','sort of','kind of','basically'];
-const TILT_MARKERS = {
-  T1:['don\'t worry','it\'s fine','it\'s okay','you got this','rest assured'],
-  T2:['guarantee','guarantees','guaranteed','perfect','zero risk','eliminates all risk','always','never fail','100%'],
-  T3:['most people','many people','everyone','no one','in general','typically'],
-  T5:['always','never','everyone','no one','completely','entirely','100%','guaranteed','perfect'],
-  T6:['later','eventually','phase 2','we\'ll figure it out','future iteration'],
-  T7:['kind of','sort of','basically','overall','at the end of the day'],
-  T10:['experts agree','industry standard','research shows','studies show','best practice','widely accepted']
+  _specificity(t){ let s=60; if(/\d+%|\$[\d,]+|\d+ (year|month|day|week)/i.test(t))s+=20; if(/by \d{4}|in \d+ (months|years)|Q[1-4]/i.test(t))s+=15; return s; },
+  _commitment(t){ let s=50; const h=(t.match(/\b(will try|hope to|plan to|aim to|maybe|perhaps|possibly|might|could)\b/gi)||[]).length; const c=(t.match(/\b(will|shall|commit|promise|pledge|ensure|deliver)\b/gi)||[]).length; s+=c*12-h*10; return Math.max(10,Math.min(100,s)); },
+  _clarity(t){ const w=t.split(/\s+/).length; const se=(t.match(/[.!?]+/g)||[]).length||1; let s=100-Math.max(0,(w/se)-20)*2; const f=(t.match(/\b(basically|literally|actually|you know|sort of|kind of)\b/gi)||[]).length; s-=f*8; return Math.max(20,Math.min(100,s)); },
+  _hedgeDensity(t){ const h=(t.match(/\b(maybe|perhaps|possibly|might|could|I think|I believe|potentially|probably|likely)\b/gi)||[]).length; return Math.max(10,100-h*15); },
+  _tiltExposure(t){ const ti=(t.match(/\b(always|never|everyone|nobody|all|none|absolutely|certainly|definitely|obviously)\b/gi)||[]).length; return Math.max(20,100-ti*12); },
+  _emptyCommitments(t){ const e=(t.match(/\b(work with|work toward|explore|consider|look into|examine|study|review|evaluate)\b/gi)||[]).length; const b=(t.match(/\d+|\$[\d,]+|by \d{4}|specific|measur/i)||[]).length; return Math.max(20,80-e*10+b*15); },
+  _objectiveAnchor(t){ let s=50; if(/\bwho\b/i.test(t))s+=15; if(/\bwhat\b/i.test(t))s+=15; if(/\bwhen\b|\bby \d{4}\b/i.test(t))s+=20; return Math.min(100,s); },
+  _accountability(t){ const a=(t.match(/\b(measure|report|track|accountable|responsible|deadline|by \d{4}|quarterly|annually)\b/gi)||[]).length; return Math.min(100,50+a*15); },
+  _redundancy(t){ const words=t.toLowerCase().split(/\s+/); return Math.round(new Set(words).size/words.length*100); },
+  _differentiation(t){ const g=(t.match(/\b(great|best|better|improve|grow|strong|good|excellence|prosperity)\b/gi)||[]).length; const sp=(t.match(/[A-Z][a-z]+ (County|Road|School|Department|Fund)|[\$\d]+/g)||[]).length; return Math.max(20,70-g*5+sp*10); }
 };
-const SPECIFIC = ['$','%','percent',/\d{4}/,/\d+,\d{3}/,'january','february','march','april','may','june','july','august','september','october','november','december'];
-const PROMISE = ['will','pledge','commit','committed','promise','vow','guarantee','plan to','going to','I will','we will'];
-const VAGUE = ['things','stuff','issues','challenges','opportunities','synergy','leverage','stakeholders','moving forward','going forward','at the end of the day','make a difference'];
 
-function computeHCS(text) {
-  const t = text.toLowerCase();
-  const words = text.split(/\s+/).filter(w=>w.length>0);
-  const wc = words.length;
-  const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>0);
-  const sc = Math.max(sentences.length,1);
-  const syllables = words.reduce((s,w)=>s+countSyllables(w),0);
-  const grade = Math.max(0,Math.min(18, 0.39*(wc/sc)+11.8*(syllables/wc)-15.59));
+function scoreColor(v){ if(v>=90)return'#00e89c'; if(v>=80)return'#22c55e'; if(v>=70)return'#8bc34a'; if(v>=60)return'#ffc107'; if(v>=50)return'#ff9800'; return'#f44336'; }
 
-  let emo = 0;
-  EMO_HIGH.forEach(w=>{if(t.includes(w))emo+=12});
-  EMO_MOD.forEach(w=>{if(t.includes(w))emo+=5});
-  emo = Math.min(100,emo);
+let ALL_CANDIDATES = [], activeLens = 'all';
 
-  let hedges = 0; HEDGE.forEach(h=>{if(t.includes(h))hedges++});
-  let tilts = []; let tiltCount = 0;
-  Object.entries(TILT_MARKERS).forEach(([cat,markers])=>{
-    for(const m of markers){if(t.includes(m)){tilts.push(cat);tiltCount++;break}}
-  });
-
-  let specific = 0;
-  SPECIFIC.forEach(s=>{
-    if(s instanceof RegExp){if(s.test(t))specific++}
-    else if(t.includes(s))specific++
-  });
-
-  let promises = 0; PROMISE.forEach(p=>{if(t.includes(p))promises++});
-  let vague = 0; VAGUE.forEach(v=>{if(t.includes(v))vague++});
-  let facts = specific;
-
-  // Credit score: start at 85, deductions and bonuses
-  let score = 85;
-  if(grade>12) score -= (grade-12)*3;
-  if(grade>8 && grade<=12) score -= (grade-8)*1;
-  if(grade<=6) score += 4;
-  score -= emo * 0.2;
-  score -= tiltCount * 8;
-  score -= vague * 4;
-  score -= Math.max(0, promises - 1) * 3;
-  score += Math.min(15, specific * 5);
-  score += Math.min(8, facts * 3);
-  if(hedges>0 && hedges<=2) score += 3;
-  if(hedges>2) score -= (hedges-2)*2;
-  if(wc<10) score -= 5;
-  if(wc>50) score -= 3;
-
-  score = Math.max(10, Math.min(97, Math.round(score)));
-
-  return {
-    score, grade: Math.round(grade*10)/10, emo, hedges, tiltCount, tilts, specific,
-    promises, vague, facts, wc,
-    raw:{readability:grade, emotional:emo, hedges, tiltCount, promises, vague, specific, facts, wordCount:wc}
-  };
-}
-
-function computeCandidateHCS(candidate) {
-  const results = candidate.statements.map(s => computeHCS(s));
-  const scores = results.map(r => r.score);
-  const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-  const best = Math.max(...scores);
-  const worst = Math.min(...scores);
-  const totalTilt = results.reduce((s,r)=>s+r.tiltCount,0);
-  const avgEmo = Math.round(results.reduce((s,r)=>s+r.emo,0)/results.length);
-  const totalSpecific = results.reduce((s,r)=>s+r.specific,0);
-  const avgVague = Math.round(results.reduce((s,r)=>s+r.vague,0)/results.length*10)/10;
-  return { avg, scores, results, totalTilt, avgEmo, totalSpecific, avgVague, best, worst };
-}
-
-// ══════════════════════════════════════
-// SCORING LENSES
-// ══════════════════════════════════════
-let activeLens = 'composite';
-
-function scoreLens(raw, lens) {
-  let s;
-  switch(lens) {
-    case 'clarity':
-      s = 85;
-      if(raw.readability>10) s -= (raw.readability-10)*4;
-      if(raw.readability<=6) s += 5;
-      s -= raw.emotional*0.15;
-      if(raw.wordCount<=15) s += 5;
-      if(raw.wordCount>30) s -= 3;
-      break;
-    case 'accountability':
-      s = 85;
-      s -= raw.tiltCount*10;
-      s -= Math.max(0,raw.promises-raw.hedges)*6;
-      s += Math.min(10,raw.hedges*4);
-      s -= raw.vague*2;
-      break;
-    case 'substance':
-      s = 60;
-      s += Math.min(25,raw.specific*6);
-      s += Math.min(15,raw.facts*4);
-      s -= Math.min(30,raw.vague*4);
-      s -= raw.emotional*0.1;
-      break;
-    case 'authenticity':
-      s = 85;
-      s -= raw.emotional*0.25;
-      s -= raw.tiltCount*8;
-      s -= Math.min(20,raw.vague*3);
-      s += Math.min(10,raw.hedges*3);
-      s += Math.min(8,raw.facts*2);
-      if(raw.wordCount<=20) s += 3;
-      break;
-    default: return null;
-  }
-  return Math.max(10,Math.min(97,Math.round(s)));
-}
-
-function computeCandidateScore(candidate) {
-  if(activeLens==='composite') return computeCandidateHCS(candidate);
-  const base = computeCandidateHCS(candidate);
-  const lensScores = base.results.map(r => scoreLens(r.raw, activeLens));
-  const avg = Math.round(lensScores.reduce((a,b)=>a+b,0)/lensScores.length);
-  return { ...base, avg, scores: lensScores, best: Math.max(...lensScores), worst: Math.min(...lensScores) };
-}
-
-function switchLens(lens) {
-  activeLens = lens;
-  document.querySelectorAll('.lens-tab').forEach(t=>t.classList.remove('active'));
-  const names = ['composite','clarity','accountability','substance','authenticity'];
-  const tabs = document.querySelectorAll('.lens-tab');
-  const idx = names.indexOf(lens);
-  if(idx>=0 && tabs[idx]) tabs[idx].classList.add('active');
-  renderDashboard();
-}
-
-// ══════════════════════════════════════
-// RENDERING
-// ══════════════════════════════════════
-function getScoreColor(s){return s>=75?'green':s>=55?'amber':'red'}
-function getRingClass(s){return s>=75?'ring-green':s>=55?'ring-amber':'ring-red'}
-function escHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
-
-function renderCard(candidate) {
-  const hcs = computeCandidateScore(candidate);
-  const color = getScoreColor(hcs.avg);
-  const ring = getRingClass(hcs.avg);
-
-  let stmtsHtml = '';
-  candidate.statements.forEach((s, i) => {
-    const r = hcs.results[i];
-    const sc = hcs.scores[i];
-    const scColor = getScoreColor(sc);
-    const tags = r.tilts.length > 0
-      ? r.tilts.map(t=>`<span class="stmt-tag tag-tilt">${t}</span>`).join('')
-      : '<span class="stmt-tag tag-clean">Clean</span>';
-    stmtsHtml += `
-      <div class="stmt">
-        <span class="stmt-score" style="color:var(--${scColor})">${sc}</span>
-        <span class="stmt-text">${escHtml(s.length>120?s.substring(0,117)+'...':s)}</span>
-        <div class="stmt-tags">${tags}</div>
+function renderCandidates() {
+  const container = document.getElementById('candidates');
+  container.innerHTML = '';
+  ALL_CANDIDATES.forEach(cand => {
+    const stmts = cand.statements || [];
+    const hcs = HCS.score(stmts);
+    const color = scoreColor(hcs.total);
+    const party = (cand.party||'').toLowerCase();
+    const badgeClass = party==='republican'?'pp-badge-r':party==='democrat'?'pp-badge-d':'pp-badge-i';
+    const badgeLabel = party==='republican'?'R':party==='democrat'?'D':'I';
+    let displayStmts = stmts;
+    if(activeLens==='commitment') displayStmts=stmts.filter(s=>/\b(will|commit|pledge|promise|ensure|deliver)\b/i.test(s.text));
+    if(activeLens==='specificity') displayStmts=stmts.filter(s=>/\d+%|\$[\d,]+|\d+ (year|month|week)|by \d{4}/i.test(s.text));
+    if(activeLens==='accountability') displayStmts=stmts.filter(s=>/\b(measure|report|track|accountable|deadline)\b/i.test(s.text));
+    if(activeLens==='hedge') displayStmts=stmts.filter(s=>/\b(maybe|perhaps|possibly|might|could|I think|I believe|potentially|probably)\b/i.test(s.text));
+    const stmtRows = displayStmts.map(s=>`<div class="pp-stmt">${s.text}${s.source_url?`<div class="pp-stmt-source"><a href="${s.source_url}" target="_blank" style="color:var(--az-muted);text-decoration:none">${s.source_url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]}</a></div>`:''}</div>`).join('');
+    const card = document.createElement('div');
+    card.className = 'pp-card';
+    card.innerHTML = `
+      <div class="pp-card-header">
+        <div class="pp-avatar">${cand.initials||cand.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+        <div style="flex:1">
+          <div class="pp-card-name">${cand.name}</div>
+          <div class="pp-card-role">${cand.role||''}</div>
+          <div class="pp-card-badges">
+            <span class="pp-badge ${badgeClass}">${badgeLabel}</span>
+            ${cand.raised?`<span class="pp-raised">${cand.raised}</span>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="pp-score-band">
+        <div class="pp-score-row">
+          <span class="pp-score-label">HCS SCORE</span>
+          <span class="pp-score-value" style="color:${color}">${hcs.total}</span>
+        </div>
+        <div class="pp-score-bar-track"><div class="pp-score-bar-fill" style="width:${hcs.total}%;background:${color}"></div></div>
+      </div>
+      <div class="pp-statements">
+        <div class="pp-stmt-header">${displayStmts.length} STATEMENT${displayStmts.length!==1?'S':''}${activeLens!=='all'?' — '+activeLens.toUpperCase()+' LENS':''}</div>
+        ${stmtRows||'<div class="pp-stmt" style="color:var(--az-muted);font-style:italic">No statements match this lens.</div>'}
       </div>`;
+    container.appendChild(card);
   });
-
-  return `
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-name">${candidate.name}</div>
-          <div class="card-role">${candidate.role}</div>
-        </div>
-        <span class="card-party party-${candidate.party.toLowerCase()}">${candidate.party}</span>
-      </div>
-      <div class="score-section">
-        <div class="score-ring ${ring}">
-          <div class="score-num">${hcs.avg}</div>
-          <div class="score-label">${activeLens.toUpperCase()}</div>
-        </div>
-        <div class="score-meta">
-          <span>Best: <strong style="color:var(--green)">${hcs.best}</strong></span>
-          <span>Worst: <strong style="color:var(--red)">${hcs.worst}</strong></span>
-          <span>Tilt: <strong style="color:var(--amber)">${hcs.totalTilt}</strong></span>
-        </div>
-      </div>
-      <div class="statements">${stmtsHtml}</div>
-    </div>`;
 }
 
-function renderCompare() {
-  const scores = CANDIDATES.map(c => ({ name: c.name, hcs: computeCandidateScore(c) }));
-  const maxAvg = Math.max(...scores.map(s=>s.hcs.avg));
-
-  const metrics = [
-    { label: activeLens.toUpperCase(), key: 'avg' },
-    { label: 'BEST', key: 'best' },
-    { label: 'WORST', key: 'worst' },
-    { label: 'TILT', key: 'totalTilt', invert: true },
-  ];
-
-  let rows = metrics.map(m => {
-    const bars = scores.map(s => {
-      const val = s.hcs[m.key];
-      const maxVal = m.invert ? Math.max(...scores.map(x=>x.hcs[m.key]||1)) : 97;
-      const pct = m.invert ? (val/(maxVal||1))*100 : (val/97)*100;
-      const color = m.invert ? (val<=2?'var(--green)':val<=5?'var(--amber)':'var(--red)') : `var(--${getScoreColor(val)})`;
-      return `<div class="compare-fill" style="width:${Math.max(8,pct)}%;background:${color}"></div><span class="compare-val" style="color:${color}">${val}</span>`;
-    }).join('');
-    return `<div class="compare-row"><div class="compare-label">${m.label}</div><div class="compare-bars">${bars}</div></div>`;
-  }).join('');
-
-  const legend = scores.map((s,i) => `<span style="font-family:var(--mono);font-size:11px;color:var(--dim)">${s.name}</span>`).join(' vs ');
-
-  document.getElementById('compareBar').innerHTML = `
-    <div class="compare-card">
-      <div class="compare-title">HEAD TO HEAD — ${legend}</div>
-      ${rows}
-    </div>`;
+async function loadRace() {
+  try {
+    const res = await fetch('/api/candidate/anderson-county-mayor');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    ALL_CANDIDATES = data.candidates || [];
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('candidates').style.display = 'grid';
+    renderCandidates();
+  } catch(err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Failed to load race data. ' + err.message;
+  }
 }
 
-function renderDashboard() {
-  const sorted = [...CANDIDATES].sort((a,b) => computeCandidateScore(b).avg - computeCandidateScore(a).avg);
-  document.getElementById('candidateGrid').innerHTML = sorted.map(c => renderCard(c)).join('');
-  renderCompare();
-}
+document.getElementById('lens-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.pp-lens-btn');
+  if (!btn) return;
+  document.querySelectorAll('.pp-lens-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeLens = btn.dataset.lens;
+  renderCandidates();
+});
 
-// INIT
-renderDashboard();
+loadRace();
 </script>
-
 {% endblock %}
