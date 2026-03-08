@@ -117,18 +117,18 @@ def main():
     cur = conn.cursor()
     if database.USE_PG:
         cur.execute(
-            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json, homepage_copy) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
             "ON CONFLICT (slug) DO UPDATE SET nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count, "
-            "last_checked=EXCLUDED.last_checked, score_json=EXCLUDED.score_json",
-            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj)
+            "last_checked=EXCLUDED.last_checked, score_json=EXCLUDED.score_json, homepage_copy=EXCLUDED.homepage_copy",
+            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj, combined)
         )
     else:
         cur.execute("DELETE FROM fortune500_scores WHERE slug = ?", (AZ["slug"],))
         cur.execute(
-            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj)
+            "INSERT INTO fortune500_scores (slug, company_name, rank, url, nii_score, issue_count, last_checked, score_json, homepage_copy) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (AZ["slug"], AZ["company_name"], AZ["rank"], AZ["url"], display_score, issues, now, sj, combined)
         )
     conn.commit()
     conn.close()
