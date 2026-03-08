@@ -20,3 +20,9 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+taskdef_edit.json
+taskdef_clean.json
+taskdef_current.json
+taskdef_new.json
+taskdef_final.json
