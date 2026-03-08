@@ -1782,16 +1782,7 @@ def stripe_webhook():
     return jsonify({"received": True})
 
 
-# ═══════════════════════════════════════
-# DASHBOARD (balance, usage, top-up)
-# ═══════════════════════════════════════
-@app.route("/dashboard")
-def dashboard():
-    user_id = session.get("user_id")
-    if not user_id:
-        from flask import redirect
-        return redirect("/login")
-    return render_template("dashboard.html")
+# /dashboard route owned by auth_bp (auth.py) with @login_required — do not duplicate here
 
 
 # ═══════════════════════════════════════
