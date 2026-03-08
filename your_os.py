@@ -45,7 +45,10 @@ DB_WRITE_WARN_MS = 200  # log warning if db write exceeds this
 def os_db():
     conn = sqlite3.connect(YOUR_OS_DB, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        pass  # another worker already set WAL — safe to ignore
     return conn
 
 
@@ -1218,4 +1221,13 @@ tr:hover td{{background:#0c0f18}}
 # ============================================================
 # INIT
 # ============================================================
-os_db_init()
+import time as _time
+for _attempt in range(5):
+    try:
+        os_db_init()
+        break
+    except sqlite3.OperationalError as _e:
+        if "locked" in str(_e) and _attempt < 4:
+            _time.sleep(0.5 + _attempt * 0.5)
+        else:
+            raise
