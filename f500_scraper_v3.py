@@ -945,6 +945,10 @@ VC_FUNDS = [
     ("fifth-wall", "Fifth Wall", 30, "https://fifthwall.com", ["/about"]),
 ]
 
+AZ_ENTITIES = [
+    ("artifact-zero", "Artifact Zero", 501, "https://artifact0.com", ["/safecheck", "/score", "/examples", "/docs", "/contact"]),
+]
+
 
 # ═══════════════════════════════════════════
 # ENTRY POINT
@@ -1037,6 +1041,31 @@ def lambda_handler(event, context):
                     conn = get_conn()
         results.append(f"VC: {ok}/{len(funds)} scraped")
 
+    if target in ("az", "both"):
+        entities = list(AZ_ENTITIES)
+        ok = 0
+        for slug, name, rank, url, subs in entities:
+            try:
+                try:
+                    conn.isolation_level
+                except Exception:
+                    try: conn.close()
+                    except: pass
+                    conn = get_conn()
+
+                if process_entity(conn, slug, name, rank, url, subs, "az"):
+                    ok += 1
+                time.sleep(1)
+            except Exception as e:
+                log.error(f"Error {name}: {e}")
+                try:
+                    conn.rollback()
+                except Exception:
+                    try: conn.close()
+                    except: pass
+                    conn = get_conn()
+        results.append(f"AZ: {ok}/{len(entities)} scraped")
+
     conn.close()
     msg = "Done. " + " | ".join(results)
     log.info(msg)
@@ -1047,7 +1076,7 @@ if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser(description="Artifact Zero F500 Scraper v3")
     p.add_argument("--limit", type=int, default=5)
-    p.add_argument("--target", choices=["f500", "vc", "both"], default="both")
+    p.add_argument("--target", choices=["f500", "vc", "az", "both"], default="both")
     p.add_argument("--start", type=int, default=1, help="Start at rank")
     p.add_argument("--empty-only", action="store_true", help="Only scrape companies with no/thin copy")
     a = p.parse_args()
