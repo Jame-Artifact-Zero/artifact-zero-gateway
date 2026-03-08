@@ -167,7 +167,7 @@ body::before {
 .az-nav-dropdown-menu {
   display: none;
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
   background: rgba(10, 12, 16, .98);
@@ -178,6 +178,17 @@ body::before {
   z-index: 9001;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  /* Bridge the gap between trigger and menu so mouse doesn't fall off */
+  margin-top: 0;
+}
+.az-nav-dropdown::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
 }
 .az-nav-dropdown:hover .az-nav-dropdown-menu { display: block; }
 .az-nav-dropdown-menu a {
