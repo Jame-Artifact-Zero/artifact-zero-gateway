@@ -169,7 +169,9 @@ function renderList(companies){
     const cls = scoreClass(score);
     const findings = c.findings_count || c.issue_count || 0;
     const label = c.csi_label || '';
-    const checked = c.last_checked ? new Date(c.last_checked).toLocaleDateString() : '';
+    const checkedDate = c.last_checked ? new Date(c.last_checked) : null;
+    const daysSince = checkedDate ? Math.floor((Date.now() - checkedDate) / 86400000) : 999;
+    const checked = checkedDate && daysSince <= 7 ? checkedDate.toLocaleDateString() : '';
     return `
       <a class="company-card" href="/scored/${c.slug}" data-score="${score}" data-findings="${findings}">
         <div class="card-rank">${c.rank || '—'}</div>
