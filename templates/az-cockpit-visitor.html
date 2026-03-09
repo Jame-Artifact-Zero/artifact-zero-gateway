@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Visitor {{ ip }} — Cockpit{% endblock %}
+
+{% block body_class %}cockpit-page{% endblock %}
+
+{% block head %}
+<style>
+.az-topbar, .az-bottomnav, .az-footer { display: none !important; }
+.az-main { padding: 0; }
+
+.ck-vis { max-width: 1100px; margin: 0 auto; padding: 24px; font-family: var(--az-mono); }
+.ck-vis a.back { color: var(--accent); text-decoration: none; font-size: 12px; }
+.ck-vis a.back:hover { opacity: 0.8; }
+.ck-vis h1 { font-size: 14px; color: var(--accent); letter-spacing: 2px; margin: 16px 0 4px; }
+.ck-vis .sub { color: var(--muted); font-size: 11px; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+td { padding: 7px 10px; border-bottom: 1px solid rgba(37,42,53,0.5); vertical-align: top; font-size: 12px; }
+tr:hover td { background: var(--surface); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ck-vis">
+  <a href="/az-cockpit" class="back">&larr; Back to Cockpit</a>
+  <h1>VISITOR: {{ ip }}</h1>
+  <div class="sub">{{ rows|length }} page views &middot; full chronological path</div>
+  <table>
+    <tr><th>Time (EST)</th><th>Path</th><th>Method</th><th>Referrer</th><th>Latency</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td style="color:var(--muted);white-space:nowrap">{{ r.est_time }}</td>
+      <td style="color:var(--accent)">{{ r.path }}</td>
+      <td style="color:var(--muted)">{{ r.method }}</td>
+      <td style="color:var(--muted);max-width:200px;word-break:break-all;font-size:11px">{{ (r.referrer or '')[:80] }}</td>
+      <td style="color:var(--muted);text-align:right">{{ r.latency_ms or 0 }}ms</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
