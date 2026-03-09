@@ -31,6 +31,20 @@ ANALYTICS_DB = os.path.join(_db_dir(), "az_analytics.db")
 def utc_now():
     return datetime.now(timezone.utc).isoformat()
 
+def est_now():
+    from datetime import timezone as tz
+    EST = timezone(timedelta(hours=-5))
+    EDT = timezone(timedelta(hours=-4))
+    now = datetime.now(timezone.utc)
+    # EDT: second Sunday March → first Sunday November
+    import time
+    lt = time.localtime()
+    # Simple DST check: March 8 – Nov 1 approx
+    yday = now.timetuple().tm_yday
+    eastern = EDT if 67 <= yday <= 304 else EST
+    label = "EDT" if 67 <= yday <= 304 else "EST"
+    return datetime.now(eastern).strftime('%Y-%m-%d %H:%M:%S') + ' ' + label
+
 def analytics_db():
     conn = sqlite3.connect(ANALYTICS_DB)
     conn.row_factory = sqlite3.Row
@@ -462,6 +476,9 @@ tr:hover{{background:var(--s2)}}
 .cg{{color:var(--g);font-weight:bold}}.ca{{color:var(--am);font-weight:bold}}.cr{{color:var(--r);font-weight:bold}}
 .bar{{height:6px;border-radius:3px;background:var(--s2);overflow:hidden;width:120px}}
 .bf{{height:100%;border-radius:3px;background:var(--a)}}
+.tv-btn.active{{background:var(--a);color:#000;border-color:var(--a)}}
+.tv-bar{{background:var(--a);border-radius:2px 2px 0 0;min-width:6px;transition:height .2s;cursor:default}}
+.tv-bar:hover{{opacity:.75}}
 .ld{{width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block;animation:pulse 2s infinite}}
 @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:.4}}}}
 .tabs{{display:flex;gap:4px;margin-bottom:12px}}
@@ -477,7 +494,7 @@ tr:hover{{background:var(--s2)}}
 <div class="hd">
   <h1><span class="ld"></span> &nbsp;COCKPIT</h1>
   <div class="mt">
-    <span>{utc_now()[:19]} UTC</span>
+    <span>{est_now()}</span>
     <a href="/az-cockpit">↻ REFRESH</a>
     <a href="/" target="_blank">SITE →</a>
     <a href="/logout">LOGOUT</a>
@@ -505,6 +522,7 @@ tr:hover{{background:var(--s2)}}
   <div class="tab" onclick="sT('copy')">Copy</div>
   <div class="tab" onclick="sT('admin')">Admin</div>
   <div class="tab" onclick="sT('scraper')">Scraper</div>
+  <div class="tab" onclick="sT('traffic');loadTraffic()">Traffic</div>
 </div>
 
 <div class="tc active" id="t-banner"><div class="cp">
@@ -571,6 +589,37 @@ tr:hover{{background:var(--s2)}}
   </div>
   <div id="scrape-status" style="margin-top:12px;font-family:monospace;font-size:11px;color:var(--m);min-height:24px"></div>
 </div></div>
+
+<div class="tc" id="t-traffic"><div class="cp">
+  <h3>Traffic Analytics</h3>
+  <div style="display:flex;gap:6px;margin:10px 0 16px;flex-wrap:wrap">
+    <button class="btn btn-s tv-btn active" onclick="setRange('7d',this)">7 Days</button>
+    <button class="btn btn-s tv-btn" onclick="setRange('30d',this)">30 Days</button>
+    <button class="btn btn-s tv-btn" onclick="setRange('90d',this)">90 Days</button>
+  </div>
+  <div id="tv-loading" style="color:var(--m);font-size:11px;padding:12px 0">Loading...</div>
+  <div id="tv-content" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px" id="tv-stats"></div>
+    <div style="margin-bottom:20px">
+      <div class="st">Daily Visitors</div>
+      <div id="tv-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:8px;padding:0 2px"></div>
+      <div id="tv-chart-labels" style="display:flex;gap:3px;margin-top:4px;font-size:9px;color:var(--m)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div><div class="st">Top Pages</div><table style="margin-top:8px"><tr><th>Page</th><th>Visitors</th><th>Hits</th></tr><tbody id="tv-pages"></tbody></table></div>
+      <div><div class="st">Top Referrers</div><table style="margin-top:8px"><tr><th>Source</th><th>Visitors</th></tr><tbody id="tv-refs"></tbody></table></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div><div class="st">Entry Pages</div><table style="margin-top:8px"><tr><th>Page</th><th>Sessions</th></tr><tbody id="tv-entry"></tbody></table></div>
+      <div><div class="st">Repeat Visitors</div><table style="margin-top:8px"><tr><th>IP</th><th>Days Seen</th><th>Hits</th></tr><tbody id="tv-repeat"></tbody></table></div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div class="st">High Engagement (5+ pages)</div>
+      <table style="margin-top:8px"><tr><th>IP</th><th>Pages</th><th>Hits</th><th>Last Seen</th><th>First Path</th></tr><tbody id="tv-engaged"></tbody></table>
+    </div>
+  </div>
+</div></div>
+
 </div>
 
 <div class="sc"><div class="st">Traffic — Today</div>
@@ -585,7 +634,7 @@ tr:hover{{background:var(--s2)}}
 <div class="sc"><div class="st">Recent Scores</div>
 <table><tr><th>Time</th><th>IP</th><th>Input</th><th>NII</th><th>Latency</th></tr>{nti_html}</table></div>
 
-<div style="margin-top:40px;padding:16px;border-top:1px solid var(--b);color:var(--m);font-size:10px;text-align:center">Artifact Zero Labs · Cockpit · {utc_now()[:19]} UTC</div>
+<div style="margin-top:40px;padding:16px;border-top:1px solid var(--b);color:var(--m);font-size:10px;text-align:center">Artifact Zero Labs · Cockpit · {est_now()}</div>
 </div>
 <div class="toast" id="toast">Saved ✓</div>
 
@@ -609,6 +658,58 @@ function runScrape(target,limit){{const st=document.getElementById('scrape-statu
 function runSeed(){{const st=document.getElementById('scrape-status');st.textContent='Seeding data...';st.style.color='#a78bfa';fetch(aU('/az-cockpit/api/run-seed'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:'{{}}'}}).then(r=>r.json()).then(d=>{{if(d.error){{st.textContent=d.error;st.style.color='#ef4444';}}else{{st.textContent='Seeding in progress... started '+d.started;st.style.color='#a78bfa';pollScrape();}}}}).catch(e=>{{st.textContent='Error: '+e;st.style.color='#ef4444';}})}}
 function pollScrape(){{const st=document.getElementById('scrape-status');const iv=setInterval(()=>{{fetch(aU('/az-cockpit/api/rescrape-status')).then(r=>r.json()).then(d=>{{if(d.running){{st.textContent='⏳ Scraping... started '+d.started;st.style.color='#f59e0b';}}else if(d.last_result){{st.textContent='✓ '+d.last_result;st.style.color='#00e89c';clearInterval(iv);}}}})}},5000)}}
 setTimeout(()=>location.reload(),60000);
+let _tvRange='7d';
+function setRange(r,btn){{_tvRange=r;document.querySelectorAll('.tv-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadTraffic();}}
+function loadTraffic(){{
+  document.getElementById('tv-loading').style.display='block';
+  document.getElementById('tv-content').style.display='none';
+  fetch('/az-cockpit/api/traffic?range='+_tvRange).then(r=>r.json()).then(d=>{{
+    document.getElementById('tv-loading').style.display='none';
+    document.getElementById('tv-content').style.display='block';
+    // Stats strip
+    const ss=document.getElementById('tv-stats');
+    const pct=(a,b)=>b>0?Math.round((a-b)/b*100):null;
+    const arrow=(n)=>n==null?'':n>0?'<span style="color:var(--a)">▲'+n+'%</span>':'<span style="color:var(--r)">▼'+Math.abs(n)+'%</span>';
+    ss.innerHTML=[
+      ['Total Visitors',d.total_visitors,arrow(pct(d.total_visitors,d.prev_visitors))],
+      ['Total Views',d.total_views,''],
+      ['Avg/Day',d.avg_per_day,''],
+      ['Repeat Visitors',d.repeat_count,''],
+    ].map(([l,v,a])=>'<div style="background:var(--s);border:1px solid var(--b);border-radius:6px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--a);font-family:\'Courier New\',monospace">'+v+'</div><div style="font-size:9px;color:var(--m);text-transform:uppercase;letter-spacing:1px;margin-top:4px">'+l+'</div>'+(a?'<div style="font-size:10px;margin-top:2px">'+a+'</div>':'')+'</div>').join('');
+    // Daily chart
+    const days=d.daily||[];
+    const chart=document.getElementById('tv-chart');
+    const labels=document.getElementById('tv-chart-labels');
+    chart.innerHTML=''; labels.innerHTML='';
+    const mx=Math.max(...days.map(x=>x.v),1);
+    const barW=Math.max(Math.floor((chart.offsetWidth||600)/Math.max(days.length,1))-3,6);
+    days.forEach(day=>{{
+      const h=Math.max(Math.round((day.v/mx)*76),2);
+      const bar=document.createElement('div');
+      bar.className='tv-bar';
+      bar.style.height=h+'px';
+      bar.style.width=barW+'px';
+      bar.title=day.date+': '+day.v+' visitors, '+day.hits+' hits';
+      chart.appendChild(bar);
+      const lbl=document.createElement('div');
+      lbl.style.width=barW+'px';
+      lbl.style.textAlign='center';
+      lbl.style.overflow='hidden';
+      lbl.textContent=days.length<=14?day.date.slice(5):(day.date.slice(8));
+      labels.appendChild(lbl);
+    }});
+    // Top pages
+    document.getElementById('tv-pages').innerHTML=(d.top_pages||[]).map(p=>'<tr><td style="color:var(--a)">'+p.path+'</td><td>'+p.visitors+'</td><td>'+p.hits+'</td></tr>').join('');
+    // Referrers
+    document.getElementById('tv-refs').innerHTML=(d.top_refs||[]).map(r=>'<tr><td style="max-width:200px;word-break:break-all;font-size:10px">'+r.ref+'</td><td>'+r.visitors+'</td></tr>').join('');
+    // Entry pages
+    document.getElementById('tv-entry').innerHTML=(d.entry_pages||[]).map(p=>'<tr><td style="color:var(--a)">'+p.path+'</td><td>'+p.sessions+'</td></tr>').join('');
+    // Repeat visitors
+    document.getElementById('tv-repeat').innerHTML=(d.repeat_visitors||[]).map(v=>'<tr><td style="font-family:\'Courier New\',monospace;font-size:10px"><a href="/az-cockpit/visitor/'+v.ip+'" style="color:var(--a);text-decoration:none">'+v.ip+'</a></td><td>'+v.days+'</td><td>'+v.hits+'</td></tr>').join('');
+    // High engagement
+    document.getElementById('tv-engaged').innerHTML=(d.engaged||[]).map(v=>'<tr><td style="font-family:\'Courier New\',monospace;font-size:10px"><a href="/az-cockpit/visitor/'+v.ip+'" style="color:var(--a);text-decoration:none">'+v.ip+'</a></td><td>'+v.pages+'</td><td>'+v.hits+'</td><td>'+v.last_seen.slice(0,16)+'</td><td style="font-size:10px;color:var(--m)">'+v.first_path+'</td></tr>').join('');
+  }}).catch(e=>{{document.getElementById('tv-loading').textContent='Error loading traffic: '+e;}})
+}}
 </script></body></html>'''
 
 
@@ -913,8 +1014,19 @@ def cockpit_visitor(ip):
 
     def e(s): return str(s or '').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
+    def to_est(ts_str):
+        try:
+            dt = datetime.fromisoformat(ts_str.replace('Z',''))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            yday = dt.timetuple().tm_yday
+            offset = timedelta(hours=-4) if 67 <= yday <= 304 else timedelta(hours=-5)
+            return (dt + offset).strftime('%Y-%m-%d %H:%M:%S')
+        except Exception:
+            return ts_str[:19]
+
     rows_html = "".join(
-        f'<tr><td style="color:var(--m);white-space:nowrap">{e(r["created_at"][:19])}</td>'
+        f'<tr><td style="color:var(--m);white-space:nowrap">{e(to_est(r["created_at"]))}</td>'
         f'<td style="color:var(--a)">{e(r["path"])}</td>'
         f'<td style="color:var(--m)">{e(r["method"])}</td>'
         f'<td style="color:var(--m);max-width:200px;word-break:break-all;font-size:11px">{e((r["referrer"] or "")[:80])}</td>'
@@ -938,10 +1050,102 @@ tr:hover td{{background:var(--s)}}
 <a href="/az-cockpit">&larr; Back to Cockpit</a>
 <h1 style="margin-top:16px">VISITOR: {e(ip)}</h1>
 <div class="sub">{len(rows)} page views &middot; full chronological path</div>
-<table><tr><th>Time (UTC)</th><th>Path</th><th>Method</th><th>Referrer</th><th>Latency</th></tr>
+<table><tr><th>Time (EST)</th><th>Path</th><th>Method</th><th>Referrer</th><th>Latency</th></tr>
 {rows_html}
 </table>
 </body></html>'''
+
+
+
+# ─── Traffic Analytics API ───
+@admin.route('/az-cockpit/api/traffic')
+def api_traffic():
+    if not _is_admin():
+        return jsonify(error="unauthorized"), 403
+
+    range_param = request.args.get('range', '7d')
+    days_map = {'7d': 7, '30d': 30, '90d': 90}
+    days = days_map.get(range_param, 7)
+    prev_days = days * 2
+
+    conn = analytics_db()
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).isoformat()
+    prev_since = (now - timedelta(days=prev_days)).isoformat()
+
+    # Total visitors + views current period
+    total_visitors = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE created_at >= ?", (since,)).fetchone()["c"]
+    total_views = conn.execute("SELECT COUNT(*) as c FROM page_views WHERE created_at >= ?", (since,)).fetchone()["c"]
+    avg_per_day = round(total_visitors / days, 1)
+
+    # Previous period for comparison
+    prev_visitors = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE created_at >= ? AND created_at < ?", (prev_since, since)).fetchone()["c"]
+
+    # Repeat visitors — seen on 2+ distinct days
+    repeat_rows = conn.execute("""
+        SELECT ip, COUNT(DISTINCT date(created_at)) as days, COUNT(*) as hits
+        FROM page_views WHERE created_at >= ?
+        GROUP BY ip HAVING days >= 2
+        ORDER BY days DESC, hits DESC LIMIT 10
+    """, (since,)).fetchall()
+    repeat_count = len(repeat_rows)
+
+    # Daily breakdown
+    daily_rows = conn.execute("""
+        SELECT date(created_at) as date, COUNT(DISTINCT ip) as v, COUNT(*) as hits
+        FROM page_views WHERE created_at >= ?
+        GROUP BY date ORDER BY date ASC
+    """, (since,)).fetchall()
+
+    # Top pages (exclude cockpit itself)
+    top_pages = conn.execute("""
+        SELECT path, COUNT(DISTINCT ip) as visitors, COUNT(*) as hits
+        FROM page_views WHERE created_at >= ? AND path NOT LIKE '/az-cockpit%' AND path NOT LIKE '/api/%' AND path NOT LIKE '/static/%'
+        GROUP BY path ORDER BY visitors DESC LIMIT 10
+    """, (since,)).fetchall()
+
+    # Top referrers (external only)
+    top_refs = conn.execute("""
+        SELECT referrer as ref, COUNT(DISTINCT ip) as visitors
+        FROM page_views WHERE created_at >= ? AND referrer != '' AND referrer IS NOT NULL
+        AND referrer NOT LIKE '%artifact0.com%'
+        GROUP BY referrer ORDER BY visitors DESC LIMIT 10
+    """, (since,)).fetchall()
+
+    # Entry pages — first page per session (approximated by first hit per ip per day)
+    entry_rows = conn.execute("""
+        SELECT path, COUNT(*) as sessions FROM (
+            SELECT ip, date(created_at) as day, MIN(created_at) as first_hit,
+                   path
+            FROM page_views WHERE created_at >= ?
+            GROUP BY ip, day
+        ) GROUP BY path ORDER BY sessions DESC LIMIT 10
+    """, (since,)).fetchall()
+
+    # High engagement visitors (5+ distinct pages)
+    engaged_rows = conn.execute("""
+        SELECT ip, COUNT(DISTINCT path) as pages, COUNT(*) as hits,
+               MAX(created_at) as last_seen, MIN(path) as first_path
+        FROM page_views WHERE created_at >= ?
+        GROUP BY ip HAVING pages >= 5
+        ORDER BY pages DESC, hits DESC LIMIT 15
+    """, (since,)).fetchall()
+
+    conn.close()
+
+    return jsonify(
+        total_visitors=total_visitors,
+        total_views=total_views,
+        avg_per_day=avg_per_day,
+        repeat_count=repeat_count,
+        prev_visitors=prev_visitors,
+        daily=[{"date": r["date"], "v": r["v"], "hits": r["hits"]} for r in daily_rows],
+        top_pages=[{"path": r["path"], "visitors": r["visitors"], "hits": r["hits"]} for r in top_pages],
+        top_refs=[{"ref": r["ref"][:60], "visitors": r["visitors"]} for r in top_refs],
+        entry_pages=[{"path": r["path"], "sessions": r["sessions"]} for r in entry_rows],
+        repeat_visitors=[{"ip": r["ip"], "days": r["days"], "hits": r["hits"]} for r in repeat_rows],
+        engaged=[{"ip": r["ip"], "pages": r["pages"], "hits": r["hits"], "last_seen": r["last_seen"], "first_path": r["first_path"]} for r in engaged_rows],
+    )
 
 
 def init_admin(app):
