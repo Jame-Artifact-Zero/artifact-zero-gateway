@@ -364,13 +364,13 @@ def cockpit_login():
     if token and ADMIN_TOKEN and token == ADMIN_TOKEN:
         session['role'] = 'admin'
         return redirect('/az-cockpit')
-    return COCKPIT_LOGIN_HTML, 200
+    return render_template("az-cockpit-login.html", error="Invalid token"), 200
 
 # ─── COCKPIT MAIN ───
 @admin.route('/az-cockpit')
 def cockpit():
     if not _is_admin():
-        return COCKPIT_LOGIN_HTML, 200
+        return render_template("az-cockpit-login.html", error=None), 200
 
     conn = analytics_db()
     now = datetime.now(timezone.utc)
@@ -402,331 +402,35 @@ def cockpit():
     hourly = conn.execute("SELECT strftime('%H:00', created_at) as hour, COUNT(*) as hits, COUNT(DISTINCT ip) as v FROM page_views WHERE created_at >= ? GROUP BY hour ORDER BY hour DESC", ((now-timedelta(hours=12)).isoformat(),)).fetchall()
     conn.close()
 
-    tp = ""
-
-    def e(s): return str(s or '').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
-
-    insight_html = "".join(f'<div class="insight"><span class="ii">{icon}</span> {e(text)}</div>' for icon, text in insights)
-
-    visitor_html = "".join(f'<tr><td><a href="/az-cockpit/visitor/{e(v["ip"])}" style="color:var(--a);text-decoration:none">{e(v["ip"])}</a></td><td>{v["hits"]}</td><td>{v["pages"]}</td><td>{e(v["last_seen"][:16])}</td><td style="max-width:280px;word-break:break-all;font-size:11px">{e((v["paths"] or "")[:200])}</td><td>{e((v["ref"] or "")[:50])}</td></tr>' for v in recent_visitors)
-
-    nti_html = ""
-    for n in recent_nti:
-        nii = n["nii_score"] or 0
-        nd = nii if nii > 1 else nii*100
-        cls = "cg" if nd>=70 else ("ca" if nd>=40 else "cr")
-        nti_html += f'<tr><td>{e(n["created_at"][:16])}</td><td>{e(n["ip"])}</td><td>{e((n["input_preview"] or "")[:50])}</td><td class="{cls}">{nd:.0f}</td><td>{n["latency_ms"] or 0}ms</td></tr>'
-
-    page_html = "".join(f'<tr><td>{e(p["path"])}</td><td>{p["hits"]}</td><td>{p["visitors"]}</td></tr>' for p in pages_today)
-
     mx = max((h["hits"] for h in hourly), default=1)
-    hour_html = "".join(f'<tr><td>{e(h["hour"])}</td><td>{h["hits"]}</td><td>{h["v"]}</td><td><div class="bar"><div class="bf" style="width:{int(h["hits"]/mx*100) if mx else 0}%"></div></div></td></tr>' for h in hourly)
+    hourly_data = [{"hour": h["hour"], "hits": h["hits"], "v": h["v"], "pct": int(h["hits"]/mx*100) if mx else 0} for h in hourly]
+    kill_features = ["safecheck", "rewrite", "relay", "signup", "api", "scrapers"]
 
-    kill_features = ["safecheck","rewrite","relay","signup","api","scrapers"]
-    kill_html = "".join(f'<label class="tr"><span class="tl">{f.upper()}</span><input type="checkbox" {"" if kills.get(f) else "checked"} onchange="tK(\'{f}\',!this.checked)"><span class="ts"></span></label>' for f in kill_features)
-
-    return f'''<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>COCKPIT</title>
-<style>
-:root{{--bg:#0a0c10;--s:#12151b;--s2:#1a1e27;--b:#252a35;--t:#e8eaf0;--m:#6b7280;--a:#00e89c;--g:#22c55e;--r:#ef4444;--am:#f59e0b;--bl:#3b82f6;--p:#a78bfa}}
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:var(--bg);color:var(--t);font-family:'Courier New',monospace;font-size:13px}}
-.ck{{max-width:1100px;margin:0 auto;padding:20px}}
-.hd{{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--b)}}
-.hd h1{{font-size:16px;color:var(--a);letter-spacing:3px}}
-.hd .mt{{color:var(--m);font-size:11px}}
-.hd a{{color:var(--a);text-decoration:none;margin-left:16px;font-size:12px}}
-.sc{{margin-bottom:28px}}
-.st{{font-size:12px;color:var(--bl);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}}
-.st::after{{content:'';flex:1;height:1px;background:var(--b)}}
-.insight{{background:var(--s);border-left:3px solid var(--a);padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.5}}
-.ii{{margin-right:6px}}
-.stats{{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px}}
-@media(max-width:800px){{.stats{{grid-template-columns:repeat(3,1fr)}}}}
-.sd{{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:14px 10px;text-align:center}}
-.sd .v{{font-size:26px;font-weight:bold;color:var(--a)}}
-.sd .l{{font-size:9px;color:var(--m);text-transform:uppercase;letter-spacing:1px;margin-top:4px}}
-.cg2{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
-@media(max-width:800px){{.cg2{{grid-template-columns:1fr}}}}
-.cp{{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:16px}}
-.cp h3{{font-size:11px;color:var(--p);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}}
-input[type="text"],textarea{{background:var(--s2);border:1px solid var(--b);color:var(--t);padding:8px 10px;border-radius:4px;font-family:inherit;font-size:12px;width:100%}}
-input[type="text"]:focus,textarea:focus{{border-color:var(--a);outline:none}}
-textarea{{resize:vertical;min-height:60px}}
-.ir{{display:flex;gap:8px;margin-bottom:8px;align-items:center}}
-.ir label{{font-size:10px;color:var(--m);min-width:50px;text-transform:uppercase}}
-.btn{{background:var(--a);color:#000;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px}}
-.btn:hover{{opacity:.9}}
-.btn-r{{background:var(--r);color:#fff}}
-.btn-s{{padding:4px 10px;font-size:10px}}
-.tr{{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b)}}
-.tr:last-child{{border-bottom:none}}
-.tl{{font-size:11px;color:var(--t);letter-spacing:1px}}
-input[type="checkbox"]{{appearance:none;width:36px;height:20px;background:var(--r);border-radius:10px;position:relative;cursor:pointer;transition:.2s}}
-input[type="checkbox"]:checked{{background:var(--g)}}
-input[type="checkbox"]::before{{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.2s}}
-input[type="checkbox"]:checked::before{{left:18px}}
-input[type="color"]{{width:32px;height:28px;border:1px solid var(--b);border-radius:4px;cursor:pointer;padding:2px;background:var(--s2)}}
-table{{width:100%;border-collapse:collapse;font-size:11px}}
-th{{text-align:left;padding:6px 8px;color:var(--m);border-bottom:1px solid var(--b);font-size:9px;text-transform:uppercase;letter-spacing:1px}}
-td{{padding:5px 8px;border-bottom:1px solid var(--b);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-tr:hover{{background:var(--s2)}}
-.cg{{color:var(--g);font-weight:bold}}.ca{{color:var(--am);font-weight:bold}}.cr{{color:var(--r);font-weight:bold}}
-.bar{{height:6px;border-radius:3px;background:var(--s2);overflow:hidden;width:120px}}
-.bf{{height:100%;border-radius:3px;background:var(--a)}}
-.tv-btn.active{{background:var(--a);color:#000;border-color:var(--a)}}
-.tv-bar{{background:var(--a);border-radius:2px 2px 0 0;min-width:6px;transition:height .2s;cursor:default}}
-.tv-bar:hover{{opacity:.75}}
-.ld{{width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block;animation:pulse 2s infinite}}
-@keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:.4}}}}
-.tabs{{display:flex;gap:4px;margin-bottom:12px}}
-.tab{{padding:6px 14px;font-size:11px;color:var(--m);cursor:pointer;border-radius:4px 4px 0 0;border:1px solid transparent;border-bottom:none;text-transform:uppercase;letter-spacing:1px}}
-.tab.active{{color:var(--a);border-color:var(--b);background:var(--s)}}
-.tab:hover{{color:var(--t)}}
-.tc{{display:none}}.tc.active{{display:block}}
-.pb{{padding:10px 16px;text-align:center;font-size:13px;font-weight:bold;border-radius:4px;margin:8px 0}}
-.toast{{position:fixed;bottom:20px;right:20px;background:var(--g);color:#000;padding:10px 20px;border-radius:6px;font-weight:bold;font-size:12px;display:none;z-index:999}}
-</style>
-</head><body>
-<div class="ck">
-<div class="hd">
-  <h1><span class="ld"></span> &nbsp;COCKPIT</h1>
-  <div class="mt">
-    <span>{est_now()}</span>
-    <a href="/az-cockpit">↻ REFRESH</a>
-    <a href="/" target="_blank">SITE →</a>
-    <a href="/logout">LOGOUT</a>
-  </div>
-</div>
-
-<div class="sc"><div class="st">Intelligence</div>{insight_html}</div>
-
-<div class="sc"><div class="st">Pulse</div>
-<div class="stats">
-  <div class="sd"><div class="v">{active_now}</div><div class="l">Active Now</div></div>
-  <div class="sd"><div class="v">{today_views}</div><div class="l">Views Today</div></div>
-  <div class="sd"><div class="v">{today_visitors}</div><div class="l">Visitors Today</div></div>
-  <div class="sd"><div class="v">{week_views}</div><div class="l">Views 7d</div></div>
-  <div class="sd"><div class="v">{nti_today}</div><div class="l">Scores Today</div></div>
-  <div class="sd"><div class="v">{total_nti}</div><div class="l">All-Time Scores</div></div>
-</div></div>
-
-<div class="sc"><div class="st">Controls</div>
-<div class="tabs">
-  <div class="tab active" onclick="sT('banner')">Banner</div>
-  <div class="tab" onclick="sT('modal')">Pop-Up</div>
-  <div class="tab" onclick="sT('kills')">Kill Switches</div>
-  <div class="tab" onclick="sT('pricing')">Pricing</div>
-  <div class="tab" onclick="sT('copy')">Copy</div>
-  <div class="tab" onclick="sT('admin')">Admin</div>
-  <div class="tab" onclick="sT('scraper')">Scraper</div>
-  <div class="tab" onclick="sT('traffic');loadTraffic()">Traffic</div>
-</div>
-
-<div class="tc active" id="t-banner"><div class="cp">
-  <h3>Site Banner — shows on every page</h3>
-  <div class="ir"><label>On/Off</label><input type="checkbox" id="b-on" {"checked" if banner_on else ""} style="width:36px"></div>
-  <div class="ir"><label>Text</label><input type="text" id="b-text" value="{e(banner_text)}" placeholder="🚀 First 100 users get 50% off"></div>
-  <div class="ir"><label>Link</label><input type="text" id="b-link" value="{e(banner_link)}" placeholder="/signup"></div>
-  <div class="ir"><label>Text</label><input type="color" id="b-color" value="{banner_color}"><label>BG</label><input type="color" id="b-bg" value="{banner_bg}"></div>
-  <div class="pb" id="b-preview" style="background:{banner_bg};color:{banner_color}">{e(banner_text) or "Banner preview..."}</div>
-  <button class="btn" onclick="sB()">DEPLOY BANNER</button>
-  <button class="btn btn-r btn-s" onclick="kB()" style="margin-left:8px">KILL</button>
-</div></div>
-
-<div class="tc" id="t-modal"><div class="cp">
-  <h3>Pop-Up Modal — shows once per visitor</h3>
-  <div class="ir"><label>Active</label><input type="checkbox" id="m-on" {"checked" if modal.get("on") else ""} style="width:36px"></div>
-  <div class="ir"><label>Title</label><input type="text" id="m-title" value="{e(modal.get('title',''))}" placeholder="Welcome to Artifact Zero"></div>
-  <div class="ir" style="align-items:start"><label>Body</label><textarea id="m-body" placeholder="Score your next email before you send it.">{e(modal.get('body',''))}</textarea></div>
-  <div class="ir"><label>CTA</label><input type="text" id="m-cta" value="{e(modal.get('cta',''))}" placeholder="Try SafeCheck →"></div>
-  <div class="ir"><label>Link</label><input type="text" id="m-link" value="{e(modal.get('cta_link',''))}" placeholder="/safecheck"></div>
-  <div class="ir"><label>Pages</label><input type="text" id="m-pages" value="{e(modal.get('pages',''))}" placeholder="/ , /examples (* for all)"></div>
-  <button class="btn" onclick="sM()">DEPLOY POP-UP</button>
-  <button class="btn btn-r btn-s" onclick="kM()" style="margin-left:8px">KILL</button>
-</div></div>
-
-<div class="tc" id="t-kills"><div class="cp">
-  <h3>Feature Switches — off = disabled for visitors</h3>
-  {kill_html}
-</div></div>
-
-<div class="tc" id="t-pricing"><div class="cp">
-  <h3>Pricing Controls</h3>
-  <div class="ir"><label>Pack 1</label><input type="text" id="p1n" value="{e(pricing.get('pack1_name','Starter'))}" style="width:30%"><input type="text" id="p1p" value="{e(pricing.get('pack1_price','5'))}" placeholder="$" style="width:20%"><input type="text" id="p1s" value="{e(pricing.get('pack1_scores','25'))}" placeholder="scores" style="width:20%"></div>
-  <div class="ir"><label>Pack 2</label><input type="text" id="p2n" value="{e(pricing.get('pack2_name','Pro'))}" style="width:30%"><input type="text" id="p2p" value="{e(pricing.get('pack2_price','15'))}" placeholder="$" style="width:20%"><input type="text" id="p2s" value="{e(pricing.get('pack2_scores','100'))}" placeholder="scores" style="width:20%"></div>
-  <div class="ir"><label>Pack 3</label><input type="text" id="p3n" value="{e(pricing.get('pack3_name','Team'))}" style="width:30%"><input type="text" id="p3p" value="{e(pricing.get('pack3_price','49'))}" placeholder="$" style="width:20%"><input type="text" id="p3s" value="{e(pricing.get('pack3_scores','500'))}" placeholder="scores" style="width:20%"></div>
-  <div class="ir"><label>Promo</label><input type="text" id="pc" value="{e(pricing.get('promo_code',''))}" placeholder="EARLY100"><input type="text" id="pp" value="{e(pricing.get('promo_pct',''))}" placeholder="% off" style="width:20%"></div>
-  <button class="btn" onclick="sP()">UPDATE PRICING</button>
-</div></div>
-
-<div class="tc" id="t-copy"><div class="cp">
-  <h3>Live Copy — change page text without deploying</h3>
-  <div class="ir"><label>Hero H1</label><input type="text" id="c-h1" value="{e(copy_ov.get('hero_h1',''))}" placeholder="Score your message before you send it."></div>
-  <div class="ir"><label>Hero Sub</label><input type="text" id="c-sub" value="{e(copy_ov.get('hero_sub',''))}" placeholder="NTI finds what humans miss."></div>
-  <div class="ir"><label>CTA Btn</label><input type="text" id="c-cta" value="{e(copy_ov.get('cta_btn',''))}" placeholder="SafeCheck ✓"></div>
-  <div class="ir"><label>Custom</label><input type="text" id="c-sel" value="{e(copy_ov.get('custom_selector',''))}" placeholder=".tagline" style="width:35%"><input type="text" id="c-val" value="{e(copy_ov.get('custom_value',''))}" placeholder="New text" style="width:60%"></div>
-  <button class="btn" onclick="sC()">UPDATE COPY</button>
-</div></div>
-
-<div class="tc" id="t-admin"><div class="cp">
-  <h3>Admin Controls</h3>
-  <div class="ir"><label>Promote</label><input type="text" id="a-email" placeholder="email@example.com"><button class="btn btn-s" onclick="pA()">MAKE ADMIN</button></div>
-  <p style="color:var(--m);font-size:10px;margin-top:8px">Grants admin role to an existing user.</p>
-</div></div>
-
-<div class="tc" id="t-scraper"><div class="cp">
-  <h3>Fortune 500 + VC Fund Scraper</h3>
-  <p style="color:var(--m);font-size:11px;margin-bottom:12px">Re-scrapes corporate pages and re-scores. Takes 5-15 minutes.</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn" onclick="runSeed()" style="background:#a78bfa;border-color:#a78bfa">SEED DATA (score + store)</button>
-    <button class="btn" onclick="runScrape('both',50)">RESCRAPE ALL (50)</button>
-    <button class="btn btn-s" onclick="runScrape('f500',50)">F500 ONLY</button>
-    <button class="btn btn-s" onclick="runScrape('vc',30)">VC ONLY</button>
-    <button class="btn btn-s" onclick="runScrape('both',5)">TEST (5)</button>
-  </div>
-  <div id="scrape-status" style="margin-top:12px;font-family:monospace;font-size:11px;color:var(--m);min-height:24px"></div>
-</div></div>
-
-<div class="tc" id="t-traffic"><div class="cp">
-  <h3>Traffic Analytics</h3>
-  <div style="display:flex;gap:6px;margin:10px 0 16px;flex-wrap:wrap">
-    <button class="btn btn-s tv-btn active" onclick="setRange('7d',this)">7 Days</button>
-    <button class="btn btn-s tv-btn" onclick="setRange('30d',this)">30 Days</button>
-    <button class="btn btn-s tv-btn" onclick="setRange('90d',this)">90 Days</button>
-  </div>
-  <div id="tv-loading" style="color:var(--m);font-size:11px;padding:12px 0">Loading...</div>
-  <div id="tv-content" style="display:none">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px" id="tv-stats"></div>
-    <div style="margin-bottom:20px">
-      <div class="st">Daily Visitors</div>
-      <div id="tv-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:8px;padding:0 2px"></div>
-      <div id="tv-chart-labels" style="display:flex;gap:3px;margin-top:4px;font-size:9px;color:var(--m)"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div><div class="st">Top Pages</div><table style="margin-top:8px"><tr><th>Page</th><th>Visitors</th><th>Hits</th></tr><tbody id="tv-pages"></tbody></table></div>
-      <div><div class="st">Top Referrers</div><table style="margin-top:8px"><tr><th>Source</th><th>Visitors</th></tr><tbody id="tv-refs"></tbody></table></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div><div class="st">Entry Pages</div><table style="margin-top:8px"><tr><th>Page</th><th>Sessions</th></tr><tbody id="tv-entry"></tbody></table></div>
-      <div><div class="st">Repeat Visitors</div><table style="margin-top:8px"><tr><th>IP</th><th>Days Seen</th><th>Hits</th></tr><tbody id="tv-repeat"></tbody></table></div>
-    </div>
-    <div style="margin-bottom:20px">
-      <div class="st">High Engagement (5+ pages)</div>
-      <table style="margin-top:8px"><tr><th>IP</th><th>Pages</th><th>Hits</th><th>Last Seen</th><th>First Path</th></tr><tbody id="tv-engaged"></tbody></table>
-    </div>
-  </div>
-</div></div>
-
-</div>
-
-<div class="sc"><div class="st">Traffic — Today</div>
-<div class="cg2">
-<div><table><tr><th>Page</th><th>Hits</th><th>Visitors</th></tr>{page_html}</table></div>
-<div><table><tr><th>Hour</th><th>Hits</th><th>Visitors</th><th></th></tr>{hour_html}</table></div>
-</div></div>
-
-<div class="sc"><div class="st">Visitors — 24h</div>
-<table><tr><th>IP</th><th>Hits</th><th>Pages</th><th>Last Seen</th><th>Paths</th><th>Referrer</th></tr>{visitor_html}</table></div>
-
-<div class="sc"><div class="st">Recent Scores</div>
-<table><tr><th>Time</th><th>IP</th><th>Input</th><th>NII</th><th>Latency</th></tr>{nti_html}</table></div>
-
-<div style="margin-top:40px;padding:16px;border-top:1px solid var(--b);color:var(--m);font-size:10px;text-align:center">Artifact Zero Labs · Cockpit · {est_now()}</div>
-</div>
-<div class="toast" id="toast">Saved ✓</div>
-
-<script>
-function aU(p){{return p}}
-function toast(m){{const t=document.getElementById('toast');t.textContent=m||'Saved ✓';t.style.display='block';setTimeout(()=>t.style.display='none',2000)}}
-function sT(n){{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));event.target.classList.add('active');document.getElementById('t-'+n).classList.add('active')}}
-function uBP(){{const p=document.getElementById('b-preview');p.textContent=document.getElementById('b-text').value||'Banner preview...';p.style.color=document.getElementById('b-color').value;p.style.background=document.getElementById('b-bg').value}}
-document.getElementById('b-text').addEventListener('input',uBP);
-document.getElementById('b-color').addEventListener('input',uBP);
-document.getElementById('b-bg').addEventListener('input',uBP);
-function sB(){{fetch(aU('/az-cockpit/api/banner'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{on:document.getElementById('b-on').checked,text:document.getElementById('b-text').value,color:document.getElementById('b-color').value,bg:document.getElementById('b-bg').value,link:document.getElementById('b-link').value}})}}).then(r=>r.json()).then(()=>toast('Banner deployed'))}}
-function kB(){{fetch(aU('/az-cockpit/api/banner'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{on:false}})}}).then(r=>r.json()).then(()=>{{document.getElementById('b-on').checked=false;toast('Banner killed')}})}}
-function sM(){{fetch(aU('/az-cockpit/api/modal'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{on:document.getElementById('m-on').checked,title:document.getElementById('m-title').value,body:document.getElementById('m-body').value,cta:document.getElementById('m-cta').value,cta_link:document.getElementById('m-link').value,pages:document.getElementById('m-pages').value}})}}).then(r=>r.json()).then(()=>toast('Pop-up deployed'))}}
-function kM(){{fetch(aU('/az-cockpit/api/modal'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{on:false}})}}).then(r=>r.json()).then(()=>{{document.getElementById('m-on').checked=false;toast('Pop-up killed')}})}}
-function tK(f,k){{const p={{}};p[f]=k;fetch(aU('/az-cockpit/api/kills'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(p)}}).then(r=>r.json()).then(()=>toast(f+(k?' DISABLED':' ENABLED')))}}
-function sP(){{fetch(aU('/az-cockpit/api/pricing'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{pack1_name:document.getElementById('p1n').value,pack1_price:document.getElementById('p1p').value,pack1_scores:document.getElementById('p1s').value,pack2_name:document.getElementById('p2n').value,pack2_price:document.getElementById('p2p').value,pack2_scores:document.getElementById('p2s').value,pack3_name:document.getElementById('p3n').value,pack3_price:document.getElementById('p3p').value,pack3_scores:document.getElementById('p3s').value,promo_code:document.getElementById('pc').value,promo_pct:document.getElementById('pp').value}})}}).then(r=>r.json()).then(()=>toast('Pricing updated'))}}
-function sC(){{fetch(aU('/az-cockpit/api/copy'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{hero_h1:document.getElementById('c-h1').value,hero_sub:document.getElementById('c-sub').value,cta_btn:document.getElementById('c-cta').value,custom_selector:document.getElementById('c-sel').value,custom_value:document.getElementById('c-val').value}})}}).then(r=>r.json()).then(()=>toast('Copy updated'))}}
-function pA(){{const em=document.getElementById('a-email').value;if(!em)return;if(!confirm('Grant admin to '+em+'?'))return;fetch(aU('/az-cockpit/api/set-admin-email'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email:em}})}}).then(r=>r.json()).then(d=>toast(d.affected?'Admin granted':'User not found'))}}
-function runScrape(target,limit){{const st=document.getElementById('scrape-status');st.textContent='Starting scrape...';st.style.color='#f59e0b';fetch(aU('/az-cockpit/api/rescrape'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{target:target,limit:limit}})}}).then(r=>r.json()).then(d=>{{if(d.error){{st.textContent=d.error;st.style.color='#ef4444';}}else{{st.textContent='Running: '+target+' (limit '+limit+')... started '+d.started;st.style.color='#00e89c';pollScrape();}}}}).catch(e=>{{st.textContent='Error: '+e;st.style.color='#ef4444';}})}}
-function runSeed(){{const st=document.getElementById('scrape-status');st.textContent='Seeding data...';st.style.color='#a78bfa';fetch(aU('/az-cockpit/api/run-seed'),{{method:'POST',headers:{{'Content-Type':'application/json'}},body:'{{}}'}}).then(r=>r.json()).then(d=>{{if(d.error){{st.textContent=d.error;st.style.color='#ef4444';}}else{{st.textContent='Seeding in progress... started '+d.started;st.style.color='#a78bfa';pollScrape();}}}}).catch(e=>{{st.textContent='Error: '+e;st.style.color='#ef4444';}})}}
-function pollScrape(){{const st=document.getElementById('scrape-status');const iv=setInterval(()=>{{fetch(aU('/az-cockpit/api/rescrape-status')).then(r=>r.json()).then(d=>{{if(d.running){{st.textContent='⏳ Scraping... started '+d.started;st.style.color='#f59e0b';}}else if(d.last_result){{st.textContent='✓ '+d.last_result;st.style.color='#00e89c';clearInterval(iv);}}}})}},5000)}}
-setTimeout(()=>location.reload(),60000);
-let _tvRange='7d';
-function setRange(r,btn){{_tvRange=r;document.querySelectorAll('.tv-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadTraffic();}}
-function loadTraffic(){{
-  document.getElementById('tv-loading').style.display='block';
-  document.getElementById('tv-content').style.display='none';
-  fetch('/az-cockpit/api/traffic?range='+_tvRange).then(r=>r.json()).then(d=>{{
-    document.getElementById('tv-loading').style.display='none';
-    document.getElementById('tv-content').style.display='block';
-    // Stats strip
-    const ss=document.getElementById('tv-stats');
-    const pct=(a,b)=>b>0?Math.round((a-b)/b*100):null;
-    const arrow=(n)=>n==null?'':n>0?'<span style="color:var(--a)">▲'+n+'%</span>':'<span style="color:var(--r)">▼'+Math.abs(n)+'%</span>';
-    ss.innerHTML=[
-      ['Total Visitors',d.total_visitors,arrow(pct(d.total_visitors,d.prev_visitors))],
-      ['Total Views',d.total_views,''],
-      ['Avg/Day',d.avg_per_day,''],
-      ['Repeat Visitors',d.repeat_count,''],
-    ].map(([l,v,a])=>'<div style="background:var(--s);border:1px solid var(--b);border-radius:6px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--a);font-family:\'Courier New\',monospace">'+v+'</div><div style="font-size:9px;color:var(--m);text-transform:uppercase;letter-spacing:1px;margin-top:4px">'+l+'</div>'+(a?'<div style="font-size:10px;margin-top:2px">'+a+'</div>':'')+'</div>').join('');
-    // Daily chart
-    const days=d.daily||[];
-    const chart=document.getElementById('tv-chart');
-    const labels=document.getElementById('tv-chart-labels');
-    chart.innerHTML=''; labels.innerHTML='';
-    const mx=Math.max(...days.map(x=>x.v),1);
-    const barW=Math.max(Math.floor((chart.offsetWidth||600)/Math.max(days.length,1))-3,6);
-    days.forEach(day=>{{
-      const h=Math.max(Math.round((day.v/mx)*76),2);
-      const bar=document.createElement('div');
-      bar.className='tv-bar';
-      bar.style.height=h+'px';
-      bar.style.width=barW+'px';
-      bar.title=day.date+': '+day.v+' visitors, '+day.hits+' hits';
-      chart.appendChild(bar);
-      const lbl=document.createElement('div');
-      lbl.style.width=barW+'px';
-      lbl.style.textAlign='center';
-      lbl.style.overflow='hidden';
-      lbl.textContent=days.length<=14?day.date.slice(5):(day.date.slice(8));
-      labels.appendChild(lbl);
-    }});
-    // Top pages
-    document.getElementById('tv-pages').innerHTML=(d.top_pages||[]).map(p=>'<tr><td style="color:var(--a)">'+p.path+'</td><td>'+p.visitors+'</td><td>'+p.hits+'</td></tr>').join('');
-    // Referrers
-    document.getElementById('tv-refs').innerHTML=(d.top_refs||[]).map(r=>'<tr><td style="max-width:200px;word-break:break-all;font-size:10px">'+r.ref+'</td><td>'+r.visitors+'</td></tr>').join('');
-    // Entry pages
-    document.getElementById('tv-entry').innerHTML=(d.entry_pages||[]).map(p=>'<tr><td style="color:var(--a)">'+p.path+'</td><td>'+p.sessions+'</td></tr>').join('');
-    // Repeat visitors
-    document.getElementById('tv-repeat').innerHTML=(d.repeat_visitors||[]).map(v=>'<tr><td style="font-family:\'Courier New\',monospace;font-size:10px"><a href="/az-cockpit/visitor/'+v.ip+'" style="color:var(--a);text-decoration:none">'+v.ip+'</a></td><td>'+v.days+'</td><td>'+v.hits+'</td></tr>').join('');
-    // High engagement
-    document.getElementById('tv-engaged').innerHTML=(d.engaged||[]).map(v=>'<tr><td style="font-family:\'Courier New\',monospace;font-size:10px"><a href="/az-cockpit/visitor/'+v.ip+'" style="color:var(--a);text-decoration:none">'+v.ip+'</a></td><td>'+v.pages+'</td><td>'+v.hits+'</td><td>'+v.last_seen.slice(0,16)+'</td><td style="font-size:10px;color:var(--m)">'+v.first_path+'</td></tr>').join('');
-  }}).catch(e=>{{document.getElementById('tv-loading').textContent='Error loading traffic: '+e;}})
-}}
-</script></body></html>'''
-
-
-COCKPIT_LOGIN_HTML = '''<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Cockpit</title>
-<style>
-body{background:#0a0c10;color:#e8eaf0;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.box{background:#12151b;border:1px solid #252a35;border-radius:8px;padding:32px;width:320px;text-align:center}
-h1{font-size:14px;color:#00e89c;letter-spacing:3px;margin-bottom:20px}
-input{width:100%;padding:10px;background:#1a1e27;border:1px solid #252a35;border-radius:4px;color:#e8eaf0;font-family:inherit;margin-bottom:10px;font-size:13px}
-input:focus{border-color:#00e89c;outline:none}
-button{width:100%;padding:10px;background:#00e89c;color:#000;border:none;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:bold;letter-spacing:1px;text-transform:uppercase}
-</style></head><body>
-<div class="box"><h1>COCKPIT</h1>
-<p style="color:#6b7280;font-size:11px;margin-bottom:16px">Admin access required</p>
-<form method="POST" action="/az-cockpit/login"><input type="password" name="token" placeholder="Admin token" autofocus><button type="submit">Enter</button></form>
-</div></body></html>'''
+    return render_template(
+        "az-cockpit.html",
+        est_now=est_now(),
+        insights=insights,
+        active_now=active_now,
+        today_views=today_views,
+        today_visitors=today_visitors,
+        week_views=week_views,
+        nti_today=nti_today,
+        total_nti=total_nti,
+        banner_on=banner_on,
+        banner_text=banner_text,
+        banner_color=banner_color,
+        banner_bg=banner_bg,
+        banner_link=banner_link,
+        kills=kills,
+        kill_features=kill_features,
+        pricing=pricing,
+        copy_ov=copy_ov,
+        modal=modal,
+        pages_today=pages_today,
+        hourly=hourly_data,
+        recent_visitors=recent_visitors,
+        recent_nti=recent_nti,
+    )
 
 
 # ─── Rescrape Trigger ───
@@ -1006,13 +710,11 @@ def cockpit_visitor(ip):
     if not _is_admin():
         return redirect('/az-cockpit')
     conn = analytics_db()
-    rows = conn.execute(
+    raw_rows = conn.execute(
         "SELECT created_at, path, method, referrer, latency_ms FROM page_views WHERE ip = ? ORDER BY created_at ASC",
         (ip,)
     ).fetchall()
     conn.close()
-
-    def e(s): return str(s or '').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
     def to_est(ts_str):
         try:
@@ -1025,35 +727,10 @@ def cockpit_visitor(ip):
         except Exception:
             return ts_str[:19]
 
-    rows_html = "".join(
-        f'<tr><td style="color:var(--m);white-space:nowrap">{e(to_est(r["created_at"]))}</td>'
-        f'<td style="color:var(--a)">{e(r["path"])}</td>'
-        f'<td style="color:var(--m)">{e(r["method"])}</td>'
-        f'<td style="color:var(--m);max-width:200px;word-break:break-all;font-size:11px">{e((r["referrer"] or "")[:80])}</td>'
-        f'<td style="color:var(--m);text-align:right">{r["latency_ms"] or 0}ms</td></tr>'
-        for r in rows
-    )
+    rows = [{"est_time": to_est(r["created_at"]), "path": r["path"], "method": r["method"],
+             "referrer": r["referrer"], "latency_ms": r["latency_ms"]} for r in raw_rows]
 
-    return f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Visitor — {e(ip)}</title>
-<style>
-:root{{--bg:#0a0c10;--s:#12151b;--b:#252a35;--t:#e8eaf0;--m:#6b7280;--a:#00e89c}}
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:var(--bg);color:var(--t);font-family:'Courier New',monospace;font-size:13px;padding:24px}}
-h1{{font-size:14px;color:var(--a);letter-spacing:2px;margin-bottom:4px}}
-.sub{{color:var(--m);font-size:11px;margin-bottom:20px}}
-a{{color:var(--a);text-decoration:none;font-size:12px}}
-table{{width:100%;border-collapse:collapse}}
-th{{text-align:left;font-size:10px;color:var(--m);letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--b)}}
-td{{padding:7px 10px;border-bottom:1px solid rgba(37,42,53,.5);vertical-align:top}}
-tr:hover td{{background:var(--s)}}
-</style></head><body>
-<a href="/az-cockpit">&larr; Back to Cockpit</a>
-<h1 style="margin-top:16px">VISITOR: {e(ip)}</h1>
-<div class="sub">{len(rows)} page views &middot; full chronological path</div>
-<table><tr><th>Time (EST)</th><th>Path</th><th>Method</th><th>Referrer</th><th>Latency</th></tr>
-{rows_html}
-</table>
-</body></html>'''
+    return render_template("az-cockpit-visitor.html", ip=ip, rows=rows)
 
 
 
