@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Cockpit — Artifact Zero{% endblock %}
+
+{% block body_class %}cockpit-page{% endblock %}
+
+{% block head %}
+<style>
+.az-topbar, .az-bottomnav, .az-footer { display: none !important; }
+.az-main { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 0; }
+
+.ck-login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px;
+  width: 320px;
+  text-align: center;
+}
+.ck-login-box h1 {
+  font-family: var(--az-mono);
+  font-size: 14px;
+  color: var(--accent);
+  letter-spacing: 3px;
+  margin-bottom: 20px;
+}
+.ck-login-box p {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 16px;
+  font-family: var(--az-mono);
+}
+.ck-login-box input {
+  width: 100%;
+  padding: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--az-mono);
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.ck-login-box input:focus { border-color: var(--accent); outline: none; }
+.ck-login-box button {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--az-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.ck-login-box button:hover { opacity: 0.9; }
+{% if error %}
+.ck-error { color: var(--red); font-size: 11px; margin-top: 8px; font-family: var(--az-mono); }
+{% endif %}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ck-login-box">
+  <h1>COCKPIT</h1>
+  <p>Admin access required</p>
+  <form method="POST" action="/az-cockpit/login">
+    <input type="password" name="token" placeholder="Admin token" autofocus>
+    <button type="submit">Enter</button>
+  </form>
+  {% if error %}<p class="ck-error">{{ error }}</p>{% endif %}
+</div>
+{% endblock %}
