@@ -288,6 +288,33 @@ def run_scoring(limit=999, slug=None, rescore=False, csi_only=False, target="bot
 
         results.append(f"VC: {ok}/{len(funds)} scored")
 
+    if target in ("az",):
+        companies = get_unscored(conn, limit, slug, rescore)
+        # Filter to artifact-zero only
+        companies = [c for c in companies if c["slug"] == "artifact-zero"] if not slug else companies
+        log.info(f"AZ: {len(companies)} entities to score")
+
+        ok = 0
+        for c in companies:
+            try:
+                text = c["homepage_copy"]
+                log.info(f"[{c['rank']}] {c['company_name']} ({len(text)} chars)")
+
+                csi, nti = score_company(text, csi_only)
+
+                if csi is None and nti is None:
+                    log.warning(f"  SKIP {c['company_name']}: all scoring failed")
+                    continue
+
+                score, nii, issues = store_score(conn, "fortune500_scores", "company_name", c["slug"], csi, nti)
+                log.info(f"  OK CSI={score:.1f} NII={nii} issues={issues}")
+                ok += 1
+
+            except Exception as e:
+                log.error(f"  ERROR {c['company_name']}: {e}")
+
+        results.append(f"AZ: {ok}/{len(companies)} scored")
+
     conn.close()
     msg = "Done. " + " | ".join(results)
     log.info(msg)
@@ -301,7 +328,7 @@ if __name__ == "__main__":
     p.add_argument("--slug", type=str, default=None, help="Score one company by slug")
     p.add_argument("--rescore", action="store_true", help="Re-score all companies")
     p.add_argument("--csi-only", action="store_true", help="CSI only, skip NTI")
-    p.add_argument("--target", choices=["f500", "vc", "both"], default="both")
+    p.add_argument("--target", choices=["f500", "vc", "az", "both"], default="both")
     a = p.parse_args()
     print(run_scoring(
         limit=a.limit,
