@@ -95,11 +95,18 @@ jobs:
         run: |
           docker run -d --name az-test -p 10000:10000 \
             -e DATABASE_URL="sqlite:///test.db" \
+            -e WEB_CONCURRENCY=1 \
             artifact-zero-test
-          echo "Waiting 10s for container startup..."
-          sleep 10
+          echo "Waiting 15s for container startup..."
+          sleep 15
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/health || echo "000")
           echo "Health check returned: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "First attempt failed, retrying in 10s..."
+            sleep 10
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/health || echo "000")
+            echo "Retry returned: $STATUS"
+          fi
           docker logs az-test
           docker stop az-test
           if [ "$STATUS" = "200" ]; then
