@@ -115,6 +115,21 @@ def public_config():
 SKIP_PATHS = {'/health', '/favicon.ico', '/static', '/api/cockpit/config'}
 BOT_MARKERS = {'bot','crawler','spider','curl','wget','python-requests','go-http','uptimerobot','pingdom'}
 
+# Known exploit scanner path fragments — skip logging, don't block
+SCANNER_PATHS = {
+    '/vendor/phpunit', '/.env', '/index.php', '/wp-', '/wordpress',
+    '/admin/vendor', '/backup/vendor', '/blog/vendor', '/cms/vendor',
+    '/crm/vendor', '/demo/vendor', '/app/vendor', '/apps/vendor',
+    '/api/vendor', '/V2/vendor', '/DrOv', '/Dr0v', '/hello.world',
+    '/developmentserver', '/metadatauploader', '/update/picture',
+    '/phpinfo', '/.git', '/config.php', '/setup.php', '/install.php',
+    '/xmlrpc', '/boaform', '/cgi-bin', '/shell', '/cmd', '/eval',
+}
+
+def _is_scanner(path):
+    p = path.lower()
+    return any(s.lower() in p for s in SCANNER_PATHS)
+
 def _is_bot(ua):
     ua_lower = (ua or "").lower()
     return any(b in ua_lower for b in BOT_MARKERS)
@@ -134,6 +149,7 @@ def track_request(app):
             if ip and "," in ip: ip = ip.split(",")[0].strip()
             ua = request.headers.get("User-Agent") or ""
             if _is_bot(ua): return response
+            if _is_scanner(path): return response
             latency = int((_time.time() - getattr(g, 'req_start', 0)) * 1000)
             conn = analytics_db()
             conn.execute("INSERT INTO page_views (id,created_at,path,method,ip,user_agent,referrer,session_id,latency_ms) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -250,9 +266,11 @@ def _build_insights(conn):
     hour_ago = (now - timedelta(hours=1)).isoformat()
     insights = []
 
+    # Active now
     active = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE created_at >= ?", (hour_ago,)).fetchone()["c"]
     insights.append(("🟢" if active else "⚫", f"{active} visitor{'s' if active!=1 else ''} active in the last hour." if active else "No visitors in the last hour."))
 
+    # Today vs yesterday
     today_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE created_at >= ?", (today_start,)).fetchone()["c"]
     yest_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE created_at >= ? AND created_at < ?", (yesterday_start, today_start)).fetchone()["c"]
     if yest_v > 0:
@@ -262,54 +280,77 @@ def _build_insights(conn):
     else:
         insights.append(("📊", f"Today: {today_v} visitors. No yesterday data to compare."))
 
-    # Funnel
-    funnel = [("/","Landing"), ("/safecheck","SafeCheck"), ("/nti","Scored"), ("/api/v1/rewrite","Rewrite"), ("/dashboard","Pricing"), ("/signup","Signup")]
-    fc = []
-    for path, name in funnel:
-        c = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE path LIKE ? AND created_at >= ?", (path+"%", week_start)).fetchone()["c"]
-        fc.append((name, c))
-    drops = []
-    for i in range(len(fc)-1):
-        nf, cf = fc[i]
-        nt, ct = fc[i+1]
-        if cf > 0 and ct == 0:
-            drops.append(f"Everyone drops at {nf} → {nt}.")
-        elif cf > 3 and ct > 0:
-            rate = int((ct/cf)*100)
-            if rate < 20:
-                drops.append(f"Only {rate}% convert {nf}→{nt} ({cf}→{ct}).")
-    if drops:
-        insights.append(("🚨", " ".join(drops)))
+    # Page activity — what pages are actually getting traffic this week
+    active_pages = conn.execute(
+        "SELECT path, COUNT(DISTINCT ip) as v FROM page_views WHERE created_at >= ? AND path NOT LIKE '/api/%' AND path NOT LIKE '/static/%' GROUP BY path ORDER BY v DESC LIMIT 5",
+        (week_start,)
+    ).fetchall()
+    if active_pages:
+        page_summary = ", ".join(f"{r['path']} ({r['v']})" for r in active_pages)
+        insights.append(("📄", f"Top pages this week: {page_summary}."))
 
+    # SafeCheck usage
+    sc_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE path = '/safecheck' AND created_at >= ?", (week_start,)).fetchone()["c"]
+    home_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE path = '/' AND created_at >= ?", (week_start,)).fetchone()["c"]
+    if home_v > 0 and sc_v > 0:
+        rate = int((sc_v / home_v) * 100)
+        insights.append(("⚡", f"{rate}% of homepage visitors reached SafeCheck this week ({home_v}→{sc_v})."))
+    elif sc_v > 0:
+        insights.append(("⚡", f"{sc_v} SafeCheck visitor{'s' if sc_v!=1 else ''} this week."))
+
+    # Scoreboard traffic
+    f500_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE path LIKE '/fortune500%' AND created_at >= ?", (week_start,)).fetchone()["c"]
+    vc_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE path LIKE '/vc-funds%' AND created_at >= ?", (week_start,)).fetchone()["c"]
+    if f500_v or vc_v:
+        insights.append(("🏆", f"Scoreboards: Fortune 500 {f500_v} visitors, VC Funds {vc_v} visitors this week."))
+
+    # Signup attempts
+    signup_v = conn.execute("SELECT COUNT(DISTINCT ip) as c FROM page_views WHERE path = '/signup' AND created_at >= ?", (week_start,)).fetchone()["c"]
+    if signup_v:
+        insights.append(("👤", f"{signup_v} visitor{'s' if signup_v!=1 else ''} reached /signup this week."))
+
+    # NTI runs
     nti_today = conn.execute("SELECT COUNT(*) as c FROM nti_runs WHERE created_at >= ?", (today_start,)).fetchone()["c"]
     nti_week = conn.execute("SELECT COUNT(*) as c FROM nti_runs WHERE created_at >= ?", (week_start,)).fetchone()["c"]
     if nti_today: insights.append(("⚡", f"{nti_today} scores today, {nti_week} this week."))
     elif nti_week: insights.append(("💤", f"No scores today. {nti_week} this week."))
 
+    # Average NII
     avg_nii = conn.execute("SELECT AVG(nii_score) as a FROM nti_runs WHERE created_at >= ? AND nii_score IS NOT NULL", (week_start,)).fetchone()["a"]
     if avg_nii is not None:
         d = avg_nii if avg_nii > 1 else avg_nii * 100
         insights.append(("🎯", f"Average NII this week: {d:.0f}."))
 
+    # Top referrers
     refs = conn.execute("SELECT referrer, COUNT(DISTINCT ip) as v FROM page_views WHERE referrer!='' AND referrer IS NOT NULL AND created_at >= ? GROUP BY referrer ORDER BY v DESC LIMIT 3", (week_start,)).fetchall()
     if refs:
         insights.append(("🔗", "Top sources: " + ", ".join(f"{r['referrer'][:40]} ({r['v']})" for r in refs)))
 
+    # Slow requests
     slow = conn.execute("SELECT COUNT(*) as c FROM page_views WHERE latency_ms > 5000 AND created_at >= ?", (week_start,)).fetchone()["c"]
     if slow > 3:
         insights.append(("⚠️", f"{slow} slow requests (>5s) this week."))
 
+    # Signups from relay events
     signups = conn.execute("SELECT COUNT(*) as c FROM relay_events WHERE event_type='signup' AND created_at >= ?", (week_start,)).fetchone()["c"]
-    if signups: insights.append(("👤", f"{signups} signups this week."))
-    elif today_v > 0: insights.append(("👤", "No signups this week."))
+    if signups: insights.append(("👤", f"{signups} account signup{'s' if signups!=1 else ''} this week."))
+    elif today_v > 0: insights.append(("👤", "No account signups this week."))
 
     return insights
 
 # ─── Redirect old route ───
 @admin.route('/az-admin')
 def admin_redirect():
-    t = request.args.get('token','')
-    return redirect(f'/az-cockpit?token={t}' if t else '/az-cockpit')
+    return redirect('/az-cockpit')
+
+# ─── Cockpit Login (POST) ───
+@admin.route('/az-cockpit/login', methods=['POST'])
+def cockpit_login():
+    token = request.form.get('token', '')
+    if token and ADMIN_TOKEN and token == ADMIN_TOKEN:
+        session['role'] = 'admin'
+        return redirect('/az-cockpit')
+    return COCKPIT_LOGIN_HTML, 200
 
 # ─── COCKPIT MAIN ───
 @admin.route('/az-cockpit')
@@ -348,14 +389,12 @@ def cockpit():
     conn.close()
 
     tp = ""
-    t = request.args.get("token","")
-    if t: tp = f"?token={t}"
 
     def e(s): return str(s or '').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
     insight_html = "".join(f'<div class="insight"><span class="ii">{icon}</span> {e(text)}</div>' for icon, text in insights)
 
-    visitor_html = "".join(f'<tr><td>{e(v["ip"])}</td><td>{v["hits"]}</td><td>{v["pages"]}</td><td>{e(v["last_seen"][:16])}</td><td>{e((v["paths"] or "")[:80])}</td><td>{e((v["ref"] or "")[:50])}</td></tr>' for v in recent_visitors)
+    visitor_html = "".join(f'<tr><td><a href="/az-cockpit/visitor/{e(v["ip"])}" style="color:var(--a);text-decoration:none">{e(v["ip"])}</a></td><td>{v["hits"]}</td><td>{v["pages"]}</td><td>{e(v["last_seen"][:16])}</td><td style="max-width:280px;word-break:break-all;font-size:11px">{e((v["paths"] or "")[:200])}</td><td>{e((v["ref"] or "")[:50])}</td></tr>' for v in recent_visitors)
 
     nti_html = ""
     for n in recent_nti:
@@ -439,7 +478,7 @@ tr:hover{{background:var(--s2)}}
   <h1><span class="ld"></span> &nbsp;COCKPIT</h1>
   <div class="mt">
     <span>{utc_now()[:19]} UTC</span>
-    <a href="/az-cockpit{tp}">↻ REFRESH</a>
+    <a href="/az-cockpit">↻ REFRESH</a>
     <a href="/" target="_blank">SITE →</a>
     <a href="/logout">LOGOUT</a>
   </div>
@@ -551,8 +590,7 @@ tr:hover{{background:var(--s2)}}
 <div class="toast" id="toast">Saved ✓</div>
 
 <script>
-const TP='{tp}';
-function aU(p){{const s=p.includes('?')?'&':'?';return TP?p+s+TP.replace('?',''):p}}
+function aU(p){{return p}}
 function toast(m){{const t=document.getElementById('toast');t.textContent=m||'Saved ✓';t.style.display='block';setTimeout(()=>t.style.display='none',2000)}}
 function sT(n){{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));event.target.classList.add('active');document.getElementById('t-'+n).classList.add('active')}}
 function uBP(){{const p=document.getElementById('b-preview');p.textContent=document.getElementById('b-text').value||'Banner preview...';p.style.color=document.getElementById('b-color').value;p.style.background=document.getElementById('b-bg').value}}
@@ -586,7 +624,7 @@ button{width:100%;padding:10px;background:#00e89c;color:#000;border:none;border-
 </style></head><body>
 <div class="box"><h1>COCKPIT</h1>
 <p style="color:#6b7280;font-size:11px;margin-bottom:16px">Admin access required</p>
-<form method="GET"><input type="password" name="token" placeholder="Admin token" autofocus><button type="submit">Enter</button></form>
+<form method="POST" action="/az-cockpit/login"><input type="password" name="token" placeholder="Admin token" autofocus><button type="submit">Enter</button></form>
 </div></body></html>'''
 
 
@@ -610,7 +648,7 @@ def api_rescrape():
         _scrape_status["started"] = utc_now()
         _scrape_status["last_result"] = None
         try:
-            from f500_scraper import lambda_handler
+            from f500_scraper_v3 import lambda_handler
             result = lambda_handler({"target": target, "limit": limit}, None)
             _scrape_status["last_result"] = result.get("body", str(result))
         except Exception as e:
@@ -630,101 +668,7 @@ def api_rescrape_status():
 
 
 # ─── BOOTSTRAP: promote + seed without cockpit login ───
-@admin.route('/api/bootstrap', methods=['POST'])
-def api_bootstrap():
-    """Token-protected bootstrap: promote user to admin and/or seed data. No session needed."""
-    data = request.get_json(silent=True) or {}
-    if data.get("token") != "aztempfix2026":
-        return jsonify(error="bad token"), 403
-
-    results = {}
-
-    # Promote if email provided
-    email = data.get("email", "").strip().lower()
-    if email:
-        try:
-            import db as database
-            conn = database.db_connect()
-            cur = conn.cursor()
-            if database.USE_PG:
-                cur.execute("UPDATE users SET role='admin' WHERE email=%s", (email,))
-            else:
-                cur.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
-            results["promoted"] = {"email": email, "affected": cur.rowcount}
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            results["promote_error"] = str(e)
-
-    # Seed if requested
-    if data.get("seed"):
-        try:
-            from seed_data import FORTUNE_500, VC_FUNDS
-            import requests as req
-            import db as database
-
-            ok_f, ok_v = 0, 0
-            all_items = [(item, "fortune500_scores", "company_name") for item in FORTUNE_500] + \
-                        [(item, "vc_fund_scores", "fund_name") for item in VC_FUNDS]
-
-            for item, table, name_col in all_items:
-                try:
-                    text = item["text"]
-                    r = req.post("http://127.0.0.1:10000/nti", json={"text": text}, timeout=30)
-                    score_data = r.json()
-                    if "error" in score_data:
-                        continue
-
-                    nii_raw = 0
-                    if "nii" in score_data:
-                        nii = score_data["nii"]
-                        nii_raw = nii.get("nii_score", 0) if isinstance(nii, dict) else nii
-                    nii_display = round(nii_raw * 100) if isinstance(nii_raw, float) and nii_raw <= 1.0 else round(nii_raw)
-
-                    issues = 0
-                    fm = score_data.get("parent_failure_modes") or {}
-                    if isinstance(fm, dict):
-                        for key in ["UDDS", "DCE", "CCA"]:
-                            val = fm.get(key)
-                            if isinstance(val, dict):
-                                st = str(val.get(f"{key.lower()}_state", ""))
-                                if "CONFIRMED" in st or "PROBABLE" in st:
-                                    issues += 1
-                    tilt = score_data.get("tilt_taxonomy") or []
-                    if isinstance(tilt, list):
-                        issues += len(tilt)
-
-                    now = utc_now()
-                    conn = database.db_connect()
-                    cur = conn.cursor()
-                    if database.USE_PG:
-                        cur.execute(f"""
-                            INSERT INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (slug) DO UPDATE SET
-                                homepage_copy=EXCLUDED.homepage_copy, score_json=EXCLUDED.score_json,
-                                nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count,
-                                last_checked=EXCLUDED.last_checked, last_changed=EXCLUDED.last_changed
-                        """, (item["slug"], item["name"], item.get("rank", 0), item.get("url", ""), text, json.dumps(score_data), nii_display, issues, now, now))
-                    else:
-                        cur.execute(f"""
-                            INSERT OR REPLACE INTO {table} (slug, {name_col}, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (item["slug"], item["name"], item.get("rank", 0), item.get("url", ""), text, json.dumps(score_data), nii_display, issues, now, now))
-                    conn.commit()
-                    conn.close()
-                    if table == "fortune500_scores":
-                        ok_f += 1
-                    else:
-                        ok_v += 1
-                except Exception as e:
-                    print(f"[SEED] Error {item.get('slug')}: {e}", flush=True)
-
-            results["seed"] = f"F500: {ok_f}/{len(FORTUNE_500)} | VC: {ok_v}/{len(VC_FUNDS)}"
-        except Exception as e:
-            results["seed_error"] = str(e)
-
-    return jsonify(ok=True, **results)
+# /api/bootstrap removed — served its purpose, no longer needed
 
 
 @admin.route('/az-cockpit/api/seed-score', methods=['POST'])
@@ -952,6 +896,52 @@ def api_run_seed():
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return jsonify(ok=True, started=_scrape_status["started"])
+
+
+
+# ─── IP Visitor Drill-Down ───
+@admin.route('/az-cockpit/visitor/<ip>')
+def cockpit_visitor(ip):
+    if not _is_admin():
+        return redirect('/az-cockpit')
+    conn = analytics_db()
+    rows = conn.execute(
+        "SELECT created_at, path, method, referrer, latency_ms FROM page_views WHERE ip = ? ORDER BY created_at ASC",
+        (ip,)
+    ).fetchall()
+    conn.close()
+
+    def e(s): return str(s or '').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
+
+    rows_html = "".join(
+        f'<tr><td style="color:var(--m);white-space:nowrap">{e(r["created_at"][:19])}</td>'
+        f'<td style="color:var(--a)">{e(r["path"])}</td>'
+        f'<td style="color:var(--m)">{e(r["method"])}</td>'
+        f'<td style="color:var(--m);max-width:200px;word-break:break-all;font-size:11px">{e((r["referrer"] or "")[:80])}</td>'
+        f'<td style="color:var(--m);text-align:right">{r["latency_ms"] or 0}ms</td></tr>'
+        for r in rows
+    )
+
+    return f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Visitor — {e(ip)}</title>
+<style>
+:root{{--bg:#0a0c10;--s:#12151b;--b:#252a35;--t:#e8eaf0;--m:#6b7280;--a:#00e89c}}
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:var(--bg);color:var(--t);font-family:'Courier New',monospace;font-size:13px;padding:24px}}
+h1{{font-size:14px;color:var(--a);letter-spacing:2px;margin-bottom:4px}}
+.sub{{color:var(--m);font-size:11px;margin-bottom:20px}}
+a{{color:var(--a);text-decoration:none;font-size:12px}}
+table{{width:100%;border-collapse:collapse}}
+th{{text-align:left;font-size:10px;color:var(--m);letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--b)}}
+td{{padding:7px 10px;border-bottom:1px solid rgba(37,42,53,.5);vertical-align:top}}
+tr:hover td{{background:var(--s)}}
+</style></head><body>
+<a href="/az-cockpit">&larr; Back to Cockpit</a>
+<h1 style="margin-top:16px">VISITOR: {e(ip)}</h1>
+<div class="sub">{len(rows)} page views &middot; full chronological path</div>
+<table><tr><th>Time (UTC)</th><th>Path</th><th>Method</th><th>Referrer</th><th>Latency</th></tr>
+{rows_html}
+</table>
+</body></html>'''
 
 
 def init_admin(app):
