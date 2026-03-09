@@ -15,7 +15,7 @@ import sqlite3
 import time as _time
 from datetime import datetime, timezone, timedelta
 from functools import wraps
-from flask import Blueprint, request, jsonify, g, session, redirect
+from flask import Blueprint, request, jsonify, g, session, redirect, render_template
 
 admin = Blueprint('admin', __name__)
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
