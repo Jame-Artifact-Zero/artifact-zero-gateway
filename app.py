@@ -133,6 +133,20 @@ except ImportError:
     print("[app] nti_log_routes not found, skipping", flush=True)
 
 try:
+    from nti_relay_routes import relay_bp
+    app.register_blueprint(relay_bp)
+    print("[app] nti_relay loaded", flush=True)
+except ImportError:
+    print("[app] nti_relay_routes not found, skipping", flush=True)
+
+try:
+    from az_relay_memory import relay_memory_bp
+    app.register_blueprint(relay_memory_bp)
+    print("[app] relay_memory loaded", flush=True)
+except ImportError:
+    print("[app] az_relay_memory not found, skipping", flush=True)
+
+try:
     from ccs_routes import init_ccs
     init_ccs(app)
 except ImportError:
