@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from typing import Optional, Tuple
 
-NTI_RELAY_VERSION = "nti-relay-v1.0"
+NTI_RELAY_VERSION = "nti-relay-v2.0"
 
 SUPPORTED_PROVIDERS = {"anthropic", "openai", "google", "xai"}
 
@@ -44,6 +44,16 @@ try:
     _HAS_V3 = True
 except ImportError:
     _HAS_V3 = False
+
+try:
+    from relay_memory import (
+        build_injected_prompt as _build_injected_prompt,
+        resolve_session_id as _resolve_session_id,
+    )
+    _HAS_RELAY_MEMORY = True
+except ImportError:
+    _HAS_RELAY_MEMORY = False
+    _resolve_session_id = None
 
 
 def _utc_now() -> str:
@@ -337,14 +347,37 @@ def process_relay(
     governance: dict,
     webhook_url: Optional[str] = None,
     request_id: Optional[str] = None,
+    session_scope: Optional[str] = None,
+    api_key_id: Optional[str] = None,
 ) -> dict:
+    """
+    session_scope controls memory isolation for this call.
+    Scope tokens:
+        call              -- fully isolated, no memory continuity (default)
+        session:{id}      -- caller-supplied session ID, private to this API key
+        account           -- all calls under same api_key_id share memory
+        shared:{topic}    -- opt-in cross-account topic library (stubbed)
+    Security: unknown or invalid scope tokens fall back to call scope silently.
+    """
     rid = request_id or str(uuid.uuid4())
     t0 = time.time()
+
+    # Resolve session ID from scope token
+    if _HAS_RELAY_MEMORY and _resolve_session_id:
+        effective_session_id, scope_meta = _resolve_session_id(
+            scope=session_scope,
+            api_key_id=api_key_id,
+        )
+    else:
+        effective_session_id = rid
+        scope_meta = {"scope_type": "call", "effective_id": rid,
+                      "isolation": "full", "granted": True, "stub_reason": "relay_memory unavailable"}
 
     result = {
         "request_id": rid,
         "version": NTI_RELAY_VERSION,
         "status": "ok",
+        "session": scope_meta,
     }
 
     if ai_provider.lower() not in SUPPORTED_PROVIDERS:
@@ -370,14 +403,42 @@ def process_relay(
             dispatch_webhook(webhook_url, result)
         return result
 
-    # Step 2: Customer LLM call
+    # Step 2: Inject relay memory artifacts into prompt
+    injected_prompt = text
+    relay_meta = {}
+    prompt_token_estimate = 0
+    if _HAS_RELAY_MEMORY:
+        try:
+            injection = _build_injected_prompt(text, session_id=effective_session_id)
+            injected_prompt = injection["prompt"]
+            # Rough token estimate: 1 token ~ 4 chars. Used to protect output ceiling.
+            prompt_token_estimate = len(injected_prompt) // 4
+            relay_meta = {
+                "topic": injection.get("topic"),
+                "mode": injection.get("mode"),
+                "injected_artifacts": injection.get("injected_artifacts", []),
+                "retrieval_meta": injection.get("retrieval_meta", {}),
+                "prompt_token_estimate": prompt_token_estimate,
+                "anchor_compliance": None,  # populated after LLM response
+            }
+        except Exception as e:
+            relay_meta = {"error": str(e)}
+
+    # Token ceiling applies to LLM OUTPUT only.
+    # Reserve headroom: ceiling is the output budget, not total request budget.
+    # Prompt overhead is additive on top of ceiling — do not subtract from it.
+    output_token_ceiling = max(200, governance["token_ceiling"])
+
+    result["relay_memory"] = relay_meta
+
+    # Step 3: Customer LLM call (injected prompt, protected output ceiling)
     llm_text, llm_error = call_customer_llm(
         provider=ai_provider,
         api_key=ai_key,
         model=ai_model,
         system_prompt=system_prompt,
-        user_text=text,
-        token_ceiling=governance["token_ceiling"],
+        user_text=injected_prompt,
+        token_ceiling=output_token_ceiling,
     )
 
     if llm_error or not llm_text:
@@ -394,7 +455,25 @@ def process_relay(
         "raw_response": llm_text,
     }
 
-    # Step 3: V3 outbound governance
+    # Anchor compliance check — did the model follow the P0 anchor instructions?
+    # [GENERAL] prefix signals model acknowledged it left artifact context.
+    # False = model answered from training without flagging it.
+    if relay_meta and "anchor_compliance" in relay_meta:
+        anchor_followed = "[GENERAL]" in llm_text or "[general]" in llm_text.lower()
+        artifact_count = len(relay_meta.get("injected_artifacts", []))
+        # If no artifacts were injected, compliance check is not applicable
+        if artifact_count == 0:
+            relay_meta["anchor_compliance"] = None
+            relay_meta["anchor_compliance_note"] = "no artifacts injected"
+        else:
+            relay_meta["anchor_compliance"] = anchor_followed
+            relay_meta["anchor_compliance_note"] = (
+                "[GENERAL] prefix detected" if anchor_followed
+                else "no [GENERAL] prefix — model may be answering from training"
+            )
+        result["relay_memory"] = relay_meta
+
+    # Step 4: V3 outbound governance
     v3 = run_outbound_governance(
         text=llm_text,
         audit_threshold=governance["audit_threshold"],
