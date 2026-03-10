@@ -786,16 +786,16 @@ def cockpit_visitor(ip):
         (ip,))
     conn.close()
 
-    def to_est(ts_str):
+    def to_est(ts):
         try:
-            dt = datetime.fromisoformat(ts_str.replace('Z',''))
+            dt = ts if hasattr(ts, 'timetuple') else datetime.fromisoformat(str(ts).replace('Z',''))
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             yday = dt.timetuple().tm_yday
             offset = timedelta(hours=-4) if 67 <= yday <= 304 else timedelta(hours=-5)
             return (dt + offset).strftime('%Y-%m-%d %H:%M:%S')
         except Exception:
-            return ts_str[:19]
+            return str(ts)[:19]
 
     rows = [{"est_time": to_est(r["created_at"]), "path": r["path"], "method": r["method"],
              "referrer": r["referrer"], "latency_ms": r["latency_ms"]} for r in raw_rows]
