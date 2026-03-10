@@ -11,7 +11,8 @@
 import os
 import json
 import uuid
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import time as _time
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -20,13 +21,8 @@ from flask import Blueprint, request, jsonify, g, session, redirect, render_temp
 admin = Blueprint('admin', __name__)
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 
-def _db_dir():
-    for d in ["/var/data", "/tmp"]:
-        if os.path.isdir(d):
-            return d
-    return "/tmp"
-
-ANALYTICS_DB = os.path.join(_db_dir(), "az_analytics.db")
+def _pg_dsn():
+    return os.getenv("DATABASE_URL", "")
 
 def utc_now():
     return datetime.now(timezone.utc).isoformat()
@@ -45,43 +41,99 @@ def est_now():
     label = "EDT" if 67 <= yday <= 304 else "EST"
     return datetime.now(eastern).strftime('%Y-%m-%d %H:%M:%S') + ' ' + label
 
+class _PgRow(dict):
+    """Makes psycopg2 rows accessible by both index and column name, like sqlite3.Row."""
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+class _PgCursor:
+    """Wraps psycopg2 cursor to return _PgRow objects and accept ? placeholders."""
+    def __init__(self, cur, conn):
+        self._cur = cur
+        self._conn = conn
+    def _fix(self, sql):
+        return sql.replace("?", "%s")
+    def execute(self, sql, params=None):
+        self._cur.execute(self._fix(sql), params)
+        return self
+    def fetchone(self):
+        row = self._cur.fetchone()
+        if row is None: return None
+        cols = [d[0] for d in self._cur.description]
+        return _PgRow(zip(cols, row))
+    def fetchall(self):
+        rows = self._cur.fetchall()
+        if not rows: return []
+        cols = [d[0] for d in self._cur.description]
+        return [_PgRow(zip(cols, r)) for r in rows]
+    def close(self):
+        self._cur.close()
+
+class _PgConn:
+    """Wraps psycopg2 connection to behave like sqlite3 connection."""
+    def __init__(self, conn):
+        self._conn = conn
+    def execute(self, sql, params=None):
+        cur = self._conn.cursor()
+        sql = sql.replace("?", "%s").replace("INSERT OR IGNORE", "INSERT").replace(
+            "ON CONFLICT(key)", "ON CONFLICT(key)").replace(
+            "ON CONFLICT DO NOTHING", "ON CONFLICT DO NOTHING")
+        # Handle GROUP_CONCAT -> string_agg
+        import re
+        sql = re.sub(r"GROUP_CONCAT\(DISTINCT\s+(\w+)\)", r"string_agg(DISTINCT \1, ',')", sql)
+        sql = re.sub(r"GROUP_CONCAT\((\w+)\)", r"string_agg(\1::text, ',')", sql)
+        sql = re.sub(r"strftime\('%H:00',\s*(\w+)\)", r"to_char(\1::timestamptz AT TIME ZONE 'UTC', 'HH24') || ':00'", sql)
+        cur.execute(sql, params)
+        return _PgCursor(cur, self._conn)
+    def cursor(self):
+        return _PgCursor(self._conn.cursor(), self._conn)
+    def commit(self):
+        self._conn.commit()
+    def close(self):
+        self._conn.close()
+    def executescript(self, sql):
+        # Not used after migration but kept for safety
+        pass
+
 def analytics_db():
-    conn = sqlite3.connect(ANALYTICS_DB)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    conn = psycopg2.connect(_pg_dsn())
+    return _PgConn(conn)
 
 def init_analytics_db():
     conn = analytics_db()
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS page_views (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
+    stmts = [
+        """CREATE TABLE IF NOT EXISTS page_views (
+            id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL,
             path TEXT NOT NULL, method TEXT NOT NULL,
             ip TEXT, user_agent TEXT, referrer TEXT,
             country TEXT, session_id TEXT, latency_ms INTEGER
-        );
-        CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views(created_at);
-        CREATE INDEX IF NOT EXISTS idx_pv_path ON page_views(path);
-        CREATE INDEX IF NOT EXISTS idx_pv_ip ON page_views(ip);
-        CREATE TABLE IF NOT EXISTS nti_runs (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_pv_path ON page_views(path)",
+        "CREATE INDEX IF NOT EXISTS idx_pv_ip ON page_views(ip)",
+        """CREATE TABLE IF NOT EXISTS nti_runs (
+            id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL,
             ip TEXT, input_preview TEXT, word_count INTEGER,
             nii_score REAL, dominance TEXT, tilt_tags TEXT,
             latency_ms INTEGER, session_id TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_nti_created ON nti_runs(created_at);
-        CREATE TABLE IF NOT EXISTS relay_events (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_nti_created ON nti_runs(created_at)",
+        """CREATE TABLE IF NOT EXISTS relay_events (
+            id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL,
             event_type TEXT NOT NULL, ip TEXT, username TEXT, detail TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_re_created ON relay_events(created_at);
-        CREATE TABLE IF NOT EXISTS cockpit_config (
-            key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL
-        );
-    """)
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_re_created ON relay_events(created_at)",
+        """CREATE TABLE IF NOT EXISTS cockpit_config (
+            key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL
+        )""",
+    ]
+    for stmt in stmts:
+        conn.execute(stmt)
     conn.commit()
     conn.close()
-    print(f"[COCKPIT] Analytics DB at {ANALYTICS_DB}")
+    print("[COCKPIT] Analytics tables verified in Postgres")
 
 # ─── Config helpers ───
 def config_get(key, default=""):
@@ -96,7 +148,7 @@ def config_get(key, default=""):
 def config_set(key, value):
     conn = analytics_db()
     conn.execute("""INSERT INTO cockpit_config (key, value, updated_at) VALUES (?, ?, ?)
-        ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+        ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=EXCLUDED.updated_at
     """, (key, str(value), utc_now()))
     conn.commit()
     conn.close()
@@ -186,7 +238,7 @@ def log_nti_run(request_id, ip, text, result, latency_ms, session_id=""):
         nii = result.get("nii", {})
         nii_score = nii.get("nii_score") if isinstance(nii, dict) else nii
         conn = analytics_db()
-        conn.execute("INSERT OR IGNORE INTO nti_runs (id,created_at,ip,input_preview,word_count,nii_score,dominance,tilt_tags,latency_ms,session_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        conn.execute("INSERT INTO nti_runs (id,created_at,ip,input_preview,word_count,nii_score,dominance,tilt_tags,latency_ms,session_id) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
             (request_id, utc_now(), ip, (text or "")[:200], len((text or "").split()), nii_score, str(dom), json.dumps(tilt), latency_ms, session_id))
         conn.commit()
         conn.close()
