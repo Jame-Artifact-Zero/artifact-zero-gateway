@@ -459,10 +459,10 @@ def cockpit():
     copy_ov = config_get_json("copy_overrides", {})
     modal = config_get_json("modal", {})
 
-    recent_visitors = conn.execute("""SELECT ip, COUNT(*) as hits, COUNT(DISTINCT path) as pages, GROUP_CONCAT(DISTINCT path) as paths, MAX(created_at) as last_seen, MAX(referrer) as ref FROM page_views WHERE created_at >= ? GROUP BY ip ORDER BY last_seen DESC LIMIT 20""", ((now-timedelta(hours=24)).isoformat(),)).fetchall()
+    recent_visitors = conn.execute("""SELECT ip, COUNT(*) as hits, COUNT(DISTINCT path) as pages, string_agg(DISTINCT path, ',') as paths, MAX(created_at) as last_seen, MAX(referrer) as ref FROM page_views WHERE created_at >= ? GROUP BY ip ORDER BY last_seen DESC LIMIT 20""", ((now-timedelta(hours=24)).isoformat(),)).fetchall()
     recent_nti = conn.execute("SELECT * FROM nti_runs ORDER BY created_at DESC LIMIT 15").fetchall()
     pages_today = conn.execute("SELECT path, COUNT(*) as hits, COUNT(DISTINCT ip) as visitors FROM page_views WHERE created_at >= ? GROUP BY path ORDER BY hits DESC LIMIT 15", (ts,)).fetchall()
-    hourly = conn.execute("SELECT strftime('%H:00', created_at) as hour, COUNT(*) as hits, COUNT(DISTINCT ip) as v FROM page_views WHERE created_at >= ? GROUP BY hour ORDER BY hour DESC", ((now-timedelta(hours=12)).isoformat(),)).fetchall()
+    hourly = conn.execute("""SELECT to_char(created_at::timestamptz AT TIME ZONE 'UTC', 'HH24') || ':00' as hour, COUNT(*) as hits, COUNT(DISTINCT ip) as v FROM page_views WHERE created_at >= ? GROUP BY 1 ORDER BY 1 DESC""", ((now-timedelta(hours=12)).isoformat(),)).fetchall()
     conn.close()
 
     mx = max((h["hits"] for h in hourly), default=1)
