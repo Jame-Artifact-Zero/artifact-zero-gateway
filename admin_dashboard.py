@@ -99,7 +99,7 @@ class _PgConn:
 
 def analytics_db():
     dsn = _pg_dsn()
-    if not dsn:
+    if not dsn or not dsn.startswith("postgres"):
         return None
     conn = psycopg2.connect(dsn)
     return _PgConn(conn)
