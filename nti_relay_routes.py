@@ -149,6 +149,9 @@ def relay_single():
     request_gov = data.get("governance") or {}
     webhook_url = (data.get("webhook_url") or "").strip() or None
     request_id = str(uuid.uuid4())
+    # session_scope: call | session:{id} | account | shared:{topic}
+    # Defaults to call (fully isolated) if not supplied.
+    session_scope = (data.get("session_scope") or "call").strip()
 
     api_key_id = getattr(request, "_api_key_id", "unknown")
     stored_profile = _get_governance_profile(api_key_id)
@@ -163,6 +166,8 @@ def relay_single():
         governance=governance,
         webhook_url=webhook_url,
         request_id=request_id,
+        session_scope=session_scope,
+        api_key_id=api_key_id,
     )
 
     _log_relay_usage(
@@ -214,6 +219,7 @@ def relay_batch():
     api_key_id = getattr(request, "_api_key_id", "unknown")
     stored_profile = _get_governance_profile(api_key_id)
     governance = resolve_governance(request_gov, stored_profile)
+    session_scope = (data.get("session_scope") or "call").strip()
 
     results = []
     for i, text in enumerate(texts):
@@ -231,6 +237,8 @@ def relay_batch():
             governance=governance,
             webhook_url=None,
             request_id=str(uuid.uuid4()),
+            session_scope=session_scope,
+            api_key_id=api_key_id,
         )
         res["index"] = i
         results.append(res)
