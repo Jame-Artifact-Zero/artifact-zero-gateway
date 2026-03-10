@@ -1,15 +1,13 @@
 """
-RELAY MEMORY SYSTEM v4
+RELAY MEMORY SYSTEM v5
 Product: Thread
 
-Changes from v3:
-    1. Dynamic artifact retrieval — limit scales with task complexity (1-12), not fixed at 6
-    2. Classification fallback chain — confidence scoring, keyword fallback, domain token overlap,
-       global search, explicit flag when nothing matched
-    3. Signal-based intent router — uses NTI signal markers instead of keyword matching.
-       Natural language routes correctly. Constraint density boosts execution modes.
-    4. P0 anchor — seeded at init_db(), locked, injected into every prompt. Tells AI to treat
-       artifacts as ground truth and flag unsupported claims.
+Changes from v4:
+    1. Session scope model — explicit isolation contract per call.
+       Scopes: call | session | account | shared:{topic}
+       Security-first: no bleed without opt-in. shared: scopes are stubbed for future monetization.
+    2. resolve_session_id() — single routing function, all scope logic contained here.
+    3. Shared scope stub — field and routing land now, shared stores come later.
 """
 
 import os
@@ -44,6 +42,133 @@ COMPLEXITY_BANDS = [
     (11, 20,  9),
     (21, 999, 12),
 ]
+
+# ─────────────────────────────────────────────
+# SESSION SCOPE MODEL
+# ─────────────────────────────────────────────
+# Scope controls memory isolation. Security contract:
+#   - A caller can only read their own scope.
+#   - No bleed without explicit opt-in.
+#   - shared: scopes require grant (stubbed — infrastructure comes later).
+#
+# Scope tokens:
+#   call              — fully isolated. No memory across calls. Default.
+#   session:{id}      — caller-supplied ID. Groups calls into a named session.
+#   account:{key_id}  — all calls under the same API key share memory.
+#   shared:{topic}    — opt-in cross-account topic library. Monetization surface.
+#                       Stubbed: resolves to call scope until shared stores are live.
+
+SCOPE_CALL    = "call"
+SCOPE_SESSION = "session"
+SCOPE_ACCOUNT = "account"
+SCOPE_SHARED  = "shared"
+
+VALID_SCOPES = {SCOPE_CALL, SCOPE_SESSION, SCOPE_ACCOUNT, SCOPE_SHARED}
+
+
+def resolve_session_id(
+    scope: str,
+    caller_session_id: str = None,
+    api_key_id: str = None,
+    topic: str = None,
+) -> tuple:
+    """
+    Resolves the effective session_id and scope metadata from caller-supplied scope token.
+
+    Returns (session_id, scope_meta).
+    scope_meta: {scope_type, effective_id, isolation, granted, stub_reason}
+
+    Security: defaults to call scope (fully isolated) on any parse failure.
+    """
+    import re as _re
+
+    scope = (scope or SCOPE_CALL).strip().lower()
+
+    # call — new UUID every time, no memory continuity
+    if scope == SCOPE_CALL or not scope:
+        import uuid as _uuid
+        sid = f"call_{_uuid.uuid4().hex[:12]}"
+        return sid, {
+            "scope_type": SCOPE_CALL,
+            "effective_id": sid,
+            "isolation": "full",
+            "granted": True,
+            "stub_reason": None,
+        }
+
+    # session:{id} — caller owns the ID, fully private
+    if scope.startswith("session:"):
+        raw_id = scope[len("session:"):].strip()
+        if not raw_id or not _re.match(r'^[a-zA-Z0-9_\-]{1,64}$', raw_id):
+            # Invalid session ID format — fall back to call scope, flag it
+            import uuid as _uuid
+            sid = f"call_{_uuid.uuid4().hex[:12]}"
+            return sid, {
+                "scope_type": SCOPE_CALL,
+                "effective_id": sid,
+                "isolation": "full",
+                "granted": True,
+                "stub_reason": "session ID invalid format, fell back to call scope",
+            }
+        sid = f"session_{raw_id}"
+        # Namespace under api_key_id so two callers can't share a session ID
+        if api_key_id:
+            sid = f"session_{api_key_id[:8]}_{raw_id}"
+        return sid, {
+            "scope_type": SCOPE_SESSION,
+            "effective_id": sid,
+            "isolation": "caller_private",
+            "granted": True,
+            "stub_reason": None,
+        }
+
+    # account:{key_id} — all calls under same API key share memory
+    if scope == SCOPE_ACCOUNT:
+        if not api_key_id:
+            import uuid as _uuid
+            sid = f"call_{_uuid.uuid4().hex[:12]}"
+            return sid, {
+                "scope_type": SCOPE_CALL,
+                "effective_id": sid,
+                "isolation": "full",
+                "granted": True,
+                "stub_reason": "account scope requires api_key_id, fell back to call scope",
+            }
+        sid = f"account_{api_key_id}"
+        return sid, {
+            "scope_type": SCOPE_ACCOUNT,
+            "effective_id": sid,
+            "isolation": "account_private",
+            "granted": True,
+            "stub_reason": None,
+        }
+
+    # shared:{topic} — opt-in cross-account topic library (STUBBED)
+    if scope.startswith("shared:"):
+        raw_topic = scope[len("shared:"):].strip()
+        # Stub: shared stores not yet live. Log the intent, resolve to call scope.
+        import uuid as _uuid
+        sid = f"call_{_uuid.uuid4().hex[:12]}"
+        return sid, {
+            "scope_type": SCOPE_SHARED,
+            "effective_id": sid,
+            "isolation": "full",
+            "granted": False,
+            "stub_reason": f"shared:{raw_topic} scope stubbed — resolves to call until shared stores are live",
+            "requested_topic": raw_topic,
+        }
+
+    # Unknown scope token — secure default: call scope
+    import uuid as _uuid
+    sid = f"call_{_uuid.uuid4().hex[:12]}"
+    return sid, {
+        "scope_type": SCOPE_CALL,
+        "effective_id": sid,
+        "isolation": "full",
+        "granted": True,
+        "stub_reason": f"unknown scope token '{scope}', fell back to call scope",
+    }
+
 
 TOPIC_MAP = {
     "deploy":       ["deploy", "deployment", "push", "release", "ci", "ecs", "fargate", "branch", "pipeline"],
