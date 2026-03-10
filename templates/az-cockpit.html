@@ -285,7 +285,7 @@ input[type="color"].ck-color { width: 32px; height: 28px; border: 1px solid var(
         <td><a href="/az-cockpit/visitor/{{ v.ip }}" style="color:var(--accent);text-decoration:none">{{ v.ip }}</a></td>
         <td>{{ v.hits }}</td>
         <td>{{ v.pages }}</td>
-        <td>{{ v.last_seen[:16] }}</td>
+        <td>{{ v.last_seen | string | truncate(16, killwords=True, end="") }}</td>
         <td style="max-width:280px;word-break:break-all;font-size:11px">{{ (v.paths or '')[:200] }}</td>
         <td>{{ (v.ref or '')[:50] }}</td>
       </tr>
@@ -302,7 +302,7 @@ input[type="color"].ck-color { width: 32px; height: 28px; border: 1px solid var(
       {% set nd = n.nii_score if n.nii_score and n.nii_score > 1 else (n.nii_score or 0) * 100 %}
       {% set cls = 'cg' if nd >= 70 else ('ca' if nd >= 40 else 'cr') %}
       <tr>
-        <td>{{ n.created_at[:16] }}</td>
+        <td>{{ n.created_at | string | truncate(16, killwords=True, end="") }}</td>
         <td>{{ n.ip }}</td>
         <td>{{ (n.input_preview or '')[:50] }}</td>
         <td class="{{ cls }}">{{ nd|int }}</td>
