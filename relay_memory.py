@@ -1,13 +1,14 @@
 """
-RELAY MEMORY SYSTEM v5
+RELAY MEMORY SYSTEM v6
 Product: Thread
 
-Changes from v4:
-    1. Session scope model — explicit isolation contract per call.
-       Scopes: call | session | account | shared:{topic}
-       Security-first: no bleed without opt-in. shared: scopes are stubbed for future monetization.
-    2. resolve_session_id() — single routing function, all scope logic contained here.
-    3. Shared scope stub — field and routing land now, shared stores come later.
+Changes from v5:
+    1. store_response() — auto-capture every AI response after delivery.
+       Filler stripped before storage. NTI v2 score attached. Mode attached.
+       Runs regardless of relay_mode. Data always accumulates.
+    2. Response scoring — v2 score stored with every captured response.
+       Queryable: AI score by topic, by mode, over time. Delta between open and governed.
+    3. Relay mode constants — OPEN and GOVERNED defined here as the canonical source.
 """
 
 import os
@@ -788,6 +789,171 @@ def search_messages(query: str, topic: Optional[str] = None, limit: int = 10) ->
     conn.close()
     return [{"role": r["role"], "content": r["content"],
              "topic": r["topic"], "created_at": r["created_at"]} for r in rows]
+
+
+# ─────────────────────────────────────────────
+# RELAY MODE CONSTANTS
+# ─────────────────────────────────────────────
+# Canonical source. nti_relay.py imports these.
+# Per-message — each call declares its own mode independently.
+# Both modes auto-capture to store. Data always accumulates.
+
+RELAY_MODE_OPEN     = "open"
+RELAY_MODE_GOVERNED = "governed"
+VALID_RELAY_MODES   = {RELAY_MODE_OPEN, RELAY_MODE_GOVERNED}
+
+# Open mode anchor — AI answers freely. System captures.
+OPEN_MODE_ANCHOR = """ARTIFACT ZERO — OPEN MODE
+
+Answer this question fully from your training and knowledge.
+Do not restrict your response based on the absence of injected artifacts.
+The system will capture, score, and index your response automatically.
+Over time this store will grow and your answers will be drawn from it.
+For now: answer as well as you can."""
+
+# Governed mode anchor — existing P0 anchor (retrieval-first enforcement)
+# Defined in P0_ANCHOR_CONTENT above. Used when relay_mode=governed.
+
+
+# ─────────────────────────────────────────────
+# FILLER STRIP (inline — no gateway dependency)
+# ─────────────────────────────────────────────
+import re as _re
+
+_FILLER_PATTERNS = [
+    r"\bi think\b", r"\bi believe\b", r"\bi feel like\b",
+    r"\bkind of\b", r"\bsort of\b", r"\bpretty much\b",
+    r"\bbasically\b", r"\bessentially\b", r"\bgenerally speaking\b",
+    r"\bfor the most part\b", r"\bmore or less\b", r"\bsomewhat\b",
+    r"\bat some point\b", r"\beventually\b", r"\bdown the road\b",
+    r"\bwe'll see\b", r"\bdon't worry\b", r"\bno worries\b",
+    r"\bit'll be fine\b", r"\bwe should be good\b", r"\bi'm sure\b",
+    r"\bgreat question\b", r"\bof course\b", r"\babsolutely\b",
+    r"\bcertainly\b", r"\bhappy to help\b", r"\bfeel free to\b",
+    r"\bdon't hesitate to\b", r"\bso basically\b", r"\bso essentially\b",
+    r"\bif that makes sense\b", r"\bdoes that make sense\b",
+    r"\bhope that helps\b", r"\bwith that being said\b",
+    r"\bthat being said\b", r"\bat the end of the day\b",
+    r"\ball things considered\b", r"\bin any case\b",
+    r"\banyway\b", r"\banyways\b",
+]
+_FILLER_RE = _re.compile("|".join(_FILLER_PATTERNS), flags=_re.IGNORECASE)
+
+
+def _strip_filler(text: str) -> str:
+    """Strip NTI filler patterns before storage. Zero compute — regex only."""
+    cleaned = _FILLER_RE.sub("", text)
+    cleaned = _re.sub(r" {2,}", " ", cleaned)
+    cleaned = _re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def _nti_score(text: str) -> float:
+    """
+    Lightweight inline NTI score for stored responses.
+    Counts filler hits as a ratio of total words.
+    Range 0.0 (all filler) to 1.0 (no filler).
+    Full v2 engine score is attached separately when available.
+    """
+    if not text:
+        return 1.0
+    words = len(text.split())
+    if words == 0:
+        return 1.0
+    hits = len(_FILLER_RE.findall(text))
+    return round(max(0.0, 1.0 - (hits / max(words, 1))), 4)
+
+
+# ─────────────────────────────────────────────
+# RESPONSE CAPTURE — AUTO-STORE AFTER EVERY CALL
+# ─────────────────────────────────────────────
+
+def store_response(
+    response_text: str,
+    user_message: str,
+    session_id: str,
+    relay_mode: str,
+    request_id: str,
+    v2_score: float = None,
+    v3_score: float = None,
+    topic: str = None,
+    mode_detected: str = None,
+) -> dict:
+    """
+    Auto-capture every AI response after delivery.
+    Runs regardless of relay_mode — data always accumulates.
+
+    Stores:
+      - filler-stripped response
+      - inline NTI score
+      - v2 inbound score (if available)
+      - v3 outbound score (if available)
+      - relay_mode used for this call
+      - NTI mode detected (EXECUTE, BUILD, EXPLORE, etc.)
+      - topic classification
+      - session_id and request_id for traceability
+
+    Priority assignment:
+      P2 (REFERENCE) by default.
+      Upgraded to P1 (CANONICAL) if inline NTI score >= 0.92.
+      P3 (HISTORY) if score < 0.70 — low signal, keep but deprioritize.
+    """
+    if not response_text or not response_text.strip():
+        return {"stored": False, "reason": "empty response"}
+
+    stripped = _strip_filler(response_text)
+    inline_score = _nti_score(response_text)
+
+    # Priority from score
+    if inline_score >= 0.92:
+        priority = P1
+    elif inline_score < 0.70:
+        priority = P3
+    else:
+        priority = P2
+
+    # Topic from caller or classify from user message
+    if not topic and user_message:
+        topic, _, _ = classify_topic(user_message)
+    topic = topic or "general"
+
+    # Build artifact key — unique per request
+    artifact_key = f"response_{request_id}"
+
+    # Metadata envelope stored as content prefix
+    meta_prefix = (
+        f"[CAPTURED] relay_mode={relay_mode} | "
+        f"nti_score={inline_score} | "
+        f"v2={v2_score if v2_score is not None else 'n/a'} | "
+        f"v3={v3_score if v3_score is not None else 'n/a'} | "
+        f"mode={mode_detected or 'n/a'} | "
+        f"session={session_id[:16]}"
+    )
+    content_to_store = meta_prefix + stripped
+
+    result = store_artifact(
+        key=artifact_key,
+        topic=topic,
+        content=content_to_store,
+        priority=priority,
+        source_mode=relay_mode,
+    )
+
+    # Also store the user message for context continuity
+    store_message("user", user_message, session_id)
+    store_message("assistant", response_text[:500], session_id)
+
+    return {
+        "stored": True,
+        "artifact_key": artifact_key,
+        "topic": topic,
+        "priority": priority,
+        "inline_nti_score": inline_score,
+        "relay_mode": relay_mode,
+        "stripped_length": len(stripped),
+        "original_length": len(response_text),
+        "compression_ratio": round(len(stripped) / max(len(response_text), 1), 4),
+    }
 
 
 # ─────────────────────────────────────────────
