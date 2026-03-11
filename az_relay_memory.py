@@ -20,7 +20,7 @@ Endpoints:
 """
 
 from flask import Blueprint, request, jsonify
-from relay_memory import (
+from relay_artifacts import (
     build_injected_prompt,
     store_message,
     store_artifact,
