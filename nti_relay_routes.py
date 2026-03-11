@@ -149,11 +149,6 @@ def relay_single():
     request_gov = data.get("governance") or {}
     webhook_url = (data.get("webhook_url") or "").strip() or None
     request_id = str(uuid.uuid4())
-    # session_scope: call | session:{id} | account | shared:{topic}
-    # Defaults to call (fully isolated) if not supplied.
-    session_scope = (data.get("session_scope") or "call").strip()
-    # relay_mode: "open" (default) or "governed" — per message, independent of session
-    relay_mode = (data.get("relay_mode") or "open").strip()
 
     api_key_id = getattr(request, "_api_key_id", "unknown")
     stored_profile = _get_governance_profile(api_key_id)
@@ -168,9 +163,6 @@ def relay_single():
         governance=governance,
         webhook_url=webhook_url,
         request_id=request_id,
-        session_scope=session_scope,
-        api_key_id=api_key_id,
-        relay_mode=relay_mode,
     )
 
     _log_relay_usage(
@@ -222,8 +214,6 @@ def relay_batch():
     api_key_id = getattr(request, "_api_key_id", "unknown")
     stored_profile = _get_governance_profile(api_key_id)
     governance = resolve_governance(request_gov, stored_profile)
-    session_scope = (data.get("session_scope") or "call").strip()
-    relay_mode = (data.get("relay_mode") or "open").strip()
 
     results = []
     for i, text in enumerate(texts):
@@ -241,9 +231,6 @@ def relay_batch():
             governance=governance,
             webhook_url=None,
             request_id=str(uuid.uuid4()),
-            session_scope=session_scope,
-            api_key_id=api_key_id,
-            relay_mode=relay_mode,
         )
         res["index"] = i
         results.append(res)
@@ -331,4 +318,149 @@ def relay_health():
             "PUT  /api/v1/relay/profile",
             "GET  /api/v1/relay/health",
         ],
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# POST /api/v1/relay/session
+# Stateful relay call — maintains SimulatedThread per session_id.
+# Same governance pipeline as /api/v1/relay. Adds window tracking + blob injection.
+#
+# Required body fields (same as /api/v1/relay, plus session_id):
+#   session_id      str   — caller-managed, persists across calls
+#   text            str   — human message
+#   ai_provider     str
+#   ai_key          str
+#   ai_model        str   (optional)
+#   system_prompt   str   (optional)
+#   governance      obj   (optional)
+#   webhook_url     str   (optional)
+#   label           str   (optional, human-readable session name)
+#
+# Response additions vs /api/v1/relay:
+#   session.window_pct      float  — % of context window used
+#   session.window_status   str    — NOMINAL/WATCH/PREPARE/INJECT/CRITICAL
+#   session.relay_number    int    — how many times window has been reset
+#   session.relay_triggered bool   — blob built and window reset this call
+#   session.total_messages  int    — total messages across all relays
+# ═══════════════════════════════════════════════════════════════════════════
+
+@relay_bp.route("/api/v1/relay/session", methods=["POST"])
+@require_api_key
+def relay_session_call():
+    try:
+        from relay_session import get_or_create_session, record_exchange
+    except ImportError as e:
+        return jsonify({"status": "error", "error": f"relay_session unavailable: {e}"}), 500
+
+    data = request.get_json(force=True, silent=True) or {}
+
+    session_id = data.get("session_id", "")
+    if not session_id or not isinstance(session_id, str):
+        return jsonify({"status": "error", "error": "session_id required"}), 400
+
+    text = data.get("text", "").strip()
+    if not text:
+        return jsonify({"status": "error", "error": "text required"}), 400
+
+    ai_provider = data.get("ai_provider", "")
+    ai_key = data.get("ai_key", "")
+    if not ai_provider or not ai_key:
+        return jsonify({"status": "error", "error": "ai_provider and ai_key required"}), 400
+
+    ai_model = data.get("ai_model")
+    webhook_url = data.get("webhook_url")
+    label = data.get("label", session_id)
+
+    api_key_id = getattr(request, "_api_key_id", "unknown")
+    stored_profile = _get_governance_profile(api_key_id)
+    governance = resolve_governance(data.get("governance"), stored_profile)
+
+    # Build system prompt — prepend blob if window was just reset
+    base_system_prompt = data.get("system_prompt", "You are a helpful assistant.")
+    thread = get_or_create_session(session_id, label=label)
+    pending_blob = thread.last_blob()
+    if pending_blob and thread.relay_number > 1:
+        system_prompt = pending_blob.to_prompt() + "\n\n" + base_system_prompt
+    else:
+        system_prompt = base_system_prompt
+
+    # Standard relay pipeline: v2 gate -> LLM -> v3 governance
+    relay_result = process_relay(
+        text=text,
+        ai_provider=ai_provider,
+        ai_key=ai_key,
+        ai_model=ai_model,
+        system_prompt=system_prompt,
+        governance=governance,
+        webhook_url=webhook_url,
+        request_id=str(uuid.uuid4()),
+    )
+
+    # Record exchange in session thread
+    ai_response = relay_result.get("governed_response") or relay_result.get("error", "")
+    session_meta = record_exchange(
+        session_id=session_id,
+        human_text=text,
+        ai_response=ai_response,
+        label=label,
+    )
+
+    relay_result["session"] = {
+        "session_id": session_id,
+        "window_pct": session_meta["window_pct"],
+        "window_status": session_meta["window_status"],
+        "relay_number": session_meta["relay_number"],
+        "relay_triggered": session_meta["relay_triggered"],
+        "total_messages": session_meta["total_messages"],
+    }
+
+    return jsonify(relay_result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# GET /api/v1/relay/session/status?session_id=...
+# Returns window state and current core sequences for a session.
+# ═══════════════════════════════════════════════════════════════════════════
+
+@relay_bp.route("/api/v1/relay/session/status", methods=["GET"])
+@require_api_key
+def relay_session_status():
+    try:
+        from relay_session import session_status
+    except ImportError as e:
+        return jsonify({"status": "error", "error": f"relay_session unavailable: {e}"}), 500
+
+    session_id = request.args.get("session_id", "").strip()
+    if not session_id:
+        return jsonify({"status": "error", "error": "session_id required"}), 400
+
+    status = session_status(session_id)
+    return jsonify({"status": "ok", **status})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DELETE /api/v1/relay/session
+# Destroy a session and free its memory.
+# Body: { "session_id": "..." }
+# ═══════════════════════════════════════════════════════════════════════════
+
+@relay_bp.route("/api/v1/relay/session", methods=["DELETE"])
+@require_api_key
+def relay_session_destroy():
+    try:
+        from relay_session import destroy_session
+    except ImportError as e:
+        return jsonify({"status": "error", "error": f"relay_session unavailable: {e}"}), 500
+
+    data = request.get_json(force=True, silent=True) or {}
+    session_id = data.get("session_id", "").strip()
+    if not session_id:
+        return jsonify({"status": "error", "error": "session_id required"}), 400
+
+    destroyed = destroy_session(session_id)
+    return jsonify({
+        "status": "ok",
+        "session_id": session_id,
+        "destroyed": destroyed,
     })
