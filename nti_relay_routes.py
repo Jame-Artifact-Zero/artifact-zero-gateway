@@ -152,6 +152,8 @@ def relay_single():
     # session_scope: call | session:{id} | account | shared:{topic}
     # Defaults to call (fully isolated) if not supplied.
     session_scope = (data.get("session_scope") or "call").strip()
+    # relay_mode: "open" (default) or "governed" — per message, independent of session
+    relay_mode = (data.get("relay_mode") or "open").strip()
 
     api_key_id = getattr(request, "_api_key_id", "unknown")
     stored_profile = _get_governance_profile(api_key_id)
@@ -168,6 +170,7 @@ def relay_single():
         request_id=request_id,
         session_scope=session_scope,
         api_key_id=api_key_id,
+        relay_mode=relay_mode,
     )
 
     _log_relay_usage(
@@ -220,6 +223,7 @@ def relay_batch():
     stored_profile = _get_governance_profile(api_key_id)
     governance = resolve_governance(request_gov, stored_profile)
     session_scope = (data.get("session_scope") or "call").strip()
+    relay_mode = (data.get("relay_mode") or "open").strip()
 
     results = []
     for i, text in enumerate(texts):
@@ -239,6 +243,7 @@ def relay_batch():
             request_id=str(uuid.uuid4()),
             session_scope=session_scope,
             api_key_id=api_key_id,
+            relay_mode=relay_mode,
         )
         res["index"] = i
         results.append(res)
