@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from typing import Optional, Tuple
 
-NTI_RELAY_VERSION = "nti-relay-v3.0"
+NTI_RELAY_VERSION = "nti-relay-v1.0"
 
 SUPPORTED_PROVIDERS = {"anthropic", "openai", "google", "xai"}
 
@@ -44,27 +44,6 @@ try:
     _HAS_V3 = True
 except ImportError:
     _HAS_V3 = False
-
-try:
-    from relay_memory import (
-        build_injected_prompt as _build_injected_prompt,
-        resolve_session_id as _resolve_session_id,
-        store_response as _store_response,
-        RELAY_MODE_OPEN,
-        RELAY_MODE_GOVERNED,
-        VALID_RELAY_MODES,
-        OPEN_MODE_ANCHOR,
-    )
-    _HAS_RELAY_MEMORY = True
-except ImportError:
-    _HAS_RELAY_MEMORY = False
-    _resolve_session_id = None
-    _store_response = None
-    RELAY_MODE_OPEN = "open"
-    RELAY_MODE_GOVERNED = "governed"
-    VALID_RELAY_MODES = {"open", "governed"}
-    OPEN_MODE_ANCHOR = "Answer this question fully from your training and knowledge."
-
 
 
 def _utc_now() -> str:
@@ -153,7 +132,7 @@ def call_customer_llm(
     system_prompt: str,
     user_text: str,
     token_ceiling: int,
-    timeout: int = 30,
+    timeout: int = 90,
 ) -> Tuple[Optional[str], Optional[str]]:
     """Returns (response_text, error_message)."""
 
@@ -358,53 +337,14 @@ def process_relay(
     governance: dict,
     webhook_url: Optional[str] = None,
     request_id: Optional[str] = None,
-    session_scope: Optional[str] = None,
-    api_key_id: Optional[str] = None,
-    relay_mode: Optional[str] = None,
 ) -> dict:
-    """
-    relay_mode controls how the relay operates for this specific call.
-    Per-message — each call declares its own mode independently.
-    Both modes auto-capture the response to the store. Data always accumulates.
-
-        open      -- AI answers freely from training. No artifact restriction.
-                     System captures and indexes the response. (default)
-        governed  -- Retrieval-first enforcement. Anchor active. Drift warnings.
-                     [GENERAL] prefix required for unsupported claims.
-
-    session_scope controls memory isolation for this call.
-    Scope tokens:
-        call              -- fully isolated, no memory continuity (default)
-        session:{id}      -- caller-supplied session ID, private to this API key
-        account           -- all calls under same api_key_id share memory
-        shared:{topic}    -- opt-in cross-account topic library (stubbed)
-    Security: unknown or invalid scope tokens fall back to call scope silently.
-    """
     rid = request_id or str(uuid.uuid4())
     t0 = time.time()
-
-    # Resolve session ID from scope token
-    if _HAS_RELAY_MEMORY and _resolve_session_id:
-        effective_session_id, scope_meta = _resolve_session_id(
-            scope=session_scope,
-            api_key_id=api_key_id,
-        )
-    else:
-        effective_session_id = rid
-        scope_meta = {"scope_type": "call", "effective_id": rid,
-                      "isolation": "full", "granted": True, "stub_reason": "relay_memory unavailable"}
-
-    # Resolve relay mode — default open, validate, never block on unknown
-    effective_mode = (relay_mode or RELAY_MODE_OPEN).strip().lower()
-    if effective_mode not in VALID_RELAY_MODES:
-        effective_mode = RELAY_MODE_OPEN
 
     result = {
         "request_id": rid,
         "version": NTI_RELAY_VERSION,
         "status": "ok",
-        "session": scope_meta,
-        "relay_mode": effective_mode,
     }
 
     if ai_provider.lower() not in SUPPORTED_PROVIDERS:
@@ -430,54 +370,14 @@ def process_relay(
             dispatch_webhook(webhook_url, result)
         return result
 
-    # Step 2: Build prompt — mode-aware
-    # OPEN:     AI answers freely. Anchor instructs full use of training. No artifact restriction.
-    # GOVERNED: Retrieval-first. Existing P0 anchor active. Drift warnings enforced.
-    # Both modes inject available artifacts from the store (warm state).
-    # Both modes capture the response to the store after delivery.
-    injected_prompt = text
-    relay_meta = {}
-    prompt_token_estimate = 0
-
-    if _HAS_RELAY_MEMORY:
-        try:
-            if effective_mode == RELAY_MODE_OPEN:
-                # Open mode: inject available artifacts but prepend open-mode anchor
-                # so the AI knows it should answer freely, not wait for artifacts
-                injection = _build_injected_prompt(text, session_id=effective_session_id)
-                # Prepend open anchor before the assembled prompt
-                injected_prompt = OPEN_MODE_ANCHOR + "\n\n" + injection["prompt"]
-            else:
-                # Governed mode: standard retrieval-first prompt assembly
-                # P0 governed anchor is already first in the artifact store
-                injection = _build_injected_prompt(text, session_id=effective_session_id)
-                injected_prompt = injection["prompt"]
-
-            prompt_token_estimate = len(injected_prompt) // 4
-            relay_meta = {
-                "topic": injection.get("topic"),
-                "mode": injection.get("mode"),
-                "injected_artifacts": injection.get("injected_artifacts", []),
-                "retrieval_meta": injection.get("retrieval_meta", {}),
-                "prompt_token_estimate": prompt_token_estimate,
-                "anchor_compliance": None,
-            }
-        except Exception as e:
-            relay_meta = {"error": str(e)}
-
-    # Token ceiling applies to LLM OUTPUT only — prompt overhead is additive
-    output_token_ceiling = max(200, governance["token_ceiling"])
-
-    result["relay_memory"] = relay_meta
-
-    # Step 3: Customer LLM call (injected prompt, protected output ceiling)
+    # Step 2: Customer LLM call
     llm_text, llm_error = call_customer_llm(
         provider=ai_provider,
         api_key=ai_key,
         model=ai_model,
         system_prompt=system_prompt,
-        user_text=injected_prompt,
-        token_ceiling=output_token_ceiling,
+        user_text=text,
+        token_ceiling=governance["token_ceiling"],
     )
 
     if llm_error or not llm_text:
@@ -494,25 +394,7 @@ def process_relay(
         "raw_response": llm_text,
     }
 
-    # Anchor compliance check — did the model follow the P0 anchor instructions?
-    # [GENERAL] prefix signals model acknowledged it left artifact context.
-    # False = model answered from training without flagging it.
-    if relay_meta and "anchor_compliance" in relay_meta:
-        anchor_followed = "[GENERAL]" in llm_text or "[general]" in llm_text.lower()
-        artifact_count = len(relay_meta.get("injected_artifacts", []))
-        # If no artifacts were injected, compliance check is not applicable
-        if artifact_count == 0:
-            relay_meta["anchor_compliance"] = None
-            relay_meta["anchor_compliance_note"] = "no artifacts injected"
-        else:
-            relay_meta["anchor_compliance"] = anchor_followed
-            relay_meta["anchor_compliance_note"] = (
-                "[GENERAL] prefix detected" if anchor_followed
-                else "no [GENERAL] prefix — model may be answering from training"
-            )
-        result["relay_memory"] = relay_meta
-
-    # Step 4: V3 outbound governance
+    # Step 3: V3 outbound governance
     v3 = run_outbound_governance(
         text=llm_text,
         audit_threshold=governance["audit_threshold"],
@@ -523,40 +405,7 @@ def process_relay(
     result["governance_applied"] = governance
     result["latency_ms"] = int((time.time() - t0) * 1000)
 
-    # Step 5: Auto-capture response to store — runs regardless of relay_mode
-    # Data always accumulates. Score always recorded. Mode always logged.
-    capture_meta = {}
-    if _HAS_RELAY_MEMORY and _store_response:
-        try:
-            v2_score = None
-            v3_score = None
-            try:
-                v2_signals = result.get("inbound_gate", {}).get("signals", {}).get("v2", {})
-                v2_score = float(v2_signals.get("score", 0)) if v2_signals else None
-            except Exception:
-                pass
-            try:
-                v3_score = v3.get("final_score")
-            except Exception:
-                pass
-
-            capture_meta = _store_response(
-                response_text=v3["enforced_text"],
-                user_message=text,
-                session_id=effective_session_id,
-                relay_mode=effective_mode,
-                request_id=rid,
-                v2_score=v2_score,
-                v3_score=v3_score,
-                topic=relay_meta.get("topic"),
-                mode_detected=relay_meta.get("mode"),
-            )
-        except Exception as e:
-            capture_meta = {"stored": False, "error": str(e)}
-
-    result["capture"] = capture_meta
-
-    # Step 6: Webhook
+    # Step 4: Webhook
     if webhook_url:
         dispatch_webhook(webhook_url, result)
         result["webhook"] = {"dispatched": True, "url": webhook_url}
