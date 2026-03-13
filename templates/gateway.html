@@ -559,6 +559,47 @@
   }
   .gw-debug { width: 100%; }
 }
+
+/* V2 rewrite notice */
+.gw-rewrite-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(0,232,156,0.05);
+  border-left: 2px solid var(--accent);
+  margin: 4px 0 4px 0;
+  max-width: 560px;
+}
+.gw-rewrite-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.gw-rewrite-original {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.gw-rewrite-cleaned {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+.gw-gate-mode-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  background: rgba(107,114,128,0.12);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
 </style>
 {% endblock %}
 
@@ -1032,7 +1073,19 @@ async function sendMessage() {
     removeThinking(thinkId);
 
     if (data.status === 'gated') {
-      addMessage('ai', `🚫 GATED: ${data.error || 'Input blocked by inbound gate.'}`, data);
+      // V2 rewrite-and-forward: strip violation signals, refire silently
+      const rewritten = v2Rewrite(text, data);
+      if (rewritten && rewritten !== text) {
+        // Show rewrite indicator
+        addRewriteNotice(text, rewritten);
+        // Refire with cleaned input
+        await fireRelay(rewritten, body, azKey, thinkId);
+        isLoading = false;
+        document.getElementById('gwSendBtn').disabled = false;
+        return;
+      } else {
+        addMessage('ai', `🚫 GATED: ${data.error || 'Input blocked by inbound gate.'}`, data);
+      }
     } else if (data.status === 'error' || data.status === 'llm_error') {
       addMessage('ai', `⚠ ERROR: ${data.error || 'Unknown error.'}`, data);
     } else {
@@ -1078,7 +1131,9 @@ function addMessage(role, content, data) {
     metaParts.push(`<span class="provider-dot"></span>${providerName[document.getElementById('cfgProvider').value] || 'AI'}`);
     if (showGate && data.inbound_gate) {
       const gp = data.inbound_gate.passed;
+      const gateMode = getRadio('cfgGateMode').toUpperCase();
       metaParts.push(`<span class="gw-gate-badge ${gp?'pass':'block'}">${gp?'GATE PASS':'GATE BLOCK'}</span>`);
+      metaParts.push(`<span class="gw-gate-mode-badge">${gateMode}</span>`);
     }
     if (data.session?.relay_triggered) {
       metaParts.push(`<span class="gw-relay-badge">RELAY FIRED</span>`);
@@ -1231,5 +1286,94 @@ function esc(s) {
 document.querySelector('.az-main').style.padding = '0';
 // Override body flex so gw-root fills full height without topbar
 document.querySelector('.az-main').style.overflow = 'hidden';
+
+// ── V2 CLIENT-SIDE REWRITE ────────────────────────────────────────────────
+const HEDGE_STRIP = [
+  'maybe ','perhaps ','possibly ','probably ','likely ','potentially ',
+  'presumably ','conceivably ','apparently ','arguably ',
+  'i think ','i believe ','i guess ','i suppose ',
+  'it seems ','it appears ','kind of ','sort of ',
+];
+const HEDGE_REPLACE = {'might':'will','could be':'is','would be':'is','should be':'is'};
+const DEFERRED = [
+  "we'll fix later","we will fix later","for now just","adjust after",
+  "fix later","later we can","we can revisit","circle back","table that for now","tbd"
+];
+
+function v2Rewrite(text, gateData) {
+  let out = text;
+  // Only act on HEDGE_WORD violations
+  const violations = (gateData.inbound_gate && gateData.inbound_gate.signals && gateData.inbound_gate.signals.v2)
+    ? (gateData.inbound_gate.signals.v2.violations || [])
+    : [];
+  const reason = gateData.error || '';
+  const isHedge = violations.includes('HEDGE_WORD') || reason.includes('HEDGE_WORD');
+  if (!isHedge) return null; // don't rewrite non-hedge blocks
+
+  // Strip hedge words
+  for (const h of HEDGE_STRIP) {
+    const re = new RegExp('\\b' + h.trim() + '\\b\\s*', 'gi');
+    out = out.replace(re, '');
+  }
+  // Replace hedge substitutions
+  for (const [from, to] of Object.entries(HEDGE_REPLACE)) {
+    const re = new RegExp('\\b' + from + '\\b', 'gi');
+    out = out.replace(re, to);
+  }
+  // Strip deferred phrases
+  for (const d of DEFERRED) {
+    out = out.replace(new RegExp(d, 'gi'), '');
+  }
+  // Clean up
+  out = out.replace(/\s{2,}/g, ' ').trim();
+  out = out.replace(/^[,\s]+/, '').trim();
+  return out !== text ? out : null;
+}
+
+function addRewriteNotice(original, rewritten) {
+  const msgs = document.getElementById('gwMessages');
+  const div = document.createElement('div');
+  div.className = 'gw-rewrite-notice';
+  div.innerHTML = `
+    <div class="gw-rewrite-label">V2 Rewrite</div>
+    <div class="gw-rewrite-original">${escHtml(original)}</div>
+    <div class="gw-rewrite-cleaned">${escHtml(rewritten)}</div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function fireRelay(text, originalBody, azKey, thinkId) {
+  const body = Object.assign({}, originalBody, { text });
+  try {
+    const resp = await fetch('/api/v1/relay/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': azKey },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    document.getElementById('gwDebugBody').textContent = JSON.stringify(data, null, 2);
+    removeThinking(thinkId);
+    if (data.status === 'gated') {
+      addMessage('ai', `🚫 GATED after rewrite: ${data.error || 'Still blocked.'}`, data);
+    } else if (data.status === 'error' || data.status === 'llm_error') {
+      addMessage('ai', `⚠ ERROR: ${data.error || 'Unknown error.'}`, data);
+    } else {
+      addMessage('ai', data.governed_response || data.error || '(empty response)', data);
+    }
+    if (data.session && document.getElementById('cfgShowWindow').checked) {
+      updateWindowStatus(data.session);
+    }
+  } catch(e) {
+    removeThinking(thinkId);
+    addMessage('ai', `⚠ Network error: ${e.message}`, null);
+    toast('Request failed', 'error');
+  }
+}
+
 </script>
 {% endblock %}
