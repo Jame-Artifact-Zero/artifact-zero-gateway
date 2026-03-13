@@ -144,6 +144,12 @@ try:
     init_ccs(app)
 except ImportError:
     print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
+try:
+    from gateway_routes import gateway_bp
+    app.register_blueprint(gateway_bp)
+    print("[app] gateway loaded", flush=True)
+except ImportError:
+    print("[app] gateway_routes not found, skipping", flush=True)
 
 
 # ============================================================
