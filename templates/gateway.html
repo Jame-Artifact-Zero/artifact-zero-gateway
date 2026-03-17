@@ -1,0 +1,1407 @@
+{% extends "base.html" %}
+{% block title %}Gateway — Artifact Zero{% endblock %}
+{% block body_class %}page-gateway{% endblock %}
+
+{% block head %}
+<style>
+/* ── LAYOUT ── */
+.gw-root {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 1fr;
+  height: calc(100vh - var(--az-topbar-h));
+  max-width: 100%;
+  gap: 0;
+  margin: 0 -16px; /* bleed past az-main padding */
+}
+
+/* ── LEFT PANEL ── */
+.gw-left {
+  border-right: 1px solid var(--az-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--az-surface);
+}
+.gw-left-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--az-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gw-left-label {
+  font: 700 10px/1 var(--mono);
+  letter-spacing: 2px;
+  color: var(--az-accent);
+  text-transform: uppercase;
+}
+.gw-left-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── CONTROL SECTIONS ── */
+.gw-section {
+  background: var(--az-bg);
+  border: 1px solid var(--az-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.gw-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s;
+}
+.gw-section-hd.open { border-color: var(--az-border); }
+.gw-section-hd-label {
+  font: 700 9px/1 var(--mono);
+  letter-spacing: 2px;
+  color: var(--az-muted);
+  text-transform: uppercase;
+}
+.gw-section-hd-arrow {
+  font-size: 10px;
+  color: var(--az-muted);
+  transition: transform .2s;
+}
+.gw-section-hd.open .gw-section-hd-arrow { transform: rotate(180deg); }
+.gw-section-body {
+  display: none;
+  padding: 12px 14px;
+  flex-direction: column;
+  gap: 12px;
+}
+.gw-section-body.open { display: flex; }
+
+/* ── FORM CONTROLS ── */
+.gw-field { display: flex; flex-direction: column; gap: 5px; }
+.gw-field-label {
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 1.5px;
+  color: var(--az-muted);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gw-field-val {
+  font: 700 9px/1 var(--mono);
+  color: var(--az-accent);
+}
+.gw-input {
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-radius: 6px;
+  color: var(--az-text);
+  font: 400 12px/1 var(--mono);
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color .15s;
+}
+.gw-input:focus { border-color: var(--az-accent); }
+.gw-input::placeholder { color: var(--az-muted); }
+.gw-select {
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-radius: 6px;
+  color: var(--az-text);
+  font: 400 11px/1 var(--mono);
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color .15s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.gw-select:focus { border-color: var(--az-accent); }
+
+.gw-range-wrap { display: flex; flex-direction: column; gap: 4px; }
+.gw-range {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--az-border);
+  outline: none;
+  cursor: pointer;
+}
+.gw-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--az-accent);
+  cursor: pointer;
+  transition: transform .1s;
+}
+.gw-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.gw-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gw-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+}
+.gw-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.gw-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--az-border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.gw-toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  top: 3px;
+  background: var(--az-muted);
+  border-radius: 50%;
+  transition: transform .2s, background .2s;
+}
+.gw-toggle input:checked + .gw-toggle-slider { background: rgba(0,232,156,.2); border: 1px solid var(--az-accent); }
+.gw-toggle input:checked + .gw-toggle-slider::after { transform: translateX(16px); background: var(--az-accent); }
+
+.gw-radio-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.gw-radio-btn {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--az-border);
+  background: transparent;
+  color: var(--az-muted);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.gw-radio-btn:hover { border-color: var(--az-accent); color: var(--az-text); }
+.gw-radio-btn.active { border-color: var(--az-accent); background: rgba(0,232,156,.12); color: var(--az-accent); }
+
+/* ── WINDOW STATUS BAR ── */
+.gw-window-bar {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--az-border);
+}
+.gw-window-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gw-window-label {
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 1px;
+  color: var(--az-muted);
+  text-transform: uppercase;
+}
+.gw-window-val {
+  font: 700 11px/1 var(--mono);
+  color: var(--az-accent);
+}
+.gw-window-track {
+  height: 3px;
+  background: var(--az-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.gw-window-fill {
+  height: 100%;
+  background: var(--az-accent);
+  border-radius: 2px;
+  transition: width .5s ease, background .3s;
+  width: 0%;
+}
+.gw-window-status {
+  font: 700 9px/1 var(--mono);
+  letter-spacing: 2px;
+  color: var(--az-accent);
+}
+
+/* ── RIGHT PANEL ── */
+.gw-right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--az-bg);
+}
+.gw-chat-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--az-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--az-surface);
+  flex-shrink: 0;
+}
+.gw-session-id {
+  font: 400 10px/1 var(--mono);
+  color: var(--az-muted);
+}
+.gw-session-id span { color: var(--az-text); }
+.gw-header-actions { display: flex; gap: 8px; align-items: center; }
+.gw-btn-sm {
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--az-border);
+  background: transparent;
+  color: var(--az-muted);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.gw-btn-sm:hover { border-color: var(--az-accent); color: var(--az-accent); }
+.gw-btn-sm.danger:hover { border-color: var(--az-red); color: var(--az-red); }
+
+/* ── MESSAGES ── */
+.gw-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.gw-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--az-muted);
+  text-align: center;
+}
+.gw-empty-icon { font-size: 32px; opacity: .3; }
+.gw-empty-label { font: 600 10px/1 var(--mono); letter-spacing: 2px; text-transform: uppercase; }
+.gw-empty-sub { font: 400 12px/1.5 var(--mono); color: var(--az-border); max-width: 32ch; }
+
+.gw-msg { display: flex; flex-direction: column; gap: 4px; animation: gwFadeIn .2s ease; }
+@keyframes gwFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+.gw-msg-user { align-items: flex-end; }
+.gw-msg-ai { align-items: flex-start; }
+
+.gw-msg-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font: 400 14px/1.65 var(--sans);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.gw-msg-user .gw-msg-bubble {
+  background: var(--az-surface2);
+  border: 1px solid var(--az-border);
+  border-bottom-right-radius: 4px;
+  color: var(--az-text);
+}
+.gw-msg-ai .gw-msg-bubble {
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-bottom-left-radius: 4px;
+  color: var(--az-text);
+}
+
+.gw-msg-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font: 400 10px/1 var(--mono);
+  color: var(--az-muted);
+  padding: 0 4px;
+}
+.gw-msg-meta .provider-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--az-accent);
+}
+.gw-relay-badge {
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(0,232,156,.1);
+  border: 1px solid rgba(0,232,156,.25);
+  color: var(--az-accent);
+  font: 700 8px/1 var(--mono);
+  letter-spacing: 1px;
+}
+.gw-gate-badge {
+  padding: 2px 7px;
+  border-radius: 3px;
+  font: 700 8px/1 var(--mono);
+  letter-spacing: 1px;
+}
+.gw-gate-badge.pass { background: rgba(0,232,156,.1); color: var(--az-accent); }
+.gw-gate-badge.block { background: rgba(239,68,68,.1); color: var(--az-red); }
+
+.gw-thinking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-radius: 12px;
+  border-bottom-left-radius: 4px;
+  width: fit-content;
+  max-width: 75%;
+}
+.gw-thinking-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--az-muted);
+  animation: gwDot 1.2s ease-in-out infinite;
+}
+.gw-thinking-dot:nth-child(2) { animation-delay: .2s; }
+.gw-thinking-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes gwDot {
+  0%, 80%, 100% { opacity: .3; transform: scale(.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* ── FILE ATTACHMENTS ── */
+.gw-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 20px 8px;
+}
+.gw-attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-radius: 6px;
+  font: 400 11px/1 var(--mono);
+  color: var(--az-text);
+}
+.gw-attachment-chip button {
+  background: none;
+  border: none;
+  color: var(--az-muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.gw-attachment-chip button:hover { color: var(--az-red); }
+
+/* ── INPUT BAR ── */
+.gw-input-area {
+  flex-shrink: 0;
+  border-top: 1px solid var(--az-border);
+  background: var(--az-surface);
+}
+.gw-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 12px 20px;
+}
+.gw-textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 160px;
+  background: var(--az-bg);
+  border: 1px solid var(--az-border);
+  border-radius: 8px;
+  color: var(--az-text);
+  font: 400 14px/1.5 var(--sans);
+  padding: 10px 14px;
+  resize: none;
+  outline: none;
+  transition: border-color .15s;
+  overflow-y: auto;
+}
+.gw-textarea:focus { border-color: var(--az-accent); }
+.gw-textarea::placeholder { color: var(--az-muted); }
+
+.gw-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gw-upload-btn {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--az-border);
+  background: var(--az-bg);
+  color: var(--az-muted);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.gw-upload-btn:hover { border-color: var(--az-accent); color: var(--az-accent); }
+.gw-send-btn {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: none;
+  background: var(--az-accent);
+  color: #000;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.gw-send-btn:hover { background: #00ffaa; transform: scale(1.05); }
+.gw-send-btn:disabled { background: var(--az-border); color: var(--az-muted); cursor: not-allowed; transform: none; }
+
+.gw-input-footer {
+  padding: 0 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gw-input-hint { font: 400 9px/1 var(--mono); color: var(--az-muted); }
+
+/* ── TOAST ── */
+.gw-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font: 600 12px/1 var(--mono);
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  color: var(--az-text);
+  z-index: 9999;
+  opacity: 0;
+  transition: all .2s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.gw-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.gw-toast.error { border-color: var(--az-red); color: var(--az-red); }
+.gw-toast.success { border-color: var(--az-accent); color: var(--az-accent); }
+
+/* ── DEBUG PANEL ── */
+.gw-debug {
+  display: none;
+  position: fixed;
+  right: 0; top: var(--az-topbar-h); bottom: 0;
+  width: 380px;
+  background: var(--az-bg);
+  border-left: 1px solid var(--az-border);
+  z-index: 800;
+  flex-direction: column;
+  overflow: hidden;
+}
+.gw-debug.open { display: flex; }
+.gw-debug-hd {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--az-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.gw-debug-label { font: 700 10px/1 var(--mono); letter-spacing: 2px; color: var(--az-amber); text-transform: uppercase; }
+.gw-debug-close {
+  background: none; border: none; color: var(--az-muted);
+  cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px;
+}
+.gw-debug-close:hover { color: var(--az-text); }
+.gw-debug-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  font: 400 11px/1.6 var(--mono);
+  color: var(--az-muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .gw-root {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    margin: 0 -16px;
+  }
+  .gw-left {
+    border-right: none;
+    border-bottom: 1px solid var(--az-border);
+    max-height: 280px;
+  }
+  .gw-debug { width: 100%; }
+}
+
+/* V2 rewrite notice */
+.gw-rewrite-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(0,232,156,0.05);
+  border-left: 2px solid var(--accent);
+  margin: 4px 0 4px 0;
+  max-width: 560px;
+}
+.gw-rewrite-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.gw-rewrite-original {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.gw-rewrite-cleaned {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+.gw-gate-mode-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  background: rgba(107,114,128,0.12);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gw-root">
+
+  <!-- ══ LEFT: CONTROLS ══ -->
+  <div class="gw-left">
+    <div class="gw-left-header">
+      <span class="gw-left-label">Gateway Config</span>
+      <button class="gw-btn-sm" onclick="resetSession()">New Session</button>
+    </div>
+
+    <div class="gw-left-body">
+
+      <!-- ── SECTION: API KEYS ── -->
+      <div class="gw-section">
+        <div class="gw-section-hd open" onclick="toggleSection(this)">
+          <span class="gw-section-hd-label">API Keys</span>
+          <span class="gw-section-hd-arrow">▼</span>
+        </div>
+        <div class="gw-section-body open">
+          <div class="gw-field">
+            <label class="gw-field-label">Provider</label>
+            <select class="gw-select" id="cfgProvider" onchange="updateProviderUI()">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI (GPT)</option>
+              <option value="google">Google (Gemini)</option>
+              <option value="xai">xAI (Grok)</option>
+            </select>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">API Key</label>
+            <input type="password" class="gw-input" id="cfgApiKey" placeholder="sk-ant-..." autocomplete="off">
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">Model <span class="gw-field-val" id="cfgModelDisplay"></span></label>
+            <select class="gw-select" id="cfgModel">
+              <option value="">Provider default</option>
+              <option value="claude-sonnet-4-20250514">claude-sonnet-4 (recommended)</option>
+              <option value="claude-opus-4-20250514">claude-opus-4</option>
+              <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+            </select>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">AZ API Key</label>
+            <input type="password" class="gw-input" id="cfgAzKey" placeholder="Your X-API-Key..." autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: GOVERNANCE ── -->
+      <div class="gw-section">
+        <div class="gw-section-hd open" onclick="toggleSection(this)">
+          <span class="gw-section-hd-label">Governance</span>
+          <span class="gw-section-hd-arrow">▼</span>
+        </div>
+        <div class="gw-section-body open">
+          <div class="gw-field">
+            <label class="gw-field-label">Gate Mode</label>
+            <div class="gw-radio-group" id="cfgGateMode">
+              <button class="gw-radio-btn" data-val="permissive" onclick="setRadio('cfgGateMode',this)">PERMISSIVE</button>
+              <button class="gw-radio-btn active" data-val="standard" onclick="setRadio('cfgGateMode',this)">STANDARD</button>
+              <button class="gw-radio-btn" data-val="strict" onclick="setRadio('cfgGateMode',this)">STRICT</button>
+            </div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">
+              Audit Threshold
+              <span class="gw-field-val" id="cfgAuditThresholdVal">0.85</span>
+            </label>
+            <div class="gw-range-wrap">
+              <input type="range" class="gw-range" id="cfgAuditThreshold"
+                     min="0" max="1" step="0.01" value="0.85"
+                     oninput="document.getElementById('cfgAuditThresholdVal').textContent=parseFloat(this.value).toFixed(2)">
+            </div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">
+              Max V3 Passes
+              <span class="gw-field-val" id="cfgMaxPassesVal">2</span>
+            </label>
+            <div class="gw-range-wrap">
+              <input type="range" class="gw-range" id="cfgMaxPasses"
+                     min="1" max="5" step="1" value="2"
+                     oninput="document.getElementById('cfgMaxPassesVal').textContent=this.value">
+            </div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">
+              Token Ceiling
+              <span class="gw-field-val" id="cfgTokenCeilingVal">1000</span>
+            </label>
+            <div class="gw-range-wrap">
+              <input type="range" class="gw-range" id="cfgTokenCeiling"
+                     min="100" max="8000" step="100" value="1000"
+                     oninput="document.getElementById('cfgTokenCeilingVal').textContent=this.value">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: SYSTEM PROMPT ── -->
+      <div class="gw-section">
+        <div class="gw-section-hd" onclick="toggleSection(this)">
+          <span class="gw-section-hd-label">System Prompt</span>
+          <span class="gw-section-hd-arrow">▼</span>
+        </div>
+        <div class="gw-section-body">
+          <textarea class="gw-input" id="cfgSystemPrompt" rows="4"
+            style="resize:vertical;line-height:1.5;font-size:11px;"
+            placeholder="You are a helpful assistant.">You are a helpful assistant.</textarea>
+        </div>
+      </div>
+
+      <!-- ── SECTION: WINDOW THRESHOLDS ── -->
+      <div class="gw-section">
+        <div class="gw-section-hd" onclick="toggleSection(this)">
+          <span class="gw-section-hd-label">Window Thresholds</span>
+          <span class="gw-section-hd-arrow">▼</span>
+        </div>
+        <div class="gw-section-body">
+          <p style="font:400 10px/1.5 var(--mono);color:var(--az-muted);">Read-only — set in thread_monitor.py</p>
+          <div class="gw-field">
+            <label class="gw-field-label">WATCH <span class="gw-field-val">70%</span></label>
+            <div class="gw-window-track"><div class="gw-window-fill" style="width:70%;background:var(--az-amber);"></div></div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">PREPARE <span class="gw-field-val">80%</span></label>
+            <div class="gw-window-track"><div class="gw-window-fill" style="width:80%;background:var(--az-orange);"></div></div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">INJECT <span class="gw-field-val">90%</span></label>
+            <div class="gw-window-track"><div class="gw-window-fill" style="width:90%;background:var(--az-red);"></div></div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-field-label">CRITICAL <span class="gw-field-val">95%</span></label>
+            <div class="gw-window-track"><div class="gw-window-fill" style="width:95%;background:var(--az-red);"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: OPTIONS ── -->
+      <div class="gw-section">
+        <div class="gw-section-hd" onclick="toggleSection(this)">
+          <span class="gw-section-hd-label">Options</span>
+          <span class="gw-section-hd-arrow">▼</span>
+        </div>
+        <div class="gw-section-body">
+          <div class="gw-toggle-row">
+            <span style="font:600 10px/1 var(--mono);letter-spacing:1px;color:var(--az-muted);text-transform:uppercase;">Show Debug Panel</span>
+            <label class="gw-toggle">
+              <input type="checkbox" id="cfgShowDebug" onchange="toggleDebug(this.checked)">
+              <span class="gw-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="gw-toggle-row">
+            <span style="font:600 10px/1 var(--mono);letter-spacing:1px;color:var(--az-muted);text-transform:uppercase;">Show Window %</span>
+            <label class="gw-toggle">
+              <input type="checkbox" id="cfgShowWindow" checked>
+              <span class="gw-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="gw-toggle-row">
+            <span style="font:600 10px/1 var(--mono);letter-spacing:1px;color:var(--az-muted);text-transform:uppercase;">Show Gate Result</span>
+            <label class="gw-toggle">
+              <input type="checkbox" id="cfgShowGate" checked>
+              <span class="gw-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="gw-toggle-row">
+            <span style="font:600 10px/1 var(--mono);letter-spacing:1px;color:var(--az-muted);text-transform:uppercase;">Show Latency</span>
+            <label class="gw-toggle">
+              <input type="checkbox" id="cfgShowLatency" checked>
+              <span class="gw-toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /gw-left-body -->
+
+    <!-- ── WINDOW STATUS (pinned bottom) ── -->
+    <div class="gw-window-bar">
+      <div class="gw-window-row">
+        <span class="gw-window-label">Context Window</span>
+        <span class="gw-window-val" id="windowPct">0%</span>
+      </div>
+      <div class="gw-window-track">
+        <div class="gw-window-fill" id="windowFill"></div>
+      </div>
+      <div class="gw-window-row">
+        <span class="gw-window-status" id="windowStatus">NOMINAL</span>
+        <span style="font:400 9px/1 var(--mono);color:var(--az-muted);">Relay #<span id="relayNum">1</span></span>
+      </div>
+    </div>
+
+  </div><!-- /gw-left -->
+
+  <!-- ══ RIGHT: CHAT ══ -->
+  <div class="gw-right">
+
+    <div class="gw-chat-header">
+      <div class="gw-session-id">Session: <span id="sessionIdDisplay">—</span></div>
+      <div class="gw-header-actions">
+        <span style="font:400 10px/1 var(--mono);color:var(--az-muted);" id="msgCount">0 messages</span>
+        <button class="gw-btn-sm" onclick="exportChat()">Export</button>
+        <button class="gw-btn-sm danger" onclick="clearChat()">Clear</button>
+      </div>
+    </div>
+
+    <div class="gw-messages" id="gwMessages">
+      <div class="gw-empty" id="gwEmpty">
+        <div class="gw-empty-icon">⬡</div>
+        <div class="gw-empty-label">Gateway Ready</div>
+        <div class="gw-empty-sub">Configure API keys and governance settings, then send your first message.</div>
+      </div>
+    </div>
+
+    <div class="gw-attachments" id="gwAttachments"></div>
+
+    <div class="gw-input-area">
+      <div class="gw-input-row">
+        <textarea class="gw-textarea" id="gwInput"
+          placeholder="Type a message or paste text to test..."
+          rows="1"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"></textarea>
+        <div class="gw-input-actions">
+          <button class="gw-upload-btn" onclick="document.getElementById('gwFileInput').click()" title="Attach file">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+          <button class="gw-send-btn" id="gwSendBtn" onclick="sendMessage()" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2 21L23 12 2 3v7l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="gw-input-footer">
+        <span class="gw-input-hint">↵ Send &nbsp;·&nbsp; Shift+↵ Newline</span>
+        <span class="gw-input-hint" id="charCount">0 chars</span>
+      </div>
+    </div>
+
+  </div><!-- /gw-right -->
+
+</div><!-- /gw-root -->
+
+<!-- Hidden file input -->
+<input type="file" id="gwFileInput" multiple accept=".txt,.md,.pdf,.csv,.json,.py,.js,.html,.css,.docx,.xlsx"
+       style="display:none" onchange="handleFileUpload(this.files)">
+
+<!-- Debug Panel -->
+<div class="gw-debug" id="gwDebug">
+  <div class="gw-debug-hd">
+    <span class="gw-debug-label">Raw Response</span>
+    <button class="gw-debug-close" onclick="document.getElementById('gwDebug').classList.remove('open')">&times;</button>
+  </div>
+  <div class="gw-debug-body" id="gwDebugBody">— No response yet —</div>
+</div>
+
+<!-- Toast -->
+<div class="gw-toast" id="gwToast"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+'use strict';
+
+// ── STATE ──
+let sessionId = 'gw_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+let messages = [];
+let attachedFiles = [];
+let isLoading = false;
+let totalMessages = 0;
+
+// ── INIT ──
+document.getElementById('sessionIdDisplay').textContent = sessionId;
+document.getElementById('gwInput').addEventListener('input', () => {
+  document.getElementById('charCount').textContent = document.getElementById('gwInput').value.length + ' chars';
+});
+
+// ── SECTION TOGGLE ──
+function toggleSection(hd) {
+  hd.classList.toggle('open');
+  const body = hd.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ── RADIO BUTTONS ──
+function setRadio(groupId, btn) {
+  document.querySelectorAll(`#${groupId} .gw-radio-btn`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function getRadio(groupId) {
+  const active = document.querySelector(`#${groupId} .gw-radio-btn.active`);
+  return active ? active.dataset.val : 'standard';
+}
+
+// ── PROVIDER MODEL OPTIONS ──
+const PROVIDER_MODELS = {
+  anthropic: [
+    { value: '', label: 'Provider default' },
+    { value: 'claude-sonnet-4-20250514', label: 'claude-sonnet-4' },
+    { value: 'claude-opus-4-20250514', label: 'claude-opus-4' },
+    { value: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4-5' },
+  ],
+  openai: [
+    { value: '', label: 'Provider default' },
+    { value: 'gpt-4o', label: 'gpt-4o' },
+    { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
+    { value: 'gpt-4-turbo', label: 'gpt-4-turbo' },
+  ],
+  google: [
+    { value: '', label: 'Provider default' },
+    { value: 'gemini-1.5-pro', label: 'gemini-1.5-pro' },
+    { value: 'gemini-1.5-flash', label: 'gemini-1.5-flash' },
+    { value: 'gemini-2.0-flash', label: 'gemini-2.0-flash' },
+  ],
+  xai: [
+    { value: '', label: 'Provider default' },
+    { value: 'grok-beta', label: 'grok-beta' },
+    { value: 'grok-2', label: 'grok-2' },
+  ],
+};
+
+function updateProviderUI() {
+  const provider = document.getElementById('cfgProvider').value;
+  const modelSel = document.getElementById('cfgModel');
+  const models = PROVIDER_MODELS[provider] || [{ value:'', label:'Provider default' }];
+  modelSel.innerHTML = models.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+  // Update api key placeholder
+  const placeholders = { anthropic:'sk-ant-...', openai:'sk-...', google:'AIza...', xai:'xai-...' };
+  document.getElementById('cfgApiKey').placeholder = placeholders[provider] || 'API Key...';
+}
+
+// ── FILE UPLOAD ──
+function handleFileUpload(files) {
+  Array.from(files).forEach(file => {
+    if (attachedFiles.find(f => f.name === file.name)) return;
+    attachedFiles.push(file);
+  });
+  renderAttachments();
+  document.getElementById('gwFileInput').value = '';
+}
+
+function renderAttachments() {
+  const el = document.getElementById('gwAttachments');
+  if (!attachedFiles.length) { el.innerHTML = ''; return; }
+  el.innerHTML = attachedFiles.map((f, i) => `
+    <div class="gw-attachment-chip">
+      <span>📎</span>
+      <span>${esc(f.name)}</span>
+      <span style="color:var(--az-muted);font-size:10px;">${formatSize(f.size)}</span>
+      <button onclick="removeAttachment(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeAttachment(i) {
+  attachedFiles.splice(i, 1);
+  renderAttachments();
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + 'KB';
+  return (bytes/1024/1024).toFixed(1) + 'MB';
+}
+
+// Read files for context injection
+async function readFileAsText(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsText(file);
+  });
+}
+
+// ── AUTO RESIZE TEXTAREA ──
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+// ── KEY HANDLER ──
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+// ── SEND MESSAGE ──
+async function sendMessage() {
+  if (isLoading) return;
+
+  const input = document.getElementById('gwInput');
+  let text = input.value.trim();
+  if (!text && !attachedFiles.length) return;
+
+  const apiKey = document.getElementById('cfgApiKey').value.trim();
+  const azKey = document.getElementById('cfgAzKey').value.trim();
+  if (!apiKey) { toast('API key required', 'error'); return; }
+  if (!azKey) { toast('AZ API key required', 'error'); return; }
+
+  // Append file contents to message
+  if (attachedFiles.length) {
+    const fileTexts = [];
+    for (const file of attachedFiles) {
+      try {
+        const content = await readFileAsText(file);
+        fileTexts.push(`\n\n--- FILE: ${file.name} ---\n${content.slice(0, 20000)}`);
+      } catch(e) {
+        fileTexts.push(`\n\n--- FILE: ${file.name} (unreadable) ---`);
+      }
+    }
+    text = text + fileTexts.join('');
+    attachedFiles = [];
+    renderAttachments();
+  }
+
+  // Show user message
+  addMessage('user', input.value.trim() + (attachedFiles.length ? ` [+${attachedFiles.length} file(s)]` : ''));
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('charCount').textContent = '0 chars';
+
+  // Show thinking
+  const thinkId = showThinking();
+  isLoading = true;
+  document.getElementById('gwSendBtn').disabled = true;
+
+  // Build request
+  const body = {
+    session_id: sessionId,
+    text: text,
+    ai_provider: document.getElementById('cfgProvider').value,
+    ai_key: apiKey,
+    ai_model: document.getElementById('cfgModel').value || undefined,
+    system_prompt: document.getElementById('cfgSystemPrompt').value.trim() || 'You are a helpful assistant.',
+    label: 'gateway-test',
+    governance: {
+      gate_mode: getRadio('cfgGateMode'),
+      audit_threshold: parseFloat(document.getElementById('cfgAuditThreshold').value),
+      max_passes: parseInt(document.getElementById('cfgMaxPasses').value),
+      token_ceiling: parseInt(document.getElementById('cfgTokenCeiling').value),
+    },
+  };
+
+  try {
+    const resp = await fetch('/api/v1/relay/session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': azKey,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json();
+
+    // Store raw response for debug
+    document.getElementById('gwDebugBody').textContent = JSON.stringify(data, null, 2);
+
+    removeThinking(thinkId);
+
+    if (data.status === 'gated') {
+      // V2 rewrite-and-forward: strip violation signals, refire silently
+      const rewritten = v2Rewrite(text, data);
+      if (rewritten && rewritten !== text) {
+        // Show rewrite indicator
+        addRewriteNotice(text, rewritten);
+        // Refire with cleaned input
+        await fireRelay(rewritten, body, azKey, thinkId);
+        isLoading = false;
+        document.getElementById('gwSendBtn').disabled = false;
+        return;
+      } else {
+        addMessage('ai', `🚫 GATED: ${data.error || 'Input blocked by inbound gate.'}`, data);
+      }
+    } else if (data.status === 'error' || data.status === 'llm_error') {
+      addMessage('ai', `⚠ ERROR: ${data.error || 'Unknown error.'}`, data);
+    } else {
+      const reply = data.governed_response || data.error || '(empty response)';
+      addMessage('ai', reply, data);
+    }
+
+    // Update window status
+    if (data.session && document.getElementById('cfgShowWindow').checked) {
+      updateWindowStatus(data.session);
+    }
+
+  } catch(e) {
+    removeThinking(thinkId);
+    addMessage('ai', `⚠ Network error: ${e.message}`, null);
+    toast('Request failed', 'error');
+  }
+
+  isLoading = false;
+  document.getElementById('gwSendBtn').disabled = false;
+  document.getElementById('gwInput').focus();
+}
+
+// ── MESSAGES ──
+function addMessage(role, content, data) {
+  const el = document.getElementById('gwMessages');
+  const empty = document.getElementById('gwEmpty');
+  if (empty) empty.remove();
+
+  totalMessages++;
+  document.getElementById('msgCount').textContent = totalMessages + ' message' + (totalMessages===1?'':'s');
+
+  const msg = document.createElement('div');
+  msg.className = `gw-msg gw-msg-${role}`;
+
+  const showGate = document.getElementById('cfgShowGate').checked;
+  const showLatency = document.getElementById('cfgShowLatency').checked;
+
+  let metaHTML = '';
+  if (role === 'ai' && data) {
+    const metaParts = [];
+    const providerName = { anthropic:'Claude', openai:'GPT', google:'Gemini', xai:'Grok' };
+    metaParts.push(`<span class="provider-dot"></span>${providerName[document.getElementById('cfgProvider').value] || 'AI'}`);
+    if (showGate && data.inbound_gate) {
+      const gp = data.inbound_gate.passed;
+      const gateMode = getRadio('cfgGateMode').toUpperCase();
+      metaParts.push(`<span class="gw-gate-badge ${gp?'pass':'block'}">${gp?'GATE PASS':'GATE BLOCK'}</span>`);
+      metaParts.push(`<span class="gw-gate-mode-badge">${gateMode}</span>`);
+    }
+    if (data.session?.relay_triggered) {
+      metaParts.push(`<span class="gw-relay-badge">RELAY FIRED</span>`);
+    }
+    if (showLatency && data.latency_ms !== undefined) {
+      metaParts.push(`${data.latency_ms}ms`);
+    }
+    if (data.v3) {
+      metaParts.push(`v3: ${Math.round((1-data.v3.compression_ratio)*100)}% compressed`);
+    }
+    metaHTML = `<div class="gw-msg-meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>`;
+  }
+
+  msg.innerHTML = `
+    <div class="gw-msg-bubble">${esc(content)}</div>
+    ${metaHTML}
+  `;
+
+  el.appendChild(msg);
+  el.scrollTop = el.scrollHeight;
+
+  messages.push({ role, content, data, ts: Date.now() });
+}
+
+function showThinking() {
+  const id = 'think_' + Date.now();
+  const el = document.getElementById('gwMessages');
+  const div = document.createElement('div');
+  div.className = 'gw-msg gw-msg-ai';
+  div.id = id;
+  div.innerHTML = `
+    <div class="gw-thinking">
+      <div class="gw-thinking-dot"></div>
+      <div class="gw-thinking-dot"></div>
+      <div class="gw-thinking-dot"></div>
+    </div>
+  `;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  return id;
+}
+
+function removeThinking(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ── WINDOW STATUS UPDATE ──
+function updateWindowStatus(session) {
+  const pct = session.window_pct || 0;
+  const fill = document.getElementById('windowFill');
+  const pctEl = document.getElementById('windowPct');
+  const statusEl = document.getElementById('windowStatus');
+  const relayEl = document.getElementById('relayNum');
+
+  pctEl.textContent = pct.toFixed(1) + '%';
+  fill.style.width = Math.min(pct, 100) + '%';
+  relayEl.textContent = session.relay_number || 1;
+
+  const status = session.window_status || 'NOMINAL';
+  statusEl.textContent = status;
+
+  const colors = {
+    NOMINAL: 'var(--az-accent)',
+    WATCH: 'var(--az-amber)',
+    PREPARE: 'var(--az-orange)',
+    INJECT: 'var(--az-red)',
+    CRITICAL: 'var(--az-red)',
+  };
+  fill.style.background = colors[status] || 'var(--az-accent)';
+  statusEl.style.color = colors[status] || 'var(--az-accent)';
+  pctEl.style.color = colors[status] || 'var(--az-accent)';
+
+  if (session.relay_triggered) {
+    toast('Relay fired — window reset', 'success');
+  }
+}
+
+// ── RESET SESSION ──
+function resetSession() {
+  sessionId = 'gw_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+  messages = [];
+  totalMessages = 0;
+  document.getElementById('sessionIdDisplay').textContent = sessionId;
+  document.getElementById('msgCount').textContent = '0 messages';
+  document.getElementById('gwMessages').innerHTML = `
+    <div class="gw-empty" id="gwEmpty">
+      <div class="gw-empty-icon">⬡</div>
+      <div class="gw-empty-label">Gateway Ready</div>
+      <div class="gw-empty-sub">New session started. Configure and send.</div>
+    </div>
+  `;
+  updateWindowStatus({ window_pct: 0, window_status: 'NOMINAL', relay_number: 1, relay_triggered: false });
+  document.getElementById('gwDebugBody').textContent = '— No response yet —';
+  toast('New session started');
+}
+
+// ── CLEAR CHAT (keep session) ──
+function clearChat() {
+  messages = [];
+  totalMessages = 0;
+  document.getElementById('msgCount').textContent = '0 messages';
+  document.getElementById('gwMessages').innerHTML = `
+    <div class="gw-empty" id="gwEmpty">
+      <div class="gw-empty-icon">⬡</div>
+      <div class="gw-empty-label">Gateway Ready</div>
+      <div class="gw-empty-sub">Chat cleared. Session ID preserved.</div>
+    </div>
+  `;
+}
+
+// ── EXPORT ──
+function exportChat() {
+  const lines = messages.map(m => {
+    const role = m.role.toUpperCase();
+    const ts = new Date(m.ts).toISOString();
+    return `[${ts}] ${role}:\n${m.content}\n`;
+  });
+  const blob = new Blob([lines.join('\n---\n\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gateway-session-${sessionId}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Chat exported');
+}
+
+// ── DEBUG PANEL ──
+function toggleDebug(on) {
+  document.getElementById('gwDebug').classList.toggle('open', on);
+}
+
+// ── TOAST ──
+function toast(msg, type = '') {
+  const el = document.getElementById('gwToast');
+  el.textContent = msg;
+  el.className = 'gw-toast' + (type ? ' ' + type : '') + ' show';
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── ESCAPE ──
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
+// ── REMOVE az-main PADDING so layout bleeds ──
+document.querySelector('.az-main').style.padding = '0';
+// Override body flex so gw-root fills full height without topbar
+document.querySelector('.az-main').style.overflow = 'hidden';
+
+// ── V2 CLIENT-SIDE REWRITE ────────────────────────────────────────────────
+const HEDGE_STRIP = [
+  'maybe ','perhaps ','possibly ','probably ','likely ','potentially ',
+  'presumably ','conceivably ','apparently ','arguably ',
+  'i think ','i believe ','i guess ','i suppose ',
+  'it seems ','it appears ','kind of ','sort of ',
+];
+const HEDGE_REPLACE = {'might':'will','could be':'is','would be':'is','should be':'is'};
+const DEFERRED = [
+  "we'll fix later","we will fix later","for now just","adjust after",
+  "fix later","later we can","we can revisit","circle back","table that for now","tbd"
+];
+
+function v2Rewrite(text, gateData) {
+  let out = text;
+  // Only act on HEDGE_WORD violations
+  const violations = (gateData.inbound_gate && gateData.inbound_gate.signals && gateData.inbound_gate.signals.v2)
+    ? (gateData.inbound_gate.signals.v2.violations || [])
+    : [];
+  const reason = gateData.error || '';
+  const isHedge = violations.includes('HEDGE_WORD') || reason.includes('HEDGE_WORD');
+  if (!isHedge) return null; // don't rewrite non-hedge blocks
+
+  // Strip hedge words ONLY when functioning as qualifiers.
+  // A qualifier appears:
+  //   - at sentence start (after ^ or after . ? ! followed by whitespace)
+  //   - immediately before a verb, adjective, or another hedge
+  //   - NOT when it is the only word, NOT when embedded in a noun phrase
+  //   - NOT inside quoted strings or code blocks
+  for (const h of HEDGE_STRIP) {
+    const hw = h.trim();
+    // Match hedge at sentence start or after punctuation boundary, before content
+    // (?:^|(?<=[.?!]\s)) — sentence boundary
+    // (?=\s+\w) — followed by whitespace then a word (not end of string)
+    const reSentenceStart = new RegExp(
+      '(?:^|(?<=[.?!]\\s))' + hw + '(?=\\s+\\w)',
+      'gi'
+    );
+    // Match hedge immediately before a verb-like or adjective-like word
+    // Covers: "probably correct", "likely the", "possibly a"
+    const reBeforeContent = new RegExp(
+      '\\b' + hw + '\\b(?=\\s+(?:is|are|was|were|will|would|can|could|should|the|a|an|this|that|it|correct|wrong|true|false|good|bad|better|worse|right|able|ready|needed|required|possible|important|clear|done|complete|built|live|deployed)\\b)',
+      'gi'
+    );
+    out = out.replace(reSentenceStart, '');
+    out = out.replace(reBeforeContent, '');
+  }
+
+  // Replace hedge substitutions (these are safe — swap word for word)
+  for (const [from, to] of Object.entries(HEDGE_REPLACE)) {
+    // Only replace when the hedge word is flanked by non-content boundaries
+    const re = new RegExp(
+      '(?<![\\w-])' + from + '(?![\\w-])',
+      'gi'
+    );
+    out = out.replace(re, to);
+  }
+
+  // Strip deferred phrases (these are full phrases, safe to remove)
+  for (const d of DEFERRED) {
+    out = out.replace(new RegExp(d, 'gi'), '');
+  }
+
+  // Clean up whitespace artifacts
+  out = out.replace(/\s{2,}/g, ' ').trim();
+  out = out.replace(/^[,;\s]+/, '').trim();
+  out = out.replace(/\s+([.,;!?])/g, '$1');
+
+  return out !== text ? out : null;
+}
+
+function addRewriteNotice(original, rewritten) {
+  const msgs = document.getElementById('gwMessages');
+  const div = document.createElement('div');
+  div.className = 'gw-rewrite-notice';
+  div.innerHTML = `
+    <div class="gw-rewrite-label">V2 Rewrite</div>
+    <div class="gw-rewrite-original">${escHtml(original)}</div>
+    <div class="gw-rewrite-cleaned">${escHtml(rewritten)}</div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function fireRelay(text, originalBody, azKey, thinkId) {
+  const body = Object.assign({}, originalBody, { text });
+  try {
+    const resp = await fetch('/api/v1/relay/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': azKey },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    document.getElementById('gwDebugBody').textContent = JSON.stringify(data, null, 2);
+    removeThinking(thinkId);
+    if (data.status === 'gated') {
+      addMessage('ai', `🚫 GATED after rewrite: ${data.error || 'Still blocked.'}`, data);
+    } else if (data.status === 'error' || data.status === 'llm_error') {
+      addMessage('ai', `⚠ ERROR: ${data.error || 'Unknown error.'}`, data);
+    } else {
+      addMessage('ai', data.governed_response || data.error || '(empty response)', data);
+    }
+    if (data.session && document.getElementById('cfgShowWindow').checked) {
+      updateWindowStatus(data.session);
+    }
+  } catch(e) {
+    removeThinking(thinkId);
+    addMessage('ai', `⚠ Network error: ${e.message}`, null);
+    toast('Request failed', 'error');
+  }
+}
+
+</script>
+{% endblock %}
