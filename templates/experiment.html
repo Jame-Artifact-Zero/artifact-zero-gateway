@@ -1,0 +1,786 @@
+{% extends "base.html" %}
+{% block title %}A 60-Second Thought Experiment — Artifact Zero{% endblock %}
+
+{% block head %}
+<style>
+/* ── EXPERIMENT PAGE ───────────────────────────────────────── */
+.exp-wrap {
+  min-height: calc(100vh - var(--az-topbar-h));
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px 80px;
+  font-family: var(--sans);
+}
+
+/* INTRO */
+.exp-intro {
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  padding: 72px 0 56px;
+}
+.exp-intro-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.exp-intro-title {
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.15;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+.exp-intro-sub {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 40px;
+}
+.exp-intro-sub span {
+  display: block;
+}
+.exp-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #0a0c10;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 14px 32px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.exp-start-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.exp-start-btn svg { width: 14px; height: 14px; }
+
+/* QUIZ STAGE */
+.exp-stage {
+  display: none;
+  max-width: 640px;
+  width: 100%;
+  padding-top: 48px;
+}
+.exp-stage.active { display: block; }
+
+/* Progress bar */
+.exp-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.exp-progress-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+.exp-timer-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  transition: color 0.3s;
+}
+.exp-timer-label.urgent { color: #ef4444; }
+.exp-progress-bar-track {
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  margin-bottom: 36px;
+  position: relative;
+}
+.exp-progress-bar-fill {
+  height: 2px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.exp-timer-track {
+  width: 100%;
+  height: 3px;
+  background: var(--surface2);
+  margin-bottom: 36px;
+  position: relative;
+  overflow: hidden;
+}
+.exp-timer-fill {
+  height: 3px;
+  background: var(--accent);
+  width: 100%;
+  transition: width 1s linear, background 0.3s;
+}
+.exp-timer-fill.urgent { background: #ef4444; }
+
+/* Question card */
+.exp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 24px;
+}
+.exp-card-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.exp-col-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.exp-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.exp-task-item {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.exp-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-rule-item {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+.exp-question-prompt {
+  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  margin-bottom: 16px;
+}
+
+/* Answer options */
+.exp-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.exp-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.exp-option:hover:not(.locked) {
+  border-color: var(--accent);
+  background: rgba(0,232,156,0.04);
+}
+.exp-option.selected {
+  border-color: var(--accent);
+  background: rgba(0,232,156,0.07);
+}
+.exp-option.correct {
+  border-color: var(--accent);
+  background: rgba(0,232,156,0.12);
+}
+.exp-option.incorrect {
+  border-color: #ef4444;
+  background: rgba(239,68,68,0.08);
+}
+.exp-option.missed {
+  border-color: var(--accent);
+  background: rgba(0,232,156,0.05);
+  opacity: 0.7;
+}
+.exp-option-check {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.exp-option.selected .exp-option-check,
+.exp-option.correct .exp-option-check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.exp-option.incorrect .exp-option-check {
+  border-color: #ef4444;
+  background: #ef4444;
+}
+.exp-option-check svg { display: none; }
+.exp-option.selected .exp-option-check svg,
+.exp-option.correct .exp-option-check svg,
+.exp-option.incorrect .exp-option-check svg { display: block; }
+
+.exp-option-text {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* Multi-select hint */
+.exp-multi-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.exp-multi-hint.show { opacity: 1; }
+
+/* Feedback */
+.exp-feedback {
+  display: none;
+  padding: 14px 18px;
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  border-left: 3px solid var(--accent);
+  background: rgba(0,232,156,0.05);
+  color: var(--muted);
+}
+.exp-feedback.wrong {
+  border-color: #ef4444;
+  background: rgba(239,68,68,0.05);
+}
+.exp-feedback.show { display: block; }
+
+/* Next button */
+.exp-next-btn {
+  display: none;
+  width: 100%;
+  padding: 15px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background 0.15s, color 0.15s;
+}
+.exp-next-btn:hover { background: var(--accent); color: #0a0c10; }
+.exp-next-btn.show { display: block; }
+
+/* RESULTS */
+.exp-results {
+  display: none;
+  max-width: 600px;
+  width: 100%;
+  padding-top: 64px;
+  text-align: center;
+}
+.exp-results.active { display: block; }
+
+.exp-score-block {
+  margin-bottom: 48px;
+}
+.exp-score-num {
+  font-family: var(--mono);
+  font-size: clamp(56px, 12vw, 96px);
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.exp-score-denom {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.exp-score-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+.exp-stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 40px 0;
+  padding: 28px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.exp-stat {
+  text-align: center;
+}
+.exp-stat-num {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+}
+.exp-stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.exp-instability {
+  font-size: clamp(17px, 3.5vw, 22px);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  margin: 36px 0 48px;
+  letter-spacing: -0.01em;
+}
+
+/* Final block */
+.exp-final-block {
+  text-align: left;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.exp-final-line {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+.exp-final-line:last-of-type { margin-bottom: 0; }
+.exp-final-line strong { color: var(--accent); font-weight: 600; }
+
+.exp-arch-block {
+  padding: 24px 32px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.exp-arch-flow {
+  font-family: var(--mono);
+  font-size: clamp(13px, 2.5vw, 17px);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  margin-bottom: 20px;
+}
+.exp-arch-flow span { color: var(--accent); }
+.exp-arch-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.exp-arch-row {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+.exp-arch-row b { color: var(--text); font-weight: 600; }
+
+.exp-cta-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.exp-cta-primary {
+  flex: 1;
+  min-width: 180px;
+  padding: 15px 24px;
+  background: var(--accent);
+  color: #0a0c10;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-align: center;
+  transition: opacity 0.15s;
+}
+.exp-cta-primary:hover { opacity: 0.85; }
+.exp-cta-secondary {
+  flex: 1;
+  min-width: 180px;
+  padding: 15px 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-align: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+.exp-cta-secondary:hover { border-color: var(--text); color: var(--text); }
+
+/* Fade-in animation */
+@keyframes exp-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.exp-intro, .exp-stage, .exp-results {
+  animation: exp-fade-up 0.4s ease both;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="exp-wrap">
+
+  <!-- INTRO -->
+  <div class="exp-intro" id="exp-intro">
+    <div class="exp-intro-eyebrow">Thought Experiment</div>
+    <h1 class="exp-intro-title">A 60-Second Thought Experiment</h1>
+    <p class="exp-intro-sub">
+      <span>Four short scheduling problems.</span>
+      <span>Follow the rules exactly.</span>
+    </p>
+    <button class="exp-start-btn" onclick="startExperiment()">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="2,1 13,7 2,13" fill="currentColor"/></svg>
+      BEGIN
+    </button>
+  </div>
+
+  <!-- QUIZ STAGE -->
+  <div class="exp-stage" id="exp-stage">
+
+    <div class="exp-progress-row">
+      <span class="exp-progress-label" id="exp-q-label">Question 1 of 4</span>
+      <span class="exp-timer-label" id="exp-timer-label">15s</span>
+    </div>
+    <div class="exp-progress-bar-track">
+      <div class="exp-progress-bar-fill" id="exp-progress-fill" style="width:25%"></div>
+    </div>
+    <div class="exp-timer-track">
+      <div class="exp-timer-fill" id="exp-timer-fill"></div>
+    </div>
+
+    <div class="exp-card">
+      <div class="exp-card-header">
+        <div>
+          <div class="exp-col-label">Tasks</div>
+          <div class="exp-task-list" id="exp-tasks"></div>
+        </div>
+        <div>
+          <div class="exp-col-label">Rules</div>
+          <div class="exp-rule-list" id="exp-rules"></div>
+        </div>
+      </div>
+      <div class="exp-question-prompt">Choose the valid execution order</div>
+      <div class="exp-multi-hint" id="exp-multi-hint">SELECT ALL THAT APPLY</div>
+      <div class="exp-options" id="exp-options"></div>
+      <div class="exp-feedback" id="exp-feedback"></div>
+    </div>
+
+    <button class="exp-next-btn" id="exp-next-btn" onclick="nextQuestion()">
+      NEXT QUESTION →
+    </button>
+
+  </div>
+
+  <!-- RESULTS -->
+  <div class="exp-results" id="exp-results">
+
+    <div class="exp-score-block">
+      <div class="exp-score-num" id="res-score">0</div>
+      <div class="exp-score-denom">/ 4</div>
+      <div class="exp-score-label">Your Score</div>
+    </div>
+
+    <div class="exp-stats-row">
+      <div class="exp-stat">
+        <div class="exp-stat-num">4</div>
+        <div class="exp-stat-label">Tasks</div>
+      </div>
+      <div class="exp-stat">
+        <div class="exp-stat-num">5</div>
+        <div class="exp-stat-label">Constraints</div>
+      </div>
+      <div class="exp-stat">
+        <div class="exp-stat-num">15s</div>
+        <div class="exp-stat-label">Per Decision</div>
+      </div>
+    </div>
+
+    <div class="exp-instability">
+      Constraint systems become unstable under pressure.
+    </div>
+
+    <div class="exp-final-block">
+      <div class="exp-final-line">AI systems operate inside constraint systems constantly.</div>
+      <div class="exp-final-line"><strong>Most AI failures are not intelligence failures.</strong></div>
+      <div class="exp-final-line">They are constraint failures.</div>
+    </div>
+
+    <div class="exp-arch-block">
+      <div class="exp-arch-flow">
+        Human → <span>V2</span> → AI → <span>V3</span> → Human
+      </div>
+      <div class="exp-arch-desc">
+        <div class="exp-arch-row"><b>V2</b> stabilizes constraints before execution.</div>
+        <div class="exp-arch-row"><b>AI</b> performs the task.</div>
+        <div class="exp-arch-row"><b>V3</b> verifies constraint integrity before returning the result.</div>
+      </div>
+    </div>
+
+    <div class="exp-cta-row">
+      <a href="/relay" class="exp-cta-primary">VIEW THE ARCHITECTURE</a>
+      <a href="/api" class="exp-cta-secondary">EXPLORE THE API</a>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    tasks: ["A","B","C","D"],
+    rules: ["B depends on A","C depends on B","D must run last"],
+    options: ["A → B → C → D","B → A → C → D","A → C → B → D","A → B → D → C"],
+    correct: [0],
+    multi: false,
+    feedback_right: "A must run first (B depends on it). B before C (C depends on B). D runs last. Only one valid path.",
+    feedback_wrong: "B requires A to complete first. C requires B. D must be last. Only A → B → C → D satisfies all three rules.",
+  },
+  {
+    tasks: ["A","B","C","D"],
+    rules: ["B depends on A","C depends on A","D depends on B and C"],
+    options: ["A → B → C → D","A → C → B → D","B → A → C → D","A → B → D → C"],
+    correct: [0,1],
+    multi: true,
+    feedback_right: "A must go first. B and C can run in either order — both depend only on A. D must come last (needs both B and C).",
+    feedback_wrong: "A must precede both B and C. D needs both B and C done first. Options 1 and 2 both satisfy this. B cannot start before A.",
+  },
+  {
+    tasks: ["A","B","C","D"],
+    rules: ["B depends on A","C depends on A","D depends on B and C","B and C cannot run at the same time"],
+    options: ["A → B → C → D","A → C → B → D","A → B,C → D","B → A → C → D"],
+    correct: [0,1],
+    multi: true,
+    feedback_right: "B,C parallel is blocked by rule 4. B before A is blocked by rule 1. A → B → C → D and A → C → B → D both satisfy all four rules.",
+    feedback_wrong: "Parallel B,C violates rule 4. B first violates rule 1. The two valid sequential orders are A→B→C→D and A→C→B→D.",
+  },
+  {
+    tasks: ["A","B","C","D"],
+    rules: ["B depends on A","C depends on A","D depends on B and C","B and C cannot run at the same time","C must execute immediately before D"],
+    options: ["A → B → C → D","A → C → B → D","A → B → D → C","B → A → C → D"],
+    correct: [0],
+    multi: false,
+    feedback_right: "Rule 5 requires C immediately before D, eliminating A→C→B→D. Rules 1 and 2 eliminate B first. Only A→B→C→D survives all five constraints.",
+    feedback_wrong: "Rule 5 locks C directly before D, so B cannot run between C and D. A→C→B→D breaks that. Only A→B→C→D satisfies every constraint.",
+  },
+];
+
+let currentQ = 0;
+let score = 0;
+let selected = [];
+let locked = false;
+let timerInterval = null;
+let timeLeft = 15;
+
+function startExperiment() {
+  document.getElementById("exp-intro").style.display = "none";
+  const stage = document.getElementById("exp-stage");
+  stage.classList.add("active");
+  loadQuestion(0);
+}
+
+function loadQuestion(idx) {
+  currentQ = idx;
+  selected = [];
+  locked = false;
+  timeLeft = 15;
+
+  const q = QUESTIONS[idx];
+  document.getElementById("exp-q-label").textContent = `Question ${idx+1} of 4`;
+  document.getElementById("exp-progress-fill").style.width = `${((idx+1)/4)*100}%`;
+
+  // Tasks
+  const tasksEl = document.getElementById("exp-tasks");
+  tasksEl.innerHTML = q.tasks.map(t => `<div class="exp-task-item">${t}</div>`).join("");
+
+  // Rules
+  const rulesEl = document.getElementById("exp-rules");
+  rulesEl.innerHTML = q.rules.map(r => `<div class="exp-rule-item">${r}</div>`).join("");
+
+  // Multi hint
+  const hint = document.getElementById("exp-multi-hint");
+  hint.classList.toggle("show", q.multi);
+
+  // Options
+  const optionsEl = document.getElementById("exp-options");
+  optionsEl.innerHTML = q.options.map((opt, i) => `
+    <div class="exp-option" id="opt-${i}" onclick="selectOption(${i})">
+      <div class="exp-option-check">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="${i === -1 ? '#ef4444' : '#0a0c10'}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="exp-option-text">${opt}</div>
+    </div>
+  `).join("");
+
+  // Feedback
+  const fb = document.getElementById("exp-feedback");
+  fb.className = "exp-feedback";
+  fb.textContent = "";
+
+  // Next btn
+  document.getElementById("exp-next-btn").className = "exp-next-btn";
+  document.getElementById("exp-next-btn").textContent = idx < 3 ? "NEXT QUESTION →" : "SEE RESULTS →";
+
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeExpired();
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const label = document.getElementById("exp-timer-label");
+  const fill = document.getElementById("exp-timer-fill");
+  label.textContent = `${timeLeft}s`;
+  label.classList.toggle("urgent", timeLeft <= 5);
+  fill.style.width = `${(timeLeft/15)*100}%`;
+  fill.classList.toggle("urgent", timeLeft <= 5);
+}
+
+function timeExpired() {
+  if (locked) return;
+  locked = true;
+  // Mark all unselected correct answers as missed
+  const q = QUESTIONS[currentQ];
+  q.correct.forEach(ci => {
+    const el = document.getElementById(`opt-${ci}`);
+    if (!el.classList.contains("selected")) el.classList.add("missed");
+  });
+  showFeedback(false, true);
+  document.getElementById("exp-next-btn").classList.add("show");
+}
+
+function selectOption(i) {
+  if (locked) return;
+  const q = QUESTIONS[currentQ];
+  const el = document.getElementById(`opt-${i}`);
+
+  if (q.multi) {
+    if (selected.includes(i)) {
+      selected = selected.filter(x => x !== i);
+      el.classList.remove("selected");
+    } else {
+      selected.push(i);
+      el.classList.add("selected");
+    }
+    // Auto-submit when correct count selected
+    if (selected.length === q.correct.length) {
+      submitAnswer();
+    }
+  } else {
+    selected = [i];
+    document.querySelectorAll(".exp-option").forEach(o => o.classList.remove("selected"));
+    el.classList.add("selected");
+    submitAnswer();
+  }
+}
+
+function submitAnswer() {
+  clearInterval(timerInterval);
+  locked = true;
+  const q = QUESTIONS[currentQ];
+
+  const correctSet = new Set(q.correct);
+  const selectedSet = new Set(selected);
+  const isCorrect = q.correct.every(c => selectedSet.has(c)) && selected.every(s => correctSet.has(s));
+
+  // Color options
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${i}`);
+    el.classList.add("locked");
+    if (correctSet.has(i) && selectedSet.has(i)) el.classList.add("correct");
+    else if (!correctSet.has(i) && selectedSet.has(i)) el.classList.add("incorrect");
+    else if (correctSet.has(i) && !selectedSet.has(i)) el.classList.add("missed");
+  });
+
+  if (isCorrect) score++;
+  showFeedback(isCorrect, false);
+  document.getElementById("exp-next-btn").classList.add("show");
+}
+
+function showFeedback(correct, expired) {
+  const q = QUESTIONS[currentQ];
+  const fb = document.getElementById("exp-feedback");
+  fb.className = "exp-feedback show" + (correct ? "" : " wrong");
+  fb.textContent = expired ? "Time expired. " + q.feedback_wrong : (correct ? q.feedback_right : q.feedback_wrong);
+}
+
+function nextQuestion() {
+  if (currentQ < 3) {
+    loadQuestion(currentQ + 1);
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById("exp-stage").classList.remove("active");
+  const results = document.getElementById("exp-results");
+  results.classList.add("active");
+  document.getElementById("res-score").textContent = score;
+}
+</script>
+{% endblock %}
