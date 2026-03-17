@@ -1310,23 +1310,51 @@ function v2Rewrite(text, gateData) {
   const isHedge = violations.includes('HEDGE_WORD') || reason.includes('HEDGE_WORD');
   if (!isHedge) return null; // don't rewrite non-hedge blocks
 
-  // Strip hedge words
+  // Strip hedge words ONLY when functioning as qualifiers.
+  // A qualifier appears:
+  //   - at sentence start (after ^ or after . ? ! followed by whitespace)
+  //   - immediately before a verb, adjective, or another hedge
+  //   - NOT when it is the only word, NOT when embedded in a noun phrase
+  //   - NOT inside quoted strings or code blocks
   for (const h of HEDGE_STRIP) {
-    const re = new RegExp('\\b' + h.trim() + '\\b\\s*', 'gi');
-    out = out.replace(re, '');
+    const hw = h.trim();
+    // Match hedge at sentence start or after punctuation boundary, before content
+    // (?:^|(?<=[.?!]\s)) — sentence boundary
+    // (?=\s+\w) — followed by whitespace then a word (not end of string)
+    const reSentenceStart = new RegExp(
+      '(?:^|(?<=[.?!]\\s))' + hw + '(?=\\s+\\w)',
+      'gi'
+    );
+    // Match hedge immediately before a verb-like or adjective-like word
+    // Covers: "probably correct", "likely the", "possibly a"
+    const reBeforeContent = new RegExp(
+      '\\b' + hw + '\\b(?=\\s+(?:is|are|was|were|will|would|can|could|should|the|a|an|this|that|it|correct|wrong|true|false|good|bad|better|worse|right|able|ready|needed|required|possible|important|clear|done|complete|built|live|deployed)\\b)',
+      'gi'
+    );
+    out = out.replace(reSentenceStart, '');
+    out = out.replace(reBeforeContent, '');
   }
-  // Replace hedge substitutions
+
+  // Replace hedge substitutions (these are safe — swap word for word)
   for (const [from, to] of Object.entries(HEDGE_REPLACE)) {
-    const re = new RegExp('\\b' + from + '\\b', 'gi');
+    // Only replace when the hedge word is flanked by non-content boundaries
+    const re = new RegExp(
+      '(?<![\\w-])' + from + '(?![\\w-])',
+      'gi'
+    );
     out = out.replace(re, to);
   }
-  // Strip deferred phrases
+
+  // Strip deferred phrases (these are full phrases, safe to remove)
   for (const d of DEFERRED) {
     out = out.replace(new RegExp(d, 'gi'), '');
   }
-  // Clean up
+
+  // Clean up whitespace artifacts
   out = out.replace(/\s{2,}/g, ' ').trim();
-  out = out.replace(/^[,\s]+/, '').trim();
+  out = out.replace(/^[,;\s]+/, '').trim();
+  out = out.replace(/\s+([.,;!?])/g, '$1');
+
   return out !== text ? out : null;
 }
 

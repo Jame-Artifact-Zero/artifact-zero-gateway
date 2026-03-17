@@ -1,0 +1,1252 @@
+{% extends "base.html" %}
+{% block title %}Operator Room — Artifact Zero{% endblock %}
+{% block body_class %}page-operator{% endblock %}
+
+{% block head %}
+<style>
+/* ── OPERATOR ROOM ─────────────────────────────────────────── */
+.page-operator .az-main { padding: 0; overflow: hidden; height: calc(100vh - 56px); }
+.page-operator .az-bottomnav { display: none; }
+.page-operator .az-footer { display: none; }
+
+.op-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── LEFT SIDEBAR — S0 STATE ───────────────────────────────── */
+.op-sidebar {
+  background: var(--s2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.op-sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.op-sidebar-header .op-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.op-s0-block {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.op-s0-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.op-s0-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.op-s0-score.critical { color: var(--red); }
+.op-s0-score.weak     { color: var(--amber); }
+.op-s0-score.moderate { color: var(--blue); }
+.op-s0-score.strong   { color: var(--accent); }
+
+.op-s0-desc {
+  font-size: 11px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.op-state-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.op-state-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.op-state-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 4px 0;
+  gap: 8px;
+}
+
+.op-state-key {
+  font-size: 11px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+.op-state-val {
+  font-size: 11px;
+  color: var(--text);
+  text-align: right;
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.3;
+}
+
+.op-state-val.green  { color: var(--accent); }
+.op-state-val.red    { color: var(--red); }
+.op-state-val.amber  { color: var(--amber); }
+.op-state-val.blue   { color: var(--blue); }
+
+.op-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.op-tool-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,232,156,0.04);
+}
+
+.op-tool-btn .tool-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.op-tool-btn.running {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--accent); }
+  50% { border-color: transparent; }
+}
+
+/* ── CENTER — CHAT ─────────────────────────────────────────── */
+.op-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.op-chat-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.op-chat-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+.op-chat-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.op-nii-live {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  transition: all 0.3s;
+}
+
+.op-nii-live.scored {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,232,156,0.06);
+}
+
+.op-nii-live.flagged {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(245,158,11,0.06);
+}
+
+.op-model-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+/* Messages */
+.op-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+.op-messages::-webkit-scrollbar { width: 4px; }
+.op-messages::-webkit-scrollbar-track { background: transparent; }
+.op-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.op-msg {
+  display: flex;
+  gap: 12px;
+  animation: msgIn 0.2s ease;
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.op-msg.user { flex-direction: row-reverse; }
+
+.op-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.op-msg.user .op-msg-avatar {
+  background: var(--accent);
+  color: #000;
+}
+
+.op-msg.assistant .op-msg-avatar {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+
+.op-msg-body { max-width: 680px; flex: 1; }
+
+.op-msg.user .op-msg-body { display: flex; flex-direction: column; align-items: flex-end; }
+
+.op-msg-bubble {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.op-msg.user .op-msg-bubble {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-top-right-radius: 2px;
+}
+
+.op-msg.assistant .op-msg-bubble {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-top-left-radius: 2px;
+}
+
+.op-msg-nii {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.op-nii-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.op-nii-chip.good { background: rgba(0,232,156,0.1); color: var(--accent); border: 1px solid rgba(0,232,156,0.2); }
+.op-nii-chip.warn { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+.op-nii-chip.bad  { background: rgba(239,68,68,0.1);  color: var(--red);   border: 1px solid rgba(239,68,68,0.2); }
+
+.op-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.op-typing span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--dim);
+  animation: typing 1.2s infinite;
+}
+.op-typing span:nth-child(2) { animation-delay: 0.2s; }
+.op-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Input */
+.op-input-area {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--s1);
+}
+
+.op-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.op-input-wrap {
+  flex: 1;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.op-input-wrap:focus-within {
+  border-color: var(--accent);
+}
+
+.op-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 12px 16px;
+  resize: none;
+  min-height: 44px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.op-textarea::placeholder { color: var(--muted); }
+
+.op-input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px 10px;
+}
+
+.op-input-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.op-send-btn {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #000;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.op-send-btn:hover { background: #00ffab; transform: scale(1.04); }
+.op-send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+/* JOS fields */
+.op-jos-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.op-jos-bar::-webkit-scrollbar { display: none; }
+
+.op-jos-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.op-jos-tag.set { border-color: var(--accent); color: var(--accent); background: rgba(0,232,156,0.05); }
+.op-jos-tag.required { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
+
+/* ── RIGHT SIDEBAR — NTI PANEL ─────────────────────────────── */
+.op-nti-panel {
+  background: var(--s2);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.op-panel-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.op-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.op-panel-body::-webkit-scrollbar { width: 3px; }
+.op-panel-body::-webkit-scrollbar-thumb { background: var(--border); }
+
+.op-score-ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.op-ring-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  transition: all 0.4s;
+}
+
+.op-ring-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+.op-fm-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.op-fm-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.op-fm-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.op-fm-val.false  { color: var(--accent); }
+.op-fm-val.prob   { color: var(--amber); }
+.op-fm-val.conf   { color: var(--red); }
+
+.op-tilt-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  background: rgba(245,158,11,0.1);
+  color: var(--amber);
+  border: 1px solid rgba(245,158,11,0.2);
+  margin: 2px;
+}
+
+.op-session-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.op-session-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.op-session-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text);
+}
+
+/* Empty state */
+.op-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--muted);
+  padding: 40px;
+  text-align: center;
+}
+
+.op-empty-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+}
+
+.op-empty p {
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.op-empty-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 8px;
+}
+
+.op-hint-chip {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  font-size: 13px;
+  color: var(--dim);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.op-hint-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .op-shell { grid-template-columns: 0 1fr 0; }
+  .op-sidebar, .op-nti-panel { display: none; }
+}
+
+/* Tool result block */
+.op-tool-result {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 8px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.op-tool-result .tool-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="op-shell">
+
+  <!-- ── LEFT SIDEBAR ────────────────────────────────────────── -->
+  <aside class="op-sidebar">
+    <div class="op-sidebar-header">
+      <span class="op-logo">itB₀</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">OPERATOR</span>
+    </div>
+
+    <!-- S0 Score -->
+    <div class="op-s0-block">
+      <div class="op-s0-label">Prior State S₀</div>
+      <div class="op-s0-score moderate" id="s0Display">0.29</div>
+      <div class="op-s0-desc" id="s0Desc">MODERATE — outpatient neuro context</div>
+    </div>
+
+    <!-- Active State -->
+    <div class="op-state-section">
+      <div class="op-state-title">Active State</div>
+      <div class="op-state-item">
+        <span class="op-state-key">Push</span>
+        <span class="op-state-val amber">p0038 next</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">Patent</span>
+        <span class="op-state-val red">NOT FILED</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">Market</span>
+        <span class="op-state-val green">Mon UP +1.1%</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">itB₀ call</span>
+        <span class="op-state-val red">was DOWN — missed</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">FOMC</span>
+        <span class="op-state-val amber">Wed Mar 18</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">Dr. Abel</span>
+        <span class="op-state-val amber">Consult pending</span>
+      </div>
+    </div>
+
+    <!-- JOS State -->
+    <div class="op-state-section">
+      <div class="op-state-title">JOS Fields</div>
+      <div class="op-state-item">
+        <span class="op-state-key">Objective</span>
+        <span class="op-state-val" id="josObj" style="color:var(--muted)">— not set</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">Constraints</span>
+        <span class="op-state-val" id="josCon" style="color:var(--muted)">— not set</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">Done When</span>
+        <span class="op-state-val" id="josDone" style="color:var(--muted)">— not set</span>
+      </div>
+      <div class="op-state-item">
+        <span class="op-state-key">Closure</span>
+        <span class="op-state-val green">Jame</span>
+      </div>
+    </div>
+
+    <!-- Tools -->
+    <div class="op-state-section">
+      <div class="op-state-title">Tools</div>
+      <button class="op-tool-btn" onclick="runTool('signal')">
+        <span class="tool-icon">📡</span> NTI Signal Scanner
+      </button>
+      <button class="op-tool-btn" onclick="runTool('market')">
+        <span class="tool-icon">📈</span> S&amp;P itB₀ Model
+      </button>
+      <button class="op-tool-btn" onclick="runTool('fortune500')">
+        <span class="tool-icon">🏢</span> Fortune 500 Feed
+      </button>
+      <button class="op-tool-btn" onclick="runTool('score')">
+        <span class="tool-icon">⚡</span> Score Any Text
+      </button>
+    </div>
+
+    <!-- Session history placeholder -->
+    <div class="op-state-section" style="flex:1;">
+      <div class="op-state-title">Recent Sessions</div>
+      <div id="sessionList" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">
+        Loading...
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── CENTER CHAT ─────────────────────────────────────────── -->
+  <main class="op-chat">
+    <div class="op-chat-header">
+      <span class="op-chat-title">OPERATOR ROOM</span>
+      <div class="op-chat-meta">
+        <span class="op-nii-live" id="liveNII">NII —</span>
+        <span class="op-model-badge">claude-sonnet-4-6</span>
+      </div>
+    </div>
+
+    <!-- JOS bar -->
+    <div class="op-jos-bar">
+      <div class="op-jos-tag required" id="josObjTag" onclick="setJOS('objective')">
+        OBJ <span id="josObjShort">— set objective</span>
+      </div>
+      <div class="op-jos-tag" id="josConTag" onclick="setJOS('constraint')">
+        CON <span id="josConShort">— constraints</span>
+      </div>
+      <div class="op-jos-tag" id="josNogoTag" onclick="setJOS('nogo')">
+        NO-GO <span id="josNogoShort">—</span>
+      </div>
+      <div class="op-jos-tag" id="josDoneTag" onclick="setJOS('done')">
+        DONE WHEN <span id="josDoneShort">—</span>
+      </div>
+      <div class="op-jos-tag set">
+        CLOSURE <span>Jame</span>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="op-messages" id="messages">
+      <div class="op-empty" id="emptyState">
+        <div class="op-empty-logo">AZ</div>
+        <p>Operator workspace. Full project context loaded. NTI V3 governs every response.</p>
+        <div class="op-empty-hints">
+          <div class="op-hint-chip" onclick="useHint(this)">What is the current S₀ entering today?</div>
+          <div class="op-hint-chip" onclick="useHint(this)">Score this text through NTI: [paste text]</div>
+          <div class="op-hint-chip" onclick="useHint(this)">Build Tuesday's market S₀ from today's data</div>
+          <div class="op-hint-chip" onclick="useHint(this)">What are the three non-negotiables this week?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="op-input-area">
+      <div class="op-input-row">
+        <div class="op-input-wrap">
+          <textarea
+            class="op-textarea"
+            id="msgInput"
+            placeholder="Message the operator room..."
+            rows="1"
+            onkeydown="handleKey(event)"
+            oninput="autoResize(this)"
+          ></textarea>
+          <div class="op-input-footer">
+            <span class="op-input-hint" id="inputHint">Enter to send · Shift+Enter for newline</span>
+            <span class="op-input-hint" id="charCount">0</span>
+          </div>
+        </div>
+        <button class="op-send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
+          ↑
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── RIGHT PANEL — NTI LIVE ──────────────────────────────── -->
+  <aside class="op-nti-panel">
+    <div class="op-panel-header">NTI ANALYSIS</div>
+    <div class="op-panel-body" id="ntiPanel">
+
+      <!-- Score ring -->
+      <div class="op-score-ring">
+        <div class="op-ring-num" id="ntiScore">—</div>
+        <div class="op-ring-label" id="ntiLabel">WAITING</div>
+      </div>
+
+      <!-- Failure modes -->
+      <div style="margin-bottom:12px;">
+        <div class="op-state-title" style="margin-bottom:6px;">FAILURE MODES</div>
+        <div class="op-fm-row">
+          <span class="op-fm-key">UDDS</span>
+          <span class="op-fm-val false" id="fmUDDS">FALSE</span>
+        </div>
+        <div class="op-fm-row">
+          <span class="op-fm-key">DCE</span>
+          <span class="op-fm-val false" id="fmDCE">FALSE</span>
+        </div>
+        <div class="op-fm-row">
+          <span class="op-fm-key">CCA</span>
+          <span class="op-fm-val false" id="fmCCA">FALSE</span>
+        </div>
+      </div>
+
+      <!-- Tilt -->
+      <div style="margin-bottom:12px;">
+        <div class="op-state-title" style="margin-bottom:6px;">TILT DETECTED</div>
+        <div id="tiltTags" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">
+          None
+        </div>
+      </div>
+
+      <!-- V3 -->
+      <div style="margin-bottom:12px;">
+        <div class="op-state-title" style="margin-bottom:6px;">V3 ENFORCEMENT</div>
+        <div class="op-fm-row">
+          <span class="op-fm-key">Passed</span>
+          <span class="op-fm-val false" id="v3Passed">—</span>
+        </div>
+        <div class="op-fm-row">
+          <span class="op-fm-key">Actions</span>
+          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">—</span>
+        </div>
+      </div>
+
+      <!-- Session stats -->
+      <div>
+        <div class="op-state-title" style="margin-bottom:6px;">SESSION</div>
+        <div class="op-session-stat">
+          <span class="op-session-key">Messages</span>
+          <span class="op-session-val" id="statMsgs">0</span>
+        </div>
+        <div class="op-session-stat">
+          <span class="op-session-key">Avg NII</span>
+          <span class="op-session-val" id="statAvgNII">—</span>
+        </div>
+        <div class="op-session-stat">
+          <span class="op-session-key">Flagged</span>
+          <span class="op-session-val red" id="statFlagged">0</span>
+        </div>
+        <div class="op-session-stat">
+          <span class="op-session-key">S₀ delta</span>
+          <span class="op-session-val" id="statS0Delta">+0.000</span>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+</div>
+
+<!-- JOS Modal -->
+<div id="josModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:90vw;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);margin-bottom:16px;" id="josModalTitle">SET OBJECTIVE</div>
+    <textarea id="josModalInput" style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:80px;outline:none;resize:vertical;" placeholder="Enter value..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+      <button onclick="closeJOS()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">CANCEL</button>
+      <button onclick="saveJOS()" style="padding:8px 16px;border-radius:6px;border:none;background:var(--accent);color:#000;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">SET</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── STATE ─────────────────────────────────────────────────────
+const CLAUDE_API = '/operator/api/chat';
+const NTI_API    = '/api/v1/score';
+
+let messages      = [];
+let josState      = { objective:'', constraint:'', nogo:'', done:'' };
+let sessionStats  = { count:0, niiSum:0, flagged:0 };
+let isLoading     = false;
+let currentJOS    = null;
+
+// System prompt — full operator context
+const SYSTEM = `You are operating inside the Artifact Zero Operator Room.
+
+OPERATOR: Jame Houghton, Founder, Artifact Zero Labs, Knoxville TN.
+
+THE INVARIANT (proven):
+itB0 = (Q, S0). Every output requires a prior state. R = Phi(Q, S0). S1 = Psi(S0, Q, R).
+Proven across 10 foundational mathematical structures. NTI is the implementation.
+
+CURRENT STATE:
+- S0 = 0.290 (outpatient neurological context, cord signal present, time-sensitive)
+- Patent: NOT FILED — provisional target this week (itB runtime + NTI)
+- Push: p0038 is next after p0037
+- Market: Monday March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired)
+- FOMC: Wednesday March 18 — no cut expected
+- Fortune 500: 415 companies scored daily
+- Live feed: 13 sources, NTI scoring active
+- Medical: Dr. Abel consultation pending, cord signal change at C5-C6
+
+RULES:
+- Be terse. Voice-to-text style input is normal. Parse intent.
+- Never propose next steps at end of responses.
+- Never narrate your process.
+- git add -A is permanently banned.
+- Jame closes pushes. Never declare a push closed.
+- Full copy-paste code only. Never partial snippets.
+- Closure Authority: Jame.
+
+NTI V3 governs every response you produce. You are the typist. NTI is the governor.
+When asked to score text, call the internal NTI endpoint.
+When asked to run tools, execute them through the operator API.`;
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('msgInput').focus();
+  loadSessions();
+});
+
+// ── CHAT ──────────────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text  = input.value.trim();
+  if (!text || isLoading) return;
+
+  // Hide empty state
+  document.getElementById('emptyState').style.display = 'none';
+
+  // Add user message
+  addMessage('user', text);
+  messages.push({ role: 'user', content: text });
+  input.value = '';
+  autoResize(input);
+  updateCharCount('');
+
+  // Score user input through NTI
+  scoreText(text, 'input');
+
+  setLoading(true);
+
+  try {
+    const res = await fetch(CLAUDE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: SYSTEM,
+        messages: messages,
+        jos: josState,
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      addMessage('assistant', `Error: ${data.error}`, null);
+    } else {
+      const reply = data.content?.[0]?.text || data.text || '';
+      addMessage('assistant', reply, null);
+      messages.push({ role: 'assistant', content: reply });
+
+      // Score assistant response
+      if (reply) {
+        const ntiResult = await scoreText(reply, 'output');
+        // Update last message with NTI score
+        updateLastMessageNTI(ntiResult);
+      }
+    }
+  } catch (e) {
+    addMessage('assistant', `Connection error: ${e.message}`);
+  }
+
+  setLoading(false);
+}
+
+function addMessage(role, text, ntiData) {
+  const msgs    = document.getElementById('messages');
+  const initials = role === 'user' ? 'JH' : 'AZ';
+
+  const div = document.createElement('div');
+  div.className = `op-msg ${role}`;
+  div.innerHTML = `
+    <div class="op-msg-avatar">${initials}</div>
+    <div class="op-msg-body">
+      <div class="op-msg-bubble">${escHtml(text)}</div>
+      <div class="op-msg-nii" id="msgNTI_${sessionStats.count}"></div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  sessionStats.count++;
+  document.getElementById('statMsgs').textContent = sessionStats.count;
+}
+
+function updateLastMessageNTI(ntiData) {
+  if (!ntiData) return;
+  const idx     = sessionStats.count - 1;
+  const el      = document.getElementById(`msgNTI_${idx}`);
+  if (!el) return;
+
+  const score   = extractNII(ntiData);
+  const hasFlag = hasFailures(ntiData);
+  const cls     = score >= 70 ? 'good' : score >= 50 ? 'warn' : 'bad';
+  const label   = score >= 70 ? 'HIGH INTEGRITY' : score >= 50 ? 'MODERATE' : 'LOW INTEGRITY';
+
+  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% — ${label}</span>`;
+
+  sessionStats.niiSum += score;
+  if (hasFlag) sessionStats.flagged++;
+
+  const avg = sessionStats.count > 0 ? Math.round(sessionStats.niiSum / sessionStats.count) : 0;
+  document.getElementById('statAvgNII').textContent = avg + '%';
+  document.getElementById('statFlagged').textContent = sessionStats.flagged;
+}
+
+// ── NTI SCORING ───────────────────────────────────────────────
+async function scoreText(text, context) {
+  try {
+    const res = await fetch(NTI_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': '{{ api_key | default("") }}'
+      },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    updateNTIPanel(data, context);
+    return data;
+  } catch(e) {
+    return null;
+  }
+}
+
+function extractNII(d) {
+  if (!d) return 0;
+  const sc = d.score || {};
+  let v = sc.nii ?? sc.nii_score ?? 0;
+  if (v <= 1) v = Math.round(v * 100);
+  return v;
+}
+
+function hasFailures(d) {
+  if (!d) return false;
+  const fm = d.failure_modes || {};
+  return Object.values(fm).some(v => String(v).includes('CONFIRMED') || String(v).includes('PROBABLE'));
+}
+
+function updateNTIPanel(data, ctx) {
+  if (!data || data.error) return;
+
+  const score  = extractNII(data);
+  const fm     = data.failure_modes || {};
+  const tilt   = (data.tilt?.tags || []);
+  const v3     = data.v3 || {};
+  const hasF   = hasFailures(data);
+
+  // Score ring
+  const ringEl = document.getElementById('ntiScore');
+  ringEl.textContent = score + '%';
+  ringEl.style.color = score >= 70 ? 'var(--accent)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+
+  const label = score >= 80 ? 'HIGH INTEGRITY' : score >= 65 ? 'SOLID' : score >= 50 ? 'MODERATE' : score >= 35 ? 'WEAK' : 'FAILING';
+  document.getElementById('ntiLabel').textContent = label;
+
+  // Live NII badge in header
+  const liveBadge = document.getElementById('liveNII');
+  liveBadge.textContent = `NII ${score}%`;
+  liveBadge.className = 'op-nii-live ' + (score >= 70 ? 'scored' : 'flagged');
+
+  // Failure modes
+  const fmKeys = { UDDS: 'fmUDDS', DCE: 'fmDCE', CCA: 'fmCCA' };
+  Object.entries(fmKeys).forEach(([key, elId]) => {
+    const el  = document.getElementById(elId);
+    const val = String(fm[key] || 'FALSE');
+    el.textContent = val.includes('CONFIRMED') ? 'CONFIRMED' : val.includes('PROBABLE') ? 'PROBABLE' : 'FALSE';
+    el.className   = 'op-fm-val ' + (val.includes('CONFIRMED') ? 'conf' : val.includes('PROBABLE') ? 'prob' : 'false');
+  });
+
+  // Tilt
+  const tiltEl = document.getElementById('tiltTags');
+  tiltEl.innerHTML = tilt.length
+    ? tilt.map(t => `<span class="op-tilt-tag">${t}</span>`).join('')
+    : '<span style="color:var(--muted)">None</span>';
+
+  // V3
+  document.getElementById('v3Passed').textContent = v3.passed ? 'YES' : 'NO';
+  document.getElementById('v3Passed').className = 'op-fm-val ' + (v3.passed ? 'false' : 'conf');
+  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '—';
+}
+
+// ── JOS ───────────────────────────────────────────────────────
+function setJOS(field) {
+  currentJOS = field;
+  const labels = { objective:'SET OBJECTIVE', constraint:'SET CONSTRAINTS', nogo:'SET NO-GO ZONES', done:'DONE WHEN' };
+  document.getElementById('josModalTitle').textContent = labels[field] || 'SET';
+  document.getElementById('josModalInput').value = josState[field] || '';
+  const modal = document.getElementById('josModal');
+  modal.style.display = 'flex';
+  document.getElementById('josModalInput').focus();
+}
+
+function closeJOS() {
+  document.getElementById('josModal').style.display = 'none';
+  currentJOS = null;
+}
+
+function saveJOS() {
+  const val = document.getElementById('josModalInput').value.trim();
+  if (!currentJOS) return;
+  josState[currentJOS] = val;
+
+  const tagMap = { objective:'josObjTag', constraint:'josConTag', nogo:'josNogoTag', done:'josDoneTag' };
+  const shortMap = { objective:'josObjShort', constraint:'josConShort', nogo:'josNogoShort', done:'josDoneShort' };
+
+  const tagEl   = document.getElementById(tagMap[currentJOS]);
+  const shortEl = document.getElementById(shortMap[currentJOS]);
+
+  if (val) {
+    tagEl.className   = 'op-jos-tag set';
+    shortEl.textContent = val.length > 20 ? val.slice(0,20)+'…' : val;
+  }
+
+  // Update sidebar
+  if (currentJOS === 'objective') {
+    document.getElementById('josObj').textContent = val || '— not set';
+    document.getElementById('josObj').style.color = val ? 'var(--text)' : 'var(--muted)';
+  }
+
+  closeJOS();
+}
+
+// ── TOOLS ─────────────────────────────────────────────────────
+async function runTool(tool) {
+  const prompts = {
+    signal: 'Run the NTI live signal scanner on current CNBC feed and give me the S0 delta and directional call.',
+    market: 'Build the current S0 for the S&P 500 using today\'s confirmed data and give me tomorrow\'s directional call.',
+    fortune500: 'What are the 5 lowest NTI scoring Fortune 500 companies right now and what are their flags?',
+    score: 'I want to score some text through NTI. Stand by for my input.',
+  };
+
+  const input = document.getElementById('msgInput');
+  input.value = prompts[tool] || '';
+  autoResize(input);
+  input.focus();
+}
+
+// ── SESSION HISTORY ───────────────────────────────────────────
+async function loadSessions() {
+  try {
+    const res  = await fetch('/operator/sessions');
+    const data = await res.json();
+    const el   = document.getElementById('sessionList');
+    if (!data.sessions?.length) {
+      el.textContent = 'No previous sessions';
+      return;
+    }
+    el.innerHTML = data.sessions.slice(0,8).map(s => `
+      <div style="padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="loadSession('${s.id}')">
+        <div style="color:var(--dim);margin-bottom:2px;">${s.summary?.slice(0,35) || 'Session'}…</div>
+        <div style="font-size:9px;color:var(--muted)">${s.created_at?.slice(0,16) || ''}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('sessionList').textContent = 'Not available';
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+  updateCharCount(e.target.value + e.key);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+  updateCharCount(el.value);
+}
+
+function updateCharCount(text) {
+  document.getElementById('charCount').textContent = text.length || '';
+}
+
+function useHint(el) {
+  const input = document.getElementById('msgInput');
+  input.value = el.textContent.trim();
+  autoResize(input);
+  input.focus();
+}
+
+function setLoading(v) {
+  isLoading = v;
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = v;
+
+  if (v) {
+    const msgs = document.getElementById('messages');
+    const dot  = document.createElement('div');
+    dot.className = 'op-msg assistant';
+    dot.id = 'typingIndicator';
+    dot.innerHTML = `
+      <div class="op-msg-avatar">AZ</div>
+      <div class="op-msg-body">
+        <div class="op-msg-bubble">
+          <div class="op-typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>`;
+    msgs.appendChild(dot);
+    msgs.scrollTop = msgs.scrollHeight;
+  } else {
+    const dot = document.getElementById('typingIndicator');
+    if (dot) dot.remove();
+  }
+}
+
+function escHtml(str) {
+  return str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/\n/g,'<br>');
+}
+
+// Close JOS modal on backdrop click
+document.getElementById('josModal').addEventListener('click', function(e) {
+  if (e.target === this) closeJOS();
+});
+</script>
+{% endblock %}

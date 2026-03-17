@@ -151,6 +151,13 @@ try:
 except ImportError:
     print("[app] gateway_routes not found, skipping", flush=True)
 
+try:
+    from operator_room import operator_bp
+    app.register_blueprint(operator_bp)
+    print("[app] operator room loaded", flush=True)
+except ImportError:
+    print("[app] operator_room not found, skipping", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
