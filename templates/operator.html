@@ -650,8 +650,8 @@
     <!-- S0 Score -->
     <div class="op-s0-block">
       <div class="op-s0-label">Prior State S₀</div>
-      <div class="op-s0-score moderate" id="s0Display">0.29</div>
-      <div class="op-s0-desc" id="s0Desc">MODERATE — outpatient neuro context</div>
+      <div class="op-s0-score moderate" id="s0Display">—</div>
+      <div class="op-s0-desc" id="s0Desc">LOADING...</div>
     </div>
 
     <!-- Active State -->
@@ -659,7 +659,7 @@
       <div class="op-state-title">Active State</div>
       <div class="op-state-item">
         <span class="op-state-key">Push</span>
-        <span class="op-state-val amber">p0038 next</span>
+        <span class="op-state-val amber" id="sidebarPush">p0044 active</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Patent</span>
@@ -667,19 +667,19 @@
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Market</span>
-        <span class="op-state-val green">Mon UP +1.1%</span>
+        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">—</span>
       </div>
       <div class="op-state-item">
-        <span class="op-state-key">itB₀ call</span>
-        <span class="op-state-val red">was DOWN — missed</span>
+        <span class="op-state-key">S₀ delta</span>
+        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">—</span>
       </div>
       <div class="op-state-item">
-        <span class="op-state-key">FOMC</span>
-        <span class="op-state-val amber">Wed Mar 18</span>
+        <span class="op-state-key">Signal env</span>
+        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">—</span>
       </div>
       <div class="op-state-item">
-        <span class="op-state-key">Dr. Abel</span>
-        <span class="op-state-val amber">Consult pending</span>
+        <span class="op-state-key">Last tool</span>
+        <span class="op-state-val" id="sidebarLastTool" style="color:var(--muted)">none</span>
       </div>
     </div>
 
@@ -707,18 +707,23 @@
     <!-- Tools -->
     <div class="op-state-section">
       <div class="op-state-title">Tools</div>
-      <button class="op-tool-btn" onclick="runTool('signal')">
+      <button class="op-tool-btn" id="toolSignal" onclick="executeTool('signal')">
         <span class="tool-icon">📡</span> NTI Signal Scanner
       </button>
-      <button class="op-tool-btn" onclick="runTool('market')">
+      <button class="op-tool-btn" id="toolMarket" onclick="executeTool('market')">
         <span class="tool-icon">📈</span> S&amp;P itB₀ Model
       </button>
-      <button class="op-tool-btn" onclick="runTool('fortune500')">
+      <button class="op-tool-btn" id="toolFortune" onclick="executeTool('fortune500')">
         <span class="tool-icon">🏢</span> Fortune 500 Feed
       </button>
-      <button class="op-tool-btn" onclick="runTool('score')">
+      <button class="op-tool-btn" id="toolScore" onclick="promptScoreText()">
         <span class="tool-icon">⚡</span> Score Any Text
       </button>
+      <button class="op-tool-btn" id="toolUpload" onclick="triggerUpload()">
+        <span class="tool-icon">📎</span> Upload + Score File
+      </button>
+      <input type="file" id="fileUploadInput" accept=".txt,.pdf,.docx,.csv,.md,.html"
+             style="display:none" onchange="handleFileUpload(this)">
     </div>
 
     <!-- Session history placeholder -->
@@ -897,7 +902,6 @@ let sessionStats  = { count:0, niiSum:0, flagged:0 };
 let isLoading     = false;
 let currentJOS    = null;
 
-// System prompt — full operator context
 const SYSTEM = `You are operating inside the Artifact Zero Operator Room.
 
 OPERATOR: Jame Houghton, Founder, Artifact Zero Labs, Knoxville TN.
@@ -907,27 +911,28 @@ itB0 = (Q, S0). Every output requires a prior state. R = Phi(Q, S0). S1 = Psi(S0
 Proven across 10 foundational mathematical structures. NTI is the implementation.
 
 CURRENT STATE:
-- S0 = 0.290 (outpatient neurological context, cord signal present, time-sensitive)
 - Patent: NOT FILED — provisional target this week (itB runtime + NTI)
-- Push: p0038 is next after p0037
-- Market: Monday March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired)
-- FOMC: Wednesday March 18 — no cut expected
+- Push: p0044 active — operator room tool execution, file upload, API key fix, sidebar dynamic state
+- Market: March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired — named in advance)
+- FOMC: March 18 — no cut (4% probability CME FedWatch)
 - Fortune 500: 415 companies scored daily
 - Live feed: 13 sources, NTI scoring active
-- Medical: Dr. Abel consultation pending, cord signal change at C5-C6
+- OPERATOR_API_KEY: enterprise tier fix in p0044 scope (NII badge showing 0% until fixed)
+- ANTHROPIC_API_KEY: must be set in ECS for operator chat to function
 
 RULES:
 - Be terse. Voice-to-text style input is normal. Parse intent.
 - Never propose next steps at end of responses.
 - Never narrate your process.
 - git add -A is permanently banned.
+- PR target is always develop, never main.
 - Jame closes pushes. Never declare a push closed.
 - Full copy-paste code only. Never partial snippets.
 - Closure Authority: Jame.
 
 NTI V3 governs every response you produce. You are the typist. NTI is the governor.
-When asked to score text, call the internal NTI endpoint.
-When asked to run tools, execute them through the operator API.`;
+When asked to score text, the operator room will call the internal NTI endpoint.
+When asked to run tools, use the /operator/run endpoint.`;
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -1148,19 +1153,162 @@ function saveJOS() {
   closeJOS();
 }
 
-// ── TOOLS ─────────────────────────────────────────────────────
-async function runTool(tool) {
-  const prompts = {
-    signal: 'Run the NTI live signal scanner on current CNBC feed and give me the S0 delta and directional call.',
-    market: 'Build the current S0 for the S&P 500 using today\'s confirmed data and give me tomorrow\'s directional call.',
-    fortune500: 'What are the 5 lowest NTI scoring Fortune 500 companies right now and what are their flags?',
-    score: 'I want to score some text through NTI. Stand by for my input.',
-  };
+// ── TOOLS — SERVER-SIDE EXECUTION ─────────────────────────────
+async function executeTool(tool) {
+  const btnMap = { signal: 'toolSignal', market: 'toolMarket', fortune500: 'toolFortune' };
+  const btnId  = btnMap[tool];
+  const btn    = btnId ? document.getElementById(btnId) : null;
 
+  document.getElementById('emptyState').style.display = 'none';
+
+  // Show running state
+  if (btn) btn.classList.add('running');
+
+  const label = { signal: 'NTI Signal Scanner', market: 'S&P itB₀ Model', fortune500: 'Fortune 500 Feed' }[tool] || tool;
+  addToolMessage(`Running ${label}...`, true);
+
+  try {
+    const res  = await fetch('/operator/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      updateLastToolMessage(`Tool error: ${data.error}`);
+    } else {
+      updateLastToolMessage(data.result || 'No result returned');
+
+      // Update sidebar state from tool result
+      if (tool === 'signal' && data.summary) {
+        const delta = data.summary.s0_delta;
+        const avg   = data.summary.avg_nii;
+        document.getElementById('sidebarSignal').textContent  = `NII avg ${avg}%`;
+        document.getElementById('sidebarSignal').style.color  = avg >= 70 ? 'var(--accent)' : avg >= 50 ? 'var(--amber)' : 'var(--red)';
+        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '—';
+        document.getElementById('sidebarS0Delta').style.color = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--red)' : 'var(--muted)';
+
+        // Update S0 display
+        if (delta !== undefined) {
+          const currentS0 = parseFloat(document.getElementById('s0Display').textContent) || 0.5;
+          const newS0     = Math.max(0, Math.min(1, currentS0 + delta)).toFixed(3);
+          document.getElementById('s0Display').textContent = newS0;
+          document.getElementById('s0Desc').textContent    = `Signal scan: delta ${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
+        }
+      }
+
+      if (tool === 'market' && data.summary) {
+        const s0  = data.summary.s0_computed;
+        const call = data.summary.call;
+        document.getElementById('sidebarMarket').textContent = call || '—';
+        document.getElementById('sidebarMarket').style.color = call === 'UP' ? 'var(--accent)' : call === 'DOWN' ? 'var(--red)' : 'var(--amber)';
+        if (s0 !== undefined && s0 !== null) {
+          document.getElementById('s0Display').textContent = s0.toFixed(3);
+          document.getElementById('s0Desc').textContent    = `itB₀ model: call ${call}`;
+          const cls = s0 >= 0.65 ? 'strong' : s0 >= 0.50 ? 'moderate' : s0 >= 0.35 ? 'weak' : 'critical';
+          document.getElementById('s0Display').className = 'op-s0-score ' + cls;
+        }
+      }
+
+      document.getElementById('sidebarLastTool').textContent = label;
+      document.getElementById('sidebarLastTool').style.color = 'var(--accent)';
+
+      // Update S0 delta stat
+      if (data.s0_delta !== undefined && data.s0_delta !== null) {
+        const cur = parseFloat(document.getElementById('statS0Delta').textContent) || 0;
+        document.getElementById('statS0Delta').textContent = (cur + data.s0_delta >= 0 ? '+' : '') + (cur + data.s0_delta).toFixed(3);
+      }
+    }
+  } catch (e) {
+    updateLastToolMessage(`Connection error: ${e.message}`);
+  }
+
+  if (btn) btn.classList.remove('running');
+}
+
+function promptScoreText() {
   const input = document.getElementById('msgInput');
-  input.value = prompts[tool] || '';
+  input.value = 'Score this text through NTI: ';
   autoResize(input);
   input.focus();
+  // Position cursor after the colon
+  const pos = input.value.length;
+  input.setSelectionRange(pos, pos);
+}
+
+function triggerUpload() {
+  document.getElementById('fileUploadInput').click();
+}
+
+async function handleFileUpload(inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+
+  document.getElementById('emptyState').style.display = 'none';
+
+  const btn = document.getElementById('toolUpload');
+  btn.classList.add('running');
+  addToolMessage(`Uploading ${file.name}...`, true);
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res  = await fetch('/operator/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      updateLastToolMessage(`Upload error: ${data.error}`);
+    } else {
+      updateLastToolMessage(data.result || 'Upload processed');
+
+      // Update sidebar
+      document.getElementById('sidebarLastTool').textContent = `upload: ${file.name.slice(0, 20)}`;
+      document.getElementById('sidebarLastTool').style.color = 'var(--accent)';
+
+      // Score the upload through NTI panel
+      if (data.summary) {
+        updateNTIPanel(data.summary, 'upload');
+      }
+    }
+  } catch (e) {
+    updateLastToolMessage(`Upload error: ${e.message}`);
+  }
+
+  btn.classList.remove('running');
+  // Reset file input so same file can be re-uploaded
+  inputEl.value = '';
+}
+
+function addToolMessage(text, isLoading) {
+  const msgs = document.getElementById('messages');
+  const div  = document.createElement('div');
+  div.className = 'op-msg assistant';
+  div.id = 'toolMsg_' + sessionStats.count;
+  div.innerHTML = `
+    <div class="op-msg-avatar">AZ</div>
+    <div class="op-msg-body">
+      <div class="op-tool-result" id="toolResult_${sessionStats.count}">
+        <span class="tool-label">TOOL OUTPUT</span>${isLoading ? '<div class="op-typing"><span></span><span></span><span></span></div>' : escHtml(text)}
+      </div>
+      <div class="op-msg-nii" id="msgNTI_${sessionStats.count}"></div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  sessionStats.count++;
+  document.getElementById('statMsgs').textContent = sessionStats.count;
+}
+
+function updateLastToolMessage(text) {
+  const idx = sessionStats.count - 1;
+  const el  = document.getElementById('toolResult_' + idx);
+  if (el) {
+    el.innerHTML = `<span class="tool-label">TOOL OUTPUT</span>${escHtml(text)}`;
+  }
+  const msgs = document.getElementById('messages');
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ── SESSION HISTORY ───────────────────────────────────────────
