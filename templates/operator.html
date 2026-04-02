@@ -894,7 +894,7 @@
 <script>
 // ── STATE ─────────────────────────────────────────────────────
 const CLAUDE_API = '/operator/api/chat';
-const NTI_API    = '/api/v1/score';
+const NTI_API = '/operator/score';
 
 let messages      = [];
 let josState      = { objective:'', constraint:'', nogo:'', done:'' };
@@ -1041,10 +1041,7 @@ async function scoreText(text, context) {
   try {
     const res = await fetch(NTI_API, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': '{{ api_key | default("") }}'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
     const data = await res.json();
