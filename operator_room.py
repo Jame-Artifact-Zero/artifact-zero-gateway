@@ -1,21 +1,4 @@
-"""
-operator_room.py
-================
-Flask blueprint for the Artifact Zero Operator Room.
-
-Routes:
-  GET  /operator             — operator room UI (admin only)
-  POST /operator/api/chat    — Claude API proxy with NTI governance
-  GET  /operator/sessions    — session history from RDS
-  POST /operator/run         — server-side tool execution (signal scan, S&P model, fortune500, score)
-  POST /operator/upload      — file upload → text extraction → NTI scoring → result in chat
-
-Environment variables required:
-  ANTHROPIC_API_KEY   — Claude API key (must be set in ECS)
-  OPERATOR_API_KEY    — NTI enterprise key for operator scoring (set in ECS)
-"""
-
-import os, json, time, io, re
+import os, json, time, io, re, secrets
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
@@ -27,12 +10,10 @@ CLAUDE_MODEL     = 'claude-sonnet-4-6'
 
 
 def _get_anthropic_key():
-    """Read ANTHROPIC_API_KEY at request time — not module load time."""
     return os.environ.get('ANTHROPIC_API_KEY', '')
 
 
 def require_admin(f):
-    """Simple admin check — user must be logged in with admin role."""
     from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -51,7 +32,6 @@ def require_admin(f):
 
 @operator_bp.route('/operator')
 def operator_room():
-    """Serve the operator room UI."""
     user_role = session.get('role', '')
     user_id   = session.get('user_id', '')
     is_admin  = (user_id and user_role in ('admin', 'operator'))
@@ -70,11 +50,6 @@ def operator_room():
 
 @operator_bp.route('/operator/api/chat', methods=['POST'])
 def operator_chat():
-    """
-    Proxy to Claude API with operator context.
-    Input:  { system, messages, jos }
-    Output: Claude API response JSON
-    """
     anthropic_key = _get_anthropic_key()
     if not anthropic_key:
         return jsonify({'error': 'ANTHROPIC_API_KEY not configured in ECS'}), 500
@@ -84,7 +59,6 @@ def operator_chat():
     messages = payload.get('messages', [])
     jos      = payload.get('jos', {})
 
-    # Inject JOS state
     jos_context = []
     if jos.get('objective'):  jos_context.append(f"OBJECTIVE: {jos['objective']}")
     if jos.get('constraint'): jos_context.append(f"CONSTRAINTS: {jos['constraint']}")
@@ -94,6 +68,11 @@ def operator_chat():
 
     if jos_context:
         system += "\n\nCURRENT JOS:\n" + "\n".join(jos_context)
+
+    # ── Inject prior session context ──────────────────────────────────────────
+    prior = _get_prior_session_context()
+    if prior:
+        system = "PRIOR SESSION CONTEXT:\n" + prior + "\n\n" + system
 
     claude_payload = {
         'model':      CLAUDE_MODEL,
@@ -133,11 +112,6 @@ def operator_chat():
 
 @operator_bp.route('/operator/run', methods=['POST'])
 def operator_run():
-    """
-    Server-side tool execution.
-    Input:  { tool: 'signal' | 'market' | 'fortune500' | 'score', text?: str }
-    Output: { tool, result, summary, s0_delta? }
-    """
     payload = request.get_json() or {}
     tool    = payload.get('tool', '')
 
@@ -157,10 +131,6 @@ def operator_run():
 
 
 def _run_signal_scan():
-    """
-    Fetch live RSS feeds, score top headlines through NTI, compute S0 delta.
-    Returns structured signal summary for chat injection.
-    """
     SIGNAL_FEEDS = [
         ('CNBC',       'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114'),
         ('BBC',        'https://feeds.bbci.co.uk/news/rss.xml'),
@@ -169,11 +139,11 @@ def _run_signal_scan():
         ('ARS',        'https://feeds.arstechnica.com/arstechnica/index'),
     ]
 
-    results     = []
-    s0_delta    = 0.0
-    total_nii   = 0
+    results      = []
+    s0_delta     = 0.0
+    total_nii    = 0
     scored_count = 0
-    errors      = []
+    errors       = []
 
     for source, url in SIGNAL_FEEDS:
         try:
@@ -184,10 +154,9 @@ def _run_signal_scan():
                 title = item.get('title', '')
                 if not title:
                     continue
-                # Score through NTI (internal, no API key needed for internal call)
                 score_result = _score_text_internal(title)
                 nii = score_result.get('nii', 0)
-                total_nii   += nii
+                total_nii    += nii
                 scored_count += 1
                 results.append({
                     'source': source,
@@ -200,24 +169,21 @@ def _run_signal_scan():
 
     avg_nii = round(total_nii / max(1, scored_count))
 
-    # S0 delta: positive if avg NII is high integrity (market comms clear), negative if low
     if avg_nii >= 70:
-        s0_delta = +0.02
+        s0_delta  = +0.02
         direction = 'CLEAR — high-integrity signal environment'
     elif avg_nii >= 50:
-        s0_delta = 0.00
+        s0_delta  = 0.00
         direction = 'MIXED — moderate integrity, no strong directional signal'
     else:
-        s0_delta = -0.03
+        s0_delta  = -0.03
         direction = 'NOISY — low-integrity signal environment, elevated uncertainty'
 
-    # Sort by NII ascending (most flagged first)
     results.sort(key=lambda x: x['nii'])
 
-    # Build summary text for chat
     lines = [f"NTI SIGNAL SCAN — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
     lines.append(f"Sources scanned: {len(SIGNAL_FEEDS)} | Headlines scored: {scored_count}")
-    lines.append(f"Avg NII: {avg_nii}% | S₀ delta: {s0_delta:+.3f}")
+    lines.append(f"Avg NII: {avg_nii}% | S0 delta: {s0_delta:+.3f}")
     lines.append(f"Environment: {direction}")
     lines.append("")
     lines.append("LOWEST INTEGRITY HEADLINES:")
@@ -239,18 +205,12 @@ def _run_signal_scan():
 
 
 def _run_market_model():
-    """
-    Build current S0 from available market indicators.
-    Returns directional call and S0 components.
-    """
+    lines      = [f"S&P itB0 MODEL — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
     components = {}
-    lines      = [f"S&P itB₀ MODEL — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
 
-    # Attempt to pull live breadth from Yahoo Finance via yfinance
     try:
         import yfinance as yf
 
-        # Sample breadth from key S&P components
         SAMPLE_TICKERS = ['SPY', 'QQQ', 'IWM', 'DIA', 'VIX']
         data = yf.download(SAMPLE_TICKERS, period='2d', interval='1d', progress=False, auto_adjust=True)
 
@@ -264,7 +224,6 @@ def _run_market_model():
                 except Exception:
                     pass
 
-        # Compute SPY momentum
         if 'SPY' in closes:
             spy_chg = (closes['SPY']['curr'] - closes['SPY']['prev']) / closes['SPY']['prev']
             components['spy_momentum'] = round(spy_chg, 4)
@@ -272,45 +231,41 @@ def _run_market_model():
             spy_chg = 0.0
             components['spy_momentum'] = 'unavailable'
 
-        # VIX level (risk-off signal)
         if 'VIX' in closes:
             vix = closes['VIX']['curr']
             components['vix'] = round(vix, 2)
             vix_signal = -0.05 if vix > 25 else (0.02 if vix < 15 else 0.0)
         else:
-            vix = None
+            vix        = None
             vix_signal = 0.0
             components['vix'] = 'unavailable'
 
-        # IWM vs SPY (breadth proxy)
         if 'IWM' in closes and 'SPY' in closes:
-            iwm_chg = (closes['IWM']['curr'] - closes['IWM']['prev']) / closes['IWM']['prev']
+            iwm_chg        = (closes['IWM']['curr'] - closes['IWM']['prev']) / closes['IWM']['prev']
             breadth_signal = 0.02 if (iwm_chg > 0 and spy_chg > 0) else (-0.02 if (iwm_chg < 0 and spy_chg < 0) else 0.0)
             components['breadth_signal'] = round(breadth_signal, 3)
         else:
             breadth_signal = 0.0
             components['breadth_signal'] = 'unavailable'
 
-        # Composite S0
         s0 = round(0.50 + (spy_chg * 5) + vix_signal + breadth_signal, 3)
         s0 = max(0.0, min(1.0, s0))
         components['s0_computed'] = s0
 
-        # Directional call
         if s0 > 0.55:
-            call = 'UP'
+            call       = 'UP'
             confidence = 'MODERATE' if s0 < 0.65 else 'HIGH'
         elif s0 < 0.45:
-            call = 'DOWN'
+            call       = 'DOWN'
             confidence = 'MODERATE' if s0 > 0.35 else 'HIGH'
         else:
-            call = 'FLAT/UNCERTAIN'
+            call       = 'FLAT/UNCERTAIN'
             confidence = 'LOW'
 
-        components['call'] = call
+        components['call']       = call
         components['confidence'] = confidence
 
-        lines.append(f"S₀ = {s0} | Call: {call} | Confidence: {confidence}")
+        lines.append(f"S0 = {s0} | Call: {call} | Confidence: {confidence}")
         lines.append("")
         lines.append("COMPONENTS:")
         lines.append(f"  SPY momentum: {components.get('spy_momentum', 'n/a')}")
@@ -322,8 +277,7 @@ def _run_market_model():
 
     except ImportError:
         lines.append("yfinance not available in this environment.")
-        lines.append("S₀ cannot be computed server-side without market data access.")
-        lines.append("Run sp500_itb0_full.py locally for full model output.")
+        lines.append("S0 cannot be computed server-side without market data access.")
         components['error'] = 'yfinance unavailable'
 
     except Exception as e:
@@ -331,17 +285,14 @@ def _run_market_model():
         components['error'] = str(e)[:120]
 
     return jsonify({
-        'tool':       'market',
-        'result':     '\n'.join(lines),
-        'summary':    components,
-        's0_delta':   components.get('s0_computed', None),
+        'tool':     'market',
+        'result':   '\n'.join(lines),
+        'summary':  components,
+        's0_delta': components.get('s0_computed', None),
     })
 
 
 def _run_fortune500():
-    """
-    Return lowest NTI scoring Fortune 500 companies from DB.
-    """
     lines = [f"FORTUNE 500 SCOREBOARD — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
 
     try:
@@ -351,7 +302,7 @@ def _run_fortune500():
 
         if database.USE_PG:
             cur.execute("""
-                SELECT company_name, nii_score, band, flags
+                SELECT company_name, nii_score, issue_count, score_json
                 FROM fortune500_scores
                 ORDER BY nii_score ASC
                 LIMIT 10
@@ -360,13 +311,35 @@ def _run_fortune500():
             conn.close()
 
             if rows:
-                lines.append(f"10 LOWEST NII SCORES:")
+                lines.append("10 LOWEST NII SCORES:")
                 for r in rows:
-                    name, score, band, flags = r[0], r[1], r[2] or '', r[3] or ''
-                    flag_display = flags[:80] if flags else 'none'
-                    lines.append(f"  {name[:35]:<35} NII {score}%  [{band}]")
-                    if flags:
-                        lines.append(f"    flags: {flag_display}")
+                    name        = r[0]
+                    score       = r[1]
+                    issue_count = r[2] or 0
+                    score_json  = r[3] or ''
+
+                    # Derive band from nii_score
+                    if score >= 70:
+                        band = 'HIGH'
+                    elif score >= 50:
+                        band = 'MODERATE'
+                    else:
+                        band = 'LOW'
+
+                    # Pull flags from score_json if present
+                    flags_display = ''
+                    if score_json:
+                        try:
+                            sj = json.loads(score_json) if isinstance(score_json, str) else score_json
+                            flags = sj.get('flags', [])
+                            if flags:
+                                flags_display = ', '.join(flags[:3])
+                        except Exception:
+                            pass
+
+                    lines.append(f"  {name[:35]:<35} NII {score:.1f}%  [{band}]  issues: {issue_count}")
+                    if flags_display:
+                        lines.append(f"    flags: {flags_display}")
             else:
                 lines.append("No scored companies in database.")
         else:
@@ -384,14 +357,13 @@ def _run_fortune500():
 
 
 def _run_nti_score(text: str):
-    """Score provided text through NTI engine, return full result."""
     result = _score_text_internal(text)
 
     nii   = result.get('nii', 0)
     flags = result.get('flags', [])
     label = 'HIGH INTEGRITY' if nii >= 70 else 'MODERATE' if nii >= 50 else 'LOW INTEGRITY'
 
-    lines = [f"NTI SCORE RESULT"]
+    lines = ["NTI SCORE RESULT"]
     lines.append(f"NII: {nii}% — {label}")
     lines.append(f"Text length: {len(text)} chars")
     if flags:
@@ -417,11 +389,58 @@ def _run_nti_score(text: str):
 
 def _score_text_internal(text: str) -> dict:
     """
-    Score text using internal NTI engine functions (no HTTP, no API key).
-    Mirrors what /api/v1/score does internally.
+    Score text using internal NTI engine.
+    Imports from core_engine to avoid ECS app import path breakage.
+    Falls back to app-level imports if core_engine unavailable.
     """
     try:
-        # Import scoring functions from app context
+        from core_engine.v3_engine import run_v3
+        from core_engine.scoring import compute_nii
+        from core_engine.detection import (
+            detect_l0_constraints,
+            detect_downstream_before_constraint,
+            detect_udds,
+            detect_dce,
+            detect_cca,
+        )
+        from core_engine.v2_engine import classify_tilt
+
+        l0   = detect_l0_constraints(text)
+        tilt = classify_tilt(text)
+        dbc  = detect_downstream_before_constraint('', text, l0)
+        nii  = compute_nii('', text, l0, dbc, tilt)
+        udds = detect_udds('', text, l0)
+        dce  = detect_dce(text, l0)
+        cca  = detect_cca('', text)
+
+        nii_val = nii.get('nii_score', 0)
+        if nii_val <= 1.0:
+            nii_val = round(nii_val * 100)
+
+        flags = []
+        if udds.get('udds_state', '') in ('UDDS_CONFIRMED', 'UDDS_PROBABLE'):
+            flags.append('UDDS')
+        if dce.get('dce_state', '') in ('DCE_CONFIRMED', 'DCE_PROBABLE'):
+            flags.append('DCE')
+        if cca.get('cca_state', '') in ('CCA_CONFIRMED', 'CCA_PROBABLE'):
+            flags.append('CCA')
+
+        return {
+            'nii':   nii_val,
+            'flags': flags,
+            'failure_modes': {
+                'UDDS': udds.get('udds_state', 'FALSE'),
+                'DCE':  dce.get('dce_state',  'FALSE'),
+                'CCA':  cca.get('cca_state',  'FALSE'),
+            },
+            'tilt': tilt,
+        }
+
+    except ImportError:
+        pass
+
+    # Fallback: app-level imports
+    try:
         import app as main_app
         l0   = main_app.detect_l0_constraints(text)
         tilt = main_app.classify_tilt(text)
@@ -444,15 +463,16 @@ def _score_text_internal(text: str) -> dict:
             flags.append('CCA')
 
         return {
-            'nii': nii_val,
+            'nii':   nii_val,
             'flags': flags,
             'failure_modes': {
                 'UDDS': udds.get('udds_state', 'FALSE'),
-                'DCE':  dce.get('dce_state', 'FALSE'),
-                'CCA':  cca.get('cca_state', 'FALSE'),
+                'DCE':  dce.get('dce_state',  'FALSE'),
+                'CCA':  cca.get('cca_state',  'FALSE'),
             },
             'tilt': tilt,
         }
+
     except Exception as e:
         return {'nii': 0, 'flags': [], 'error': str(e)}
 
@@ -461,11 +481,6 @@ def _score_text_internal(text: str) -> dict:
 
 @operator_bp.route('/operator/upload', methods=['POST'])
 def operator_upload():
-    """
-    File upload → text extraction → NTI scoring → result for chat.
-    Accepts: .txt, .pdf, .docx, .csv, .md
-    Returns: { filename, char_count, nii, flags, preview, tool_result }
-    """
     if 'file' not in request.files:
         return jsonify({'error': 'No file in request'}), 400
 
@@ -478,13 +493,12 @@ def operator_upload():
     if ext not in ALLOWED:
         return jsonify({'error': f'File type .{ext} not supported. Allowed: {", ".join(ALLOWED)}'}), 400
 
-    MAX_BYTES = 2 * 1024 * 1024  # 2MB
+    MAX_BYTES = 2 * 1024 * 1024
     if len(raw_bytes) > MAX_BYTES:
         return jsonify({'error': 'File exceeds 2MB limit'}), 400
 
-    # Extract text
-    text = ''
-    extraction_note = ''
+    text             = ''
+    extraction_note  = ''
 
     try:
         if ext in ('txt', 'md', 'csv', 'html'):
@@ -517,20 +531,17 @@ def operator_upload():
     if not text:
         return jsonify({'error': 'No text could be extracted from file'}), 422
 
-    # Truncate for scoring (NTI engine limit)
-    score_text = text[:50000]
-
-    # Score
+    score_text   = text[:50000]
     score_result = _score_text_internal(score_text)
-    nii   = score_result.get('nii', 0)
-    flags = score_result.get('flags', [])
-    label = 'HIGH INTEGRITY' if nii >= 70 else 'MODERATE' if nii >= 50 else 'LOW INTEGRITY'
+    nii          = score_result.get('nii', 0)
+    flags        = score_result.get('flags', [])
+    label        = 'HIGH INTEGRITY' if nii >= 70 else 'MODERATE' if nii >= 50 else 'LOW INTEGRITY'
 
     preview  = score_text[:400].replace('\n', ' ')
     char_cnt = len(text)
     word_cnt = len(text.split())
 
-    lines = [f"FILE UPLOAD — NTI SCORE"]
+    lines = ["FILE UPLOAD — NTI SCORE"]
     lines.append(f"File: {filename}")
     lines.append(f"Size: {char_cnt:,} chars | {word_cnt:,} words")
     if extraction_note:
@@ -559,11 +570,64 @@ def operator_upload():
     })
 
 
+# ── CONTEXT ENDPOINT (p0045) ───────────────────────────────────────────────────
+
+@operator_bp.route('/operator/context', methods=['POST'])
+def operator_context():
+    """
+    Accept a session blob JSON body and write to RDS operator_context table.
+    Called by exp_append scripts after writing local JSON file.
+    Returns { status: ok, id: ... }
+    """
+    payload = request.get_json() or {}
+    if not payload:
+        return jsonify({'error': 'Empty payload'}), 400
+
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur  = conn.cursor()
+
+        if database.USE_PG:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS operator_context (
+                    id          TEXT PRIMARY KEY,
+                    created_at  TIMESTAMPTZ DEFAULT NOW(),
+                    blob_json   TEXT NOT NULL,
+                    source      TEXT,
+                    summary     TEXT
+                )
+            """)
+
+            ctx_id  = 'ctx_' + secrets.token_hex(8)
+            source  = payload.get('source', 'exp_append')
+            # Build a short summary from blob keys
+            summary_parts = []
+            for key in ('push', 'experiment', 'objective', 'status'):
+                if payload.get(key):
+                    summary_parts.append(f"{key}={payload[key]}")
+            summary = ' | '.join(summary_parts[:4])
+
+            cur.execute("""
+                INSERT INTO operator_context (id, blob_json, source, summary)
+                VALUES (%s, %s, %s, %s)
+            """, (ctx_id, json.dumps(payload), source, summary))
+            conn.commit()
+            conn.close()
+
+            return jsonify({'status': 'ok', 'id': ctx_id, 'summary': summary})
+        else:
+            conn.close()
+            return jsonify({'status': 'ok', 'id': 'local', 'note': 'SQLite — blob not persisted to RDS'})
+
+    except Exception as e:
+        return jsonify({'error': str(e)[:200]}), 500
+
+
 # ── SESSION STORAGE ────────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator/sessions', methods=['GET'])
 def operator_sessions():
-    """Return recent operator sessions from database."""
     try:
         import db as database
         conn = database.db_connect()
@@ -585,8 +649,75 @@ def operator_sessions():
         return jsonify({'sessions': [], 'note': str(e)})
 
 
+def _get_prior_session_context() -> str:
+    """
+    Fetch the most recent operator session summary from RDS.
+    Returns a plain text block for system prompt injection.
+    Returns empty string on any failure — never blocks the request.
+    """
+    try:
+        import db as database
+        if not database.USE_PG:
+            return ''
+        conn = database.db_connect()
+        cur  = conn.cursor()
+
+        # Also pull latest context blob if present
+        ctx_summary = ''
+        try:
+            cur.execute("""
+                SELECT summary, blob_json, created_at
+                FROM operator_context
+                ORDER BY created_at DESC
+                LIMIT 1
+            """)
+            ctx_row = cur.fetchone()
+            if ctx_row:
+                ctx_ts      = str(ctx_row[2])[:16]
+                ctx_summary_text = ctx_row[0] or ''
+                blob        = {}
+                try:
+                    blob = json.loads(ctx_row[1]) if ctx_row[1] else {}
+                except Exception:
+                    pass
+                parts = [f"[CONTEXT BLOB {ctx_ts}] {ctx_summary_text}"]
+                for key in ('push', 'status', 'objective', 'done_when', 'key_facts'):
+                    if blob.get(key):
+                        val = blob[key]
+                        if isinstance(val, dict):
+                            val = json.dumps(val)[:200]
+                        parts.append(f"  {key}: {str(val)[:200]}")
+                ctx_summary = '\n'.join(parts)
+        except Exception:
+            pass
+
+        # Pull last session summary
+        cur.execute("""
+            SELECT summary, created_at
+            FROM operator_sessions
+            ORDER BY created_at DESC
+            LIMIT 1
+        """)
+        row = cur.fetchone()
+        conn.close()
+
+        if not row and not ctx_summary:
+            return ''
+
+        parts = []
+        if row and row[0]:
+            ts = str(row[1])[:16] if row[1] else ''
+            parts.append(f"[LAST SESSION {ts}] {row[0]}")
+        if ctx_summary:
+            parts.append(ctx_summary)
+
+        return '\n'.join(parts)
+
+    except Exception:
+        return ''
+
+
 def _store_session(messages, response, jos):
-    """Store operator session to RDS."""
     try:
         import db as database
         conn = database.db_connect()
@@ -607,7 +738,6 @@ def _store_session(messages, response, jos):
                 if m.get('role') == 'user':
                     summary = m.get('content', '')[:120]
                     break
-            import secrets
             sid = 'op_' + secrets.token_hex(8)
             cur.execute("""
                 INSERT INTO operator_sessions (id, messages_json, response_json, jos_json, summary)
