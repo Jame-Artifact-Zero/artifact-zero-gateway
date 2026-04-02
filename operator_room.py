@@ -387,6 +387,16 @@ def _run_nti_score(text: str):
     })
 
 
+@operator_bp.route('/operator/score', methods=['POST'])
+def operator_score():
+    payload = request.get_json() or {}
+    text    = payload.get('text', '').strip()
+    if not text:
+        return jsonify({'nii': 0, 'flags': [], 'error': 'no text'}), 400
+    result = _score_text_internal(text)
+    return jsonify(result)
+
+
 def _score_text_internal(text: str) -> dict:
     """
     Score text using internal NTI engine.
