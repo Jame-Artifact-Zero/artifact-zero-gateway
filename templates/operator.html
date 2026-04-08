@@ -872,6 +872,18 @@
         </div>
       </div>
 
+
+      <!-- Memory Log -->
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+        <div class="op-state-title" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span>MEMORY LOG</span>
+          <span onclick="loadMemory()" style="cursor:pointer;color:var(--accent);font-size:9px;">? REFRESH</span>
+        </div>
+        <div id="memoryLog" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);max-height:180px;overflow-y:auto;">
+          Loading...
+        </div>
+      </div>
+
     </div>
   </aside>
 </div>
@@ -937,7 +949,7 @@ When asked to run tools, use the /operator/run endpoint.`;
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('msgInput').focus();
-  loadSessions();
+  loadSessions(); loadMemory();
 });
 
 // ── CHAT ──────────────────────────────────────────────────────
@@ -1330,6 +1342,28 @@ async function loadSessions() {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+
+async function loadMemory() {
+  const el = document.getElementById('memoryLog');
+  if (!el) return;
+  try {
+    const res  = await fetch('/operator/context?limit=10');
+    const data = await res.json();
+    if (!data.rows?.length) {
+      el.textContent = 'No memory entries';
+      return;
+    }
+    el.innerHTML = data.rows.map(r => `
+      <div style="padding:5px 0;border-bottom:1px solid var(--border);">
+        <div style="color:var(--dim);font-size:9px;margin-bottom:2px;">${r.summary?.slice(0,40) || r.push || 'ctx'}&#8230;</div>
+        <div style="color:var(--muted);font-size:8px;">${r.created_at?.slice(0,16) || ''} &middot; ${r.source || ''}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.textContent = 'Not available';
+  }
+}
+
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();

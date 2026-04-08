@@ -1,4 +1,4 @@
-import os, json, time, io, re, secrets
+import os, json, time, io, re, secrets, threading
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
@@ -99,9 +99,9 @@ def operator_chat():
 
         try:
             _store_session(messages, data, jos)
+            threading.Thread(target=_auto_write_context, args=(messages, data), daemon=True).start()
         except Exception:
             pass
-
         return jsonify(data)
 
     except Exception as e:
@@ -636,6 +636,54 @@ def operator_context():
 
 # ── SESSION STORAGE ────────────────────────────────────────────────────────────
 
+@operator_bp.route('/operator/context', methods=['GET'])
+@require_admin
+def operator_context_get():
+    """
+    Return last N operator_context rows as JSON for the memory panel.
+    Query param: limit (default 10, max 50)
+    """
+    try:
+        import db as database
+        if not database.USE_PG:
+            return jsonify({'status': 'ok', 'rows': [], 'note': 'SQLite � no RDS'})
+
+        limit = min(int(request.args.get('limit', 10)), 50)
+
+        conn = database.db_connect()
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT id, created_at, source, summary, blob_json
+            FROM operator_context
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (limit,))
+        rows = cur.fetchall()
+        conn.close()
+
+        result = []
+        for row in rows:
+            blob = {}
+            try:
+                blob = json.loads(row[4]) if row[4] else {}
+            except Exception:
+                pass
+            result.append({
+                'id':         row[0],
+                'created_at': str(row[1])[:19],
+                'source':     row[2],
+                'summary':    row[3],
+                'push':       blob.get('push', ''),
+                'status':     blob.get('status', ''),
+                'objective':  blob.get('objective', ''),
+            })
+
+        return jsonify({'status': 'ok', 'rows': result, 'count': len(result)})
+
+    except Exception as e:
+        return jsonify({'error': str(e)[:200]}), 500
+
+
 @operator_bp.route('/operator/sessions', methods=['GET'])
 def operator_sessions():
     try:
@@ -661,9 +709,10 @@ def operator_sessions():
 
 def _get_prior_session_context() -> str:
     """
-    Fetch the most recent operator session summary from RDS.
+    Fetch the last 10 operator session blobs from RDS.
+    Merges decisions, key_facts, named_concepts, open_questions across rows.
     Returns a plain text block for system prompt injection.
-    Returns empty string on any failure — never blocks the request.
+    Returns empty string on any failure � never blocks the request.
     """
     try:
         import db as database
@@ -672,59 +721,221 @@ def _get_prior_session_context() -> str:
         conn = database.db_connect()
         cur  = conn.cursor()
 
-        # Also pull latest context blob if present
-        ctx_summary = ''
+        # Pull last session summary
+        last_session_line = ''
+        try:
+            cur.execute("""
+                SELECT summary, created_at
+                FROM operator_sessions
+                ORDER BY created_at DESC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+            if row and row[0]:
+                ts = str(row[1])[:16] if row[1] else ''
+                last_session_line = f"[LAST SESSION {ts}] {row[0]}"
+        except Exception:
+            pass
+
+        # Pull last 10 context blobs and merge
+        ctx_lines = []
         try:
             cur.execute("""
                 SELECT summary, blob_json, created_at
                 FROM operator_context
                 ORDER BY created_at DESC
-                LIMIT 1
+                LIMIT 10
             """)
-            ctx_row = cur.fetchone()
-            if ctx_row:
-                ctx_ts      = str(ctx_row[2])[:16]
-                ctx_summary_text = ctx_row[0] or ''
-                blob        = {}
-                try:
-                    blob = json.loads(ctx_row[1]) if ctx_row[1] else {}
-                except Exception:
-                    pass
-                parts = [f"[CONTEXT BLOB {ctx_ts}] {ctx_summary_text}"]
-                for key in ('push', 'status', 'objective', 'done_when', 'key_facts'):
-                    if blob.get(key):
-                        val = blob[key]
-                        if isinstance(val, dict):
-                            val = json.dumps(val)[:200]
-                        parts.append(f"  {key}: {str(val)[:200]}")
-                ctx_summary = '\n'.join(parts)
+            rows = cur.fetchall()
+            conn.close()
+
+            if rows:
+                # Merge fields across all rows (newest first = highest priority)
+                merged_push            = ''
+                merged_status          = ''
+                merged_objective       = ''
+                merged_key_facts       = []
+                merged_decisions       = []
+                merged_named_concepts  = {}
+                merged_open_questions  = []
+                latest_ts              = ''
+
+                for row in rows:
+                    ts   = str(row[2])[:16] if row[2] else ''
+                    blob = {}
+                    try:
+                        blob = json.loads(row[1]) if row[1] else {}
+                    except Exception:
+                        pass
+
+                    # Take push/status/objective from most recent non-empty
+                    if not merged_push and blob.get('push'):
+                        merged_push = blob['push']
+                    if not merged_status and blob.get('status'):
+                        merged_status = blob['status']
+                    if not merged_objective and blob.get('objective'):
+                        merged_objective = blob['objective']
+                    if not latest_ts:
+                        latest_ts = ts
+
+                    # Accumulate lists � deduplicate
+                    kf = blob.get('key_facts', '')
+                    if isinstance(kf, list):
+                        for item in kf:
+                            if item and item not in merged_key_facts:
+                                merged_key_facts.append(item)
+                    elif isinstance(kf, str) and kf:
+                        if kf not in merged_key_facts:
+                            merged_key_facts.append(kf)
+
+                    for d in (blob.get('decisions') or []):
+                        if d and d not in merged_decisions:
+                            merged_decisions.append(d)
+
+                    for q in (blob.get('open_questions') or []):
+                        if q and q not in merged_open_questions:
+                            merged_open_questions.append(q)
+
+                    # Merge named concepts � earlier rows don't overwrite newer
+                    for k, v in (blob.get('named_concepts') or {}).items():
+                        if k not in merged_named_concepts:
+                            merged_named_concepts[k] = v
+
+                # Build injection block
+                parts = [f"[CONTEXT BLOB {latest_ts}] push={merged_push} | status={merged_status}"]
+                if merged_objective:
+                    parts.append(f"  objective: {merged_objective[:300]}")
+                if merged_decisions:
+                    parts.append("  decisions:")
+                    for d in merged_decisions[:20]:
+                        parts.append(f"    - {str(d)[:200]}")
+                if merged_key_facts:
+                    parts.append("  key_facts:")
+                    for f in merged_key_facts[:20]:
+                        parts.append(f"    - {str(f)[:200]}")
+                if merged_named_concepts:
+                    parts.append("  named_concepts:")
+                    for k, v in list(merged_named_concepts.items())[:15]:
+                        parts.append(f"    {k}: {str(v)[:300]}")
+                if merged_open_questions:
+                    parts.append("  open_questions:")
+                    for q in merged_open_questions[:10]:
+                        parts.append(f"    - {str(q)[:200]}")
+
+                ctx_lines = parts
+
         except Exception:
-            pass
+            try:
+                conn.close()
+            except Exception:
+                pass
 
-        # Pull last session summary
-        cur.execute("""
-            SELECT summary, created_at
-            FROM operator_sessions
-            ORDER BY created_at DESC
-            LIMIT 1
-        """)
-        row = cur.fetchone()
-        conn.close()
-
-        if not row and not ctx_summary:
+        if not last_session_line and not ctx_lines:
             return ''
 
-        parts = []
-        if row and row[0]:
-            ts = str(row[1])[:16] if row[1] else ''
-            parts.append(f"[LAST SESSION {ts}] {row[0]}")
-        if ctx_summary:
-            parts.append(ctx_summary)
+        result_parts = []
+        if last_session_line:
+            result_parts.append(last_session_line)
+        if ctx_lines:
+            result_parts.extend(ctx_lines)
 
-        return '\n'.join(parts)
+        # Token budget cap � 3000 chars max
+        result = '\n'.join(result_parts)
+        if len(result) > 3000:
+            result = result[:3000] + '\n  ...[truncated]'
+
+        return result
 
     except Exception:
         return ''
+
+
+
+def _auto_write_context(messages, response):
+    """
+    Background thread: extract push/status/decisions/named_concepts from
+    the latest exchange and POST to /operator/context silently.
+    Fires after every assistant response. Never blocks the request.
+    """
+    try:
+        import db as database
+        if not database.USE_PG:
+            return
+
+        # Extract assistant response text
+        assistant_text = ''
+        try:
+            assistant_text = response.get('content', [{}])[0].get('text', '')[:3000]
+        except Exception:
+            pass
+
+        # Extract last user message
+        user_text = ''
+        for m in reversed(messages):
+            if m.get('role') == 'user':
+                user_text = m.get('content', '')[:1000]
+                break
+
+        if not assistant_text and not user_text:
+            return
+
+        # Build blob from exchange content
+        # Extract push tag if present in user message
+        push = ''
+        push_match = re.search(r'p\d{4}[_\w]*', user_text + assistant_text)
+        if push_match:
+            push = push_match.group(0)
+
+        # Extract decisions � lines starting with decision markers
+        decisions = []
+        for line in (assistant_text + '\n' + user_text).split('\n'):
+            line = line.strip()
+            if any(line.lower().startswith(w) for w in ('decided:', 'decision:', 'approved:', 'confirmed:', 'done:')):
+                decisions.append(line[:200])
+
+        # Extract key facts � bullet lines
+        key_facts = []
+        for line in assistant_text.split('\n'):
+            line = line.strip()
+            if line.startswith('- ') or line.startswith('* '):
+                key_facts.append(line[2:200])
+        key_facts = key_facts[:10]
+
+        blob = {
+            'push':        push or 'auto',
+            'status':      'active',
+            'objective':   f'Auto-captured exchange � {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")}',
+            'key_facts':   key_facts,
+            'decisions':   decisions,
+            'named_concepts': {},
+            'open_questions': [],
+            'source':      'auto_writer',
+            'assistant_snippet': assistant_text[:500],
+        }
+
+        summary = f"push={blob['push']} | auto-write | {blob['objective']}"
+
+        conn = database.db_connect()
+        cur  = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS operator_context (
+                id          TEXT PRIMARY KEY,
+                created_at  TIMESTAMPTZ DEFAULT NOW(),
+                blob_json   TEXT NOT NULL,
+                source      TEXT DEFAULT 'auto',
+                summary     TEXT
+            )
+        """)
+        ctx_id = 'ctx_auto_' + secrets.token_hex(8)
+        cur.execute("""
+            INSERT INTO operator_context (id, blob_json, source, summary)
+            VALUES (%s, %s, %s, %s)
+        """, (ctx_id, json.dumps(blob), 'auto_writer', summary))
+        conn.commit()
+        conn.close()
+
+    except Exception:
+        pass
 
 
 def _store_session(messages, response, jos):
