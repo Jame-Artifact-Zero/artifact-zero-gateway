@@ -1,4 +1,4 @@
-import os, json, time, io, re, secrets, threading
+ï»¿import os, json, time, io, re, secrets, threading
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
@@ -646,7 +646,7 @@ def operator_context_get():
     try:
         import db as database
         if not database.USE_PG:
-            return jsonify({'status': 'ok', 'rows': [], 'note': 'SQLite — no RDS'})
+            return jsonify({'status': 'ok', 'rows': [], 'note': 'SQLite - no RDS'})
 
         limit = min(int(request.args.get('limit', 10)), 50)
 
@@ -712,7 +712,7 @@ def _get_prior_session_context() -> str:
     Fetch the last 10 operator session blobs from RDS.
     Merges decisions, key_facts, named_concepts, open_questions across rows.
     Returns a plain text block for system prompt injection.
-    Returns empty string on any failure — never blocks the request.
+    Returns empty string on any failure ï¿½ never blocks the request.
     """
     try:
         import db as database
@@ -778,7 +778,7 @@ def _get_prior_session_context() -> str:
                     if not latest_ts:
                         latest_ts = ts
 
-                    # Accumulate lists — deduplicate
+                    # Accumulate lists ï¿½ deduplicate
                     kf = blob.get('key_facts', '')
                     if isinstance(kf, list):
                         for item in kf:
@@ -796,7 +796,7 @@ def _get_prior_session_context() -> str:
                         if q and q not in merged_open_questions:
                             merged_open_questions.append(q)
 
-                    # Merge named concepts — earlier rows don't overwrite newer
+                    # Merge named concepts ï¿½ earlier rows don't overwrite newer
                     for k, v in (blob.get('named_concepts') or {}).items():
                         if k not in merged_named_concepts:
                             merged_named_concepts[k] = v
@@ -839,7 +839,7 @@ def _get_prior_session_context() -> str:
         if ctx_lines:
             result_parts.extend(ctx_lines)
 
-        # Token budget cap — 3000 chars max
+        # Token budget cap ï¿½ 3000 chars max
         result = '\n'.join(result_parts)
         if len(result) > 3000:
             result = result[:3000] + '\n  ...[truncated]'
@@ -886,14 +886,14 @@ def _auto_write_context(messages, response):
         if push_match:
             push = push_match.group(0)
 
-        # Extract decisions — lines starting with decision markers
+        # Extract decisions ï¿½ lines starting with decision markers
         decisions = []
         for line in (assistant_text + '\n' + user_text).split('\n'):
             line = line.strip()
             if any(line.lower().startswith(w) for w in ('decided:', 'decision:', 'approved:', 'confirmed:', 'done:')):
                 decisions.append(line[:200])
 
-        # Extract key facts — bullet lines
+        # Extract key facts ï¿½ bullet lines
         key_facts = []
         for line in assistant_text.split('\n'):
             line = line.strip()
@@ -904,7 +904,7 @@ def _auto_write_context(messages, response):
         blob = {
             'push':        push or 'auto',
             'status':      'active',
-            'objective':   f'Auto-captured exchange — {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")}',
+            'objective':   f'Auto-captured exchange ï¿½ {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")}',
             'key_facts':   key_facts,
             'decisions':   decisions,
             'named_concepts': {},
