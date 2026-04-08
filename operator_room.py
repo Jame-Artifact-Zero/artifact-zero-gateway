@@ -712,7 +712,7 @@ def _get_prior_session_context() -> str:
     Fetch the last 10 operator session blobs from RDS.
     Merges decisions, key_facts, named_concepts, open_questions across rows.
     Returns a plain text block for system prompt injection.
-    Returns empty string on any failure � never blocks the request.
+    Returns empty string on any failure   never blocks the request.
     """
     try:
         import db as database
@@ -778,7 +778,7 @@ def _get_prior_session_context() -> str:
                     if not latest_ts:
                         latest_ts = ts
 
-                    # Accumulate lists � deduplicate
+                    # Accumulate lists   deduplicate
                     kf = blob.get('key_facts', '')
                     if isinstance(kf, list):
                         for item in kf:
@@ -796,7 +796,7 @@ def _get_prior_session_context() -> str:
                         if q and q not in merged_open_questions:
                             merged_open_questions.append(q)
 
-                    # Merge named concepts � earlier rows don't overwrite newer
+                    # Merge named concepts   earlier rows don't overwrite newer
                     for k, v in (blob.get('named_concepts') or {}).items():
                         if k not in merged_named_concepts:
                             merged_named_concepts[k] = v
@@ -839,7 +839,7 @@ def _get_prior_session_context() -> str:
         if ctx_lines:
             result_parts.extend(ctx_lines)
 
-        # Token budget cap � 3000 chars max
+        # Token budget cap   3000 chars max
         result = '\n'.join(result_parts)
         if len(result) > 3000:
             result = result[:3000] + '\n  ...[truncated]'
@@ -873,47 +873,57 @@ def _auto_write_context(messages, response):
         user_text = ''
         for m in reversed(messages):
             if m.get('role') == 'user':
-                user_text = m.get('content', '')[:1000]
+                user_text = m.get('content', '')
+                if isinstance(user_text, list):
+                    # multipart content block
+                    user_text = ' '.join(
+                        p.get('text', '') for p in user_text if isinstance(p, dict)
+                    )
+                user_text = user_text[:1000]
                 break
 
         if not assistant_text and not user_text:
             return
 
-        # Build blob from exchange content
-        # Extract push tag if present in user message
-        push = ''
-        push_match = re.search(r'p\d{4}[_\w]*', user_text + assistant_text)
+        # Push tag — check user text first, then assistant
+        push = 'auto'
+        push_match = re.search(r'\bp\d{4}[_\w]*\b', user_text + ' ' + assistant_text)
         if push_match:
             push = push_match.group(0)
 
-        # Extract decisions � lines starting with decision markers
+        # Decisions — lines starting with decision markers
         decisions = []
         for line in (assistant_text + '\n' + user_text).split('\n'):
             line = line.strip()
-            if any(line.lower().startswith(w) for w in ('decided:', 'decision:', 'approved:', 'confirmed:', 'done:')):
-                decisions.append(line[:200])
+            if any(line.lower().startswith(w) for w in (
+                'decided:', 'decision:', 'approved:', 'confirmed:', 'done:', '- ', '* '
+            )):
+                if len(line) > 10:
+                    decisions.append(line[:200])
+        decisions = decisions[:10]
 
-        # Extract key facts � bullet lines
-        key_facts = []
-        for line in assistant_text.split('\n'):
-            line = line.strip()
-            if line.startswith('- ') or line.startswith('* '):
-                key_facts.append(line[2:200])
-        key_facts = key_facts[:10]
+        # Key facts — first 300 chars of user message + first 300 of assistant
+        user_snippet      = user_text[:300].strip()
+        assistant_snippet = assistant_text[:500].strip()
+
+        # Objective: real content, not just timestamp
+        ts        = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')
+        objective = f'[{ts}] U: {user_snippet[:120]} | A: {assistant_snippet[:120]}'
 
         blob = {
-            'push':        push or 'auto',
-            'status':      'active',
-            'objective':   f'Auto-captured exchange � {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")}',
-            'key_facts':   key_facts,
-            'decisions':   decisions,
-            'named_concepts': {},
-            'open_questions': [],
-            'source':      'auto_writer',
-            'assistant_snippet': assistant_text[:500],
+            'push':             push,
+            'status':           'active',
+            'objective':        objective,
+            'key_facts':        [user_snippet, assistant_snippet],
+            'decisions':        decisions,
+            'named_concepts':   {},
+            'open_questions':   [],
+            'source':           'auto_writer',
+            'user_snippet':     user_snippet,
+            'assistant_snippet': assistant_snippet,
         }
 
-        summary = f"push={blob['push']} | auto-write | {blob['objective']}"
+        summary = f'push={push} | status=active\n  objective: {objective}\n  key_facts:\n    - `objective`: `"{objective}"`\n    - `summary`: push={push} | U: {user_snippet[:80]} | A: {assistant_snippet[:80]}'
 
         conn = database.db_connect()
         cur  = conn.cursor()
