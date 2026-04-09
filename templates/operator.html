@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Operator Room — Artifact Zero{% endblock %}
+{% block title %}Operator Room � Artifact Zero{% endblock %}
 {% block body_class %}page-operator{% endblock %}
 
 {% block head %}
 <style>
-/* ── OPERATOR ROOM ─────────────────────────────────────────── */
+/* -- OPERATOR ROOM ------------------------------------------- */
 .page-operator .az-main { padding: 0; overflow: hidden; height: calc(100vh - 56px); }
 .page-operator .az-bottomnav { display: none; }
 .page-operator .az-footer { display: none; }
@@ -17,7 +17,7 @@
   overflow: hidden;
 }
 
-/* ── LEFT SIDEBAR — S0 STATE ───────────────────────────────── */
+/* -- LEFT SIDEBAR � S0 STATE --------------------------------- */
 .op-sidebar {
   background: var(--s2);
   border-right: 1px solid var(--border);
@@ -158,7 +158,7 @@
   50% { border-color: transparent; }
 }
 
-/* ── CENTER — CHAT ─────────────────────────────────────────── */
+/* -- CENTER � CHAT ------------------------------------------- */
 .op-chat {
   display: flex;
   flex-direction: column;
@@ -445,7 +445,7 @@
 .op-jos-tag.set { border-color: var(--accent); color: var(--accent); background: rgba(0,232,156,0.05); }
 .op-jos-tag.required { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
 
-/* ── RIGHT SIDEBAR — NTI PANEL ─────────────────────────────── */
+/* -- RIGHT SIDEBAR � NTI PANEL ------------------------------- */
 .op-nti-panel {
   background: var(--s2);
   border-left: 1px solid var(--border);
@@ -640,17 +640,17 @@
 {% block content %}
 <div class="op-shell">
 
-  <!-- ── LEFT SIDEBAR ────────────────────────────────────────── -->
+  <!-- -- LEFT SIDEBAR ------------------------------------------ -->
   <aside class="op-sidebar">
     <div class="op-sidebar-header">
-      <span class="op-logo">itB₀</span>
+      <span class="op-logo">itB0</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">OPERATOR</span>
     </div>
 
     <!-- S0 Score -->
     <div class="op-s0-block">
-      <div class="op-s0-label">Prior State S₀</div>
-      <div class="op-s0-score moderate" id="s0Display">—</div>
+      <div class="op-s0-label">Prior State S0</div>
+      <div class="op-s0-score moderate" id="s0Display">�</div>
       <div class="op-s0-desc" id="s0Desc">LOADING...</div>
     </div>
 
@@ -667,15 +667,15 @@
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Market</span>
-        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">�</span>
       </div>
       <div class="op-state-item">
-        <span class="op-state-key">S₀ delta</span>
-        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">—</span>
+        <span class="op-state-key">S0 delta</span>
+        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">�</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Signal env</span>
-        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">�</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Last tool</span>
@@ -688,15 +688,15 @@
       <div class="op-state-title">JOS Fields</div>
       <div class="op-state-item">
         <span class="op-state-key">Objective</span>
-        <span class="op-state-val" id="josObj" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josObj" style="color:var(--muted)">� not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Constraints</span>
-        <span class="op-state-val" id="josCon" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josCon" style="color:var(--muted)">� not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Done When</span>
-        <span class="op-state-val" id="josDone" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josDone" style="color:var(--muted)">� not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Closure</span>
@@ -708,22 +708,29 @@
     <div class="op-state-section">
       <div class="op-state-title">Tools</div>
       <button class="op-tool-btn" id="toolSignal" onclick="executeTool('signal')">
-        <span class="tool-icon">📡</span> NTI Signal Scanner
+        <span class="tool-icon">??</span> NTI Signal Scanner
       </button>
       <button class="op-tool-btn" id="toolMarket" onclick="executeTool('market')">
-        <span class="tool-icon">📈</span> S&amp;P itB₀ Model
+        <span class="tool-icon">??</span> S&amp;P itB0 Model
       </button>
       <button class="op-tool-btn" id="toolFortune" onclick="executeTool('fortune500')">
-        <span class="tool-icon">🏢</span> Fortune 500 Feed
+        <span class="tool-icon">??</span> Fortune 500 Feed
       </button>
       <button class="op-tool-btn" id="toolScore" onclick="promptScoreText()">
-        <span class="tool-icon">⚡</span> Score Any Text
+        <span class="tool-icon">?</span> Score Any Text
       </button>
       <button class="op-tool-btn" id="toolUpload" onclick="triggerUpload()">
-        <span class="tool-icon">📎</span> Upload + Score File
+        <span class="tool-icon">??</span> Upload + Score File
       </button>
       <input type="file" id="fileUploadInput" accept=".txt,.pdf,.docx,.csv,.md,.html"
              style="display:none" onchange="handleFileUpload(this)">
+      <button class="op-tool-btn" id="toolDailyUpdate" onclick="runDailyUpdate()">
+        Run Daily Update
+      </button>
+      <div id="dailyUpdateBadge" style="display:none;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 8px;margin-top:4px;border-radius:4px;background:#1a3a1a;color:#44ff44;">READY</div>
+      <div id="dailyUpdateOutput" style="display:none;margin-top:8px;background:#0d0d1a;border:1px solid #2a2a4a;border-radius:6px;padding:10px;max-height:320px;overflow-y:auto;">
+        <pre id="dailyUpdateText" style="color:#88ff88;font-size:11px;font-family:'JetBrains Mono',monospace;white-space:pre-wrap;margin:0;"></pre>
+      </div>
     </div>
 
     <!-- Session history placeholder -->
@@ -735,12 +742,12 @@
     </div>
   </aside>
 
-  <!-- ── CENTER CHAT ─────────────────────────────────────────── -->
+  <!-- -- CENTER CHAT ------------------------------------------- -->
   <main class="op-chat">
     <div class="op-chat-header">
       <span class="op-chat-title">OPERATOR ROOM</span>
       <div class="op-chat-meta">
-        <span class="op-nii-live" id="liveNII">NII —</span>
+        <span class="op-nii-live" id="liveNII">NII �</span>
         <span class="op-model-badge">claude-sonnet-4-6</span>
       </div>
     </div>
@@ -748,16 +755,16 @@
     <!-- JOS bar -->
     <div class="op-jos-bar">
       <div class="op-jos-tag required" id="josObjTag" onclick="setJOS('objective')">
-        OBJ <span id="josObjShort">— set objective</span>
+        OBJ <span id="josObjShort">� set objective</span>
       </div>
       <div class="op-jos-tag" id="josConTag" onclick="setJOS('constraint')">
-        CON <span id="josConShort">— constraints</span>
+        CON <span id="josConShort">� constraints</span>
       </div>
       <div class="op-jos-tag" id="josNogoTag" onclick="setJOS('nogo')">
-        NO-GO <span id="josNogoShort">—</span>
+        NO-GO <span id="josNogoShort">�</span>
       </div>
       <div class="op-jos-tag" id="josDoneTag" onclick="setJOS('done')">
-        DONE WHEN <span id="josDoneShort">—</span>
+        DONE WHEN <span id="josDoneShort">�</span>
       </div>
       <div class="op-jos-tag set">
         CLOSURE <span>Jame</span>
@@ -770,9 +777,9 @@
         <div class="op-empty-logo">AZ</div>
         <p>Operator workspace. Full project context loaded. NTI V3 governs every response.</p>
         <div class="op-empty-hints">
-          <div class="op-hint-chip" onclick="useHint(this)">What is the current S₀ entering today?</div>
+          <div class="op-hint-chip" onclick="useHint(this)">What is the current S0 entering today?</div>
           <div class="op-hint-chip" onclick="useHint(this)">Score this text through NTI: [paste text]</div>
-          <div class="op-hint-chip" onclick="useHint(this)">Build Tuesday's market S₀ from today's data</div>
+          <div class="op-hint-chip" onclick="useHint(this)">Build Tuesday's market S0 from today's data</div>
           <div class="op-hint-chip" onclick="useHint(this)">What are the three non-negotiables this week?</div>
         </div>
       </div>
@@ -791,25 +798,25 @@
             oninput="autoResize(this)"
           ></textarea>
           <div class="op-input-footer">
-            <span class="op-input-hint" id="inputHint">Enter to send · Shift+Enter for newline</span>
+            <span class="op-input-hint" id="inputHint">Enter to send � Shift+Enter for newline</span>
             <span class="op-input-hint" id="charCount">0</span>
           </div>
         </div>
         <button class="op-send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
-          ↑
+          ?
         </button>
       </div>
     </div>
   </main>
 
-  <!-- ── RIGHT PANEL — NTI LIVE ──────────────────────────────── -->
+  <!-- -- RIGHT PANEL � NTI LIVE -------------------------------- -->
   <aside class="op-nti-panel">
     <div class="op-panel-header">NTI ANALYSIS</div>
     <div class="op-panel-body" id="ntiPanel">
 
       <!-- Score ring -->
       <div class="op-score-ring">
-        <div class="op-ring-num" id="ntiScore">—</div>
+        <div class="op-ring-num" id="ntiScore">�</div>
         <div class="op-ring-label" id="ntiLabel">WAITING</div>
       </div>
 
@@ -843,11 +850,11 @@
         <div class="op-state-title" style="margin-bottom:6px;">V3 ENFORCEMENT</div>
         <div class="op-fm-row">
           <span class="op-fm-key">Passed</span>
-          <span class="op-fm-val false" id="v3Passed">—</span>
+          <span class="op-fm-val false" id="v3Passed">�</span>
         </div>
         <div class="op-fm-row">
           <span class="op-fm-key">Actions</span>
-          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">—</span>
+          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">�</span>
         </div>
       </div>
 
@@ -860,14 +867,14 @@
         </div>
         <div class="op-session-stat">
           <span class="op-session-key">Avg NII</span>
-          <span class="op-session-val" id="statAvgNII">—</span>
+          <span class="op-session-val" id="statAvgNII">�</span>
         </div>
         <div class="op-session-stat">
           <span class="op-session-key">Flagged</span>
           <span class="op-session-val red" id="statFlagged">0</span>
         </div>
         <div class="op-session-stat">
-          <span class="op-session-key">S₀ delta</span>
+          <span class="op-session-key">S0 delta</span>
           <span class="op-session-val" id="statS0Delta">+0.000</span>
         </div>
       </div>
@@ -904,7 +911,51 @@
 
 {% block scripts %}
 <script>
-// ── STATE ─────────────────────────────────────────────────────
+async function runDailyUpdate() {
+  const btn    = document.getElementById('toolDailyUpdate');
+  const badge  = document.getElementById('dailyUpdateBadge');
+  const output = document.getElementById('dailyUpdateOutput');
+  const text   = document.getElementById('dailyUpdateText');
+
+  btn.disabled = true;
+  badge.style.display = 'block';
+  badge.textContent   = 'RUNNING...';
+  badge.style.background = '#2a4a2a';
+  badge.style.color      = '#88ff88';
+  output.style.display   = 'block';
+  text.textContent       = 'Running daily update...\n';
+
+  try {
+    const resp = await fetch('/operator/run_daily_update', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+    text.textContent = data.output || 'No output returned.';
+    if (data.prediction) {
+      text.textContent += '\n\nPrediction: ' + data.prediction;
+      text.textContent += '\nData through: ' + data.data_thru;
+      text.textContent += '\nRecord ID: ' + data.prediction_id;
+    }
+    if (data.success) {
+      badge.textContent      = data.prediction ? 'DONE � ' + data.prediction : 'DONE';
+      badge.style.background = '#1a3a1a';
+      badge.style.color      = '#44ff44';
+    } else {
+      badge.textContent      = 'ERROR';
+      badge.style.background = '#3a1a1a';
+      badge.style.color      = '#ff4444';
+    }
+  } catch (err) {
+    text.textContent       = 'Request failed: ' + err;
+    badge.textContent      = 'ERROR';
+    badge.style.background = '#3a1a1a';
+    badge.style.color      = '#ff4444';
+  } finally {
+    btn.disabled = false;
+  }
+}
+// -- STATE -----------------------------------------------------
 const CLAUDE_API = '/operator/api/chat';
 const NTI_API = '/operator/score';
 
@@ -923,10 +974,10 @@ itB0 = (Q, S0). Every output requires a prior state. R = Phi(Q, S0). S1 = Psi(S0
 Proven across 10 foundational mathematical structures. NTI is the implementation.
 
 CURRENT STATE:
-- Patent: NOT FILED — provisional target this week (itB runtime + NTI)
-- Push: p0044 active — operator room tool execution, file upload, API key fix, sidebar dynamic state
-- Market: March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired — named in advance)
-- FOMC: March 18 — no cut (4% probability CME FedWatch)
+- Patent: NOT FILED � provisional target this week (itB runtime + NTI)
+- Push: p0044 active � operator room tool execution, file upload, API key fix, sidebar dynamic state
+- Market: March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired � named in advance)
+- FOMC: March 18 � no cut (4% probability CME FedWatch)
 - Fortune 500: 415 companies scored daily
 - Live feed: 13 sources, NTI scoring active
 - OPERATOR_API_KEY: enterprise tier fix in p0044 scope (NII badge showing 0% until fixed)
@@ -946,13 +997,13 @@ NTI V3 governs every response you produce. You are the typist. NTI is the govern
 When asked to score text, the operator room will call the internal NTI endpoint.
 When asked to run tools, use the /operator/run endpoint.`;
 
-// ── INIT ──────────────────────────────────────────────────────
+// -- INIT ------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('msgInput').focus();
   loadSessions(); loadMemory();
 });
 
-// ── CHAT ──────────────────────────────────────────────────────
+// -- CHAT ------------------------------------------------------
 async function sendMessage() {
   const input = document.getElementById('msgInput');
   const text  = input.value.trim();
@@ -1038,7 +1089,7 @@ function updateLastMessageNTI(ntiData) {
   const cls     = score >= 70 ? 'good' : score >= 50 ? 'warn' : 'bad';
   const label   = score >= 70 ? 'HIGH INTEGRITY' : score >= 50 ? 'MODERATE' : 'LOW INTEGRITY';
 
-  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% — ${label}</span>`;
+  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% � ${label}</span>`;
 
   sessionStats.niiSum += score;
   if (hasFlag) sessionStats.flagged++;
@@ -1048,7 +1099,7 @@ function updateLastMessageNTI(ntiData) {
   document.getElementById('statFlagged').textContent = sessionStats.flagged;
 }
 
-// ── NTI SCORING ───────────────────────────────────────────────
+// -- NTI SCORING -----------------------------------------------
 async function scoreText(text, context) {
   try {
     const res = await fetch(NTI_API, {
@@ -1118,10 +1169,10 @@ function updateNTIPanel(data, ctx) {
   // V3
   document.getElementById('v3Passed').textContent = v3.passed ? 'YES' : 'NO';
   document.getElementById('v3Passed').className = 'op-fm-val ' + (v3.passed ? 'false' : 'conf');
-  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '—';
+  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '�';
 }
 
-// ── JOS ───────────────────────────────────────────────────────
+// -- JOS -------------------------------------------------------
 function setJOS(field) {
   currentJOS = field;
   const labels = { objective:'SET OBJECTIVE', constraint:'SET CONSTRAINTS', nogo:'SET NO-GO ZONES', done:'DONE WHEN' };
@@ -1150,19 +1201,19 @@ function saveJOS() {
 
   if (val) {
     tagEl.className   = 'op-jos-tag set';
-    shortEl.textContent = val.length > 20 ? val.slice(0,20)+'…' : val;
+    shortEl.textContent = val.length > 20 ? val.slice(0,20)+'�' : val;
   }
 
   // Update sidebar
   if (currentJOS === 'objective') {
-    document.getElementById('josObj').textContent = val || '— not set';
+    document.getElementById('josObj').textContent = val || '� not set';
     document.getElementById('josObj').style.color = val ? 'var(--text)' : 'var(--muted)';
   }
 
   closeJOS();
 }
 
-// ── TOOLS — SERVER-SIDE EXECUTION ─────────────────────────────
+// -- TOOLS � SERVER-SIDE EXECUTION -----------------------------
 async function executeTool(tool) {
   const btnMap = { signal: 'toolSignal', market: 'toolMarket', fortune500: 'toolFortune' };
   const btnId  = btnMap[tool];
@@ -1173,7 +1224,7 @@ async function executeTool(tool) {
   // Show running state
   if (btn) btn.classList.add('running');
 
-  const label = { signal: 'NTI Signal Scanner', market: 'S&P itB₀ Model', fortune500: 'Fortune 500 Feed' }[tool] || tool;
+  const label = { signal: 'NTI Signal Scanner', market: 'S&P itB0 Model', fortune500: 'Fortune 500 Feed' }[tool] || tool;
   addToolMessage(`Running ${label}...`, true);
 
   try {
@@ -1195,7 +1246,7 @@ async function executeTool(tool) {
         const avg   = data.summary.avg_nii;
         document.getElementById('sidebarSignal').textContent  = `NII avg ${avg}%`;
         document.getElementById('sidebarSignal').style.color  = avg >= 70 ? 'var(--accent)' : avg >= 50 ? 'var(--amber)' : 'var(--red)';
-        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '—';
+        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '�';
         document.getElementById('sidebarS0Delta').style.color = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--red)' : 'var(--muted)';
 
         // Update S0 display
@@ -1210,11 +1261,11 @@ async function executeTool(tool) {
       if (tool === 'market' && data.summary) {
         const s0  = data.summary.s0_computed;
         const call = data.summary.call;
-        document.getElementById('sidebarMarket').textContent = call || '—';
+        document.getElementById('sidebarMarket').textContent = call || '�';
         document.getElementById('sidebarMarket').style.color = call === 'UP' ? 'var(--accent)' : call === 'DOWN' ? 'var(--red)' : 'var(--amber)';
         if (s0 !== undefined && s0 !== null) {
           document.getElementById('s0Display').textContent = s0.toFixed(3);
-          document.getElementById('s0Desc').textContent    = `itB₀ model: call ${call}`;
+          document.getElementById('s0Desc').textContent    = `itB0 model: call ${call}`;
           const cls = s0 >= 0.65 ? 'strong' : s0 >= 0.50 ? 'moderate' : s0 >= 0.35 ? 'weak' : 'critical';
           document.getElementById('s0Display').className = 'op-s0-score ' + cls;
         }
@@ -1320,7 +1371,7 @@ function updateLastToolMessage(text) {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ── SESSION HISTORY ───────────────────────────────────────────
+// -- SESSION HISTORY -------------------------------------------
 async function loadSessions() {
   try {
     const res  = await fetch('/operator/sessions');
@@ -1332,7 +1383,7 @@ async function loadSessions() {
     }
     el.innerHTML = data.sessions.slice(0,8).map(s => `
       <div style="padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="loadSession('${s.id}')">
-        <div style="color:var(--dim);margin-bottom:2px;">${s.summary?.slice(0,35) || 'Session'}…</div>
+        <div style="color:var(--dim);margin-bottom:2px;">${s.summary?.slice(0,35) || 'Session'}�</div>
         <div style="font-size:9px;color:var(--muted)">${s.created_at?.slice(0,16) || ''}</div>
       </div>
     `).join('');
@@ -1341,7 +1392,7 @@ async function loadSessions() {
   }
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
+// -- HELPERS ---------------------------------------------------
 
 async function loadMemory() {
   const el = document.getElementById('memoryLog');
