@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Operator Room — Artifact Zero{% endblock %}
+{% block title %}Operator Room - Artifact Zero{% endblock %}
 {% block body_class %}page-operator{% endblock %}
 
 {% block head %}
@@ -17,7 +17,7 @@
   overflow: hidden;
 }
 
-/* -- LEFT SIDEBAR — S0 STATE --------------------------------- */
+/* -- LEFT SIDEBAR - S0 STATE --------------------------------- */
 .op-sidebar {
   background: var(--s2);
   border-right: 1px solid var(--border);
@@ -158,7 +158,7 @@
   50% { border-color: transparent; }
 }
 
-/* -- CENTER — CHAT ------------------------------------------- */
+/* -- CENTER - CHAT ------------------------------------------- */
 .op-chat {
   display: flex;
   flex-direction: column;
@@ -445,7 +445,7 @@
 .op-jos-tag.set { border-color: var(--accent); color: var(--accent); background: rgba(0,232,156,0.05); }
 .op-jos-tag.required { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
 
-/* -- RIGHT SIDEBAR — NTI PANEL ------------------------------- */
+/* -- RIGHT SIDEBAR - NTI PANEL ------------------------------- */
 .op-nti-panel {
   background: var(--s2);
   border-left: 1px solid var(--border);
@@ -650,7 +650,7 @@
     <!-- S0 Score -->
     <div class="op-s0-block">
       <div class="op-s0-label">Prior State S0</div>
-      <div class="op-s0-score moderate" id="s0Display">—</div>
+      <div class="op-s0-score moderate" id="s0Display">-</div>
       <div class="op-s0-desc" id="s0Desc">LOADING...</div>
     </div>
 
@@ -667,15 +667,15 @@
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Market</span>
-        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">-</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">S0 delta</span>
-        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">-</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Signal env</span>
-        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">-</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Last tool</span>
@@ -688,15 +688,15 @@
       <div class="op-state-title">JOS Fields</div>
       <div class="op-state-item">
         <span class="op-state-key">Objective</span>
-        <span class="op-state-val" id="josObj" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josObj" style="color:var(--muted)">- not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Constraints</span>
-        <span class="op-state-val" id="josCon" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josCon" style="color:var(--muted)">- not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Done When</span>
-        <span class="op-state-val" id="josDone" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josDone" style="color:var(--muted)">- not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Closure</span>
@@ -747,7 +747,7 @@
     <div class="op-chat-header">
       <span class="op-chat-title">OPERATOR ROOM</span>
       <div class="op-chat-meta">
-        <span class="op-nii-live" id="liveNII">NII —</span>
+        <span class="op-nii-live" id="liveNII">NII -</span>
         <span class="op-model-badge">claude-sonnet-4-6</span>
       </div>
     </div>
@@ -755,16 +755,16 @@
     <!-- JOS bar -->
     <div class="op-jos-bar">
       <div class="op-jos-tag required" id="josObjTag" onclick="setJOS('objective')">
-        OBJ <span id="josObjShort">— set objective</span>
+        OBJ <span id="josObjShort">- set objective</span>
       </div>
       <div class="op-jos-tag" id="josConTag" onclick="setJOS('constraint')">
-        CON <span id="josConShort">— constraints</span>
+        CON <span id="josConShort">- constraints</span>
       </div>
       <div class="op-jos-tag" id="josNogoTag" onclick="setJOS('nogo')">
-        NO-GO <span id="josNogoShort">—</span>
+        NO-GO <span id="josNogoShort">-</span>
       </div>
       <div class="op-jos-tag" id="josDoneTag" onclick="setJOS('done')">
-        DONE WHEN <span id="josDoneShort">—</span>
+        DONE WHEN <span id="josDoneShort">-</span>
       </div>
       <div class="op-jos-tag set">
         CLOSURE <span>Jame</span>
@@ -809,14 +809,14 @@
     </div>
   </main>
 
-  <!-- -- RIGHT PANEL — NTI LIVE -------------------------------- -->
+  <!-- -- RIGHT PANEL - NTI LIVE -------------------------------- -->
   <aside class="op-nti-panel">
     <div class="op-panel-header">NTI ANALYSIS</div>
     <div class="op-panel-body" id="ntiPanel">
 
       <!-- Score ring -->
       <div class="op-score-ring">
-        <div class="op-ring-num" id="ntiScore">—</div>
+        <div class="op-ring-num" id="ntiScore">-</div>
         <div class="op-ring-label" id="ntiLabel">WAITING</div>
       </div>
 
@@ -850,11 +850,11 @@
         <div class="op-state-title" style="margin-bottom:6px;">V3 ENFORCEMENT</div>
         <div class="op-fm-row">
           <span class="op-fm-key">Passed</span>
-          <span class="op-fm-val false" id="v3Passed">—</span>
+          <span class="op-fm-val false" id="v3Passed">-</span>
         </div>
         <div class="op-fm-row">
           <span class="op-fm-key">Actions</span>
-          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">—</span>
+          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">-</span>
         </div>
       </div>
 
@@ -867,7 +867,7 @@
         </div>
         <div class="op-session-stat">
           <span class="op-session-key">Avg NII</span>
-          <span class="op-session-val" id="statAvgNII">—</span>
+          <span class="op-session-val" id="statAvgNII">-</span>
         </div>
         <div class="op-session-stat">
           <span class="op-session-key">Flagged</span>
@@ -938,7 +938,7 @@ async function runDailyUpdate() {
       text.textContent += '\nRecord ID: ' + data.prediction_id;
     }
     if (data.success) {
-      badge.textContent      = data.prediction ? 'DONE — ' + data.prediction : 'DONE';
+      badge.textContent      = data.prediction ? 'DONE - ' + data.prediction : 'DONE';
       badge.style.background = '#1a3a1a';
       badge.style.color      = '#44ff44';
     } else {
@@ -974,10 +974,10 @@ itB0 = (Q, S0). Every output requires a prior state. R = Phi(Q, S0). S1 = Psi(S0
 Proven across 10 foundational mathematical structures. NTI is the implementation.
 
 CURRENT STATE:
-- Patent: NOT FILED — provisional target this week (itB runtime + NTI)
-- Push: p0044 active — operator room tool execution, file upload, API key fix, sidebar dynamic state
-- Market: March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired — named in advance)
-- FOMC: March 18 — no cut (4% probability CME FedWatch)
+- Patent: NOT FILED - provisional target this week (itB runtime + NTI)
+- Push: p0044 active - operator room tool execution, file upload, API key fix, sidebar dynamic state
+- Market: March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired - named in advance)
+- FOMC: March 18 - no cut (4% probability CME FedWatch)
 - Fortune 500: 415 companies scored daily
 - Live feed: 13 sources, NTI scoring active
 - OPERATOR_API_KEY: enterprise tier fix in p0044 scope (NII badge showing 0% until fixed)
@@ -1089,7 +1089,7 @@ function updateLastMessageNTI(ntiData) {
   const cls     = score >= 70 ? 'good' : score >= 50 ? 'warn' : 'bad';
   const label   = score >= 70 ? 'HIGH INTEGRITY' : score >= 50 ? 'MODERATE' : 'LOW INTEGRITY';
 
-  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% — ${label}</span>`;
+  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% - ${label}</span>`;
 
   sessionStats.niiSum += score;
   if (hasFlag) sessionStats.flagged++;
@@ -1169,7 +1169,7 @@ function updateNTIPanel(data, ctx) {
   // V3
   document.getElementById('v3Passed').textContent = v3.passed ? 'YES' : 'NO';
   document.getElementById('v3Passed').className = 'op-fm-val ' + (v3.passed ? 'false' : 'conf');
-  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '—';
+  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '-';
 }
 
 // -- JOS -------------------------------------------------------
@@ -1206,14 +1206,14 @@ function saveJOS() {
 
   // Update sidebar
   if (currentJOS === 'objective') {
-    document.getElementById('josObj').textContent = val || '— not set';
+    document.getElementById('josObj').textContent = val || '- not set';
     document.getElementById('josObj').style.color = val ? 'var(--text)' : 'var(--muted)';
   }
 
   closeJOS();
 }
 
-// -- TOOLS — SERVER-SIDE EXECUTION -----------------------------
+// -- TOOLS - SERVER-SIDE EXECUTION -----------------------------
 async function executeTool(tool) {
   const btnMap = { signal: 'toolSignal', market: 'toolMarket', fortune500: 'toolFortune' };
   const btnId  = btnMap[tool];
@@ -1246,7 +1246,7 @@ async function executeTool(tool) {
         const avg   = data.summary.avg_nii;
         document.getElementById('sidebarSignal').textContent  = `NII avg ${avg}%`;
         document.getElementById('sidebarSignal').style.color  = avg >= 70 ? 'var(--accent)' : avg >= 50 ? 'var(--amber)' : 'var(--red)';
-        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '—';
+        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '-';
         document.getElementById('sidebarS0Delta').style.color = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--red)' : 'var(--muted)';
 
         // Update S0 display
@@ -1261,7 +1261,7 @@ async function executeTool(tool) {
       if (tool === 'market' && data.summary) {
         const s0  = data.summary.s0_computed;
         const call = data.summary.call;
-        document.getElementById('sidebarMarket').textContent = call || '—';
+        document.getElementById('sidebarMarket').textContent = call || '-';
         document.getElementById('sidebarMarket').style.color = call === 'UP' ? 'var(--accent)' : call === 'DOWN' ? 'var(--red)' : 'var(--amber)';
         if (s0 !== undefined && s0 !== null) {
           document.getElementById('s0Display').textContent = s0.toFixed(3);
