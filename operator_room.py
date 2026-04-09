@@ -171,17 +171,17 @@ def _run_signal_scan():
 
     if avg_nii >= 70:
         s0_delta  = +0.02
-        direction = 'CLEAR — high-integrity signal environment'
+        direction = 'CLEAR - high-integrity signal environment'
     elif avg_nii >= 50:
         s0_delta  = 0.00
-        direction = 'MIXED — moderate integrity, no strong directional signal'
+        direction = 'MIXED - moderate integrity, no strong directional signal'
     else:
         s0_delta  = -0.03
-        direction = 'NOISY — low-integrity signal environment, elevated uncertainty'
+        direction = 'NOISY - low-integrity signal environment, elevated uncertainty'
 
     results.sort(key=lambda x: x['nii'])
 
-    lines = [f"NTI SIGNAL SCAN — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
+    lines = [f"NTI SIGNAL SCAN - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
     lines.append(f"Sources scanned: {len(SIGNAL_FEEDS)} | Headlines scored: {scored_count}")
     lines.append(f"Avg NII: {avg_nii}% | S0 delta: {s0_delta:+.3f}")
     lines.append(f"Environment: {direction}")
@@ -189,7 +189,7 @@ def _run_signal_scan():
     lines.append("LOWEST INTEGRITY HEADLINES:")
     for r in results[:5]:
         flag_str = ', '.join(r['flags'][:2]) if r['flags'] else 'none'
-        lines.append(f"  [{r['source']}] NII {r['nii']}% — {r['title']}")
+        lines.append(f"  [{r['source']}] NII {r['nii']}% - {r['title']}")
         if r['flags']:
             lines.append(f"    flags: {flag_str}")
 
@@ -205,7 +205,7 @@ def _run_signal_scan():
 
 
 def _run_market_model():
-    lines      = [f"S&P itB0 MODEL — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
+    lines      = [f"S&P itB0 MODEL - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
     components = {}
 
     try:
@@ -272,7 +272,7 @@ def _run_market_model():
         lines.append(f"  VIX:          {components.get('vix', 'n/a')}")
         lines.append(f"  Breadth:      {components.get('breadth_signal', 'n/a')}")
         lines.append("")
-        lines.append("NOTE: Layer 1 breadth model. FOMC day — elevated override probability.")
+        lines.append("NOTE: Layer 1 breadth model. FOMC day - elevated override probability.")
         lines.append("Named override variables: Fed decision (4% cut probability CME FedWatch).")
 
     except ImportError:
@@ -293,7 +293,7 @@ def _run_market_model():
 
 
 def _run_fortune500():
-    lines = [f"FORTUNE 500 SCOREBOARD — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
+    lines = [f"FORTUNE 500 SCOREBOARD - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
 
     try:
         import db as database
@@ -344,7 +344,7 @@ def _run_fortune500():
                 lines.append("No scored companies in database.")
         else:
             conn.close()
-            lines.append("Database unavailable — PostgreSQL required.")
+            lines.append("Database unavailable - PostgreSQL required.")
 
     except Exception as e:
         lines.append(f"DB error: {str(e)[:120]}")
@@ -364,7 +364,7 @@ def _run_nti_score(text: str):
     label = 'HIGH INTEGRITY' if nii >= 70 else 'MODERATE' if nii >= 50 else 'LOW INTEGRITY'
 
     lines = ["NTI SCORE RESULT"]
-    lines.append(f"NII: {nii}% — {label}")
+    lines.append(f"NII: {nii}% - {label}")
     lines.append(f"Text length: {len(text)} chars")
     if flags:
         lines.append(f"Flags: {', '.join(flags)}")
@@ -551,13 +551,13 @@ def operator_upload():
     char_cnt = len(text)
     word_cnt = len(text.split())
 
-    lines = ["FILE UPLOAD — NTI SCORE"]
+    lines = ["FILE UPLOAD - NTI SCORE"]
     lines.append(f"File: {filename}")
     lines.append(f"Size: {char_cnt:,} chars | {word_cnt:,} words")
     if extraction_note:
         lines.append(f"Note: {extraction_note}")
     lines.append("")
-    lines.append(f"NII: {nii}% — {label}")
+    lines.append(f"NII: {nii}% - {label}")
     if flags:
         lines.append(f"Flags: {', '.join(flags)}")
     fm = score_result.get('failure_modes', {})
@@ -640,7 +640,7 @@ def operator_context():
             return jsonify({'status': 'ok', 'id': ctx_id, 'summary': summary})
         else:
             conn.close()
-            return jsonify({'status': 'ok', 'id': 'local', 'note': 'SQLite — blob not persisted to RDS'})
+            return jsonify({'status': 'ok', 'id': 'local', 'note': 'SQLite - blob not persisted to RDS'})
 
     except Exception as e:
         return jsonify({'error': str(e)[:200]}), 500
