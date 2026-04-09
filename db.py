@@ -22,7 +22,6 @@ if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
     try:
         import psycopg2
         import psycopg2.extras
-        # Test the connection immediately
         print("[db] psycopg2 imported, testing connection...", flush=True)
         test_conn = psycopg2.connect(DATABASE_URL, connect_timeout=5)
         test_conn.close()
@@ -51,7 +50,6 @@ def db_connect():
         return conn
 
 
-# V3 compatibility — context manager and placeholder helpers for standalone modules
 from contextlib import contextmanager
 
 @contextmanager
@@ -63,6 +61,7 @@ def db_connection():
     finally:
         conn.close()
 
+
 def param_placeholder():
     """Return '%s' for PostgreSQL or '?' for SQLite."""
     return "%s" if USE_PG else "?"
@@ -73,8 +72,6 @@ def db_execute(conn, sql, params=None):
     if USE_PG:
         sql = sql.replace("?", "%s")
         sql = sql.replace("INSERT OR REPLACE", "INSERT")
-        # Add ON CONFLICT for upsert on PostgreSQL
-        # We handle this per-table in db_init
     cur = conn.cursor()
     cur.execute(sql, params or ())
     return cur
@@ -133,7 +130,6 @@ def db_init():
             active BOOLEAN NOT NULL DEFAULT TRUE
         )
         """)
-        # Migration: add owner_user_id if missing
         try:
             cur.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT")
         except Exception:
@@ -149,7 +145,7 @@ def db_init():
         )
         """)
         cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_api_usage_key_date 
+        CREATE INDEX IF NOT EXISTS idx_api_usage_key_date
         ON api_usage(api_key_id, created_at)
         """)
         cur.execute("""
@@ -166,8 +162,6 @@ def db_init():
             last_changed TEXT
         )
         """)
-
-        # ── ACCOUNTS ────────────────────────────────────────────────────────
         cur.execute("""
         CREATE TABLE IF NOT EXISTS accounts (
             id TEXT PRIMARY KEY,
@@ -179,8 +173,6 @@ def db_init():
             stripe_customer_id TEXT
         )
         """)
-
-        # ── USERS MIGRATIONS ────────────────────────────────────────────────
         for col, defn in [
             ("account_id",        "TEXT"),
             ("email_verified_at", "TIMESTAMPTZ"),
@@ -191,8 +183,6 @@ def db_init():
                 cur.execute(f"ALTER TABLE users ADD COLUMN {col} {defn}")
             except Exception:
                 conn.rollback()
-
-        # ── LOGIN HISTORY ────────────────────────────────────────────────────
         cur.execute("""
         CREATE TABLE IF NOT EXISTS login_history (
             id TEXT PRIMARY KEY,
@@ -204,8 +194,6 @@ def db_init():
         )
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_login_user ON login_history(user_id)")
-
-        # ── API KEYS MIGRATIONS ──────────────────────────────────────────────
         for col, defn in [
             ("account_id",   "TEXT"),
             ("name",         "TEXT NOT NULL DEFAULT ''"),
@@ -219,8 +207,6 @@ def db_init():
                 cur.execute(f"ALTER TABLE api_keys ADD COLUMN {col} {defn}")
             except Exception:
                 conn.rollback()
-
-        # ── API USAGE MIGRATIONS ─────────────────────────────────────────────
         for col, defn in [
             ("user_id",    "TEXT"),
             ("account_id", "TEXT"),
@@ -230,8 +216,6 @@ def db_init():
                 cur.execute(f"ALTER TABLE api_usage ADD COLUMN {col} {defn}")
             except Exception:
                 conn.rollback()
-
-        # ── WEBHOOKS ─────────────────────────────────────────────────────────
         cur.execute("""
         CREATE TABLE IF NOT EXISTS webhooks (
             id TEXT PRIMARY KEY,
@@ -247,8 +231,6 @@ def db_init():
         )
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_webhooks_account ON webhooks(account_id)")
-
-        # ── WEBHOOK DELIVERIES ───────────────────────────────────────────────
         cur.execute("""
         CREATE TABLE IF NOT EXISTS webhook_deliveries (
             id TEXT PRIMARY KEY,
@@ -264,8 +246,6 @@ def db_init():
         )
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_wdel_webhook ON webhook_deliveries(webhook_id)")
-
-        # ── CREDIT TRANSACTIONS MIGRATIONS ───────────────────────────────────
         for col, defn in [
             ("account_id", "TEXT"),
             ("key_type",   "TEXT NOT NULL DEFAULT 'live'"),
@@ -274,8 +254,6 @@ def db_init():
                 cur.execute(f"ALTER TABLE credit_transactions ADD COLUMN {col} {defn}")
             except Exception:
                 conn.rollback()
-
-        # ── SPEND ALERTS ──────────────────────────────────────────────────────
         cur.execute("""
         CREATE TABLE IF NOT EXISTS spend_alerts (
             id TEXT PRIMARY KEY,
@@ -287,8 +265,6 @@ def db_init():
             active BOOLEAN NOT NULL DEFAULT TRUE
         )
         """)
-
-        # ── AUTO RECHARGE ─────────────────────────────────────────────────────
         cur.execute("""
         CREATE TABLE IF NOT EXISTS auto_recharge (
             id TEXT PRIMARY KEY,
@@ -299,6 +275,27 @@ def db_init():
             stripe_payment_method_id TEXT,
             active BOOLEAN NOT NULL DEFAULT FALSE,
             last_triggered_at TIMESTAMPTZ
+        )
+        """)
+
+        # ── OPERATOR MEMORY ──────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS operator_context (
+            id          TEXT PRIMARY KEY,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            blob_json   TEXT NOT NULL,
+            source      TEXT DEFAULT 'auto',
+            summary     TEXT
+        )
+        """)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS operator_sessions (
+            id            TEXT PRIMARY KEY,
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            messages_json TEXT,
+            response_json TEXT,
+            jos_json      TEXT,
+            summary       TEXT
         )
         """)
 
@@ -344,7 +341,6 @@ def db_init():
             active INTEGER NOT NULL DEFAULT 1
         )
         """)
-        # Migration: add owner_user_id if missing
         try:
             cur.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT")
         except Exception:
@@ -374,19 +370,17 @@ def db_init():
             last_changed TEXT
         )
         """)
-
         cur.execute("""
         CREATE TABLE IF NOT EXISTS accounts (
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
-            name TEXT NOT NULL DEFAULT \'\',
+            name TEXT NOT NULL DEFAULT '',
             owner_user_id TEXT,
-            plan TEXT NOT NULL DEFAULT \'free\',
+            plan TEXT NOT NULL DEFAULT 'free',
             active INTEGER NOT NULL DEFAULT 1,
             stripe_customer_id TEXT
         )
         """)
-
         cur.execute("""
         CREATE TABLE IF NOT EXISTS login_history (
             id TEXT PRIMARY KEY,
@@ -397,7 +391,6 @@ def db_init():
             success INTEGER NOT NULL DEFAULT 1
         )
         """)
-
         cur.execute("""
         CREATE TABLE IF NOT EXISTS webhooks (
             id TEXT PRIMARY KEY,
@@ -406,13 +399,12 @@ def db_init():
             user_id TEXT NOT NULL,
             url TEXT NOT NULL,
             secret_hash TEXT NOT NULL,
-            events TEXT NOT NULL DEFAULT \'[]\',
+            events TEXT NOT NULL DEFAULT '[]',
             active INTEGER NOT NULL DEFAULT 1,
             last_triggered_at TEXT,
             failure_count INTEGER NOT NULL DEFAULT 0
         )
         """)
-
         cur.execute("""
         CREATE TABLE IF NOT EXISTS webhook_deliveries (
             id TEXT PRIMARY KEY,
@@ -427,7 +419,6 @@ def db_init():
             retry_count INTEGER NOT NULL DEFAULT 0
         )
         """)
-
         cur.execute("""
         CREATE TABLE IF NOT EXISTS spend_alerts (
             id TEXT PRIMARY KEY,
@@ -439,7 +430,6 @@ def db_init():
             active INTEGER NOT NULL DEFAULT 1
         )
         """)
-
         cur.execute("""
         CREATE TABLE IF NOT EXISTS auto_recharge (
             id TEXT PRIMARY KEY,
@@ -452,15 +442,14 @@ def db_init():
             last_triggered_at TEXT
         )
         """)
-
         for table, col, defn in [
             ("users",               "account_id",        "TEXT"),
             ("users",               "email_verified_at", "TEXT"),
             ("users",               "last_login_at",     "TEXT"),
             ("users",               "login_count",       "INTEGER NOT NULL DEFAULT 0"),
             ("api_keys",            "account_id",        "TEXT"),
-            ("api_keys",            "name",              "TEXT NOT NULL DEFAULT \'\'"),
-            ("api_keys",            "key_type",          "TEXT NOT NULL DEFAULT \'live\'"),
+            ("api_keys",            "name",              "TEXT NOT NULL DEFAULT ''"),
+            ("api_keys",            "key_type",          "TEXT NOT NULL DEFAULT 'live'"),
             ("api_keys",            "last_used_at",      "TEXT"),
             ("api_keys",            "expires_at",        "TEXT"),
             ("api_keys",            "revoked_at",        "TEXT"),
@@ -469,12 +458,33 @@ def db_init():
             ("api_usage",           "account_id",        "TEXT"),
             ("api_usage",           "key_type",          "TEXT"),
             ("credit_transactions", "account_id",        "TEXT"),
-            ("credit_transactions", "key_type",          "TEXT NOT NULL DEFAULT \'live\'"),
+            ("credit_transactions", "key_type",          "TEXT NOT NULL DEFAULT 'live'"),
         ]:
             try:
                 cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {defn}")
             except Exception:
                 pass
+
+        # ── OPERATOR MEMORY ──────────────────────────────────────────────────
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS operator_context (
+            id         TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            blob_json  TEXT NOT NULL,
+            source     TEXT DEFAULT 'auto',
+            summary    TEXT
+        )
+        """)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS operator_sessions (
+            id            TEXT PRIMARY KEY,
+            created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+            messages_json TEXT,
+            response_json TEXT,
+            jos_json      TEXT,
+            summary       TEXT
+        )
+        """)
 
     conn.commit()
     conn.close()
@@ -493,7 +503,7 @@ def record_request(request_id, route, ip, user_agent, session_id, latency_ms, pa
     else:
         cur.execute("""
             INSERT OR REPLACE INTO requests (id, created_at, route, ip, user_agent, session_id, latency_ms, payload_json, error)
-            VALUES (?, ?, datetime('now'), ?, ?, ?, ?, ?, ?)
+            VALUES (?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)
         """, (request_id, route, ip, user_agent, session_id, latency_ms, payload_json, error))
     conn.commit()
     conn.close()
@@ -557,12 +567,12 @@ def get_api_usage_count(api_key_id, month_start):
     cur = conn.cursor()
     if USE_PG:
         cur.execute("""
-            SELECT COUNT(*) FROM api_usage 
+            SELECT COUNT(*) FROM api_usage
             WHERE api_key_id = %s AND created_at >= %s
         """, (api_key_id, month_start))
     else:
         cur.execute("""
-            SELECT COUNT(*) FROM api_usage 
+            SELECT COUNT(*) FROM api_usage
             WHERE api_key_id = ? AND created_at >= ?
         """, (api_key_id, month_start))
     row = cur.fetchone()
