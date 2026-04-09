@@ -1,4 +1,4 @@
-import os, json, time, io, re, secrets, threading
+﻿import os, json, time, io, re, secrets, threading
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
@@ -28,7 +28,7 @@ def require_admin(f):
     return wrapper
 
 
-# -- UI -------------------------------------------------------------------------
+# ── UI ─────────────────────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator')
 def operator_room():
@@ -46,7 +46,7 @@ def operator_room():
     return render_template('operator.html', api_key=OPERATOR_NTI_KEY)
 
 
-# -- CHAT PROXY -----------------------------------------------------------------
+# ── CHAT PROXY ─────────────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator/api/chat', methods=['POST'])
 def operator_chat():
@@ -69,7 +69,7 @@ def operator_chat():
     if jos_context:
         system += "\n\nCURRENT JOS:\n" + "\n".join(jos_context)
 
-    # -- Inject prior session context ------------------------------------------
+    # ── Inject prior session context ──────────────────────────────────────────
     prior = _get_prior_session_context()
     if prior:
         system = "PRIOR SESSION CONTEXT:\n" + prior + "\n\n" + system
@@ -108,7 +108,7 @@ def operator_chat():
         return jsonify({'error': str(e)}), 500
 
 
-# -- TOOL EXECUTION -------------------------------------------------------------
+# ── TOOL EXECUTION ─────────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator/run', methods=['POST'])
 def operator_run():
@@ -171,17 +171,17 @@ def _run_signal_scan():
 
     if avg_nii >= 70:
         s0_delta  = +0.02
-        direction = 'CLEAR - high-integrity signal environment'
+        direction = 'CLEAR — high-integrity signal environment'
     elif avg_nii >= 50:
         s0_delta  = 0.00
-        direction = 'MIXED - moderate integrity, no strong directional signal'
+        direction = 'MIXED — moderate integrity, no strong directional signal'
     else:
         s0_delta  = -0.03
-        direction = 'NOISY - low-integrity signal environment, elevated uncertainty'
+        direction = 'NOISY — low-integrity signal environment, elevated uncertainty'
 
     results.sort(key=lambda x: x['nii'])
 
-    lines = [f"NTI SIGNAL SCAN - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
+    lines = [f"NTI SIGNAL SCAN — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
     lines.append(f"Sources scanned: {len(SIGNAL_FEEDS)} | Headlines scored: {scored_count}")
     lines.append(f"Avg NII: {avg_nii}% | S0 delta: {s0_delta:+.3f}")
     lines.append(f"Environment: {direction}")
@@ -189,7 +189,7 @@ def _run_signal_scan():
     lines.append("LOWEST INTEGRITY HEADLINES:")
     for r in results[:5]:
         flag_str = ', '.join(r['flags'][:2]) if r['flags'] else 'none'
-        lines.append(f"  [{r['source']}] NII {r['nii']}% - {r['title']}")
+        lines.append(f"  [{r['source']}] NII {r['nii']}% — {r['title']}")
         if r['flags']:
             lines.append(f"    flags: {flag_str}")
 
@@ -205,7 +205,7 @@ def _run_signal_scan():
 
 
 def _run_market_model():
-    lines      = [f"S&P itB0 MODEL - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
+    lines      = [f"S&P itB0 MODEL — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
     components = {}
 
     try:
@@ -272,7 +272,7 @@ def _run_market_model():
         lines.append(f"  VIX:          {components.get('vix', 'n/a')}")
         lines.append(f"  Breadth:      {components.get('breadth_signal', 'n/a')}")
         lines.append("")
-        lines.append("NOTE: Layer 1 breadth model. FOMC day - elevated override probability.")
+        lines.append("NOTE: Layer 1 breadth model. FOMC day — elevated override probability.")
         lines.append("Named override variables: Fed decision (4% cut probability CME FedWatch).")
 
     except ImportError:
@@ -293,7 +293,7 @@ def _run_market_model():
 
 
 def _run_fortune500():
-    lines = [f"FORTUNE 500 SCOREBOARD - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
+    lines = [f"FORTUNE 500 SCOREBOARD — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC"]
 
     try:
         import db as database
@@ -344,7 +344,7 @@ def _run_fortune500():
                 lines.append("No scored companies in database.")
         else:
             conn.close()
-            lines.append("Database unavailable - PostgreSQL required.")
+            lines.append("Database unavailable — PostgreSQL required.")
 
     except Exception as e:
         lines.append(f"DB error: {str(e)[:120]}")
@@ -364,7 +364,7 @@ def _run_nti_score(text: str):
     label = 'HIGH INTEGRITY' if nii >= 70 else 'MODERATE' if nii >= 50 else 'LOW INTEGRITY'
 
     lines = ["NTI SCORE RESULT"]
-    lines.append(f"NII: {nii}% - {label}")
+    lines.append(f"NII: {nii}% — {label}")
     lines.append(f"Text length: {len(text)} chars")
     if flags:
         lines.append(f"Flags: {', '.join(flags)}")
@@ -487,7 +487,7 @@ def _score_text_internal(text: str) -> dict:
         return {'nii': 0, 'flags': [], 'error': str(e)}
 
 
-# -- FILE UPLOAD ----------------------------------------------------------------
+# ── FILE UPLOAD ────────────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator/upload', methods=['POST'])
 def operator_upload():
@@ -551,13 +551,13 @@ def operator_upload():
     char_cnt = len(text)
     word_cnt = len(text.split())
 
-    lines = ["FILE UPLOAD - NTI SCORE"]
+    lines = ["FILE UPLOAD — NTI SCORE"]
     lines.append(f"File: {filename}")
     lines.append(f"Size: {char_cnt:,} chars | {word_cnt:,} words")
     if extraction_note:
         lines.append(f"Note: {extraction_note}")
     lines.append("")
-    lines.append(f"NII: {nii}% - {label}")
+    lines.append(f"NII: {nii}% — {label}")
     if flags:
         lines.append(f"Flags: {', '.join(flags)}")
     fm = score_result.get('failure_modes', {})
@@ -580,19 +580,7 @@ def operator_upload():
     })
 
 
-# -- DAILY UPDATE ENDPOINT (p0047) --------------------------------------------
-
-@operator_bp.route('/operator/run_daily_update', methods=['POST'])
-def operator_run_daily_update():
-    from daily_update_cloud import run_daily_update
-    try:
-        result = run_daily_update()
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'success': False, 'output': str(e), 'error': str(e)}), 500
-
-
-# -- CONTEXT ENDPOINT (p0045) ---------------------------------------------------
+# ── CONTEXT ENDPOINT (p0045) ───────────────────────────────────────────────────
 
 @operator_bp.route('/operator/context', methods=['POST'])
 def operator_context():
@@ -640,13 +628,13 @@ def operator_context():
             return jsonify({'status': 'ok', 'id': ctx_id, 'summary': summary})
         else:
             conn.close()
-            return jsonify({'status': 'ok', 'id': 'local', 'note': 'SQLite - blob not persisted to RDS'})
+            return jsonify({'status': 'ok', 'id': 'local', 'note': 'SQLite — blob not persisted to RDS'})
 
     except Exception as e:
         return jsonify({'error': str(e)[:200]}), 500
 
 
-# -- SESSION STORAGE ------------------------------------------------------------
+# ── SESSION STORAGE ────────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator/context', methods=['GET'])
 @require_admin
@@ -724,7 +712,7 @@ def _get_prior_session_context() -> str:
     Fetch the last 10 operator session blobs from RDS.
     Merges decisions, key_facts, named_concepts, open_questions across rows.
     Returns a plain text block for system prompt injection.
-    Returns empty string on any failure ? never blocks the request.
+    Returns empty string on any failure   never blocks the request.
     """
     try:
         import db as database
@@ -790,7 +778,7 @@ def _get_prior_session_context() -> str:
                     if not latest_ts:
                         latest_ts = ts
 
-                    # Accumulate lists ? deduplicate
+                    # Accumulate lists   deduplicate
                     kf = blob.get('key_facts', '')
                     if isinstance(kf, list):
                         for item in kf:
@@ -808,7 +796,7 @@ def _get_prior_session_context() -> str:
                         if q and q not in merged_open_questions:
                             merged_open_questions.append(q)
 
-                    # Merge named concepts ? earlier rows don't overwrite newer
+                    # Merge named concepts   earlier rows don't overwrite newer
                     for k, v in (blob.get('named_concepts') or {}).items():
                         if k not in merged_named_concepts:
                             merged_named_concepts[k] = v
@@ -851,7 +839,7 @@ def _get_prior_session_context() -> str:
         if ctx_lines:
             result_parts.extend(ctx_lines)
 
-        # Token budget cap ? 3000 chars max
+        # Token budget cap   3000 chars max
         result = '\n'.join(result_parts)
         if len(result) > 3000:
             result = result[:3000] + '\n  ...[truncated]'
@@ -885,47 +873,57 @@ def _auto_write_context(messages, response):
         user_text = ''
         for m in reversed(messages):
             if m.get('role') == 'user':
-                user_text = m.get('content', '')[:1000]
+                user_text = m.get('content', '')
+                if isinstance(user_text, list):
+                    # multipart content block
+                    user_text = ' '.join(
+                        p.get('text', '') for p in user_text if isinstance(p, dict)
+                    )
+                user_text = user_text[:1000]
                 break
 
         if not assistant_text and not user_text:
             return
 
-        # Build blob from exchange content
-        # Extract push tag if present in user message
-        push = ''
-        push_match = re.search(r'p\d{4}[_\w]*', user_text + assistant_text)
+        # Push tag — check user text first, then assistant
+        push = 'auto'
+        push_match = re.search(r'\bp\d{4}[_\w]*\b', user_text + ' ' + assistant_text)
         if push_match:
             push = push_match.group(0)
 
-        # Extract decisions ? lines starting with decision markers
+        # Decisions — lines starting with decision markers
         decisions = []
         for line in (assistant_text + '\n' + user_text).split('\n'):
             line = line.strip()
-            if any(line.lower().startswith(w) for w in ('decided:', 'decision:', 'approved:', 'confirmed:', 'done:')):
-                decisions.append(line[:200])
+            if any(line.lower().startswith(w) for w in (
+                'decided:', 'decision:', 'approved:', 'confirmed:', 'done:', '- ', '* '
+            )):
+                if len(line) > 10:
+                    decisions.append(line[:200])
+        decisions = decisions[:10]
 
-        # Extract key facts ? bullet lines
-        key_facts = []
-        for line in assistant_text.split('\n'):
-            line = line.strip()
-            if line.startswith('- ') or line.startswith('* '):
-                key_facts.append(line[2:200])
-        key_facts = key_facts[:10]
+        # Key facts — first 300 chars of user message + first 300 of assistant
+        user_snippet      = user_text[:300].strip()
+        assistant_snippet = assistant_text[:500].strip()
+
+        # Objective: real content, not just timestamp
+        ts        = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')
+        objective = f'[{ts}] U: {user_snippet[:120]} | A: {assistant_snippet[:120]}'
 
         blob = {
-            'push':        push or 'auto',
-            'status':      'active',
-            'objective':   f'Auto-captured exchange ? {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")}',
-            'key_facts':   key_facts,
-            'decisions':   decisions,
-            'named_concepts': {},
-            'open_questions': [],
-            'source':      'auto_writer',
-            'assistant_snippet': assistant_text[:500],
+            'push':             push,
+            'status':           'active',
+            'objective':        objective,
+            'key_facts':        [user_snippet, assistant_snippet],
+            'decisions':        decisions,
+            'named_concepts':   {},
+            'open_questions':   [],
+            'source':           'auto_writer',
+            'user_snippet':     user_snippet,
+            'assistant_snippet': assistant_snippet,
         }
 
-        summary = f"push={blob['push']} | auto-write | {blob['objective']}"
+        summary = f'push={push} | status=active\n  objective: {objective}\n  key_facts:\n    - `objective`: `"{objective}"`\n    - `summary`: push={push} | U: {user_snippet[:80]} | A: {assistant_snippet[:80]}'
 
         conn = database.db_connect()
         cur  = conn.cursor()
