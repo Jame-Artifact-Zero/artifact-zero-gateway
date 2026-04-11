@@ -1,4 +1,4 @@
-﻿import os, json, time, io, re, secrets, threading
+import os, json, time, io, re, secrets, threading
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
@@ -99,7 +99,11 @@ def operator_chat():
 
         try:
             _store_session(messages, data, jos)
-            threading.Thread(target=_auto_write_context, args=(messages, data), daemon=True).start()
+            threading.Thread(
+                target=_auto_write_context,
+                args=(messages, data, jos),
+                daemon=True
+            ).start()
         except Exception:
             pass
         return jsonify(data)
@@ -318,7 +322,6 @@ def _run_fortune500():
                     issue_count = r[2] or 0
                     score_json  = r[3] or ''
 
-                    # Derive band from nii_score
                     if score >= 70:
                         band = 'HIGH'
                     elif score >= 50:
@@ -326,7 +329,6 @@ def _run_fortune500():
                     else:
                         band = 'LOW'
 
-                    # Pull flags from score_json if present
                     flags_display = ''
                     if score_json:
                         try:
@@ -398,11 +400,6 @@ def operator_score():
 
 
 def _score_text_internal(text: str) -> dict:
-    """
-    Score text using internal NTI engine.
-    Imports from core_engine to avoid ECS app import path breakage.
-    Falls back to app-level imports if core_engine unavailable.
-    """
     try:
         from core_engine.v3_engine import run_v3
         from core_engine.scoring import compute_nii
@@ -449,7 +446,6 @@ def _score_text_internal(text: str) -> dict:
     except ImportError:
         pass
 
-    # Fallback: app-level imports
     try:
         import app as main_app
         l0   = main_app.detect_l0_constraints(text)
@@ -507,8 +503,8 @@ def operator_upload():
     if len(raw_bytes) > MAX_BYTES:
         return jsonify({'error': 'File exceeds 2MB limit'}), 400
 
-    text             = ''
-    extraction_note  = ''
+    text            = ''
+    extraction_note = ''
 
     try:
         if ext in ('txt', 'md', 'csv', 'html'):
@@ -580,15 +576,10 @@ def operator_upload():
     })
 
 
-# ── CONTEXT ENDPOINT (p0045) ───────────────────────────────────────────────────
+# ── CONTEXT ENDPOINT ───────────────────────────────────────────────────────────
 
 @operator_bp.route('/operator/context', methods=['POST'])
 def operator_context():
-    """
-    Accept a session blob JSON body and write to RDS operator_context table.
-    Called by exp_append scripts after writing local JSON file.
-    Returns { status: ok, id: ... }
-    """
     payload = request.get_json() or {}
     if not payload:
         return jsonify({'error': 'Empty payload'}), 400
@@ -611,7 +602,6 @@ def operator_context():
 
             ctx_id  = 'ctx_' + secrets.token_hex(8)
             source  = payload.get('source', 'exp_append')
-            # Build a short summary from blob keys
             summary_parts = []
             for key in ('push', 'experiment', 'objective', 'status'):
                 if payload.get(key):
@@ -634,15 +624,9 @@ def operator_context():
         return jsonify({'error': str(e)[:200]}), 500
 
 
-# ── SESSION STORAGE ────────────────────────────────────────────────────────────
-
 @operator_bp.route('/operator/context', methods=['GET'])
 @require_admin
 def operator_context_get():
-    """
-    Return last N operator_context rows as JSON for the memory panel.
-    Query param: limit (default 10, max 50)
-    """
     try:
         import db as database
         if not database.USE_PG:
@@ -707,12 +691,71 @@ def operator_sessions():
         return jsonify({'sessions': [], 'note': str(e)})
 
 
+# ── PUSH STATE PERSISTENCE ─────────────────────────────────────────────────────
+
+def _get_active_push(cur, use_pg: bool) -> str:
+    """
+    Read the current push label from the push_state row in operator_context.
+    Returns empty string if not found.
+    """
+    if not use_pg:
+        return ''
+    try:
+        cur.execute("""
+            SELECT blob_json FROM operator_context
+            WHERE source = 'push_state'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """)
+        row = cur.fetchone()
+        if row and row[0]:
+            blob = json.loads(row[0])
+            return blob.get('push', '')
+    except Exception:
+        pass
+    return ''
+
+
+def _upsert_push_state(push: str):
+    """
+    Write or update the push_state row in operator_context.
+    Called whenever a non-auto push label is detected.
+    Uses a fixed ID so it stays as one row, always current.
+    """
+    try:
+        import db as database
+        if not database.USE_PG:
+            return
+        conn = database.db_connect()
+        cur  = conn.cursor()
+        blob = json.dumps({'push': push, 'updated_at': datetime.now(timezone.utc).isoformat()})
+        cur.execute("""
+            INSERT INTO operator_context (id, blob_json, source, summary)
+            VALUES ('push_state_singleton', %s, 'push_state', %s)
+            ON CONFLICT (id) DO UPDATE
+                SET blob_json  = EXCLUDED.blob_json,
+                    source     = 'push_state',
+                    summary    = EXCLUDED.summary,
+                    created_at = NOW()
+        """, (blob, f'push={push}'))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+# ── PRIOR SESSION CONTEXT ──────────────────────────────────────────────────────
+
 def _get_prior_session_context() -> str:
     """
-    Fetch the last 10 operator session blobs from RDS.
-    Merges decisions, key_facts, named_concepts, open_questions across rows.
-    Returns a plain text block for system prompt injection.
-    Returns empty string on any failure   never blocks the request.
+    Fetch operator session blobs from RDS.
+    Priority order:
+      1. push_state row (authoritative push label)
+      2. manually posted blobs (source != 'auto_writer')
+      3. auto_writer blobs (fill remaining space)
+    Merges decisions, key_facts, named_concepts, open_questions.
+    Returns plain text block for system prompt injection.
+    Never blocks the request.
     """
     try:
         import db as database
@@ -721,7 +764,10 @@ def _get_prior_session_context() -> str:
         conn = database.db_connect()
         cur  = conn.cursor()
 
-        # Pull last session summary
+        # ── 1. Authoritative push label ───────────────────────────────────────
+        active_push = _get_active_push(cur, database.USE_PG)
+
+        # ── 2. Last session summary ───────────────────────────────────────────
         last_session_line = ''
         try:
             cur.execute("""
@@ -737,30 +783,45 @@ def _get_prior_session_context() -> str:
         except Exception:
             pass
 
-        # Pull last 10 context blobs and merge
+        # ── 3. Pull manual blobs first, then auto_writer ──────────────────────
         ctx_lines = []
         try:
+            # Manual blobs (EXP posts, seed posts) — highest priority
             cur.execute("""
-                SELECT summary, blob_json, created_at
+                SELECT summary, blob_json, created_at, source
                 FROM operator_context
+                WHERE source NOT IN ('auto_writer', 'push_state')
                 ORDER BY created_at DESC
                 LIMIT 10
             """)
-            rows = cur.fetchall()
+            manual_rows = cur.fetchall()
+
+            # auto_writer blobs — fill remaining space
+            cur.execute("""
+                SELECT summary, blob_json, created_at, source
+                FROM operator_context
+                WHERE source = 'auto_writer'
+                ORDER BY created_at DESC
+                LIMIT 10
+            """)
+            auto_rows = cur.fetchall()
+
             conn.close()
 
-            if rows:
-                # Merge fields across all rows (newest first = highest priority)
-                merged_push            = ''
-                merged_status          = ''
-                merged_objective       = ''
-                merged_key_facts       = []
-                merged_decisions       = []
-                merged_named_concepts  = {}
-                merged_open_questions  = []
-                latest_ts              = ''
+            # Process manual rows first, then auto
+            all_rows = list(manual_rows) + list(auto_rows)
 
-                for row in rows:
+            if all_rows:
+                merged_push           = active_push  # start with authoritative push
+                merged_status         = ''
+                merged_objective      = ''
+                merged_key_facts      = []
+                merged_decisions      = []
+                merged_named_concepts = {}
+                merged_open_questions = []
+                latest_ts             = ''
+
+                for row in all_rows:
                     ts   = str(row[2])[:16] if row[2] else ''
                     blob = {}
                     try:
@@ -768,7 +829,7 @@ def _get_prior_session_context() -> str:
                     except Exception:
                         pass
 
-                    # Take push/status/objective from most recent non-empty
+                    # push: only take from blob if no authoritative push set
                     if not merged_push and blob.get('push'):
                         merged_push = blob['push']
                     if not merged_status and blob.get('status'):
@@ -778,7 +839,6 @@ def _get_prior_session_context() -> str:
                     if not latest_ts:
                         latest_ts = ts
 
-                    # Accumulate lists   deduplicate
                     kf = blob.get('key_facts', '')
                     if isinstance(kf, list):
                         for item in kf:
@@ -796,7 +856,6 @@ def _get_prior_session_context() -> str:
                         if q and q not in merged_open_questions:
                             merged_open_questions.append(q)
 
-                    # Merge named concepts   earlier rows don't overwrite newer
                     for k, v in (blob.get('named_concepts') or {}).items():
                         if k not in merged_named_concepts:
                             merged_named_concepts[k] = v
@@ -839,7 +898,6 @@ def _get_prior_session_context() -> str:
         if ctx_lines:
             result_parts.extend(ctx_lines)
 
-        # Token budget cap   3000 chars max
         result = '\n'.join(result_parts)
         if len(result) > 3000:
             result = result[:3000] + '\n  ...[truncated]'
@@ -850,11 +908,13 @@ def _get_prior_session_context() -> str:
         return ''
 
 
+# ── AUTO WRITE CONTEXT ─────────────────────────────────────────────────────────
 
-def _auto_write_context(messages, response):
+def _auto_write_context(messages, response, jos):
     """
-    Background thread: extract push/status/decisions/named_concepts from
-    the latest exchange and POST to /operator/context silently.
+    Background thread: extract push/status/decisions/key_facts from
+    the latest exchange and write to operator_context.
+    jos is passed in so push label comes from JOS first, not regex.
     Fires after every assistant response. Never blocks the request.
     """
     try:
@@ -862,10 +922,10 @@ def _auto_write_context(messages, response):
         if not database.USE_PG:
             return
 
-        # Extract assistant response text
+        # Extract full assistant response text
         assistant_text = ''
         try:
-            assistant_text = response.get('content', [{}])[0].get('text', '')[:3000]
+            assistant_text = response.get('content', [{}])[0].get('text', '')
         except Exception:
             pass
 
@@ -875,21 +935,44 @@ def _auto_write_context(messages, response):
             if m.get('role') == 'user':
                 user_text = m.get('content', '')
                 if isinstance(user_text, list):
-                    # multipart content block
                     user_text = ' '.join(
                         p.get('text', '') for p in user_text if isinstance(p, dict)
                     )
-                user_text = user_text[:1000]
+                user_text = user_text[:2000]
                 break
 
         if not assistant_text and not user_text:
             return
 
-        # Push tag — check user text first, then assistant
-        push = 'auto'
-        push_match = re.search(r'\bp\d{4}[_\w]*\b', user_text + ' ' + assistant_text)
-        if push_match:
-            push = push_match.group(0)
+        # ── Push label: JOS first, then regex, then existing push_state ──────
+        push = ''
+
+        # 1. JOS authoritative push
+        if jos and jos.get('push'):
+            push = jos['push'].strip()
+
+        # 2. Regex fallback on message text
+        if not push:
+            push_match = re.search(r'\bp\d{4}[_\w]*\b', user_text + ' ' + assistant_text[:1000])
+            if push_match:
+                push = push_match.group(0)
+
+        # 3. Read existing push_state from DB as last resort
+        if not push:
+            try:
+                conn_ps = database.db_connect()
+                cur_ps  = conn_ps.cursor()
+                push    = _get_active_push(cur_ps, database.USE_PG)
+                conn_ps.close()
+            except Exception:
+                pass
+
+        if not push:
+            push = 'auto'
+
+        # Persist push state if it's a real push label
+        if push != 'auto':
+            threading.Thread(target=_upsert_push_state, args=(push,), daemon=True).start()
 
         # Decisions — lines starting with decision markers
         decisions = []
@@ -902,28 +985,33 @@ def _auto_write_context(messages, response):
                     decisions.append(line[:200])
         decisions = decisions[:10]
 
-        # Key facts — first 300 chars of user message + first 300 of assistant
-        user_snippet      = user_text[:300].strip()
-        assistant_snippet = assistant_text[:500].strip()
+        # Snippets for key_facts — store more of the assistant response
+        user_snippet      = user_text[:500].strip()
+        assistant_snippet = assistant_text[:2000].strip()
 
-        # Objective: real content, not just timestamp
         ts        = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')
         objective = f'[{ts}] U: {user_snippet[:120]} | A: {assistant_snippet[:120]}'
 
         blob = {
-            'push':             push,
-            'status':           'active',
-            'objective':        objective,
-            'key_facts':        [user_snippet, assistant_snippet],
-            'decisions':        decisions,
-            'named_concepts':   {},
-            'open_questions':   [],
-            'source':           'auto_writer',
-            'user_snippet':     user_snippet,
+            'push':              push,
+            'status':            'active',
+            'objective':         objective,
+            'key_facts':         [user_snippet, assistant_snippet],
+            'decisions':         decisions,
+            'named_concepts':    {},
+            'open_questions':    [],
+            'source':            'auto_writer',
+            'user_snippet':      user_snippet,
             'assistant_snippet': assistant_snippet,
         }
 
-        summary = f'push={push} | status=active\n  objective: {objective}\n  key_facts:\n    - `objective`: `"{objective}"`\n    - `summary`: push={push} | U: {user_snippet[:80]} | A: {assistant_snippet[:80]}'
+        summary = (
+            f'push={push} | status=active\n'
+            f'  objective: {objective}\n'
+            f'  key_facts:\n'
+            f'    - {user_snippet[:200]}\n'
+            f'    - {assistant_snippet[:200]}'
+        )
 
         conn = database.db_connect()
         cur  = conn.cursor()
@@ -948,7 +1036,13 @@ def _auto_write_context(messages, response):
         pass
 
 
+# ── SESSION STORAGE ────────────────────────────────────────────────────────────
+
 def _store_session(messages, response, jos):
+    """
+    Store full session exchange in operator_sessions.
+    Summary captures last user message (1000 chars) + assistant response (1000 chars).
+    """
     try:
         import db as database
         conn = database.db_connect()
@@ -956,19 +1050,36 @@ def _store_session(messages, response, jos):
         if database.USE_PG:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS operator_sessions (
-                    id TEXT PRIMARY KEY,
-                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    id            TEXT PRIMARY KEY,
+                    created_at    TIMESTAMPTZ DEFAULT NOW(),
                     messages_json TEXT,
                     response_json TEXT,
-                    jos_json TEXT,
-                    summary TEXT
+                    jos_json      TEXT,
+                    summary       TEXT
                 )
             """)
-            summary = ''
+
+            # Full user message
+            user_summary = ''
             for m in reversed(messages):
                 if m.get('role') == 'user':
-                    summary = m.get('content', '')[:120]
+                    user_summary = m.get('content', '')
+                    if isinstance(user_summary, list):
+                        user_summary = ' '.join(
+                            p.get('text', '') for p in user_summary if isinstance(p, dict)
+                        )
+                    user_summary = user_summary[:1000]
                     break
+
+            # Full assistant response
+            assistant_summary = ''
+            try:
+                assistant_summary = response.get('content', [{}])[0].get('text', '')[:1000]
+            except Exception:
+                pass
+
+            summary = f'U: {user_summary} | A: {assistant_summary}'
+
             sid = 'op_' + secrets.token_hex(8)
             cur.execute("""
                 INSERT INTO operator_sessions (id, messages_json, response_json, jos_json, summary)
