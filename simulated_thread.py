@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -78,6 +79,7 @@ class SimulatedThread:
         self._monitor = ThreadMonitor(thread_id=self.thread_id)
 
         self.created_at: str = _now()
+        self.force_relay_after = int(os.getenv("FORCE_RELAY_AFTER_MESSAGES", "0"))
 
     # ------------------------------------------------------------------
     # PRIMARY INTERFACE
@@ -105,7 +107,9 @@ class SimulatedThread:
         self.total_chars += rec.char_count
 
         # Check if injection needed
-        inject_now = self._monitor.needs_injection()
+        inject_now = self._monitor.needs_injection() or (
+            self.force_relay_after > 0 and self.total_messages >= self.force_relay_after
+        )
         blob = None
 
         if inject_now:
