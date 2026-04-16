@@ -1,0 +1,65 @@
+{
+  "family": "artifact-zero-dev-task",
+  "taskRoleArn": "arn:aws:iam::567282577590:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::567282577590:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "artifact-zero",
+      "image": "567282577590.dkr.ecr.us-east-1.amazonaws.com/artifact-zero:dev-9d0c26eadba874288686d629c5a739d0643bf787",
+      "cpu": 0,
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 10000,
+          "hostPort": 10000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "OTEL_TRACES_EXPORTER",
+          "value": "otlp"
+        },
+        {
+          "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "value": "http://localhost:4317"
+        },
+        {
+          "name": "OTEL_RESOURCE_ATTRIBUTES",
+          "value": "service.name=artifact-zero-dev"
+        },
+        {
+          "name": "OTEL_PYTHON_CONFIGURATOR",
+          "value": "aws_configurator"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/artifact-zero",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    },
+    {
+      "name": "aws-otel-collector",
+      "image": "public.ecr.aws/aws-observability/aws-otel-collector:latest",
+      "cpu": 0,
+      "essential": false,
+      "command": ["--config=/etc/ecs/ecs-default-config.yaml"],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/artifact-zero",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "adot"
+        }
+      }
+    }
+  ]
+}
