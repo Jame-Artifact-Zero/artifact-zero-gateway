@@ -5,3 +5,4 @@ curl_cffi>=0.7.0
 python-docx>=1.1.0
 yfinance>=0.2.40
 pdfplumber>=0.10.0
+aws-xray-sdk==2.14.0
