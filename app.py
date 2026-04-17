@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 import json
 import time
@@ -12,15 +12,8 @@ import db as database
 
 app = Flask(__name__)
 
-from aws_xray_sdk.core import xray_recorder, patch_all
-from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
-xray_recorder.configure(service='artifact-zero-dev')
-patch_all()
-XRayMiddleware(app, xray_recorder)
-
-
-# â”€â”€ Score JSON parsing helper â”€â”€
+# ── Score JSON parsing helper ──
 def _parse_score_json(result):
     """Parse score_json string and merge csi/nti into result dict."""
     sj = result.pop("score_json", None)
@@ -40,25 +33,25 @@ def _parse_score_json(result):
             result["nti"] = sj["nti"]
     return result
 
-# â”€â”€ Session Security â”€â”€
+# ── Session Security ──
 _secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
 if not _secret:
     _secret = uuid.uuid4().hex + uuid.uuid4().hex          # random per-boot fallback (sessions won't persist across restarts, but never guessable)
-    print("[SECURITY] WARNING: No FLASK_SECRET_KEY or AZ_SECRET set â€” using random ephemeral key", flush=True)
+    print("[SECURITY] WARNING: No FLASK_SECRET_KEY or AZ_SECRET set — using random ephemeral key", flush=True)
 app.secret_key = _secret
 app.config["SESSION_COOKIE_SECURE"] = True                  # only send over HTTPS
 app.config["SESSION_COOKIE_HTTPONLY"] = True                 # no JS access
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"               # CSRF protection for top-level nav
 app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7        # 7 day max session
 
-# â”€â”€ CSRF Protection â”€â”€
+# ── CSRF Protection ──
 from csrf import init_csrf
 init_csrf(app)
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# AUTH STATE â€” available to all templates + JS
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════
+# AUTH STATE — available to all templates + JS
+# ═══════════════════════════════════════════
 @app.context_processor
 def inject_auth_state():
     """Make logged_in and user_email available in all templates."""
@@ -150,7 +143,7 @@ try:
     from ccs_routes import init_ccs
     init_ccs(app)
 except ImportError:
-    print("[CCS] ccs_routes.py not found â€” skipping glossary/spec/eval routes")
+    print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
 try:
     from gateway_routes import gateway_bp
     app.register_blueprint(gateway_bp)
@@ -337,7 +330,7 @@ CCA_COLLAPSE_MARKERS = [
 
 
 # ==========================
-# NTE-CLF (Tilt Taxonomy) Ã¢â‚¬â€ RULE-BASED CLASSIFIER
+# NTE-CLF (Tilt Taxonomy) â€” RULE-BASED CLASSIFIER
 # v2.0 adds: T4, T5, T9, T10 and keeps T2
 # ==========================
 TILT_TAXONOMY = {
@@ -459,15 +452,15 @@ def _split_sentences(text):
 
 def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
     """
-    NTI Integrity Index v2 â€” 5-dimension weighted scoring.
+    NTI Integrity Index v2 — 5-dimension weighted scoring.
     Returns 0-100 continuous score with 6 bands.
 
     Dimensions (weights sum to 1.0):
-      D1: Constraint Density    (25%) â€” % of sentences containing explicit constraints
-      D2: Ask Architecture      (20%) â€” Ask positioned before capability claims
-      D3: Enforcement Integrity (20%) â€” Freedom from deferral/erosion markers
-      D4: Tilt Resistance       (15%) â€” Resistance to drift patterns
-      D5: Failure Mode Severity (20%) â€” UDDS/DCE/CCA penalty
+      D1: Constraint Density    (25%) — % of sentences containing explicit constraints
+      D2: Ask Architecture      (20%) — Ask positioned before capability claims
+      D3: Enforcement Integrity (20%) — Freedom from deferral/erosion markers
+      D4: Tilt Resistance       (15%) — Resistance to drift patterns
+      D5: Failure Mode Severity (20%) — UDDS/DCE/CCA penalty
     """
     text = answer or prompt or ""
     sents = _split_sentences(text)
@@ -804,7 +797,7 @@ def api_developer_apply():
         )
         conn.commit()
     except Exception:
-        pass  # DB table may not exist yet â€” fail silently, log below
+        pass  # DB table may not exist yet — fail silently, log below
     log_json_line("developer_apply", {"name": name, "email": email, "message": message[:200]})
     return jsonify({"status": "ok"})
 
@@ -1035,7 +1028,7 @@ def api_vc_fund_detail(slug):
         return jsonify({"error": str(e)}), 500
 
 
-# Free tier scoring â€” no API key, IP-limited
+# Free tier scoring — no API key, IP-limited
 _free_usage = {}
 
 @app.route("/api/v1/score/free", methods=["POST"])
@@ -1054,7 +1047,7 @@ def api_score_free():
     if len(text) > 50000:
         return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
 
-    # V2 PRE-SCORE GATE â€” reject gibberish/junk before scoring
+    # V2 PRE-SCORE GATE — reject gibberish/junk before scoring
     gate = pre_score_gate(text)
     if not gate["pass"]:
         return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
@@ -1095,7 +1088,7 @@ def api_score_free():
         except Exception:
             signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
-        # Failure modes already computed inside compute_nii â€” read from detail
+        # Failure modes already computed inside compute_nii — read from detail
         detail = nii.get("detail", {})
         udds_state = detail.get("udds", "FALSE")
         dce_state = detail.get("dce", "FALSE")
@@ -1139,7 +1132,7 @@ def api_score_free():
         }
     }
 
-    # â”€â”€ V3 ENFORCEMENT: self-audit loop (mandatory) â”€â”€
+    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
     try:
         from core_engine.v3_enforcement import self_audit
         audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
@@ -1190,7 +1183,7 @@ def manifest_xml_root():
 
 
 
-# â”€â”€â”€ ONE-TIME ADMIN PROMOTE (delete after use) â”€â”€â”€
+# ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
 @app.route("/api/promote-admin", methods=["POST"])
 def promote_admin():
     """One-time admin promotion. DELETE THIS ROUTE AFTER USE."""
@@ -1269,13 +1262,13 @@ def canonical_status():
     })
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# V3 ROUTES â€” Axis 2 + Full Integration
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════
+# V3 ROUTES — Axis 2 + Full Integration
+# ═══════════════════════════════════════
 
 @app.route("/nti-friction", methods=["POST"])
 def nti_friction():
-    """E04 â€” Axis 2 conversational friction scoring."""
+    """E04 — Axis 2 conversational friction scoring."""
     try:
         from axis2_endpoint import handle_request as axis2_handle
         payload = request.get_json(force=True) or {}
@@ -1294,7 +1287,7 @@ def nti_full():
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    # Axis 1 â€” existing NTI scoring
+    # Axis 1 — existing NTI scoring
     prompt = ""
     answer = text
     l0 = detect_l0_constraints(answer)
@@ -1313,7 +1306,7 @@ def nti_full():
         }
     }
 
-    # Full integration â€” Axis 2 + detection modules
+    # Full integration — Axis 2 + detection modules
     try:
         from nti_full_integration_stub import build_full
         request_id = f"nti_{uuid.uuid4().hex[:12]}"
@@ -1499,7 +1492,7 @@ def nti_run():
         "latency_ms": latency_ms
     }
 
-    # I04 â€” audit source tagging
+    # I04 — audit source tagging
     try:
         from audit_source import normalize_audit_source
         result["telemetry"]["audit_source"] = normalize_audit_source(
@@ -1508,7 +1501,7 @@ def nti_run():
     except Exception:
         result["telemetry"]["audit_source"] = "manual"
 
-    # â”€â”€ V3 ENFORCEMENT: self-audit loop â”€â”€
+    # ── V3 ENFORCEMENT: self-audit loop ──
     # Score own output before delivery. Core governance, not optional.
     try:
         from v3_self_audit import run_v3_pipeline
@@ -1541,9 +1534,9 @@ def nti_run():
     return jsonify(result)
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# API v1 â€” PUBLIC SCORING ENDPOINT
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════
+# API v1 — PUBLIC SCORING ENDPOINT
+# ═══════════════════════════════════════
 import secrets as _secrets
 import functools
 
@@ -1699,7 +1692,7 @@ def api_score():
         except Exception as e:
             print(f"[api] Credit deduction error: {e}", flush=True)
 
-    # â”€â”€ V3 ENFORCEMENT: self-audit loop (mandatory) â”€â”€
+    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
     v3_result = {"passed": True}
     try:
         from core_engine.v3_enforcement import self_audit
@@ -1736,16 +1729,16 @@ def api_score():
     })
 
 
-# POST /api/v1/keys â€” MOVED to account_bp (account.py). Session-aware, no email required.
+# POST /api/v1/keys — MOVED to account_bp (account.py). Session-aware, no email required.
 # This route is intentionally removed. account_bp registers the replacement.
 
 
-# GET /api/v1/keys/usage â€” MOVED to account_bp as /api/v1/keys/<key_id>/usage
+# GET /api/v1/keys/usage — MOVED to account_bp as /api/v1/keys/<key_id>/usage
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════
 # STRIPE WEBHOOK
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════
 @app.route("/api/stripe/webhook", methods=["POST"])
 def stripe_webhook():
     import json as _json
@@ -1813,12 +1806,12 @@ def stripe_webhook():
     return jsonify({"received": True})
 
 
-# /dashboard route owned by auth_bp (auth.py) with @login_required â€” do not duplicate here
+# /dashboard route owned by auth_bp (auth.py) with @login_required — do not duplicate here
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════
 # LLM-POWERED REWRITE (V3 structural rewrite via letter-race model)
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════
 def _letter_race(text):
     """Pick model by racing letters through user text."""
     s = re.sub(r'[^a-zA-Z]', '', text).lower()
@@ -1923,7 +1916,7 @@ def _call_llm(model_info, prompt, system_prompt):
         key = os.getenv("GOOGLE_API_KEY", "")
         if not key:
             return None, "No Google API key"
-        # Build contents â€” use systemInstruction when system_prompt present
+        # Build contents — use systemInstruction when system_prompt present
         body_dict = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 1024}
@@ -1969,7 +1962,7 @@ def api_rewrite():
     if not gate["pass"]:
         return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
 
-    # Convergence gate removed from /api/v1/rewrite â€” rewrite is always an AI call.
+    # Convergence gate removed from /api/v1/rewrite — rewrite is always an AI call.
     # Gate belongs on /nti (scoring), not here.
 
     # 1. Score with V1
@@ -2006,11 +1999,11 @@ def api_rewrite():
         if (components.get("q1") or 0) < 0.7 and not is_short:
             issues.append("Missing explicit constraints or conditions")
         if (components.get("q2") or 0) < 0.7 and word_count > 20:
-            issues.append("Main ask is buried â€” should lead")
+            issues.append("Main ask is buried — should lead")
         if (components.get("q3") or 0) < 0.7 and not is_question:
             issues.append("No deadline or enforcement boundary")
         if (components.get("q4") or 0) < 0.7 and len(tilt) > 0:
-            issues.append("Weak tilt resistance â€” hedge language detected")
+            issues.append("Weak tilt resistance — hedge language detected")
     # Always flag real failure modes regardless of length
     if "CONFIRMED" in str(failure_modes.get("UDDS", "")):
         issues.append("UDDS: Agreement given before the actual ask was stated")
@@ -2019,15 +2012,15 @@ def api_rewrite():
     if "CONFIRMED" in str(failure_modes.get("CCA", "")):
         issues.append("CCA: Capability claimed without constraint backing")
 
-    # 4a+4b. UNGOVERNED + GOVERNED â€” run in parallel to halve latency
+    # 4a+4b. UNGOVERNED + GOVERNED — run in parallel to halve latency
     ungoverned_prompt = f"Write a reply to this message.\n\nMESSAGE:\n{text}"
     ungoverned_system = "You are a customer service representative. Reply to the message you receive."
 
-    # 4b. GOVERNED CALL â€” full Artifact Zero system prompt + guardrails
-    #     This output goes through V3 â€” card 7
+    # 4b. GOVERNED CALL — full Artifact Zero system prompt + guardrails
+    #     This output goes through V3 — card 7
     governed_system = (
         "You are Artifact Zero, a structural enforcement company in Knoxville, Tennessee. "
-        "You built NTI â€” a deterministic engine that scores and stabilizes communication. "
+        "You built NTI — a deterministic engine that scores and stabilizes communication. "
         "No LLM in the scoring. Same input, same output, every time.\n\n"
         "Someone sent a message through the contact page. Reply directly on behalf of Artifact Zero.\n\n"
         "VOICE:\n"
@@ -2035,7 +2028,7 @@ def api_rewrite():
         "- Short sentences. Fragments fine.\n"
         "- Never: revolutionary, game-changing, synergy, seamless, excited, thrilled, ecosystem.\n"
         "- No exclamation marks. Warm but not performative.\n\n"
-        "HARD RULES â€” these override everything else:\n"
+        "HARD RULES — these override everything else:\n"
         "1. NEVER schedule or promise a meeting or call. NEVER give out any email address. Direct all connection to artifact0.com/docs\n"
         "2. IF SELLING SOMETHING (warranties, SEO, software, services, anything): acknowledge with dry humor, "
         "then suggest they run their pitch through the API. "
@@ -2043,19 +2036,19 @@ def api_rewrite():
         "3. IF GIVING FEEDBACK OR SUGGESTIONS: thank them genuinely, say it will be reviewed, zero commitments on what changes.\n"
         "4. IF WANTING TO PARTNER OR INVEST: direct to artifact0.com/docs for API access and contact info.\n"
         "5. IF A REAL PROSPECT: one sentence on what NTI solves for their specific situation. "
-        "Direct them to artifact0.com/docs â€” full API access, unlimited use cases, total control. "
+        "Direct them to artifact0.com/docs — full API access, unlimited use cases, total control. "
         "Tell your team. Not your competitors.\n\n"
         "REPLY RULES:\n"
         "1. First sentence shows you read their message.\n"
         "2. Answer the question or address the need directly.\n"
-        "3. One next step â€” artifact0.com/docs. Never give an email address. Never 'we will be in touch.'\n"
+        "3. One next step — artifact0.com/docs. Never give an email address. Never 'we will be in touch.'\n"
         "4. 40-80 words total.\n"
         "5. No sign-off. No Best, Thanks, Regards.\n"
         "6. Return only the reply text. No commentary. No quotes."
     )
     governed_prompt = f"THEIR MESSAGE:\n{text}\n\nWrite a reply from Artifact Zero to this person."
 
-    # Run both LLM calls in parallel â€” cuts total latency roughly in half
+    # Run both LLM calls in parallel — cuts total latency roughly in half
     from concurrent.futures import ThreadPoolExecutor
     def _call_ungov():
         try:
@@ -2121,7 +2114,7 @@ def api_rewrite():
 
     return jsonify({
         "rewrite": final,
-        "llm_raw": llm_ungoverned or "",       # card 5 â€” ungoverned, what AI does alone
+        "llm_raw": llm_ungoverned or "",       # card 5 — ungoverned, what AI does alone
         "llm_governed": llm_text,              # governed input before V3
         "model": model["name"],
         "model_color": model["color"],

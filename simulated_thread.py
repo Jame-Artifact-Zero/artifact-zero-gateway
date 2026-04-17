@@ -1,4 +1,4 @@
-﻿"""
+"""
 simulated_thread.py
 Layer 4: The infinite memory wrapper.
 
@@ -35,7 +35,7 @@ def _now() -> str:
 
 
 # ---------------------------------------------------------------------------
-# ADD RESULT ΓÇö returned on every message add
+# ADD RESULT — returned on every message add
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -73,7 +73,7 @@ class SimulatedThread:
         self.total_messages: int = 0                # across all relays
         self.total_chars: int = 0                   # across all relays
 
-        # Active gateway and monitor ΓÇö reset on each relay
+        # Active gateway and monitor — reset on each relay
         self._gateway = Gateway(label=label, gateway_id=self.thread_id)
         self._monitor = ThreadMonitor(thread_id=self.thread_id)
 
@@ -126,7 +126,7 @@ class SimulatedThread:
 
     def relay(self) -> InjectionBlob:
         """
-        Execute the relay ΓÇö reset the active window.
+        Execute the relay — reset the active window.
         Builds a blob if one wasn't already built, archives it,
         resets gateway and monitor for the next window.
 
@@ -138,7 +138,7 @@ class SimulatedThread:
         if not self.blobs or self.blobs[-1].blob_id != blob.blob_id:
             self.blobs.append(blob)
 
-        # Reset active window ΓÇö fresh gateway and monitor
+        # Reset active window — fresh gateway and monitor
         self.relay_number += 1
         self._gateway = Gateway(label=self.label, gateway_id=self.thread_id)
         self._monitor = ThreadMonitor(thread_id=self.thread_id)
