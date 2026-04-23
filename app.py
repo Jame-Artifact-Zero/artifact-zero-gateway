@@ -158,6 +158,13 @@ try:
 except ImportError:
     print("[app] operator_room not found, skipping", flush=True)
 
+try:
+    from routes.rh_toolkit import bp as rh_toolkit_bp
+    app.register_blueprint(rh_toolkit_bp)
+    print("[app] rh_toolkit loaded", flush=True)
+except ImportError:
+    print("[app] rh_toolkit not found, skipping", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
