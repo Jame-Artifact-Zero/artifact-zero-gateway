@@ -68,10 +68,12 @@ def certify():
         latency_ms = (time.perf_counter() - t0) * 1000
         nti_log.log_request(request_id, "/v1/certify", 400, latency_ms, request._api_key_id)
         return jsonify({"error": str(e)}), 400
-    except Exception:
+    except Exception as e:
         latency_ms = (time.perf_counter() - t0) * 1000
+        print(f"[certify] EXCEPTION: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
         nti_log.log_request(request_id, "/v1/certify", 500, latency_ms, request._api_key_id)
-        return jsonify({"error": "internal error"}), 500
+        return jsonify({"error": "internal error", "detail": str(e)}), 500
 
     # Persist certificate to RDS
     try:
@@ -126,10 +128,12 @@ def audit():
 
     try:
         report = api.audit(system_name)
-    except Exception:
+    except Exception as e:
         latency_ms = (time.perf_counter() - t0) * 1000
+        print(f"[audit] EXCEPTION: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
         nti_log.log_request(request_id, "/v1/audit", 500, latency_ms, request._api_key_id)
-        return jsonify({"error": "internal error"}), 500
+        return jsonify({"error": "internal error", "detail": str(e)}), 500
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/audit", 200, latency_ms, request._api_key_id)
