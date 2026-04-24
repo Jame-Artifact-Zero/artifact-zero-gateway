@@ -1,8 +1,8 @@
 """
 routes/rh_toolkit.py
 =====================
-Artifact Zero — RH Cryptographic Toolkit endpoints
-Version 1.0.0 | April 2026
+Artifact Zero - RH Cryptographic Toolkit endpoints
+Version 1.0.1 | April 2026
 
 Endpoints:
     POST /v1/certify          Single parameter certificate
@@ -37,7 +37,7 @@ bp  = Blueprint("rh_toolkit", __name__)
 api = CertificateAPI()
 
 
-# ── /v1/certify ───────────────────────────────────────────────────────────────
+# -- /v1/certify --------------------------------------------------------------
 @bp.route("/v1/certify", methods=["POST"])
 @require_api_key
 def certify():
@@ -69,11 +69,10 @@ def certify():
         nti_log.log_request(request_id, "/v1/certify", 400, latency_ms, request._api_key_id)
         return jsonify({"error": str(e)}), 400
     except Exception as e:
+        traceback.print_exc()
         latency_ms = (time.perf_counter() - t0) * 1000
-        print(f"[certify] EXCEPTION: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
         nti_log.log_request(request_id, "/v1/certify", 500, latency_ms, request._api_key_id)
-        return jsonify({"error": "internal error", "detail": str(e)}), 500
+        return jsonify({"error": "internal error"}), 500
 
     # Persist certificate to RDS
     try:
@@ -97,8 +96,8 @@ def certify():
         ))
         conn.commit()
         conn.close()
-    except Exception:
-        # Log but don't fail the request — cert was computed correctly
+    except Exception as e:
+        # Log but don't fail the request - cert was computed correctly
         traceback.print_exc()
 
     latency_ms = (time.perf_counter() - t0) * 1000
@@ -107,7 +106,7 @@ def certify():
     return jsonify(json.loads(cert.to_json())), 200
 
 
-# ── /v1/audit ─────────────────────────────────────────────────────────────────
+# -- /v1/audit ----------------------------------------------------------------
 @bp.route("/v1/audit", methods=["POST"])
 @require_api_key
 def audit():
@@ -129,11 +128,10 @@ def audit():
     try:
         report = api.audit(system_name)
     except Exception as e:
+        traceback.print_exc()
         latency_ms = (time.perf_counter() - t0) * 1000
-        print(f"[audit] EXCEPTION: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
         nti_log.log_request(request_id, "/v1/audit", 500, latency_ms, request._api_key_id)
-        return jsonify({"error": "internal error", "detail": str(e)}), 500
+        return jsonify({"error": "internal error"}), 500
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/audit", 200, latency_ms, request._api_key_id)
@@ -141,7 +139,7 @@ def audit():
     return jsonify(report), 200
 
 
-# ── /v1/theorems ──────────────────────────────────────────────────────────────
+# -- /v1/theorems -------------------------------------------------------------
 @bp.route("/v1/theorems", methods=["GET"])
 @require_api_key
 def theorems():
@@ -161,7 +159,7 @@ def theorems():
     return jsonify(result), 200
 
 
-# ── /v1/zeros ─────────────────────────────────────────────────────────────────
+# -- /v1/zeros ----------------------------------------------------------------
 @bp.route("/v1/zeros", methods=["GET"])
 @require_api_key
 def zeros():
@@ -178,7 +176,7 @@ def zeros():
 
     try:
         count = min(int(request.args.get("count", 10)), 100)
-    except ValueError:
+    except ValueError as e:
         count = 10
 
     result = api.zeros(count)
@@ -189,7 +187,7 @@ def zeros():
     return jsonify(result), 200
 
 
-# ── /v1/runner/status ─────────────────────────────────────────────────────────
+# -- /v1/runner/status --------------------------------------------------------
 @bp.route("/v1/runner/status", methods=["GET"])
 @require_api_key
 def runner_status():
@@ -219,7 +217,7 @@ def runner_status():
         rows = cur.fetchall()
         conn.close()
         result = [dict(r) for r in rows]
-    except Exception:
+    except Exception as e:
         traceback.print_exc()
         result = []
 
@@ -229,7 +227,7 @@ def runner_status():
     return jsonify(result), 200
 
 
-# ── /v1/certificates ──────────────────────────────────────────────────────────
+# -- /v1/certificates ---------------------------------------------------------
 @bp.route("/v1/certificates", methods=["GET"])
 @require_api_key
 def certificates():
@@ -248,7 +246,7 @@ def certificates():
     compliant  = request.args.get("compliant")
     try:
         limit = min(int(request.args.get("limit", 50)), 200)
-    except ValueError:
+    except ValueError as e:
         limit = 50
 
     try:
@@ -287,7 +285,7 @@ def certificates():
             row["id"] = str(row["id"])
             result.append(row)
 
-    except Exception:
+    except Exception as e:
         traceback.print_exc()
         latency_ms = (time.perf_counter() - t0) * 1000
         nti_log.log_request(request_id, "/v1/certificates", 500, latency_ms, request._api_key_id)
