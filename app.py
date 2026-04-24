@@ -162,8 +162,8 @@ try:
     from rh_toolkit import bp as rh_toolkit_bp
     app.register_blueprint(rh_toolkit_bp)
     print("[app] rh_toolkit loaded", flush=True)
-except ImportError:
-    print("[app] rh_toolkit not found, skipping", flush=True)
+except Exception as e:
+    print(f"[app] rh_toolkit failed: {e}", flush=True)
 
 
 # ============================================================
