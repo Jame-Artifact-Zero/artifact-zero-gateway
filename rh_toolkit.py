@@ -1,31 +1,10 @@
-"""
-routes/rh_toolkit.py
-=====================
-Artifact Zero - RH Cryptographic Toolkit endpoints
-Version 1.0.1 | April 2026
-
-Endpoints:
-    POST /v1/certify          Single parameter certificate
-    POST /v1/audit            Full system audit report
-    GET  /v1/theorems         Mathematical reference library
-    GET  /v1/zeros            Numerical zeta zero verification
-    GET  /v1/runner/status    Runner performance summary
-
-Registration in app.py:
-    try:
-        from routes.rh_toolkit import bp as rh_toolkit_bp
-        app.register_blueprint(rh_toolkit_bp)
-        print("[app] rh_toolkit loaded", flush=True)
-    except ImportError:
-        print("[app] rh_toolkit not found, skipping", flush=True)
-"""
-
-import uuid
+﻿import uuid
 import time
 import json
 import traceback
 
 from flask import Blueprint, request, jsonify
+import psycopg2.extras
 
 import db as database
 import nti_log
@@ -37,22 +16,13 @@ bp  = Blueprint("rh_toolkit", __name__)
 api = CertificateAPI()
 
 
-# -- /v1/certify --------------------------------------------------------------
+def _dict_cursor(conn):
+    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+
 @bp.route("/v1/certify", methods=["POST"])
 @require_api_key
 def certify():
-    """
-    Issue a signed certificate for a cryptographic parameter set.
-
-    Body (JSON):
-        { "type": "rsa",   "key_bits": 2048 }
-        { "type": "ecc",   "curve": "P-256" }
-        { "type": "dh",    "p_bits": 3072, "q_bits": 256 }
-        { "type": "prime", "n": 170141183460469231731687303715884105727 }
-
-    Returns:
-        Certificate JSON with HMAC-SHA256 signature.
-    """
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
@@ -74,7 +44,6 @@ def certify():
         nti_log.log_request(request_id, "/v1/certify", 500, latency_ms, request._api_key_id)
         return jsonify({"error": "internal error"}), 500
 
-    # Persist certificate to RDS
     try:
         conn = database.db_connect()
         cur  = conn.cursor()
@@ -96,29 +65,17 @@ def certify():
         ))
         conn.commit()
         conn.close()
-    except Exception as e:
-        # Log but don't fail the request - cert was computed correctly
+    except Exception:
         traceback.print_exc()
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/certify", 200, latency_ms, request._api_key_id)
-
     return jsonify(json.loads(cert.to_json())), 200
 
 
-# -- /v1/audit ----------------------------------------------------------------
 @bp.route("/v1/audit", methods=["POST"])
 @require_api_key
 def audit():
-    """
-    Full system audit across all standard parameter sets.
-
-    Body (JSON, optional):
-        { "system_name": "MyProduct v1.0" }
-
-    Returns:
-        Audit report JSON with all certificates and overall compliance status.
-    """
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
@@ -135,19 +92,12 @@ def audit():
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/audit", 200, latency_ms, request._api_key_id)
-
     return jsonify(report), 200
 
 
-# -- /v1/theorems -------------------------------------------------------------
 @bp.route("/v1/theorems", methods=["GET"])
 @require_api_key
 def theorems():
-    """
-    Mathematical reference library.
-    Returns theorems connecting prime distribution to cryptographic security.
-    Each entry includes established status and cryptographic relevance.
-    """
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
@@ -155,56 +105,40 @@ def theorems():
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/theorems", 200, latency_ms, request._api_key_id)
-
     return jsonify(result), 200
 
 
-# -- /v1/zeros ----------------------------------------------------------------
 @bp.route("/v1/zeros", methods=["GET"])
 @require_api_key
 def zeros():
-    """
-    Numerical zeta zero verification.
-    Computes and returns the first N non-trivial zeros of the Riemann zeta
-    function, each verified at Re(s) = 0.5 to 50 decimal places.
-
-    Query params:
-        count (int, default 10, max 100)
-    """
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
     try:
         count = min(int(request.args.get("count", 10)), 100)
-    except ValueError as e:
+    except ValueError:
         count = 10
 
     result = api.zeros(count)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/zeros", 200, latency_ms, request._api_key_id)
-
     return jsonify(result), 200
 
 
-# -- /v1/runner/status --------------------------------------------------------
 @bp.route("/v1/runner/status", methods=["GET"])
 @require_api_key
 def runner_status():
-    """
-    Runner performance summary from stored logs.
-    Returns aggregate timing statistics by bit length from az_runner_logs.
-    """
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
     try:
         conn = database.db_connect()
-        cur  = conn.cursor()
+        cur  = _dict_cursor(conn)
         cur.execute("""
             SELECT
                 bit_length,
-                COUNT(*)                        AS count,
+                COUNT(*)                         AS count,
                 ROUND(AVG(total_ms)::numeric, 1) AS avg_ms,
                 ROUND(MIN(total_ms)::numeric, 1) AS min_ms,
                 ROUND(MAX(total_ms)::numeric, 1) AS max_ms,
@@ -217,28 +151,18 @@ def runner_status():
         rows = cur.fetchall()
         conn.close()
         result = [dict(r) for r in rows]
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         result = []
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/runner/status", 200, latency_ms, request._api_key_id)
-
     return jsonify(result), 200
 
 
-# -- /v1/certificates ---------------------------------------------------------
 @bp.route("/v1/certificates", methods=["GET"])
 @require_api_key
 def certificates():
-    """
-    Retrieve certificates issued for this API key.
-
-    Query params:
-        type      Filter by param_type (RSA, ECC, DH, PRIME)
-        limit     Max results (default 50, max 200)
-        compliant Filter by compliance (true/false)
-    """
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
@@ -246,12 +170,12 @@ def certificates():
     compliant  = request.args.get("compliant")
     try:
         limit = min(int(request.args.get("limit", 50)), 200)
-    except ValueError as e:
+    except ValueError:
         limit = 50
 
     try:
         conn = database.db_connect()
-        cur  = conn.cursor()
+        cur  = _dict_cursor(conn)
 
         filters = ["api_key_id = %s"]
         values  = [request._api_key_id]
@@ -285,7 +209,7 @@ def certificates():
             row["id"] = str(row["id"])
             result.append(row)
 
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         latency_ms = (time.perf_counter() - t0) * 1000
         nti_log.log_request(request_id, "/v1/certificates", 500, latency_ms, request._api_key_id)
@@ -293,5 +217,4 @@ def certificates():
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/certificates", 200, latency_ms, request._api_key_id)
-
     return jsonify(result), 200
