@@ -629,3 +629,132 @@ def hash_text(text: str) -> str:
     """SHA256 of input text. Stored in log — never the text itself."""
     import hashlib
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def log_request(request_id: str, endpoint: str, status_code: int, latency_ms: float, api_key_id: str = None) -> None:
+    """Log an RH Toolkit API request."""
+    try:
+        conn, driver = _get_conn()
+        cur = conn.cursor()
+        if driver == "postgres":
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rh_api_requests (
+                    id          BIGSERIAL PRIMARY KEY,
+                    request_id  TEXT NOT NULL,
+                    endpoint    TEXT NOT NULL,
+                    status_code INTEGER NOT NULL,
+                    latency_ms  NUMERIC(10,2),
+                    api_key_id  TEXT,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rh_api_requests (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    request_id  TEXT NOT NULL,
+                    endpoint    TEXT NOT NULL,
+                    status_code INTEGER NOT NULL,
+                    latency_ms  REAL,
+                    api_key_id  TEXT,
+                    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+                )
+            """)
+            cur.execute("""
+                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def log_request(request_id: str, endpoint: str, status_code: int, latency_ms: float, api_key_id: str = None) -> None:
+    """Log an RH Toolkit API request."""
+    try:
+        conn, driver = _get_conn()
+        cur = conn.cursor()
+        if driver == "postgres":
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rh_api_requests (
+                    id          BIGSERIAL PRIMARY KEY,
+                    request_id  TEXT NOT NULL,
+                    endpoint    TEXT NOT NULL,
+                    status_code INTEGER NOT NULL,
+                    latency_ms  NUMERIC(10,2),
+                    api_key_id  TEXT,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rh_api_requests (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    request_id  TEXT NOT NULL,
+                    endpoint    TEXT NOT NULL,
+                    status_code INTEGER NOT NULL,
+                    latency_ms  REAL,
+                    api_key_id  TEXT,
+                    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+                )
+            """)
+            cur.execute("""
+                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def log_request(request_id: str, endpoint: str, status_code: int, latency_ms: float, api_key_id: str = None) -> None:
+    """Log an RH Toolkit API request."""
+    try:
+        conn, driver = _get_conn()
+        cur = conn.cursor()
+        if driver == "postgres":
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rh_api_requests (
+                    id          BIGSERIAL PRIMARY KEY,
+                    request_id  TEXT NOT NULL,
+                    endpoint    TEXT NOT NULL,
+                    status_code INTEGER NOT NULL,
+                    latency_ms  NUMERIC(10,2),
+                    api_key_id  TEXT,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rh_api_requests (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    request_id  TEXT NOT NULL,
+                    endpoint    TEXT NOT NULL,
+                    status_code INTEGER NOT NULL,
+                    latency_ms  REAL,
+                    api_key_id  TEXT,
+                    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+                )
+            """)
+            cur.execute("""
+                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
