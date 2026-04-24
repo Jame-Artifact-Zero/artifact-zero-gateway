@@ -1,5 +1,5 @@
 # ============================================
-# Artifact Zero â€” Deploy to Development
+# Artifact Zero — Deploy to Development
 # ============================================
 # Triggers: push to develop branch (after PR merge from dev/*)
 # Deploys to: dev.artifact0.com
@@ -87,3 +87,48 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+      - name: Verify running image SHA
+        run: |
+          TASK=$(aws ecs list-tasks \
+            --cluster $ECS_CLUSTER \
+            --service-name $ECS_SERVICE \
+            --query "taskArns[0]" --output text)
+          IMAGE=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK \
+            --query "tasks[0].containers[1].image" --output text)
+          echo "Running image: $IMAGE"
+          if [[ "$IMAGE" != *"${{ github.sha }}"* ]]; then
+            echo "ERROR: Running image SHA does not match commit SHA ${{ github.sha }}"
+            exit 1
+          fi
+          echo "Image SHA verified"
+
+      - name: Smoke test health endpoint
+        run: |
+          sleep 5
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://dev.artifact0.com/health)
+          echo "Health check response: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "ERROR: Health check failed with status $RESPONSE"
+            exit 1
+          fi
+          echo "Health check passed"
+
+      - name: Dump startup logs
+        if: always()
+        run: |
+          TASK=$(aws ecs list-tasks \
+            --cluster $ECS_CLUSTER \
+            --service-name $ECS_SERVICE \
+            --query "taskArns[0]" --output text)
+          STREAM_ID=$(echo $TASK | awk -F'/' '{print $NF}')
+          echo "=== Startup logs for task $STREAM_ID ==="
+          aws logs get-log-events \
+            --log-group-name /ecs/artifact-zero \
+            --log-stream-name ecs/artifact-zero/$STREAM_ID \
+            --start-from-head \
+            --limit 100 \
+            --query "events[*].message" \
+            --output text
