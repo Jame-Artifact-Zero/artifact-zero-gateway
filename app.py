@@ -159,7 +159,7 @@ except ImportError:
     print("[app] operator_room not found, skipping", flush=True)
 
 try:
-    from routes.rh_toolkit import bp as rh_toolkit_bp
+    from rh_toolkit import bp as rh_toolkit_bp
     app.register_blueprint(rh_toolkit_bp)
     print("[app] rh_toolkit loaded", flush=True)
 except ImportError:
