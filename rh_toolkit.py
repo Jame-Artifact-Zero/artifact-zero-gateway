@@ -29,7 +29,7 @@ from flask import Blueprint, request, jsonify
 
 import db as database
 import nti_log
-from auth import require_api_key
+from api_auth import require_api_key
 
 from az_rh_toolkit.api import CertificateAPI
 
