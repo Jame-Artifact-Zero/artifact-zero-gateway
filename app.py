@@ -165,6 +165,13 @@ try:
 except Exception as e:
     print(f"[app] rh_toolkit failed: {e}", flush=True)
 
+try:
+    from dicom_blueprint import dicom_bp
+    app.register_blueprint(dicom_bp, url_prefix='/dicom')
+    print("[app] dicom pipeline loaded", flush=True)
+except ImportError:
+    print("[app] dicom_blueprint not found, skipping", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
