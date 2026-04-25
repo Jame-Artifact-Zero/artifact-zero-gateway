@@ -368,7 +368,6 @@ if __name__ == "__main__":
     cert = api.certify(type="ecc", curve="P-256")
     valid = cert.verify_signature()
     print(f"  Signature valid: {valid}")
-    # Tamper test
     cert.parameters["curve"] = "TAMPERED"
     valid_after_tamper = cert.verify_signature()
     print(f"  Signature valid after tamper: {valid_after_tamper}")
@@ -384,12 +383,11 @@ if __name__ == "__main__":
     print("\n▶ THEOREM STATUS")
     for t in api.theorems()[:3]:
         print(f"\n  [{t['name']}]")
-        print(f"    Prior:   {t['prior_status']}")
-        print(f"    Now:     {t['current_status'][:60]}...")
+        print(f"    Established: {t['established'][:60]}...")
+        print(f"    Relevance:   {t['crypto_relevance'][:60]}...")
 
     # Zeros
     print("\n▶ ZETA ZEROS (first 5)")
     for z in api.zeros(5):
         line = "✓" if z["on_critical_line"] else "✗"
         print(f"  #{z['index']:2d}: Im={z['imaginary_part']:.8f}  Re={z['real_part']:.6f}  {line}")
-        print(f"       Status: {z['proof_status']}")
