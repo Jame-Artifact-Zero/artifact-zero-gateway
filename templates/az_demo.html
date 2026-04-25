@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artifact Zero — Signal Analysis Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg:        #080a0c;
+    --surface:   #0d1014;
+    --border:    #1a2028;
+    --border-hi: #2a3540;
+    --text:      #c8d4dc;
+    --text-dim:  #5a6a78;
+    --text-faint:#2a3540;
+    --accent:    #00e5ff;
+    --critical:  #ff3b3b;
+    --moderate:  #ff8c00;
+    --finding:   #00bfff;
+    --normal:    #00c896;
+    --mono:      'DM Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .logo span { color: var(--accent); }
+
+  .header-tag {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border: 1px solid var(--border-hi);
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+  /* ── LAYOUT ─────────────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 260px 1fr 320px;
+    grid-template-rows: 1fr;
+    height: calc(100vh - 57px);
+  }
+
+  /* ── LEFT PANEL — sequence list ──────────────────────────── */
+  .panel-left {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 16px 20px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .seq-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .seq-list::-webkit-scrollbar { width: 3px; }
+  .seq-list::-webkit-scrollbar-track { background: transparent; }
+  .seq-list::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+  .seq-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .seq-item:hover { background: rgba(255,255,255,0.03); }
+  .seq-item.active {
+    border-left-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+  }
+  .seq-name {
+    font-size: 11px;
+    color: var(--text);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .seq-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .seq-badge {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 1px 5px;
+    border-radius: 2px;
+    margin-top: 4px;
+  }
+  .badge-critical { background: rgba(255,59,59,0.15); color: var(--critical); border: 1px solid rgba(255,59,59,0.3); }
+  .badge-moderate { background: rgba(255,140,0,0.15); color: var(--moderate); border: 1px solid rgba(255,140,0,0.3); }
+  .badge-finding  { background: rgba(0,191,255,0.12); color: var(--finding);  border: 1px solid rgba(0,191,255,0.25); }
+  .badge-normal   { background: rgba(0,200,150,0.12); color: var(--normal);   border: 1px solid rgba(0,200,150,0.25); }
+  .badge-type     { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border); }
+
+  /* Upload zone in left panel */
+  .upload-zone {
+    margin: 12px;
+    border: 1px dashed var(--border-hi);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+  }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 20px; margin-bottom: 6px; opacity: 0.4; }
+  .upload-text { font-size: 10px; color: var(--text-dim); line-height: 1.5; }
+  .upload-text strong { color: var(--accent); font-weight: 400; }
+
+  .demo-btn {
+    margin: 0 12px 12px;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: calc(100% - 24px);
+    transition: all 0.2s;
+  }
+  .demo-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── CENTER — viewer ────────────────────────────────────── */
+  .panel-center {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #050709;
+  }
+
+  .viewer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .viewer-info {
+    flex: 1;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .viewer-info strong { color: var(--text); }
+
+  .toolbar-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .ctrl-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+  .ctrl-btn:hover { border-color: var(--border-hi); color: var(--text); }
+  .ctrl-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  .viewer-main {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  canvas#mri-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .viewer-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    opacity: 0.25;
+  }
+  .viewer-empty-glyph {
+    font-size: 64px;
+    line-height: 1;
+    font-family: var(--sans);
+    font-weight: 800;
+    color: var(--border-hi);
+    letter-spacing: -4px;
+  }
+  .viewer-empty-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Slice scrubber */
+  .slice-bar {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+  }
+  .slice-label { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+  .slice-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border-hi);
+    outline: none;
+    cursor: pointer;
+  }
+  .slice-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Gap profile overlay */
+  .profile-overlay {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 160px;
+    height: 80px;
+    background: rgba(8,10,12,0.85);
+    border: 1px solid var(--border-hi);
+    padding: 8px;
+    display: none;
+  }
+  .profile-overlay.show { display: block; }
+  .profile-title {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  canvas#profile-canvas { width: 100%; height: 48px; display: block; }
+
+  /* Current slice indicator */
+  .slice-indicator {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .slice-indicator.show { opacity: 1; }
+
+  /* ── RIGHT PANEL — measurements + impression ─────────────── */
+  .panel-right {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-tab {
+    flex: 1;
+    padding: 12px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    cursor: pointer;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .panel-tab:hover { color: var(--text); }
+  .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .panel-content::-webkit-scrollbar { width: 3px; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+  /* Impression status */
+  .impression-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid;
+    border-radius: 3px;
+    margin-bottom: 16px;
+  }
+  .impression-status.critical { border-color: rgba(255,59,59,0.4); background: rgba(255,59,59,0.06); }
+  .impression-status.moderate { border-color: rgba(255,140,0,0.4); background: rgba(255,140,0,0.06); }
+  .impression-status.finding  { border-color: rgba(0,191,255,0.3); background: rgba(0,191,255,0.05); }
+  .impression-status.normal   { border-color: rgba(0,200,150,0.3); background: rgba(0,200,150,0.05); }
+  .impression-status.pending  { border-color: var(--border); background: transparent; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .critical .status-dot { background: var(--critical); box-shadow: 0 0 8px var(--critical); }
+  .moderate .status-dot { background: var(--moderate); box-shadow: 0 0 8px var(--moderate); }
+  .finding  .status-dot { background: var(--finding);  box-shadow: 0 0 8px var(--finding); }
+  .normal   .status-dot { background: var(--normal);   box-shadow: 0 0 6px var(--normal); }
+  .pending  .status-dot { background: var(--text-dim); }
+
+  .status-label {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .critical .status-label { color: var(--critical); }
+  .moderate .status-label { color: var(--moderate); }
+  .finding  .status-label { color: var(--finding); }
+  .normal   .status-label { color: var(--normal); }
+  .pending  .status-label { color: var(--text-dim); }
+
+  /* Flag list */
+  .flag-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+  .flag-item {
+    padding: 10px 12px;
+    border-left: 2px solid;
+    background: rgba(255,255,255,0.02);
+  }
+  .flag-item.critical { border-color: var(--critical); }
+  .flag-item.moderate { border-color: var(--moderate); }
+  .flag-item.finding  { border-color: var(--finding); }
+  .flag-item.normal   { border-color: var(--normal); }
+
+  .flag-severity {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .critical .flag-severity { color: var(--critical); }
+  .moderate .flag-severity { color: var(--moderate); }
+  .finding  .flag-severity { color: var(--finding); }
+  .normal   .flag-severity { color: var(--normal); }
+
+  .flag-label { font-size: 11px; color: var(--text); margin-bottom: 2px; }
+  .flag-detail { font-size: 10px; color: var(--text-dim); }
+
+  /* Measurement table */
+  .meas-section { margin-bottom: 16px; }
+  .meas-title {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .meas-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .meas-row:last-child { border-bottom: none; }
+  .meas-key { font-size: 11px; color: var(--text-dim); }
+  .meas-val {
+    font-size: 11px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .meas-val.hi { color: var(--critical); }
+  .meas-val.warn { color: var(--moderate); }
+  .meas-val.good { color: var(--normal); }
+  .meas-val.info { color: var(--finding); }
+
+  /* Comparison panel */
+  .compare-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .compare-study {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .compare-study.active { border-color: var(--accent); }
+  .compare-study-date { font-size: 10px; color: var(--text-dim); }
+  .compare-study-status {
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  .compare-metric {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-metric-name { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; }
+  .compare-bars { display: flex; gap: 6px; align-items: flex-end; height: 32px; }
+  .compare-bar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .compare-bar-fill {
+    width: 100%;
+    border-radius: 1px 1px 0 0;
+    transition: height 0.4s ease;
+    min-height: 2px;
+  }
+  .bar-2024 .compare-bar-fill { background: var(--border-hi); }
+  .bar-2026 .compare-bar-fill { background: var(--critical); }
+  .compare-bar-val { font-size: 9px; color: var(--text-dim); }
+
+  .delta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-top: 4px;
+  }
+  .delta-worse { background: rgba(255,59,59,0.12); color: var(--critical); }
+  .delta-better { background: rgba(0,200,150,0.12); color: var(--normal); }
+
+  /* Disclaimer */
+  .disclaimer {
+    margin-top: auto;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 9px;
+    color: var(--text-faint);
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+  }
+
+  /* Loading state */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5,7,9,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .loading-overlay.show { opacity: 1; pointer-events: all; }
+
+  .loading-ring {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Animate in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .flag-item { animation: fadeUp 0.3s ease both; }
+  .flag-item:nth-child(1) { animation-delay: 0.05s; }
+  .flag-item:nth-child(2) { animation-delay: 0.10s; }
+  .flag-item:nth-child(3) { animation-delay: 0.15s; }
+  .flag-item:nth-child(4) { animation-delay: 0.20s; }
+  .flag-item:nth-child(5) { animation-delay: 0.25s; }
+
+  /* Note banner */
+  .note-banner {
+    margin: 0 12px 12px;
+    padding: 8px 12px;
+    background: rgba(0,229,255,0.04);
+    border: 1px solid rgba(0,229,255,0.15);
+    border-radius: 2px;
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .note-banner strong { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Artifact <span>Zero</span></div>
+  <div class="header-tag">Signal Analysis — Demo</div>
+  <div style="font-size:10px;color:var(--text-faint);letter-spacing:0.1em;">No data stored · No login required</div>
+</header>
+
+<div class="app">
+
+  <!-- LEFT: Sequence list -->
+  <div class="panel-left">
+    <div class="panel-title">Sequences</div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="dicom-input" accept=".dcm,.ima,.dicom,*">
+      <div class="upload-icon">⬆</div>
+      <div class="upload-text">
+        Drop a <strong>DICOM file</strong><br>or click to browse
+      </div>
+    </div>
+
+    <div class="note-banner">
+      <strong>Demo mode</strong> — no file is uploaded to any server. Analysis runs on preloaded data.
+    </div>
+
+    <button class="demo-btn" id="load-demo">Load example — Cervical Spine MRI</button>
+
+    <div class="seq-list" id="seq-list">
+      <div style="padding:20px;text-align:center;color:var(--text-faint);font-size:10px;letter-spacing:0.1em;">
+        No study loaded
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: MRI viewer -->
+  <div class="panel-center">
+    <div class="viewer-toolbar">
+      <div class="viewer-info" id="viewer-info">
+        <strong>—</strong>
+      </div>
+      <div class="toolbar-controls">
+        <button class="ctrl-btn active" id="btn-view-image" onclick="setView('image')">Image</button>
+        <button class="ctrl-btn" id="btn-view-gap" onclick="setView('gap')">Gap Map</button>
+        <button class="ctrl-btn" id="btn-view-asym" onclick="setView('asym')">Asymmetry</button>
+      </div>
+    </div>
+
+    <div class="viewer-main" id="viewer-main">
+      <div class="viewer-empty" id="viewer-empty">
+        <div class="viewer-empty-glyph">AZ</div>
+        <div class="viewer-empty-text">Load a study to begin</div>
+      </div>
+      <canvas id="mri-canvas" style="display:none;"></canvas>
+      <div class="profile-overlay" id="profile-overlay">
+        <div class="profile-title">Gap Profile</div>
+        <canvas id="profile-canvas"></canvas>
+      </div>
+      <div class="slice-indicator" id="slice-indicator"></div>
+      <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-ring"></div>
+        <div class="loading-text">Analyzing signal</div>
+      </div>
+    </div>
+
+    <div class="slice-bar" id="slice-bar" style="display:none;">
+      <div class="slice-label" id="slice-label">Slice 1 / 47</div>
+      <input type="range" class="slice-slider" id="slice-slider" min="0" max="46" value="0">
+      <div class="slice-label" id="gap-readout" style="color:var(--accent);">gap —</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Measurements + Impression -->
+  <div class="panel-right">
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="switchTab('impression')">Impression</div>
+      <div class="panel-tab" onclick="switchTab('measurements')">Measurements</div>
+      <div class="panel-tab" onclick="switchTab('compare')">Compare</div>
+    </div>
+
+    <div class="panel-content" id="tab-impression">
+      <div style="padding:40px 0;text-align:center;color:var(--text-faint);font-size:10px;letter-spacing:0.1em;">
+        Select a sequence
+      </div>
+    </div>
+
+    <div class="panel-content" id="tab-measurements" style="display:none;">
+      <div style="padding:40px 0;text-align:center;color:var(--text-faint);font-size:10px;letter-spacing:0.1em;">
+        Select a sequence
+      </div>
+    </div>
+
+    <div class="panel-content" id="tab-compare" style="display:none;">
+      <div style="padding:40px 0;text-align:center;color:var(--text-faint);font-size:10px;letter-spacing:0.1em;">
+        Select a sequence
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      Quantitative signal measurements only.<br>
+      Not a diagnostic tool. Radiologist review required<br>
+      for clinical interpretation.
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DEMO DATA — Jame Houghton cervical spine 2024 + 2026
+// Real algebraic measurements from the C7 session.
+// Images are synthetically rendered from the gap profiles.
+// ═══════════════════════════════════════════════════════════════
+
+const DEMO_STUDY = {
+  subject: 'Demo Subject',
+  body_part: 'CSPINE',
+  study_date: '2026-01-26',
+  institution: 'Artifact Zero Demo',
+  sequences: [
+    {
+      id: 's1',
+      name: '2D T2 MERGE',
+      type: 'T2S',
+      orientation: 'AX',
+      n_slices: 47,
+      echo_time_ms: 17.3,
+      repetition_time_ms: 620,
+      // Per-slice gap data (real profile from C7 session)
+      gap_profile: generateProfile(47, 277, 31, 15, 12),
+      asym_profile: generateAsymProfile(47, -0.229, 26, 'left'),
+      mean_gap: 277,
+      min_gap: 31.2,
+      min_gap_slice: 15,
+      min_gap_frac: 0.45,
+      max_gap: 468,
+      compression_pct: 58,
+      peak_left_asym: -0.229,
+      pct_left_dominant: 52,
+      peak_disagree: 0.323,
+      mean_fraction: 0.789,
+      flags: [
+        { severity: 'critical', label: 'T2* gap critically compressed', detail: 'Min gap = 31.2  (<50 threshold) at 45% from inferior' },
+      ]
+    },
+    {
+      id: 's2',
+      name: 'Ax T2 FSE',
+      type: 'T2',
+      orientation: 'AX',
+      n_slices: 47,
+      echo_time_ms: 102,
+      repetition_time_ms: 4200,
+      gap_profile: generateProfile(47, 320, 194, 21, 10),
+      asym_profile: generateAsymProfile(47, -0.162, 28, 'left'),
+      mean_gap: 320,
+      min_gap: 193.8,
+      min_gap_slice: 21,
+      min_gap_frac: 0.49,
+      max_gap: 510,
+      compression_pct: 49,
+      peak_left_asym: -0.162,
+      pct_left_dominant: 41,
+      peak_disagree: 0.323,
+      mean_fraction: 0.804,
+      flags: [
+        { severity: 'moderate', label: 'T2 gap compressed', detail: 'Min gap = 193.8  (<200 threshold)' },
+        { severity: 'moderate', label: 'T2 within-volume compression', detail: 'Compression = 49.2%  (>40% threshold)' },
+      ]
+    },
+    {
+      id: 's3',
+      name: 'Sag T2 FSE STIR',
+      type: 'STIR',
+      orientation: 'SAG',
+      n_slices: 19,
+      echo_time_ms: 66,
+      repetition_time_ms: 3800,
+      gap_profile: generateProfile(19, 148, 75, 11, 5),
+      asym_profile: generateAsymProfile(19, -0.911, 13, 'left'),
+      mean_gap: 148,
+      min_gap: 75,
+      min_gap_slice: 11,
+      min_gap_frac: 0.42,
+      max_gap: 280,
+      compression_pct: 53,
+      peak_left_asym: -0.911,
+      pct_left_dominant: 68.4,
+      peak_disagree: null,
+      mean_fraction: 0.812,
+      flags: [
+        { severity: 'critical', label: 'STIR severe left asymmetry', detail: 'Peak asymmetry = -0.911  (>0.5 threshold)' },
+        { severity: 'finding',  label: 'STIR left-dominant asymmetry', detail: '68.4% of slices left-compressed' },
+      ]
+    },
+    {
+      id: 's4',
+      name: 'Sag T1 FSE',
+      type: 'T1',
+      orientation: 'SAG',
+      n_slices: 19,
+      echo_time_ms: 9.2,
+      repetition_time_ms: 650,
+      gap_profile: generateProfile(19, 200, 124, 10, 5),
+      asym_profile: generateAsymProfile(19, -0.187, 12, 'slight-left'),
+      mean_gap: 200,
+      min_gap: 123.6,
+      min_gap_slice: 10,
+      min_gap_frac: 0.40,
+      max_gap: 312,
+      compression_pct: 35,
+      peak_left_asym: -0.187,
+      pct_left_dominant: 38,
+      peak_disagree: null,
+      mean_fraction: 0.226,
+      flags: [
+        { severity: 'moderate', label: 'T1 gap compressed', detail: 'Min gap = 123.6  (<150 threshold)' },
+      ]
+    },
+    {
+      id: 's5',
+      name: 'Cross-Sequence Agreement',
+      type: 'AGREE',
+      orientation: 'ALL',
+      n_slices: 19,
+      echo_time_ms: null,
+      repetition_time_ms: null,
+      gap_profile: generateDisagreeProfile(19, 0.323, 11),
+      asym_profile: null,
+      mean_gap: null,
+      min_gap: null,
+      min_gap_slice: 11,
+      min_gap_frac: 0.42,
+      max_gap: null,
+      compression_pct: null,
+      peak_left_asym: null,
+      pct_left_dominant: null,
+      peak_disagree: 0.323,
+      mean_fraction: null,
+      flags: [
+        { severity: 'finding', label: 'Cross-sequence disagreement elevated', detail: 'Score = 0.323  (>0.25 threshold) — tissue physics anomalous' },
+      ]
+    },
+  ]
+};
+
+// Prior study (2024) data for comparison
+const PRIOR_STUDY = {
+  study_date: '2024-05-14',
+  sequences: {
+    'T2S':  { mean_gap: 468, min_gap: null, peak_left_asym: 0.05,  pct_left_dominant: 18, peak_disagree: null },
+    'T2':   { mean_gap: 510, min_gap: 353,  peak_left_asym: -0.244, pct_left_dominant: 32, peak_disagree: null },
+    'STIR': { mean_gap: 220, min_gap: 151,  peak_left_asym: 0.45,  pct_left_dominant: 0,  peak_disagree: null },
+    'T1':   { mean_gap: 312, min_gap: 153,  peak_left_asym: -0.467, pct_left_dominant: 28, peak_disagree: null },
+    'AGREE':{ peak_disagree: 0.198 },
+  }
+};
+
+// Generate synthetic gap profile
+function generateProfile(n, mean, min_val, min_idx, spread) {
+  const profile = [];
+  for (let i = 0; i < n; i++) {
+    const dist = Math.abs(i - min_idx);
+    const noise = (Math.random() - 0.5) * mean * 0.08;
+    const val = min_val + (mean - min_val) * (1 - Math.exp(-dist / spread)) + noise;
+    profile.push(Math.max(10, Math.round(val)));
+  }
+  return profile;
+}
+
+function generateAsymProfile(n, peak, peak_idx, side) {
+  const profile = [];
+  for (let i = 0; i < n; i++) {
+    const dist = Math.abs(i - peak_idx);
+    const base = peak * Math.exp(-dist / 4);
+    const noise = (Math.random() - 0.5) * 0.05;
+    profile.push(parseFloat((base + noise).toFixed(3)));
+  }
+  return profile;
+}
+
+function generateDisagreeProfile(n, peak, peak_idx) {
+  const profile = [];
+  for (let i = 0; i < n; i++) {
+    const dist = Math.abs(i - peak_idx);
+    const val = peak * Math.exp(-dist / 3) * (0.9 + Math.random() * 0.2);
+    profile.push(parseFloat(val.toFixed(3)));
+  }
+  return profile;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let currentSeq = null;
+let currentSlice = 0;
+let currentView = 'image';
+let studyLoaded = false;
+let activeTab = 'impression';
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('load-demo').addEventListener('click', loadDemo);
+document.getElementById('upload-zone').addEventListener('click', () => {
+  document.getElementById('dicom-input').click();
+});
+document.getElementById('upload-zone').addEventListener('dragover', e => {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.add('drag-over');
+});
+document.getElementById('upload-zone').addEventListener('dragleave', () => {
+  document.getElementById('upload-zone').classList.remove('drag-over');
+});
+document.getElementById('upload-zone').addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  // In demo mode: just load the demo instead
+  showLoading('Reading DICOM headers...', 800, loadDemo);
+});
+document.getElementById('dicom-input').addEventListener('change', () => {
+  showLoading('Reading DICOM headers...', 800, loadDemo);
+});
+document.getElementById('slice-slider').addEventListener('input', e => {
+  currentSlice = parseInt(e.target.value);
+  updateSliceView();
+});
+
+function loadDemo() {
+  showLoading('Analyzing signal...', 1200, () => {
+    studyLoaded = true;
+    renderSequenceList();
+    selectSequence(DEMO_STUDY.sequences[0]);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEQUENCE LIST
+// ═══════════════════════════════════════════════════════════════
+function renderSequenceList() {
+  const list = document.getElementById('seq-list');
+  list.innerHTML = '';
+
+  DEMO_STUDY.sequences.forEach(seq => {
+    const maxSev = getMaxSeverity(seq.flags);
+    const item = document.createElement('div');
+    item.className = 'seq-item';
+    item.dataset.id = seq.id;
+    item.onclick = () => selectSequence(seq);
+    item.innerHTML = `
+      <div class="seq-name">${seq.name}</div>
+      <div class="seq-meta">${seq.orientation} · ${seq.n_slices} slices</div>
+      <span class="seq-badge badge-type">${seq.type}</span>
+      ${maxSev ? `<span class="seq-badge badge-${maxSev}">${maxSev.toUpperCase()}</span>` : ''}
+    `;
+    list.appendChild(item);
+  });
+}
+
+function getMaxSeverity(flags) {
+  if (!flags || !flags.length) return null;
+  if (flags.some(f => f.severity === 'critical')) return 'critical';
+  if (flags.some(f => f.severity === 'moderate')) return 'moderate';
+  if (flags.some(f => f.severity === 'finding'))  return 'finding';
+  return 'normal';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SELECT SEQUENCE
+// ═══════════════════════════════════════════════════════════════
+function selectSequence(seq) {
+  currentSeq = seq;
+  currentSlice = 0;
+
+  // Update active state
+  document.querySelectorAll('.seq-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === seq.id);
+  });
+
+  // Update viewer info
+  const te = seq.echo_time_ms ? `TE ${seq.echo_time_ms}ms` : '';
+  const tr = seq.repetition_time_ms ? `TR ${seq.repetition_time_ms}ms` : '';
+  document.getElementById('viewer-info').innerHTML =
+    `<strong>${seq.name}</strong>&nbsp;&nbsp;
+     <span style="color:var(--text-dim)">${seq.type} · ${seq.orientation} · ${seq.n_slices} slices
+     ${te ? '· ' + te : ''} ${tr ? '· ' + tr : ''}</span>`;
+
+  // Slider
+  const bar = document.getElementById('slice-bar');
+  bar.style.display = 'flex';
+  const slider = document.getElementById('slice-slider');
+  slider.max = seq.n_slices - 1;
+  slider.value = 0;
+
+  // Show canvas
+  document.getElementById('viewer-empty').style.display = 'none';
+  document.getElementById('mri-canvas').style.display = 'block';
+
+  // Draw
+  updateSliceView();
+  drawProfileOverlay();
+  renderImpression(seq);
+  renderMeasurements(seq);
+  renderCompare(seq);
+
+  // Show profile if gap data
+  document.getElementById('profile-overlay').classList.toggle('show', !!seq.gap_profile);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEWER RENDERING
+// ═══════════════════════════════════════════════════════════════
+function updateSliceView() {
+  if (!currentSeq) return;
+  const n = currentSeq.n_slices;
+  const z = currentSlice;
+
+  document.getElementById('slice-label').textContent = `Slice ${z + 1} / ${n}`;
+
+  const gap = currentSeq.gap_profile ? currentSeq.gap_profile[z] : null;
+  const asym = currentSeq.asym_profile ? currentSeq.asym_profile[z] : null;
+  document.getElementById('gap-readout').textContent = gap ? `gap ${gap}` : '—';
+
+  const ind = document.getElementById('slice-indicator');
+  ind.textContent = `z=${z}  frac=${(z/n).toFixed(2)}`;
+  ind.classList.add('show');
+
+  // Draw synthetic MRI slice
+  drawSyntheticSlice(z, currentSeq, currentView);
+}
+
+function drawSyntheticSlice(z, seq, view) {
+  const canvas = document.getElementById('mri-canvas');
+  const container = document.getElementById('viewer-main');
+  const W = container.clientWidth;
+  const H = container.clientHeight - 20;
+  const size = Math.min(W, H) * 0.85;
+
+  canvas.width  = Math.round(size);
+  canvas.height = Math.round(size * (seq.orientation === 'SAG' ? 1.3 : 0.9));
+  const ctx = canvas.getContext('2d');
+  const cw = canvas.width, ch = canvas.height;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, cw, ch);
+
+  const n    = seq.n_slices;
+  const frac = z / (n - 1);
+  const gap  = seq.gap_profile ? seq.gap_profile[z] : 300;
+  const asym = seq.asym_profile ? seq.asym_profile[z] : 0;
+
+  if (view === 'image') {
+    // Synthetic anatomical render
+    drawAnatomicalSlice(ctx, cw, ch, seq, frac, gap, asym);
+  } else if (view === 'gap') {
+    // Gap map visualization
+    drawGapMap(ctx, cw, ch, seq, z);
+  } else if (view === 'asym') {
+    // Asymmetry map
+    drawAsymMap(ctx, cw, ch, seq, z);
+  }
+
+  // Overlay: slice position indicator line on right edge
+  ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+  ctx.lineWidth = 1;
+  const lineY = ch * frac;
+  ctx.beginPath();
+  ctx.moveTo(cw - 20, lineY);
+  ctx.lineTo(cw - 4, lineY);
+  ctx.stroke();
+
+  // Overlay: min gap marker
+  if (seq.min_gap_slice !== null && z === seq.min_gap_slice) {
+    ctx.strokeStyle = 'rgba(255,59,59,0.8)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(cw * 0.1, ch * 0.15, cw * 0.8, ch * 0.7);
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,59,59,0.9)';
+    ctx.font = '10px DM Mono, monospace';
+    ctx.fillText(`MIN GAP = ${seq.min_gap}`, 10, 16);
+  }
+}
+
+function drawAnatomicalSlice(ctx, w, h, seq, frac, gap, asym) {
+  const cx = w / 2, cy = h / 2;
+  const R  = Math.min(w, h) * 0.38;
+
+  // Background gradient — soft tissue
+  const grd = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R);
+  grd.addColorStop(0, '#1a1a1a');
+  grd.addColorStop(1, '#050505');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, R, R * 1.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vertebra body (bright on T2, dim on T1)
+  const bodyBright = seq.type === 'T2S' ? 0.7 :
+                     seq.type === 'T2'  ? 0.65 :
+                     seq.type === 'STIR'? 0.6 : 0.35;
+
+  const normGap = Math.min(1, gap / 400);
+  const diskH = R * 0.18 * normGap;
+
+  // Vertebral body
+  const bodyGrd = ctx.createLinearGradient(cx - R*0.4, cy - R*0.25, cx + R*0.4, cy + R*0.25);
+  bodyGrd.addColorStop(0, `rgba(255,255,255,${bodyBright})`);
+  bodyGrd.addColorStop(1, `rgba(200,200,200,${bodyBright * 0.7})`);
+  ctx.fillStyle = bodyGrd;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, R * 0.42, R * 0.22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Intervertebral disk (darker, height = gap)
+  const diskGrd = ctx.createLinearGradient(cx, cy + R*0.22, cx, cy + R*0.22 + diskH * 2);
+  diskGrd.addColorStop(0, seq.type === 'STIR' ? 'rgba(120,180,220,0.6)' : 'rgba(60,80,100,0.8)');
+  diskGrd.addColorStop(1, 'rgba(20,30,40,0.6)');
+  ctx.fillStyle = diskGrd;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + R*0.22 + diskH, R * 0.38, diskH + 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cord (bright on T2)
+  const cordBright = seq.type === 'T2S' ? 0.9 :
+                     seq.type === 'STIR'? 0.85 : 0.5;
+  ctx.fillStyle = `rgba(220,235,245,${cordBright})`;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - R*0.38, R*0.06, R*0.22, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Foramina — show asymmetry
+  const leftFill = asym < -0.3 ? 'rgba(255,100,100,0.5)' : 'rgba(80,120,160,0.4)';
+  const rightFill = 'rgba(80,120,160,0.4)';
+  ctx.fillStyle = leftFill;
+  ctx.beginPath();
+  ctx.ellipse(cx - R*0.55, cy, R*0.1, R*0.14, -0.3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = rightFill;
+  ctx.beginPath();
+  ctx.ellipse(cx + R*0.55 + asym*R*0.2, cy, R*0.1, R*0.14, 0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Labels
+  ctx.fillStyle = 'rgba(90,106,120,0.7)';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('L', cx - R*0.55 - 6, cy + 3);
+  ctx.fillText('R', cx + R*0.6, cy + 3);
+}
+
+function drawGapMap(ctx, w, h, seq, currentZ) {
+  if (!seq.gap_profile) return;
+  const n = seq.gap_profile.length;
+  const maxGap = Math.max(...seq.gap_profile);
+  const barW = w / n;
+
+  seq.gap_profile.forEach((g, i) => {
+    const norm = g / maxGap;
+    // Color: high gap = dim blue, low gap = bright red
+    const r = Math.round((1 - norm) * 220);
+    const b = Math.round(norm * 180);
+    ctx.fillStyle = i === currentZ
+      ? `rgba(0,229,255,0.9)`
+      : `rgba(${r}, 40, ${b}, 0.85)`;
+    const barH = h * norm;
+    ctx.fillRect(i * barW, h - barH, barW - 1, barH);
+  });
+
+  // Min gap line
+  if (seq.min_gap_slice !== null) {
+    ctx.strokeStyle = 'rgba(255,59,59,0.8)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(seq.min_gap_slice * barW, 0);
+    ctx.lineTo(seq.min_gap_slice * barW, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.fillStyle = 'rgba(90,106,120,0.8)';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('GAP MAP — red = compressed', 8, 14);
+  ctx.fillText(`min gap = ${seq.min_gap} at slice ${seq.min_gap_slice}`, 8, 26);
+}
+
+function drawAsymMap(ctx, w, h, seq, currentZ) {
+  if (!seq.asym_profile) {
+    ctx.fillStyle = 'rgba(90,106,120,0.5)';
+    ctx.font = '11px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No asymmetry data for this sequence', w/2, h/2);
+    ctx.textAlign = 'left';
+    return;
+  }
+  const n = seq.asym_profile.length;
+  const barW = w / n;
+  const midY = h / 2;
+
+  ctx.fillStyle = 'rgba(42,53,64,0.5)';
+  ctx.fillRect(0, midY - 0.5, w, 1);
+
+  seq.asym_profile.forEach((a, i) => {
+    const height = Math.abs(a) * h * 0.4;
+    const isLeft = a < 0;
+    ctx.fillStyle = i === currentZ
+      ? 'rgba(0,229,255,0.9)'
+      : isLeft
+        ? `rgba(255,59,59,${0.4 + Math.abs(a) * 0.5})`
+        : `rgba(0,191,255,${0.3 + a * 0.5})`;
+    if (isLeft) {
+      ctx.fillRect(i * barW, midY, barW - 1, height);
+    } else {
+      ctx.fillRect(i * barW, midY - height, barW - 1, height);
+    }
+  });
+
+  ctx.fillStyle = 'rgba(90,106,120,0.8)';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('ASYMMETRY — red = left-compressed', 8, 14);
+  ctx.fillText(`peak = ${seq.peak_left_asym}`, 8, 26);
+  ctx.fillText('above line = right · below = left', 8, h - 8);
+}
+
+function drawProfileOverlay() {
+  if (!currentSeq || !currentSeq.gap_profile) return;
+  const canvas = document.getElementById('profile-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.offsetWidth || 144;
+  const h = 48;
+  canvas.width = w * window.devicePixelRatio;
+  canvas.height = h * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const profile = currentSeq.type === 'AGREE'
+    ? currentSeq.gap_profile
+    : currentSeq.gap_profile;
+  const n = profile.length;
+  const maxV = Math.max(...profile);
+  const minV = Math.min(...profile);
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw line
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(0,229,255,0.7)';
+  ctx.lineWidth = 1.5;
+  profile.forEach((v, i) => {
+    const x = (i / (n-1)) * w;
+    const y = h - ((v - minV) / (maxV - minV + 1)) * (h - 4) - 2;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Current slice marker
+  if (currentSlice < n) {
+    const x = (currentSlice / (n-1)) * w;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2,2]);
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Min gap marker
+  if (currentSeq.min_gap_slice !== null && currentSeq.min_gap_slice < n) {
+    const x = (currentSeq.min_gap_slice / (n-1)) * w;
+    ctx.strokeStyle = 'rgba(255,59,59,0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEW TOGGLE
+// ═══════════════════════════════════════════════════════════════
+function setView(v) {
+  currentView = v;
+  ['image','gap','asym'].forEach(name => {
+    document.getElementById(`btn-view-${name}`).classList.toggle('active', name === v);
+  });
+  updateSliceView();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IMPRESSION PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderImpression(seq) {
+  const maxSev = getMaxSeverity(seq.flags);
+  const statusClass = maxSev || 'pending';
+  const statusLabel = maxSev ? maxSev.toUpperCase() : 'CLEAN';
+
+  let html = `
+    <div class="impression-status ${statusClass}">
+      <div class="status-dot"></div>
+      <div>
+        <div class="status-label">${statusLabel}</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${seq.name}</div>
+      </div>
+    </div>
+    <div class="flag-list">
+  `;
+
+  if (seq.flags && seq.flags.length) {
+    seq.flags.forEach(f => {
+      html += `
+        <div class="flag-item ${f.severity}">
+          <div class="flag-severity">${f.severity}</div>
+          <div class="flag-label">${f.label}</div>
+          <div class="flag-detail">${f.detail}</div>
+        </div>
+      `;
+    });
+  } else {
+    html += `<div class="flag-item normal"><div class="flag-severity">normal</div><div class="flag-label">No flags for this sequence</div></div>`;
+  }
+
+  html += `</div>
+    <div class="meas-section">
+      <div class="meas-title">Signal Summary</div>
+      <div class="meas-row">
+        <span class="meas-key">Mean fraction</span>
+        <span class="meas-val">${seq.mean_fraction !== null ? seq.mean_fraction.toFixed(4) : '—'}</span>
+      </div>
+      <div class="meas-row">
+        <span class="meas-key">Disagree score</span>
+        <span class="meas-val ${seq.peak_disagree > 0.25 ? 'warn' : ''}">${seq.peak_disagree !== null ? seq.peak_disagree.toFixed(3) : '—'}</span>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('tab-impression').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MEASUREMENTS PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderMeasurements(seq) {
+  let html = `
+    <div class="meas-section">
+      <div class="meas-title">Gap Measurements</div>
+      ${mrow('Min gap', seq.min_gap !== null ? seq.min_gap.toFixed(1) : '—', seq.min_gap && seq.min_gap < 50 ? 'hi' : seq.min_gap && seq.min_gap < 150 ? 'warn' : '')}
+      ${mrow('Max gap', seq.max_gap !== null ? seq.max_gap.toFixed(0) : '—', '')}
+      ${mrow('Mean gap', seq.mean_gap !== null ? seq.mean_gap.toFixed(0) : '—', '')}
+      ${mrow('Compression', seq.compression_pct !== null ? seq.compression_pct.toFixed(0) + '%' : '—', seq.compression_pct > 50 ? 'hi' : seq.compression_pct > 40 ? 'warn' : '')}
+      ${mrow('Min gap location', seq.min_gap_frac !== null ? (seq.min_gap_frac * 100).toFixed(0) + '% from inferior' : '—', 'info')}
+    </div>
+
+    <div class="meas-section">
+      <div class="meas-title">Asymmetry</div>
+      ${mrow('Peak left asym', seq.peak_left_asym !== null ? seq.peak_left_asym.toFixed(3) : '—', seq.peak_left_asym && Math.abs(seq.peak_left_asym) > 0.5 ? 'hi' : '')}
+      ${mrow('% Left dominant', seq.pct_left_dominant !== null ? seq.pct_left_dominant.toFixed(1) + '%' : '—', seq.pct_left_dominant > 50 ? 'warn' : '')}
+    </div>
+
+    <div class="meas-section">
+      <div class="meas-title">Acquisition</div>
+      ${mrow('Sequence type', seq.type, '')}
+      ${mrow('Orientation', seq.orientation, '')}
+      ${mrow('Slices', seq.n_slices, '')}
+      ${mrow('Echo time', seq.echo_time_ms !== null ? seq.echo_time_ms + ' ms' : '—', '')}
+      ${mrow('Rep time', seq.repetition_time_ms !== null ? seq.repetition_time_ms + ' ms' : '—', '')}
+    </div>
+  `;
+  document.getElementById('tab-measurements').innerHTML = html;
+}
+
+function mrow(key, val, cls) {
+  return `<div class="meas-row">
+    <span class="meas-key">${key}</span>
+    <span class="meas-val ${cls}">${val}</span>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPARE PANEL — S₀ longitudinal comparison
+// ═══════════════════════════════════════════════════════════════
+function renderCompare(seq) {
+  const prior = PRIOR_STUDY.sequences[seq.type];
+
+  if (!prior) {
+    document.getElementById('tab-compare').innerHTML = `
+      <div style="padding:40px 0;text-align:center;color:var(--text-faint);font-size:10px;letter-spacing:0.1em;">
+        No prior study data for this sequence type
+      </div>`;
+    return;
+  }
+
+  const priorDate = PRIOR_STUDY.study_date;
+  const currDate  = DEMO_STUDY.study_date;
+
+  // Gap change
+  const gapChange = prior.min_gap && seq.min_gap
+    ? ((seq.min_gap - prior.min_gap) / prior.min_gap * 100).toFixed(1)
+    : null;
+
+  // Asymmetry direction reversal
+  const priorLeftDom = prior.pct_left_dominant > 50;
+  const currLeftDom  = seq.pct_left_dominant > 50;
+  const reversalDetected = !priorLeftDom && currLeftDom;
+
+  // Disagree change
+  const disChange = prior.peak_disagree && seq.peak_disagree
+    ? ((seq.peak_disagree - prior.peak_disagree) / prior.peak_disagree * 100).toFixed(1)
+    : null;
+
+  let html = `
+    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;">
+      S₀ — Prior State Comparison
+    </div>
+
+    <div class="compare-bar">
+      <div class="compare-study active">
+        <div class="compare-study-date">${priorDate}</div>
+        <div class="compare-study-status" style="color:var(--text-dim)">Baseline</div>
+      </div>
+      <div class="compare-study active">
+        <div class="compare-study-date">${currDate}</div>
+        <div class="compare-study-status" style="color:var(--critical)">Current</div>
+      </div>
+    </div>
+  `;
+
+  // Gap comparison bar chart
+  if (prior.min_gap && seq.min_gap) {
+    const maxVal = Math.max(prior.min_gap, seq.min_gap, 1);
+    const h1 = (prior.min_gap / maxVal * 28).toFixed(0);
+    const h2 = (seq.min_gap / maxVal * 28).toFixed(0);
+    html += `
+      <div class="compare-metric">
+        <div class="compare-metric-name">Min Gap</div>
+        <div class="compare-bars">
+          <div class="compare-bar-item bar-2024">
+            <div class="compare-bar-fill" style="height:${h1}px;"></div>
+            <div class="compare-bar-val">${prior.min_gap}</div>
+          </div>
+          <div class="compare-bar-item bar-2026">
+            <div class="compare-bar-fill" style="height:${h2}px;"></div>
+            <div class="compare-bar-val">${seq.min_gap}</div>
+          </div>
+        </div>
+        ${gapChange ? `<span class="delta-badge ${parseFloat(gapChange) < 0 ? 'delta-worse' : 'delta-better'}">${gapChange}% since ${priorDate}</span>` : ''}
+      </div>
+    `;
+  }
+
+  // Asymmetry reversal
+  if (seq.peak_left_asym !== null && prior.peak_left_asym !== null) {
+    html += `
+      <div class="compare-metric">
+        <div class="compare-metric-name">Asymmetry Index</div>
+        <div class="meas-row" style="border:none;padding:4px 0;">
+          <span class="meas-key">${priorDate}</span>
+          <span class="meas-val">${prior.peak_left_asym.toFixed(3)} (${prior.pct_left_dominant}% left)</span>
+        </div>
+        <div class="meas-row" style="border:none;padding:4px 0;">
+          <span class="meas-key">${currDate}</span>
+          <span class="meas-val ${Math.abs(seq.peak_left_asym) > 0.5 ? 'hi' : 'warn'}">${seq.peak_left_asym.toFixed(3)} (${seq.pct_left_dominant}% left)</span>
+        </div>
+        ${reversalDetected ? `
+          <div class="flag-item critical" style="margin-top:8px;">
+            <div class="flag-severity">critical — new finding</div>
+            <div class="flag-label">Asymmetry direction reversed</div>
+            <div class="flag-detail">Right-dominant → Left-dominant since ${priorDate}. Not in prior radiology record.</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Disagreement change
+  if (disChange) {
+    html += `
+      <div class="compare-metric">
+        <div class="compare-metric-name">Cross-Sequence Disagreement</div>
+        <div class="meas-row" style="border:none;padding:4px 0;">
+          <span class="meas-key">${priorDate}</span>
+          <span class="meas-val">${prior.peak_disagree.toFixed(3)}</span>
+        </div>
+        <div class="meas-row" style="border:none;padding:4px 0;">
+          <span class="meas-key">${currDate}</span>
+          <span class="meas-val warn">${seq.peak_disagree.toFixed(3)}</span>
+        </div>
+        <span class="delta-badge delta-worse">+${disChange}% — tissue physics changed</span>
+      </div>
+    `;
+  }
+
+  html += `
+    <div style="margin-top:16px;padding:10px;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);font-size:9px;color:var(--text-dim);line-height:1.6;">
+      The prior study measurements are <strong style="color:var(--accent)">S₀</strong> — the prior state this scan arrives into.
+      Findings not visible in the current scan alone are recoverable from S₀.
+    </div>
+  `;
+
+  document.getElementById('tab-compare').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  ['impression','measurements','compare'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.panel-tab').forEach((el, i) => {
+    el.classList.toggle('active', ['impression','measurements','compare'][i] === tab);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOADING STATE
+// ═══════════════════════════════════════════════════════════════
+function showLoading(msg, ms, callback) {
+  const overlay = document.getElementById('loading-overlay');
+  overlay.querySelector('.loading-text').textContent = msg;
+  overlay.classList.add('show');
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    if (callback) callback();
+  }, ms);
+}
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  if (currentSeq) updateSliceView();
+});
+</script>
+</body>
+</html>
