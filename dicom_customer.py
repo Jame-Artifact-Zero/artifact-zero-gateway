@@ -39,7 +39,11 @@ def load_dicom_customer():
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT * FROM az_customer_profiles WHERE api_key_id = %s",
+            """SELECT id, api_key_id, customer_name, contact_name, contact_email,
+                      storage_default, analysis_default, encrypt_public_key,
+                      webhook_url, webhook_secret, baa_signed, baa_signed_date,
+                      tier, studies_count, last_call_at, active
+               FROM az_customer_profiles WHERE api_key_id = %s""",
             (key_id,)
         )
         row = cur.fetchone()
@@ -54,7 +58,24 @@ def load_dicom_customer():
     if not row:
         return None
 
-    g.customer = dict(row)
+    g.customer = {
+        'id':                 row[0],
+        'api_key_id':         row[1],
+        'customer_name':      row[2],
+        'contact_name':       row[3],
+        'contact_email':      row[4],
+        'storage_default':    row[5],
+        'analysis_default':   row[6],
+        'encrypt_public_key': row[7],
+        'webhook_url':        row[8],
+        'webhook_secret':     row[9],
+        'baa_signed':         row[10],
+        'baa_signed_date':    row[11],
+        'tier':               row[12],
+        'studies_count':      row[13],
+        'last_call_at':       row[14],
+        'active':             row[15],
+    }
     # Expose api_key_id directly for storage operations
     g.customer['api_key_id'] = key_id
     # Expose tier from request if profile doesn't have it
