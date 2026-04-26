@@ -12,12 +12,13 @@ Endpoints:
     GET  /dicom/study/<study_id> — retrieve a stored study result
     GET  /dicom/status           — API health and customer usage stats
     POST /dicom/customer         — create a new customer (admin only)
+    GET  /dicom/demo             — public demo UI (no auth)
 ================================================================================
 """
 
 import time
 import json
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, render_template
 
 from api_auth          import require_api_key
 from dicom_customer    import load_dicom_customer, dicom_profile_required, \
@@ -28,6 +29,17 @@ from dicom_storage     import store_study_record, store_measurements, find_prior
 from dicom_return      import build_response
 
 dicom_bp = Blueprint('dicom', __name__)
+
+# ════════════════════════════════════════════════════════════════════
+# GET /dicom/demo
+# Public demo UI — no auth required
+# ════════════════════════════════════════════════════════════════════
+
+@dicom_bp.route('/demo', methods=['GET'])
+def demo():
+    """Public demo page. No auth. Synthetic data only."""
+    return render_template('az_demo.html')
+
 
 # ════════════════════════════════════════════════════════════════════
 # POST /dicom/analyze
