@@ -172,6 +172,13 @@ try:
 except ImportError:
     print("[app] dicom_blueprint not found, skipping", flush=True)
 
+try:
+    from azl_blueprint import bp as azl_bp
+    app.register_blueprint(azl_bp)
+    print("[app] azl loaded", flush=True)
+except Exception as e:
+    print(f"[app] azl failed: {e}", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
