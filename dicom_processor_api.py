@@ -82,7 +82,114 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
     }
 
     # Write bytes to a temp directory — pipeline scripts need file paths
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    extracted_paths = params.get('_extracted_dcm_paths')
+    tmp_dir_override = params.get('_tmp_dir')
+
+    if extracted_paths:
+        # Zip was already extracted by the blueprint — use those files directly
+        import shutil
+        try:
+            from az_dicom_processor import (
+                group_by_sequence as group_series,
+                load_volume as load_volume_sorted,
+                best_slice,
+                get_tissue_landmarks, method_algebraic, method_iterative,
+                score_sequence as detect_seq_type,
+            )
+
+            def detect_body_part_from_dicom(ds):
+                bp = getattr(ds, 'BodyPartExamined', '') or ''
+                bp = bp.upper().strip()
+                if not bp:
+                    desc = str(getattr(ds, 'StudyDescription', '') or '').upper()
+                    if any(k in desc for k in ['SPINE', 'CERVICAL', 'CSPINE', 'C-SPINE']):
+                        return 'CSPINE'
+                    if any(k in desc for k in ['BRAIN', 'HEAD']):
+                        return 'BRAIN'
+                    if any(k in desc for k in ['LUMBAR', 'LSPINE', 'L-SPINE']):
+                        return 'LSPINE'
+                    if any(k in desc for k in ['THORACIC', 'TSPINE', 'T-SPINE']):
+                        return 'TSPINE'
+                    return 'UNKNOWN'
+                if bp in ('CSPINE', 'CERVICAL'):
+                    return 'CSPINE'
+                return bp
+
+            series_list = group_series(extracted_paths)
+            good = [s for s in series_list if s['score'] > 0]
+
+            if not good:
+                result['error'] = 'No processable sequences found in DICOM'
+                return result
+
+            import pydicom as pd
+            ds = pd.dcmread(str(extracted_paths[0]), stop_before_pixels=True)
+
+            def safe(tag, default=''):
+                v = getattr(ds, tag, None)
+                return str(v).strip() if v else default
+
+            raw_date = safe('StudyDate')
+            if raw_date and len(raw_date) == 8:
+                raw_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
+
+            body_part = detect_body_part_from_dicom(ds)
+            result.update({
+                'study_instance_uid':  safe('StudyInstanceUID'),
+                'study_date':          raw_date,
+                'study_description':   safe('StudyDescription'),
+                'accession_number':    safe('AccessionNumber'),
+                'institution_name':    safe('InstitutionName'),
+                'body_part':           body_part,
+                'modality':            safe('Modality'),
+                'manufacturer':        safe('Manufacturer'),
+                'model_name':          safe('ManufacturerModelName'),
+                'device_serial':       safe('DeviceSerialNumber'),
+                'field_strength':      getattr(ds, 'MagneticFieldStrength', None),
+                'patient_id':          safe('PatientID'),
+                'patient_age':         safe('PatientAge'),
+                'patient_sex':         safe('PatientSex'),
+                'sequences_found':     len(good),
+                'sequences_processed': 0,
+                'sequences':           [],
+            })
+
+            # Continue with remaining steps using a temp path context
+            from pathlib import Path
+            tmp_path = Path(tmp_dir_override) if tmp_dir_override else Path(extracted_paths[0]).parent
+
+            if not result.get('sequences') and good:
+                # Run decomposition inline for extracted files
+                decomp = _run_decomposition_from_series(good, ds, body_part, safe, raw_date)
+                result.update(decomp)
+
+            if result.get('sequences'):
+                if 'profile' in steps:
+                    _run_profile(tmp_path, result)
+                if 'asymmetry' in steps:
+                    _run_asymmetry(tmp_path, result)
+                if 'width' in steps:
+                    _run_width(tmp_path, result)
+                if 'agreement' in steps:
+                    _run_agreement(tmp_path, result)
+                if 'impression' in steps:
+                    if body_part in CSPINE_BODY_PARTS or \
+                       params.get('body_part', 'auto').upper() in CSPINE_BODY_PARTS:
+                        _run_cspine_impression(result)
+                    else:
+                        _run_generic_impression(result)
+                if 'longitudinal' in steps and prior_study:
+                    _run_longitudinal_diff(result, prior_study)
+
+        except Exception as e:
+            result['error'] = str(e)
+            result['status'] = 'ERROR'
+        finally:
+            if tmp_dir_override:
+                shutil.rmtree(tmp_dir_override, ignore_errors=True)
+
+        result['pipeline_ms'] = round((time.perf_counter() - t_start) * 1000, 2)
+        return result
         tmp_path = Path(tmp_dir)
         dcm_path = tmp_path / 'input.dcm'
         dcm_path.write_bytes(raw_bytes)
@@ -131,6 +238,77 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
 
     result['pipeline_ms'] = round((time.perf_counter() - t_start) * 1000, 2)
     return result
+
+
+# ════════════════════════════════════════════════════════════════════
+# STEP 1b: DECOMPOSITION FROM PRE-GROUPED SERIES
+# Used when zip extraction has already grouped files
+# ════════════════════════════════════════════════════════════════════
+
+def _run_decomposition_from_series(good: list, ds, body_part: str, safe, raw_date: str) -> dict:
+    """Run decomposition on pre-grouped series list."""
+    from az_dicom_processor import (
+        load_volume as load_volume_sorted,
+        best_slice, get_tissue_landmarks,
+        method_algebraic, method_iterative, make_brain_mask,
+    )
+    import numpy as np
+
+    base = {
+        'study_instance_uid':  safe('StudyInstanceUID'),
+        'study_date':          raw_date,
+        'study_description':   safe('StudyDescription'),
+        'accession_number':    safe('AccessionNumber'),
+        'institution_name':    safe('InstitutionName'),
+        'body_part':           body_part,
+        'modality':            safe('Modality'),
+        'manufacturer':        safe('Manufacturer'),
+        'model_name':          safe('ManufacturerModelName'),
+        'device_serial':       safe('DeviceSerialNumber'),
+        'field_strength':      getattr(ds, 'MagneticFieldStrength', None),
+        'patient_id':          safe('PatientID'),
+        'patient_age':         safe('PatientAge'),
+        'patient_sex':         safe('PatientSex'),
+        'sequences_found':     len(good),
+        'sequences_processed': 0,
+        'sequences':           [],
+    }
+
+    for s in good[:5]:
+        try:
+            vol, spacing = load_volume_sorted(s)
+            sl           = best_slice(vol)
+            mask         = make_brain_mask(sl)
+            if mask.sum() < 100:
+                continue
+            A, B, _, _ = get_tissue_landmarks(sl, mask, s['type'])
+            w_alg, t_alg = method_algebraic(sl, mask, A, B)
+            w_iter, t_samp, t_extrap = method_iterative(sl, mask, A, B)
+            rms     = float(np.sqrt(np.nanmean((w_alg - w_iter) ** 2)))
+            speedup = t_extrap / t_alg if t_alg > 0 else 0
+
+            seq_result = {
+                'series_description': s['desc'],
+                'seq_type':          s['type'],
+                'n_slices':          s['n'],
+                'orientation':       _detect_orient(s['desc']),
+                'gap':               float(abs(A - B)),
+                'mean_fraction':     float(np.nanmean(w_alg[mask])),
+                'std_fraction':      float(np.nanstd(w_alg[mask])),
+                'profile_run':    False,
+                'asymmetry_run':  False,
+                'width_run':      False,
+                'agreement_run':  False,
+                'impression_run': False,
+                'slices':         [],
+            }
+            base['sequences'].append(seq_result)
+            base['sequences_processed'] += 1
+        except Exception as e:
+            logging.warning(f"Series skipped: {e}")
+            continue
+
+    return base
 
 
 # ════════════════════════════════════════════════════════════════════
