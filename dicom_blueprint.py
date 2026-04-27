@@ -106,6 +106,42 @@ def analyze():
     if len(raw_bytes) < 128:
         return jsonify({'error': 'File too small to be a valid DICOM', 'code': 'INVALID_FILE'}), 400
 
+    # ── Zip extraction -- unpack and pass all .dcm files to pipeline ──
+    import zipfile, io as _io, tempfile, os
+    if raw_bytes[:2] == b'PK':
+        try:
+            zf = zipfile.ZipFile(_io.BytesIO(raw_bytes))
+            dcm_names = [n for n in zf.namelist()
+                         if not n.startswith('__MACOSX') and
+                         not os.path.basename(n).startswith('.') and
+                         (n.lower().endswith('.dcm') or '.' not in os.path.basename(n))]
+            if not dcm_names:
+                return jsonify({'error': 'No DICOM files found in zip', 'code': 'INVALID_FILE'}), 400
+
+            # Write all files to a temp dir and pass the dir to the pipeline
+            tmp_dir = tempfile.mkdtemp()
+            extracted = []
+            for name in dcm_names:
+                data = zf.read(name)
+                if len(data) < 128:
+                    continue
+                dest = os.path.join(tmp_dir, os.path.basename(name))
+                with open(dest, 'wb') as fh:
+                    fh.write(data)
+                extracted.append(dest)
+            zf.close()
+
+            if not extracted:
+                return jsonify({'error': 'No valid DICOM files in zip', 'code': 'INVALID_FILE'}), 400
+
+            # Pass the extracted file list via params so processor_api can use them
+            request_params['_extracted_dcm_paths'] = extracted
+            request_params['_tmp_dir'] = tmp_dir
+            # Use first file bytes as the primary input (pipeline will use _extracted_dcm_paths)
+            raw_bytes = open(extracted[0], 'rb').read()
+        except zipfile.BadZipFile:
+            return jsonify({'error': 'Invalid zip file', 'code': 'INVALID_FILE'}), 400
+
     # ── Merge parameters: request > customer defaults > system defaults ──
     params = get_effective_params(customer, request_params)
 
