@@ -151,10 +151,33 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
     # Import our processor logic
     # The processor is imported as a module — no subprocess
     from az_dicom_processor import (
-        group_series, load_volume_sorted, best_slice,
+        group_by_sequence as group_series,
+        load_volume as load_volume_sorted,
+        best_slice,
         get_tissue_landmarks, method_algebraic, method_iterative,
-        detect_seq_type, detect_body_part_from_dicom
+        score_sequence as detect_seq_type,
     )
+
+    def detect_body_part_from_dicom(ds):
+        """Detect body part from DICOM metadata."""
+        bp = getattr(ds, 'BodyPartExamined', '') or ''
+        bp = bp.upper().strip()
+        if not bp:
+            desc = str(getattr(ds, 'StudyDescription', '') or '').upper()
+            if any(k in desc for k in ['SPINE', 'CERVICAL', 'CSPINE', 'C-SPINE']):
+                return 'CSPINE'
+            if any(k in desc for k in ['BRAIN', 'HEAD']):
+                return 'BRAIN'
+            if any(k in desc for k in ['LUMBAR', 'LSPINE', 'L-SPINE']):
+                return 'LSPINE'
+            if any(k in desc for k in ['THORACIC', 'TSPINE', 'T-SPINE']):
+                return 'TSPINE'
+            if any(k in desc for k in ['KNEE', 'ANKLE', 'FOOT', 'SHOULDER', 'HIP']):
+                return desc.split()[0]
+            return 'UNKNOWN'
+        if bp in ('CSPINE', 'CERVICAL', 'CSPINE_SPINE'):
+            return 'CSPINE'
+        return bp
 
     # Find all DICOM files — could be a single file or a folder
     # For API use: single file. For folder use: multiple files.
@@ -205,7 +228,7 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
         try:
             vol, spacing = load_volume_sorted(s)
             sl           = best_slice(vol)
-            from az_dicom_processor import make_brain_mask
+            from az_dicom_processor import make_brain_mask, score_sequence as detect_seq_type
             mask         = make_brain_mask(sl)
 
             if mask.sum() < 100:
