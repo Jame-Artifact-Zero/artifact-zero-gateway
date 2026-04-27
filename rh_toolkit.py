@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 import time
 import json
 import traceback
@@ -14,6 +14,30 @@ from az_rh_toolkit.api import CertificateAPI
 
 bp  = Blueprint("rh_toolkit", __name__)
 api = CertificateAPI()
+
+# Fields stripped from theorem responses — IP protection
+_THEOREM_KEEP = {"id", "name", "status", "domain"}
+
+# Fields stripped from certificate assessment — IP protection
+_ASSESSMENT_STRIP = {"notes", "prior_status"}
+
+# Fields stripped from certify response top level — IP protection
+_CERT_STRIP = {"proof_status_msg"}
+
+
+def _strip_theorem(t: dict) -> dict:
+    return {k: v for k, v in t.items() if k in _THEOREM_KEEP}
+
+
+def _strip_assessment(assessment: dict) -> dict:
+    return {k: v for k, v in assessment.items() if k not in _ASSESSMENT_STRIP}
+
+
+def _strip_cert(cert: dict) -> dict:
+    result = {k: v for k, v in cert.items() if k not in _CERT_STRIP}
+    if "assessment" in result and isinstance(result["assessment"], dict):
+        result["assessment"] = _strip_assessment(result["assessment"])
+    return result
 
 
 def _dict_cursor(conn):
@@ -70,7 +94,9 @@ def certify():
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/certify", 200, latency_ms, request._api_key_id)
-    return jsonify(json.loads(cert.to_json())), 200
+
+    raw = json.loads(cert.to_json())
+    return jsonify(_strip_cert(raw)), 200
 
 
 @bp.route("/v1/audit", methods=["POST"])
@@ -90,6 +116,10 @@ def audit():
         nti_log.log_request(request_id, "/v1/audit", 500, latency_ms, request._api_key_id)
         return jsonify({"error": "internal error"}), 500
 
+    # Strip notes from each certificate in the audit report
+    if "certificates" in report and isinstance(report["certificates"], list):
+        report["certificates"] = [_strip_cert(c) for c in report["certificates"]]
+
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/audit", 200, latency_ms, request._api_key_id)
     return jsonify(report), 200
@@ -101,7 +131,8 @@ def theorems():
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
-    result = api.theorems()
+    raw    = api.theorems()
+    result = [_strip_theorem(t) for t in raw]
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/theorems", 200, latency_ms, request._api_key_id)
