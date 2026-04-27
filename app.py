@@ -169,8 +169,8 @@ try:
     from dicom_blueprint import dicom_bp
     app.register_blueprint(dicom_bp, url_prefix='/dicom')
     print("[app] dicom pipeline loaded", flush=True)
-except ImportError:
-    print("[app] dicom_blueprint not found, skipping", flush=True)
+except Exception as e:
+    print(f"[app] dicom pipeline failed: {e}", flush=True)
 
 try:
     from azl_blueprint import bp as azl_bp

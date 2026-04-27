@@ -491,34 +491,14 @@ def _run_generic_impression(result: dict):
 
 
 # ════════════════════════════════════════════════════════════════════
-# STEP 7: LONGITUDINAL — S₀ COMPARISON
-#
-# The prior study IS S₀. The current study is Q arriving into S₀.
-# This is O = f(Q, S₀) applied to imaging — the same structural
-# principle as the clinical prior state patent applied to radiology.
-#
-# A radiologist reads the presenting scan (Q) but never formally
-# consults the prior study measurements (S₀). The algebraic pipeline
-# reads S₀. The gap between current and prior measurements is the
-# clinical finding — not the current measurements alone.
-#
-# Comparison is always measurement-to-measurement, never label-to-label.
-# "T2* gap decreased 43% from 54.8 to 31.2" is a finding.
-# "ESCALATED" is a summary. We produce both, but the measurements drive the flags.
+# STEP 7: LONGITUDINAL COMPARISON
 # ════════════════════════════════════════════════════════════════════
 
 def _run_longitudinal_diff(result: dict, prior_study: dict):
     """
-    Compare current study measurements against prior study measurements (S₀).
-
-    prior_study must contain 'sequences' — a list of prior sequence measurement
-    dicts keyed by seq_type. This is retrieved by find_prior_study_with_measurements()
-    in dicom_storage.py, which fetches actual gap, asymmetry, and disagreement
-    values from the database, not just impression labels.
-
-    Produces per-sequence measurement deltas plus new flags for changes
-    that exceed clinical thresholds. These new flags are appended to
-    result['impression']['flags'] before the response is built.
+    Compare current study measurements against prior study measurements.
+    Produces per-sequence measurement deltas and new flags for changes
+    that exceed clinical thresholds.
     """
     prior_seqs     = {s['seq_type']: s for s in prior_study.get('sequences', [])}
     current_seqs   = result.get('sequences', [])
