@@ -13,14 +13,6 @@ Routes:
   POST /v1/azl/cascade/kolmogorov -- Kolmogorov scale
   GET  /v1/azl/certificates      -- certificate history for API key
   POST /v1/azl/audit             -- full system audit
-
-Registration in app.py:
-  try:
-      from azl_blueprint import bp as azl_bp
-      app.register_blueprint(azl_bp)
-      print("[app] azl loaded", flush=True)
-  except Exception as e:
-      print(f"[app] azl failed: {e}", flush=True)
 """
 
 import uuid
@@ -35,6 +27,47 @@ from azl_storage import store_certificate, get_certificates
 
 bp  = Blueprint("azl", __name__)
 azl = AZL()
+
+# ===================================================================
+# IP PROTECTION -- strip functions applied to all responses
+# ===================================================================
+
+# Theorem fields returned to customer
+_THEOREM_KEEP = {"id", "name", "status", "domain"}
+
+# Certificate top-level fields to strip
+_CERT_STRIP = {"notes", "framework"}
+
+# Details fields stripped per cert_type
+_DETAILS_STRIP = {
+    "CASCADE_PREDICTION": {"scaling_law", "kolmogorov_exponent", "test_data"},
+    "KOLMOGOROV_SCALE":   {"epsilon", "scaling_law"},
+    "COHERENCE_CHECK":    {"first_primes", "least_prime_bound_azl", "search_limit", "phi_q"},
+    "PRIME_VERIFICATION": {"witness_source"},
+    "PRIME_GENERATION":   {"method"},
+    "SECURITY_ASSESSMENT": set(),
+}
+
+
+def _strip_theorem(t: dict) -> dict:
+    return {k: v for k, v in t.items() if k in _THEOREM_KEEP}
+
+
+def _strip_cert(cert: dict) -> dict:
+    result = {k: v for k, v in cert.items() if k not in _CERT_STRIP}
+    cert_type = result.get("cert_type", "")
+    strip_keys = _DETAILS_STRIP.get(cert_type, set())
+    if "details" in result and isinstance(result["details"], dict) and strip_keys:
+        result["details"] = {k: v for k, v in result["details"].items()
+                             if k not in strip_keys}
+    return result
+
+
+def _safe_store(api_key_id, cert_type, result):
+    try:
+        store_certificate(api_key_id, cert_type, result)
+    except Exception:
+        pass
 
 
 # ===================================================================
@@ -56,17 +89,13 @@ def prime_verify():
     except (ValueError, TypeError):
         return jsonify({"error": "n must be an integer"}), 400
 
-    cert = azl.verify_prime(n)
-    result = asdict(cert)
-
-    try:
-        store_certificate(request._api_key_id, "PRIME_VERIFICATION", result)
-    except Exception:
-        pass
+    cert   = azl.verify_prime(n)
+    raw    = asdict(cert)
+    _safe_store(request._api_key_id, "PRIME_VERIFICATION", raw)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/prime/verify", 200, latency_ms, request._api_key_id)
-    return jsonify(result), 200
+    return jsonify(_strip_cert(raw)), 200
 
 
 @bp.route("/v1/azl/prime/generate", methods=["POST"])
@@ -80,17 +109,13 @@ def prime_generate():
     if bits < 32 or bits > 4096:
         return jsonify({"error": "bits must be between 32 and 4096"}), 400
 
-    cert = azl.generate_prime(bits)
-    result = asdict(cert)
-
-    try:
-        store_certificate(request._api_key_id, "PRIME_GENERATION", result)
-    except Exception:
-        pass
+    cert   = azl.generate_prime(bits)
+    raw    = asdict(cert)
+    _safe_store(request._api_key_id, "PRIME_GENERATION", raw)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/prime/generate", 200, latency_ms, request._api_key_id)
-    return jsonify(result), 200
+    return jsonify(_strip_cert(raw)), 200
 
 
 # ===================================================================
@@ -113,17 +138,13 @@ def coherence():
     except (ValueError, TypeError):
         return jsonify({"error": "q and a must be integers"}), 400
 
-    cert = azl.coherence_check(q, a)
-    result = asdict(cert)
-
-    try:
-        store_certificate(request._api_key_id, "COHERENCE_CHECK", result)
-    except Exception:
-        pass
+    cert   = azl.coherence_check(q, a)
+    raw    = asdict(cert)
+    _safe_store(request._api_key_id, "COHERENCE_CHECK", raw)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/coherence", 200, latency_ms, request._api_key_id)
-    return jsonify(result), 200
+    return jsonify(_strip_cert(raw)), 200
 
 
 @bp.route("/v1/azl/security", methods=["POST"])
@@ -142,17 +163,13 @@ def security():
     except (ValueError, TypeError):
         return jsonify({"error": "bits must be an integer"}), 400
 
-    cert = azl.security(key_type, bits)
-    result = asdict(cert)
-
-    try:
-        store_certificate(request._api_key_id, "SECURITY_ASSESSMENT", result)
-    except Exception:
-        pass
+    cert   = azl.security(key_type, bits)
+    raw    = asdict(cert)
+    _safe_store(request._api_key_id, "SECURITY_ASSESSMENT", raw)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/security", 200, latency_ms, request._api_key_id)
-    return jsonify(result), 200
+    return jsonify(_strip_cert(raw)), 200
 
 
 @bp.route("/v1/azl/theorems", methods=["GET"])
@@ -161,7 +178,7 @@ def theorems():
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
-    result = [asdict(t) for t in azl.theorems()]
+    result = [_strip_theorem(asdict(t)) for t in azl.theorems()]
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/theorems", 200, latency_ms, request._api_key_id)
@@ -178,20 +195,16 @@ def cascade_hurst():
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
-    body = request.get_json() or {}
+    body   = request.get_json() or {}
     domain = body.get("domain", "market")
 
-    cert = azl.hurst(domain)
-    result = asdict(cert)
-
-    try:
-        store_certificate(request._api_key_id, "CASCADE_PREDICTION", result)
-    except Exception:
-        pass
+    cert   = azl.hurst(domain)
+    raw    = asdict(cert)
+    _safe_store(request._api_key_id, "CASCADE_PREDICTION", raw)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/cascade/hurst", 200, latency_ms, request._api_key_id)
-    return jsonify(result), 200
+    return jsonify(_strip_cert(raw)), 200
 
 
 @bp.route("/v1/azl/cascade/kolmogorov", methods=["POST"])
@@ -202,7 +215,7 @@ def cascade_kolmogorov():
 
     body = request.get_json() or {}
     spread = body.get("spread")
-    vol = body.get("vol")
+    vol    = body.get("vol")
     if spread is None or vol is None:
         return jsonify({"error": "spread and vol required"}), 400
     try:
@@ -211,17 +224,13 @@ def cascade_kolmogorov():
     except (ValueError, TypeError):
         return jsonify({"error": "spread and vol must be numbers"}), 400
 
-    cert = azl.kolmogorov(spread, vol)
-    result = asdict(cert)
-
-    try:
-        store_certificate(request._api_key_id, "KOLMOGOROV_SCALE", result)
-    except Exception:
-        pass
+    cert   = azl.kolmogorov(spread, vol)
+    raw    = asdict(cert)
+    _safe_store(request._api_key_id, "KOLMOGOROV_SCALE", raw)
 
     latency_ms = (time.perf_counter() - t0) * 1000
     nti_log.log_request(request_id, "/v1/azl/cascade/kolmogorov", 200, latency_ms, request._api_key_id)
-    return jsonify(result), 200
+    return jsonify(_strip_cert(raw)), 200
 
 
 # ===================================================================
@@ -234,7 +243,7 @@ def certificates():
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
-    limit = min(int(request.args.get("limit", 20)), 100)
+    limit     = min(int(request.args.get("limit", 20)), 100)
     cert_type = request.args.get("type", None)
 
     rows = get_certificates(request._api_key_id, limit=limit, cert_type=cert_type)
@@ -254,30 +263,29 @@ def audit():
     request_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
-    body = request.get_json() or {}
+    body        = request.get_json() or {}
     system_name = body.get("system_name", "AZL System")
 
     results = {
         "system_name": system_name,
-        "issued": azl._boot_time,
-        "issuer": "Artifact Zero Labs",
-        "framework": "AZL Phase Coherence",
+        "issued":      azl._boot_time,
+        "issuer":      "Artifact Zero Labs",
         "engines": {
             "prime": {
-                "status": "OPERATIONAL",
-                "test_2": asdict(azl.verify_prime(2)),
-                "test_mersenne_31": asdict(azl.verify_prime(2**31 - 1)),
-                "test_carmichael_561": asdict(azl.verify_prime(561)),
+                "status":              "OPERATIONAL",
+                "test_2":              _strip_cert(asdict(azl.verify_prime(2))),
+                "test_mersenne_31":    _strip_cert(asdict(azl.verify_prime(2**31 - 1))),
+                "test_carmichael_561": _strip_cert(asdict(azl.verify_prime(561))),
             },
             "coherence": {
-                "status": "OPERATIONAL",
-                "theorems": len(azl.theorems()),
-                "test_5mod2": asdict(azl.coherence_check(5, 2)),
-                "test_rsa2048": asdict(azl.security("rsa", 2048)),
+                "status":       "OPERATIONAL",
+                "theorems":     len(azl.theorems()),
+                "test_5mod2":   _strip_cert(asdict(azl.coherence_check(5, 2))),
+                "test_rsa2048": _strip_cert(asdict(azl.security("rsa", 2048))),
             },
             "cascade": {
-                "status": "OPERATIONAL",
-                "test_market_hurst": asdict(azl.hurst("market")),
+                "status":             "OPERATIONAL",
+                "test_market_hurst":  _strip_cert(asdict(azl.hurst("market"))),
             },
         },
         "overall": "OPERATIONAL",
