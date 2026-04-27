@@ -195,7 +195,6 @@ def analyze():
     response['_meta'] = {
         'total_ms':    t_total_ms,
         'pipeline_ms': t_pipeline_ms,
-        'storage_ms':  t_storage_ms,
     }
 
     return jsonify(response), 200
@@ -290,10 +289,8 @@ def status():
         'status':          'ok',
         'customer_name':   customer['customer_name'],
         'tier':            customer['tier'],
-        'storage_default': customer['storage_default'],
         'baa_signed':      customer['baa_signed'],
         'usage':           stats,
-        'storage_modes':   list(__import__('dicom_storage').STORAGE_MODES.keys()),
         'analysis_levels': ['speed','profile','standard','full','impression','longitudinal'],
         'return_formats':  ['json','fhir','dicom_sr','webhook'],
     }), 200
@@ -366,19 +363,7 @@ def _extract_meta_for_storage(result: dict) -> dict:
 
 
 def _get_prior_study(customer: dict, params: dict):
-    """
-    Look up prior study for longitudinal S₀ comparison.
-
-    Returns the prior study WITH per-sequence measurements — not just
-    impression labels. The measurements ARE S₀. The longitudinal diff
-    compares current measurements against prior measurements directly.
-
-    Without measurements, the longitudinal diff can only compare status
-    labels ('CRITICAL' vs 'MODERATE'), which loses all clinical specificity.
-    With measurements, it produces findings like:
-      'T2* gap 54.8 → 31.2 (-43% since 2024-05-14)'
-    which is the actual clinical value.
-    """
+    """Look up prior study for longitudinal comparison."""
     try:
         from extensions import db
         from dicom_storage import find_prior_study_with_measurements

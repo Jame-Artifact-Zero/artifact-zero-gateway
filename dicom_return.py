@@ -1,13 +1,12 @@
 """
 ================================================================================
-ARTIFACT ZERO LABS — Return Path Handler
-Merge into: services/ or pipeline/ directory
+ARTIFACT ZERO LABS -- Return Path Handler
 
 Handles all return formats:
-  json        — standard HTTP JSON response (synchronous)
-  fhir        — HL7 FHIR Observation resource
-  dicom_sr    — DICOM Structured Report (write back to PACS)
-  webhook     — async POST to customer endpoint
+  json      -- standard HTTP JSON response (synchronous)
+  fhir      -- HL7 FHIR Observation resource
+  dicom_sr  -- DICOM Structured Report (write back to PACS)
+  webhook   -- async POST to customer endpoint
 
 Also handles:
   - Payload encryption before return
@@ -19,7 +18,6 @@ Also handles:
 import json
 import hmac
 import hashlib
-import time
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -27,24 +25,83 @@ from typing import Optional
 import requests
 
 
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
+# IP PROTECTION -- sanitize functions applied to all response paths
+# ================================================================================
+
+_SEQ_KEEP = {
+    'series_description', 'seq_type', 'n_slices', 'orientation',
+    'gap', 'mean_fraction', 'std_fraction',
+    'min_gap', 'max_gap', 'compression_pct',
+    'min_gap_slice', 'min_gap_frac_inf',
+    'peak_left_asym', 'pct_left_dominant', 'pct_right_dominant',
+    'peak_disagree_score',
+    'flag_critical', 'flag_moderate', 'flag_finding', 'flag_normal',
+    'flags_json',
+}
+
+
+def _sanitize_sequence(seq: dict) -> dict:
+    """
+    Strip internal pipeline fields and threshold-revealing details.
+    Removes: ref_A, ref_B, rms_vs_standard, speedup_x, timing_ms,
+             all _run flags, mean_disagree_score, peak_disagree_slice,
+             n_compress_runs, run_widths_mm, slices array.
+    """
+    out = {k: v for k, v in seq.items() if k in _SEQ_KEEP}
+    if 'flags_json' in out:
+        out['flags_json'] = [
+            {
+                'severity': f.get('severity'),
+                'label':    f.get('label'),
+                'sequence': f.get('sequence'),
+            }
+            for f in (out['flags_json'] or [])
+        ]
+    return out
+
+
+def _sanitize_flags(flags: list) -> list:
+    """Strip detail and source fields from impression flags."""
+    return [
+        {
+            'severity': f.get('severity'),
+            'label':    f.get('label'),
+            'sequence': f.get('sequence'),
+        }
+        for f in (flags or [])
+    ]
+
+
+def _sanitize_longitudinal(longitudinal: dict) -> dict:
+    """Strip measurement deltas and raw longitudinal flags. Return summary only."""
+    return {
+        'prior_study_id':          longitudinal.get('prior_study_id'),
+        'prior_study_date':        longitudinal.get('prior_study_date'),
+        'prior_status':            longitudinal.get('prior_status'),
+        'current_status':          longitudinal.get('current_status'),
+        'change':                  longitudinal.get('change'),
+        'longitudinal_flag_count': longitudinal.get('longitudinal_flag_count', 0),
+        'prior_critical':          longitudinal.get('prior_critical', 0),
+        'prior_moderate':          longitudinal.get('prior_moderate', 0),
+    }
+
+
+# ================================================================================
 # MAIN RETURN DISPATCHER
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 
 def build_response(result: dict, params: dict, customer: dict,
                    study_id: str, db=None) -> dict:
     """
     Build the final response payload based on requested return format.
-    Applies encryption if requested.
-    Queues webhook if requested.
-
+    Applies encryption if requested. Queues webhook if requested.
     Returns the dict that Flask will jsonify and send back to the caller.
     """
     return_format = params.get('return_format', 'json')
     encrypt_key   = params.get('encrypt_key') or customer.get('encrypt_public_key')
     webhook_url   = params.get('webhook_url') or customer.get('webhook_url')
 
-    # Build the base payload
     if return_format == 'fhir':
         payload = _build_fhir_observation(result, study_id, customer)
     elif return_format == 'dicom_sr':
@@ -52,15 +109,13 @@ def build_response(result: dict, params: dict, customer: dict,
     else:
         payload = _build_json_response(result, study_id, customer)
 
-    # Encrypt if requested
     if encrypt_key:
         from dicom_encryption import encrypt_payload, validate_public_key
         if validate_public_key(encrypt_key):
             payload = encrypt_payload(payload, encrypt_key)
         else:
-            payload['encryption_warning'] = 'Invalid public key — payload not encrypted'
+            payload['encryption_warning'] = 'Invalid public key -- payload not encrypted'
 
-    # Queue webhook if requested (non-blocking)
     if webhook_url and db is not None:
         _queue_webhook(db, study_id, customer['api_key_id'], webhook_url,
                        payload, bool(encrypt_key))
@@ -68,22 +123,21 @@ def build_response(result: dict, params: dict, customer: dict,
     return payload
 
 
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 # JSON RESPONSE (default)
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 
 def _build_json_response(result: dict, study_id: str, customer: dict) -> dict:
-    """Standard JSON response — the default return format."""
-    impression = result.get('impression', {})
-    flags      = impression.get('flags', [])
+    """Standard JSON response -- the default return format."""
+    impression   = result.get('impression', {})
+    flags        = _sanitize_flags(impression.get('flags', []))
     longitudinal = result.get('longitudinal')
 
     response = {
-        'study_id':    study_id,
-        'status':      impression.get('status', 'PENDING'),
-        'called_at':   datetime.now(timezone.utc).isoformat(),
+        'study_id':  study_id,
+        'status':    impression.get('status', 'PENDING'),
+        'called_at': datetime.now(timezone.utc).isoformat(),
 
-        # Study metadata
         'study': {
             'date':        result.get('study_date'),
             'description': result.get('study_description'),
@@ -91,7 +145,6 @@ def _build_json_response(result: dict, study_id: str, customer: dict) -> dict:
             'modality':    result.get('modality'),
         },
 
-        # Scanner
         'scanner': {
             'manufacturer':   result.get('manufacturer'),
             'model':          result.get('model_name'),
@@ -99,11 +152,9 @@ def _build_json_response(result: dict, study_id: str, customer: dict) -> dict:
             'institution':    result.get('institution_name'),
         },
 
-        # Impression — includes longitudinal flags if analysis=longitudinal
         'impression': {
             'status': impression.get('status', 'PENDING'),
             'flags':  flags,
-            'text':   impression.get('text', ''),
             'counts': {
                 'critical': sum(1 for f in flags if f.get('severity') == 'CRITICAL'),
                 'moderate': sum(1 for f in flags if f.get('severity') == 'MODERATE'),
@@ -112,10 +163,8 @@ def _build_json_response(result: dict, study_id: str, customer: dict) -> dict:
             }
         },
 
-        # Sequences
-        'sequences': result.get('sequences', []),
+        'sequences': [_sanitize_sequence(s) for s in result.get('sequences', [])],
 
-        # Performance
         'performance': {
             'sequences_found':     result.get('sequences_found', 0),
             'sequences_processed': result.get('sequences_processed', 0),
@@ -123,37 +172,20 @@ def _build_json_response(result: dict, study_id: str, customer: dict) -> dict:
         }
     }
 
-    # Prior state (S₀) — only present when analysis=longitudinal
-    # This is the clinical value: measurement-level comparison against
-    # the prior study, not just a status label comparison.
-    # Structure mirrors O = f(Q, S₀) — current study is Q, prior is S₀.
     if longitudinal:
-        response['prior_state'] = {
-            'study_id':         longitudinal.get('prior_study_id'),
-            'study_date':       longitudinal.get('prior_study_date'),
-            'status':           longitudinal.get('prior_status'),
-            'change':           longitudinal.get('change'),
-            # Per-sequence measurement deltas (the actual clinical findings)
-            'measurement_diffs': longitudinal.get('measurement_diffs', []),
-            # Flags generated from S₀ comparison (appended to impression above)
-            'longitudinal_flags': longitudinal.get('longitudinal_flags', []),
-            'longitudinal_flag_count': longitudinal.get('longitudinal_flag_count', 0),
-        }
+        response['prior_state'] = _sanitize_longitudinal(longitudinal)
 
     return response
 
 
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 # FHIR OBSERVATION
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 
 def _build_fhir_observation(result: dict, study_id: str, customer: dict) -> dict:
-    """
-    Build an HL7 FHIR R4 Observation resource.
-    Compatible with Epic, Cerner, Oracle Health FHIR APIs.
-    """
+    """Build an HL7 FHIR R4 Observation resource."""
     impression = result.get('impression', {})
-    flags      = impression.get('flags', [])
+    flags      = _sanitize_flags(impression.get('flags', []))
     status_map = {
         'CRITICAL': 'abnormal',
         'MODERATE': 'abnormal',
@@ -162,8 +194,6 @@ def _build_fhir_observation(result: dict, study_id: str, customer: dict) -> dict
         'CLEAN':    'normal',
     }
 
-    # LOINC code for imaging study observation
-    # 18748-4 = Diagnostic imaging study
     return {
         'resourceType': 'Observation',
         'id': study_id,
@@ -181,7 +211,7 @@ def _build_fhir_observation(result: dict, study_id: str, customer: dict) -> dict
                 'code':    '18748-4',
                 'display': 'Diagnostic imaging study'
             }],
-            'text': f"AZ Signal Analysis — {result.get('body_part', 'Unknown')}"
+            'text': f"AZ Signal Analysis -- {result.get('body_part', 'Unknown')}"
         },
         'effectiveDateTime': result.get('study_date'),
         'issued': datetime.now(timezone.utc).isoformat(),
@@ -191,13 +221,9 @@ def _build_fhir_observation(result: dict, study_id: str, customer: dict) -> dict
                 'code':   status_map.get(impression.get('status', 'NORMAL'), 'N'),
             }]
         }],
-        'note': [{
-            'text': impression.get('text', '')
-        }],
         'component': [
             {
                 'code': {'text': f['label']},
-                'valueString': f['detail'],
                 'interpretation': [{'coding': [{'code': f['severity']}]}]
             }
             for f in flags
@@ -209,42 +235,36 @@ def _build_fhir_observation(result: dict, study_id: str, customer: dict) -> dict
     }
 
 
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 # DICOM SR REFERENCE
-# Full DICOM SR write-back requires pydicom and PACS credentials.
-# This returns the SR metadata — actual write-back is a separate service.
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 
 def _build_dicom_sr_reference(result: dict, study_id: str) -> dict:
-    """
-    Returns a reference dict describing the DICOM SR to be created.
-    The DICOM C-STORE service picks this up and writes it to the PACS.
-    """
+    """Returns a reference dict describing the DICOM SR to be created."""
     impression = result.get('impression', {})
     return {
-        'dicom_sr': True,
-        'study_id': study_id,
+        'dicom_sr':           True,
+        'study_id':           study_id,
         'study_instance_uid': result.get('study_instance_uid'),
-        'sr_document_title': f"AZ Signal Analysis — {result.get('body_part', 'Unknown')}",
-        'completion_flag': 'COMPLETE',
-        'verification_flag': 'UNVERIFIED',
+        'sr_document_title':  f"AZ Signal Analysis -- {result.get('body_part', 'Unknown')}",
+        'completion_flag':    'COMPLETE',
+        'verification_flag':  'UNVERIFIED',
         'content_sequence': [
             {
                 'relationship_type': 'CONTAINS',
-                'value_type': 'TEXT',
-                'concept_name': {'code': f['label']},
-                'text_value': f"{f['severity']}: {f['detail']}"
+                'value_type':        'TEXT',
+                'concept_name':      {'code': f['label']},
+                'text_value':        f['severity']
             }
-            for f in impression.get('flags', [])
+            for f in _sanitize_flags(impression.get('flags', []))
         ],
-        'impression_text': impression.get('text', ''),
         'impression_status': impression.get('status', 'PENDING'),
     }
 
 
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 # WEBHOOK
-# ════════════════════════════════════════════════════════════════════
+# ================================================================================
 
 def _queue_webhook(db, study_id: str, customer_id: str,
                    webhook_url: str, payload: dict, encrypted: bool):
@@ -264,7 +284,6 @@ def deliver_webhook(db, queue_row: dict) -> bool:
     """
     Attempt to deliver a queued webhook.
     Returns True if delivered successfully.
-    Called by the webhook worker task.
     """
     webhook_id  = queue_row['id']
     study_id    = queue_row['study_id']
@@ -273,29 +292,29 @@ def deliver_webhook(db, queue_row: dict) -> bool:
     payload     = queue_row['payload_json']
     attempts    = queue_row['attempts']
 
-    # Sign the payload with webhook secret if available
-    secret = _get_webhook_secret(db, customer_id)
+    secret  = _get_webhook_secret(db, customer_id)
     headers = {
         'Content-Type':     'application/json',
         'X-AZ-Study-ID':    str(study_id),
         'X-AZ-Delivery-ID': str(uuid.uuid4()),
     }
     if secret:
-        sig = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        payload_bytes = payload.encode() if isinstance(payload, str) else payload
+        sig = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
         headers['X-AZ-Signature'] = f"sha256={sig}"
 
     try:
-        resp = requests.post(url, data=payload, headers=headers, timeout=10)
+        resp      = requests.post(url, data=payload, headers=headers, timeout=10)
         delivered = resp.status_code < 300
 
         db.execute("""
             UPDATE az_webhook_queue SET
-                attempts        = attempts + 1,
-                last_attempt_at = NOW(),
+                attempts         = attempts + 1,
+                last_attempt_at  = NOW(),
                 last_status_code = %s,
-                delivered       = %s,
-                delivered_at    = CASE WHEN %s THEN NOW() ELSE NULL END,
-                next_attempt_at = CASE WHEN NOT %s
+                delivered        = %s,
+                delivered_at     = CASE WHEN %s THEN NOW() ELSE NULL END,
+                next_attempt_at  = CASE WHEN NOT %s
                     THEN NOW() + INTERVAL '1 hour' * POWER(2, attempts)
                     ELSE next_attempt_at END
             WHERE id = %s""",
@@ -312,7 +331,7 @@ def deliver_webhook(db, queue_row: dict) -> bool:
 
         return delivered
 
-    except Exception as e:
+    except Exception:
         db.execute("""
             UPDATE az_webhook_queue SET
                 attempts        = attempts + 1,
@@ -328,16 +347,14 @@ def deliver_webhook(db, queue_row: dict) -> bool:
 
 def _get_webhook_secret(db, customer_id: str) -> Optional[str]:
     row = db.execute(
-        "SELECT webhook_secret FROM az_customer_profiles WHERE api_key_id=%s", (customer_id,)
+        "SELECT webhook_secret FROM az_customer_profiles WHERE api_key_id=%s",
+        (customer_id,)
     ).fetchone()
     return row[0] if row else None
 
 
 def process_webhook_queue(db, max_per_run: int = 50) -> dict:
-    """
-    Process pending webhooks. Called by scheduled task or Celery beat.
-    Returns summary of what was processed.
-    """
+    """Process pending webhooks. Called by scheduled task."""
     rows = db.execute("""
         SELECT id, study_id, customer_id, webhook_url,
                payload_json, attempts, payload_encrypted
