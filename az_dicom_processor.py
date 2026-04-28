@@ -65,12 +65,16 @@ except ImportError:
 
 # Keywords that identify good structural brain sequences
 GOOD_SEQUENCES = {
+    'T2S':   ['t2*', 't2star', 'merge', 'medic', 'mgre', 'gre', 'swi', 'swan',
+              'suscept', '2d t2'],
+    'STIR':  ['stir', 'short tau'],
+    'FLAIR': ['flair'],
     'T1':    ['t1', 'mprage', 'bravo', 'spgr', 'tfe', 'fspgr', 'irfspgr', 't1w',
               'sag t1', 'cor t1', 'ax t1', '3d t1'],
-    'T2':    ['t2', 't2w', 'flair', 't2 flair', 'ax t2', 'sag t2'],
+    'T2':    ['t2', 't2w', 'ax t2', 'sag t2', 'fse', 'tse'],
     'PD':    ['pd', 'proton', 'pdw', 'dual echo'],
     'DWI':   ['dwi', 'diffusion', 'adc', 'dti'],
-    'SWI':   ['swi', 'susceptibility'],
+    'SWI':   ['susceptibility'],
     'TOF':   ['tof', 'mra', 'angio'],
 }
 
@@ -96,10 +100,13 @@ def score_sequence(desc, n_slices):
 
     # Score: prefer T1/T2 with many slices
     score = 0
-    if seq_type == 'T1':   score += 100
-    elif seq_type == 'T2': score += 80
-    elif seq_type == 'PD': score += 70
-    elif seq_type == 'DWI': score += 30
+    if seq_type == 'T2S':   score += 130
+    elif seq_type == 'STIR': score += 110
+    elif seq_type == 'FLAIR':score += 110
+    elif seq_type == 'T1':   score += 100
+    elif seq_type == 'T2':   score += 80
+    elif seq_type == 'PD':   score += 90
+    elif seq_type == 'DWI':  score += 30
     else: score += 10
 
     # More slices = better coverage

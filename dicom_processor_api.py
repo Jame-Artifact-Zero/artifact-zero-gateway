@@ -173,9 +173,9 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
                 if 'agreement' in steps:
                     _run_agreement(tmp_path, result)
                 if 'impression' in steps:
-                    if body_part in CSPINE_BODY_PARTS or \
-                       params.get('body_part', 'auto').upper() in CSPINE_BODY_PARTS:
-                        _run_cspine_impression(result)
+                    rules = _load_impression_rules(result.get('body_part', 'UNKNOWN'))
+                    if rules:
+                        _apply_rules(result, rules)
                     else:
                         _run_generic_impression(result)
                 if 'longitudinal' in steps and prior_study:
@@ -221,10 +221,9 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
 
             # ── STEP 6: Impression rules ──────────────────────────
             if 'impression' in steps:
-                body_part = result.get('body_part', '')
-                if body_part in CSPINE_BODY_PARTS or \
-                   params.get('body_part', 'auto').upper() in CSPINE_BODY_PARTS:
-                    _run_cspine_impression(result)
+                rules = _load_impression_rules(result.get('body_part', 'UNKNOWN'))
+                if rules:
+                    _apply_rules(result, rules)
                 else:
                     _run_generic_impression(result)
 
@@ -590,7 +589,131 @@ def _run_agreement(tmp_path: Path, result: dict):
 # STEP 6: IMPRESSION RULES
 # ════════════════════════════════════════════════════════════════════
 
-def _run_cspine_impression(result: dict):
+def _load_impression_rules(body_part: str) -> list:
+    """
+    Load impression rules from az_impression_rules for given body_part.
+    Falls back to empty list if DB unavailable.
+    Returns list of rule dicts.
+    """
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT seq_type, metric, operator, threshold, severity, label
+            FROM az_impression_rules
+            WHERE (body_part = %s OR body_part = 'ANY')
+              AND active = TRUE
+            ORDER BY
+                CASE severity
+                    WHEN 'CRITICAL' THEN 1
+                    WHEN 'MODERATE' THEN 2
+                    WHEN 'FINDING'  THEN 3
+                    ELSE 4
+                END,
+                threshold
+        """, (body_part,))
+        rows = cur.fetchall()
+        conn.close()
+        return [
+            {
+                'seq_type':  r[0],
+                'metric':    r[1],
+                'operator':  r[2],
+                'threshold': float(r[3]),
+                'severity':  r[4],
+                'label':     r[5],
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        import logging
+        logging.warning(f"Could not load impression rules from DB: {e}")
+        return []
+
+
+def _apply_rules(result: dict, rules: list):
+    """
+    Apply DB-loaded impression rules to pipeline result.
+    Updates result['impression'] in place.
+    """
+    all_flags = []
+
+    for seq in result.get('sequences', []):
+        seq_type = seq.get('seq_type', '')
+        flags = []
+
+        for rule in rules:
+            # Match seq_type (ANY matches all)
+            if rule['seq_type'] != 'ANY' and rule['seq_type'] != seq_type:
+                continue
+
+            metric = rule['metric']
+            val = seq.get(metric)
+
+            # Handle run_width_max specially
+            if metric == 'run_width_max':
+                run_widths = seq.get('run_widths_mm', [])
+                val = max(run_widths) if run_widths else None
+
+            if val is None:
+                continue
+
+            # Apply operator
+            fired = False
+            if rule['operator'] == 'lt' and val < rule['threshold']:
+                fired = True
+            elif rule['operator'] == 'gt' and val > rule['threshold']:
+                fired = True
+
+            if fired:
+                flags.append({
+                    'severity': rule['severity'],
+                    'label':    rule['label'],
+                    'sequence': seq.get('series_description', ''),
+                    'detail':   f"{metric}={val:.2f} threshold={rule['operator']} {rule['threshold']}",
+                })
+
+        # Also always add tissue fraction measured as NORMAL
+        if seq.get('mean_fraction') is not None:
+            flags.append({
+                'severity': 'NORMAL',
+                'label':    'Tissue fraction measured',
+                'sequence': seq.get('series_description', ''),
+                'detail':   f"Mean={seq['mean_fraction']:.4f}",
+            })
+
+        seq['flags_json']    = flags
+        seq['flag_critical'] = sum(1 for f in flags if f['severity'] == 'CRITICAL')
+        seq['flag_moderate'] = sum(1 for f in flags if f['severity'] == 'MODERATE')
+        seq['flag_finding']  = sum(1 for f in flags if f['severity'] == 'FINDING')
+        seq['flag_normal']   = sum(1 for f in flags if f['severity'] == 'NORMAL')
+        seq['impression_run'] = True
+        all_flags.extend(flags)
+
+    # Overall status
+    if any(f['severity'] == 'CRITICAL' for f in all_flags):
+        status = 'CRITICAL'
+    elif any(f['severity'] == 'MODERATE' for f in all_flags):
+        status = 'MODERATE'
+    elif any(f['severity'] == 'FINDING' for f in all_flags):
+        status = 'FINDING'
+    elif all_flags:
+        status = 'NORMAL'
+    else:
+        status = 'CLEAN'
+
+    result['impression'] = {
+        'status': status,
+        'flags':  all_flags,
+        'text':   '',
+        'counts': {
+            'critical': sum(1 for f in all_flags if f['severity'] == 'CRITICAL'),
+            'moderate': sum(1 for f in all_flags if f['severity'] == 'MODERATE'),
+            'finding':  sum(1 for f in all_flags if f['severity'] == 'FINDING'),
+            'normal':   sum(1 for f in all_flags if f['severity'] == 'NORMAL'),
+        }
+    }
     """Apply C-spine rule set. Updates result['impression'] in place."""
     all_flags = []
 
