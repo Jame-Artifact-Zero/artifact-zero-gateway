@@ -165,7 +165,10 @@ def analyze():
                 data = zf.read(name)
                 if len(data) < 128:
                     continue
-                dest = os.path.join(tmp_dir, os.path.basename(name))
+                # Preserve subdirectory structure to avoid filename collisions
+                safe_name = name.replace('/', os.sep).replace('\\', os.sep)
+                dest = os.path.join(tmp_dir, safe_name)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
                 with open(dest, 'wb') as fh:
                     fh.write(data)
                 extracted.append(dest)
