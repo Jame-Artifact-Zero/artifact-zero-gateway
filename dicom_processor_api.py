@@ -276,7 +276,7 @@ def _run_decomposition_from_series(good: list, ds, body_part: str, safe, raw_dat
 
     for s in good[:5]:
         try:
-            vol, spacing = load_volume_sorted(s)
+            vol = load_volume_sorted(s)
             sl           = best_slice(vol)
             mask         = make_brain_mask(sl)
             if mask.sum() < 100:
@@ -404,7 +404,7 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
 
     for s in good[:5]:  # Process top 5 sequences
         try:
-            vol, spacing = load_volume_sorted(s)
+            vol = load_volume_sorted(s)
             sl           = best_slice(vol)
             from az_dicom_processor import make_brain_mask, score_sequence as detect_seq_type
             mask         = make_brain_mask(sl)
