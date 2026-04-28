@@ -290,7 +290,7 @@ def _run_decomposition_from_series(good: list, ds, body_part: str, safe, raw_dat
             seq_result = {
                 'series_description': s['desc'],
                 'seq_type':          s['type'],
-                'n_slices':          s['n'],
+                'n_slices':          s['n_slices'],
                 'orientation':       _detect_orient(s['desc']),
                 'gap':               float(abs(A - B)),
                 'mean_fraction':     float(np.nanmean(w_alg[mask])),
@@ -423,7 +423,7 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
             seq_result = {
                 'series_description': s['desc'],
                 'seq_type':          s['type'],
-                'n_slices':          s['n'],
+                'n_slices':          s['n_slices'],
                 'orientation':       _detect_orient(s['desc']),
                 'ref_A':             float(A),
                 'ref_B':             float(B),

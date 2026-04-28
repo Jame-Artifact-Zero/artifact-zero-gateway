@@ -18,6 +18,7 @@ Endpoints:
 
 import time
 import json
+import db as _db_module
 from flask import Blueprint, request, jsonify, g, render_template
 
 from api_auth          import require_api_key
@@ -29,6 +30,45 @@ from dicom_storage     import store_study_record, store_measurements, find_prior
 from dicom_return      import build_response
 
 dicom_bp = Blueprint('dicom', __name__)
+
+
+class _DBWrapper:
+    """
+    Thin wrapper around a psycopg2 connection that mimics the
+    SQLAlchemy-style db.execute() / db.commit() interface used
+    throughout the DICOM blueprint.
+    """
+    def __init__(self, conn):
+        self._conn = conn
+        self._cur  = conn.cursor()
+
+    def execute(self, sql, params=None):
+        self._cur.execute(sql, params or ())
+        return self
+
+    def fetchone(self):
+        return self._cur.fetchone()
+
+    def fetchall(self):
+        return self._cur.fetchall()
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        try:
+            self._cur.close()
+        except Exception:
+            pass
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+
+
+def _get_db() -> _DBWrapper:
+    """Open a new DB connection and return a wrapper."""
+    return _DBWrapper(_db_module.db_connect())
 
 # ════════════════════════════════════════════════════════════════════
 # GET /dicom/demo
@@ -172,7 +212,7 @@ def analyze():
     study_id = None
 
     try:
-        from extensions import db
+        db = _get_db()
         dicom_meta = _extract_meta_for_storage(result)
         timing = {
             'total_ms':    round((time.perf_counter() - t_start) * 1000, 2),
@@ -221,7 +261,7 @@ def analyze():
     # ── Build and return response ─────────────────────────────────
     t_return_start = time.perf_counter()
     try:
-        from extensions import db
+        db = _get_db()
         response = build_response(result, params, customer, study_id or 'unsaved', db)
     except Exception as e:
         logging.warning(f"Response build fallback (no db): {e}")
@@ -251,7 +291,7 @@ def get_study(study_id):
     """
     customer = g.customer
     try:
-        from extensions import db
+        db = _get_db()
         row = db.execute("""
             SELECT id, study_date, body_part, impression_status,
                    flags_critical, flags_moderate, flags_finding,
@@ -316,7 +356,7 @@ def status():
     """API health check and customer usage statistics."""
     customer = g.customer
     try:
-        from extensions import db
+        db = _get_db()
         stats = get_customer_stats(db, customer['api_key_id'])
     except Exception:
         stats = {}
@@ -355,7 +395,7 @@ def create_customer_endpoint():
         return jsonify({'error': f"Missing fields: {missing}", 'code': 'MISSING_FIELDS'}), 400
 
     try:
-        from extensions import db
+        db = _get_db()
         from dicom_customer import create_customer
         cid, raw_key = create_customer(
             db,
@@ -401,7 +441,7 @@ def _extract_meta_for_storage(result: dict) -> dict:
 def _get_prior_study(customer: dict, params: dict):
     """Look up prior study for longitudinal comparison."""
     try:
-        from extensions import db
+        db = _get_db()
         from dicom_storage import find_prior_study_with_measurements
         from dicom_customer import hash_patient_id
         patient_hash = hash_patient_id(
