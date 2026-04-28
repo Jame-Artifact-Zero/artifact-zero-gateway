@@ -276,6 +276,13 @@ def _run_decomposition_from_series(good: list, ds, body_part: str, safe, raw_dat
     for s in good[:5]:
         try:
             vol = load_volume_sorted(s)
+
+            # ── Pathway B operators ────────────────────────────────
+            try:
+                from az_pathway_b import compute_pathway_b
+                b_feats = compute_pathway_b(vol)
+            except Exception:
+                b_feats = {'b_alg_b_joint': float('nan'), 'b_pg_center_edge': float('nan')}
             sl           = best_slice(vol)
             mask         = make_brain_mask(sl)
             if mask.sum() < 100:
@@ -292,6 +299,8 @@ def _run_decomposition_from_series(good: list, ds, body_part: str, safe, raw_dat
                 'n_slices':          s['n_slices'],
                 'orientation':       _detect_orient(s['desc']),
                 'gap':               float(abs(A - B)),
+                'b_alg_b_joint':     b_feats.get('b_alg_b_joint', float('nan')),
+                'b_pg_center_edge':  b_feats.get('b_pg_center_edge', float('nan')),
                 'mean_fraction':     float(np.nanmean(w_alg[mask])),
                 'std_fraction':      float(np.nanstd(w_alg[mask])),
                 'profile_run':    False,
@@ -404,6 +413,13 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
     for s in good[:5]:  # Process top 5 sequences
         try:
             vol = load_volume_sorted(s)
+
+            # ── Pathway B operators ────────────────────────────────
+            try:
+                from az_pathway_b import compute_pathway_b
+                b_feats = compute_pathway_b(vol)
+            except Exception:
+                b_feats = {'b_alg_b_joint': float('nan'), 'b_pg_center_edge': float('nan')}
             sl           = best_slice(vol)
             from az_dicom_processor import make_brain_mask, score_sequence as detect_seq_type
             mask         = make_brain_mask(sl)
@@ -635,8 +651,12 @@ def _load_impression_rules(body_part: str) -> list:
 def _apply_rules(result: dict, rules: list):
     """
     Apply DB-loaded impression rules to pipeline result.
+    Applies field strength threshold adjustment for gap metrics.
+    Falls back gap to seq gap when min_gap not computed.
     Updates result['impression'] in place.
     """
+    from az_field_strength import adjust_threshold, get_field_strength
+    field_strength = get_field_strength(result)
     all_flags = []
 
     for seq in result.get('sequences', []):
@@ -644,26 +664,31 @@ def _apply_rules(result: dict, rules: list):
         flags = []
 
         for rule in rules:
-            # Match seq_type (ANY matches all)
             if rule['seq_type'] != 'ANY' and rule['seq_type'] != seq_type:
                 continue
 
             metric = rule['metric']
             val = seq.get(metric)
 
-            # Handle run_width_max specially
+            # min_gap fallback -- profile step may not have run
+            if val is None and metric == 'min_gap':
+                val = seq.get('gap')
+
+            # run_width_max from list
             if metric == 'run_width_max':
                 run_widths = seq.get('run_widths_mm', [])
                 val = max(run_widths) if run_widths else None
 
-            if val is None:
+            if val is None or (isinstance(val, float) and val != val):  # nan check
                 continue
 
-            # Apply operator
+            # Apply field strength adjustment
+            adjusted = adjust_threshold(rule['threshold'], metric, field_strength)
+
             fired = False
-            if rule['operator'] == 'lt' and val < rule['threshold']:
+            if rule['operator'] == 'lt' and val < adjusted:
                 fired = True
-            elif rule['operator'] == 'gt' and val > rule['threshold']:
+            elif rule['operator'] == 'gt' and val > adjusted:
                 fired = True
 
             if fired:
@@ -671,7 +696,7 @@ def _apply_rules(result: dict, rules: list):
                     'severity': rule['severity'],
                     'label':    rule['label'],
                     'sequence': seq.get('series_description', ''),
-                    'detail':   f"{metric}={val:.2f} threshold={rule['operator']} {rule['threshold']}",
+                    'detail':   f"{metric}={val:.2f} threshold={rule['operator']} {adjusted:.2f}",
                 })
 
         # Also always add tissue fraction measured as NORMAL
