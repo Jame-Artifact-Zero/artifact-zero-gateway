@@ -40,26 +40,54 @@ Background:
 
 # Metrics that scale with field strength (absolute signal values)
 GAP_METRICS = {
+    "gap",
     "min_gap",
     "run_width",
     "b_alg_b_joint",
-    "gap",
+    "alg_B_joint",
+    "hu_mean",
+    "hu_std",
 }
 
 # Metrics that are field-strength invariant (normalized ratios)
+# Confirmed invariant in K0 Exp12 (1,738 subjects, three scanners)
 FRACTION_METRICS = {
+    "fraction",
+    "mean_fraction",
     "peak_asym",
+    "peak_left_asym",
     "compression_pct",
     "std_fraction",
     "pct_left",
+    "pct_left_dominant",
     "peak_disagree",
+    "peak_disagree_score",
     "enhancement_delta",
     "b_pg_center_edge",
+    "pg_center_edge",
+    "alg_B_fraction",
+    "alg_B_calibrated",
+    "symmetry_index",
+    "asymmetry_index",
+    "uptake_ratio",
+    "lung_field_ratio",
 }
 
-# Reference field strength — all thresholds in az_impression_rules
-# are calibrated at this value.
 REFERENCE_FIELD_STRENGTH = 1.5
+
+
+def _field_strength_multiplier(field_strength: float) -> float:
+    """
+    Piecewise field strength multiplier.
+    Linear >= 1.5T (confirmed C-spine live data).
+    Power-law below 1.5T (exponent 1.5 fits observed 0.3T gap inflation).
+    TBC: refine exponent when 0.55T and 1.0T data available.
+    """
+    if not field_strength or field_strength <= 0:
+        return 1.0
+    if field_strength >= REFERENCE_FIELD_STRENGTH:
+        return field_strength / REFERENCE_FIELD_STRENGTH
+    return (field_strength / REFERENCE_FIELD_STRENGTH) ** 1.5
 
 
 def adjust_threshold(
@@ -70,59 +98,62 @@ def adjust_threshold(
     """
     Adjust a rule threshold for the field strength of the current study.
 
-    Args:
-        base_threshold: The threshold value as stored in az_impression_rules.
-                        Calibrated at REFERENCE_FIELD_STRENGTH (1.5T).
-        metric:         The metric name (e.g. 'min_gap', 'peak_asym').
-        field_strength: The field strength of the current study in Tesla,
-                        from result['field_strength']. Defaults to 1.5
-                        if not present.
-
-    Returns:
-        adjusted_threshold: float. For gap metrics, scaled by
-                            field_strength / REFERENCE_FIELD_STRENGTH.
-                            For fraction metrics, returned unchanged.
+    Gap metrics scale with field strength (piecewise model).
+    Fraction metrics are invariant -- returned unchanged.
+    Unknown metrics returned unchanged.
 
     Examples:
-        adjust_threshold(200, 'min_gap', 1.5)  -> 200.0   (no change at ref)
-        adjust_threshold(200, 'min_gap', 3.0)  -> 400.0   (doubled at 3T)
-        adjust_threshold(200, 'min_gap', 1.0)  -> 133.3   (reduced at 1T)
-        adjust_threshold(0.25, 'peak_asym', 3.0) -> 0.25  (unchanged)
-        adjust_threshold(200, 'min_gap', None) -> 200.0   (safe default)
+        adjust_threshold(200, 'gap', 1.5)   -> 200.0
+        adjust_threshold(200, 'gap', 3.0)   -> 400.0
+        adjust_threshold(200, 'gap', 0.3)   -> 17.9
+        adjust_threshold(0.274, 'fraction', 3.0) -> 0.274
+        adjust_threshold(0.949, 'pg_center_edge', 3.0) -> 0.949
     """
-    # Safe default if field strength missing or zero
     if not field_strength or field_strength <= 0:
         field_strength = REFERENCE_FIELD_STRENGTH
 
-    # Fraction metrics are invariant — return unchanged
     if metric in FRACTION_METRICS:
         return float(base_threshold)
 
-    # Gap metrics scale linearly with field strength
     if metric in GAP_METRICS:
-        multiplier = field_strength / REFERENCE_FIELD_STRENGTH
-        return float(base_threshold) * multiplier
+        return float(base_threshold) * _field_strength_multiplier(field_strength)
 
-    # Unknown metric — return unchanged with no error
-    # Allows new metrics to be added to the rules table without
-    # requiring a code change here first.
     return float(base_threshold)
 
 
 def get_field_strength(result: dict, default: float = 1.5) -> float:
-    """
-    Safely extract field strength from a result dict.
-
-    Args:
-        result:  The sequence result dict from the decomposition pipeline.
-        default: Value to return if field_strength is missing or invalid.
-
-    Returns:
-        field_strength as float.
-    """
+    """Safely extract field strength from a result dict."""
     fs = result.get("field_strength", default)
     try:
         fs = float(fs)
         return fs if fs > 0 else default
     except (TypeError, ValueError):
         return default
+
+
+def apply_rule(rule: dict, value, field_strength: float) -> bool:
+    """
+    Apply a single impression rule against a measured value
+    with field strength adjustment.
+
+    Returns True if the rule fires, else False.
+    Handles None, non-numeric, and non-finite values safely.
+    """
+    if value is None:
+        return False
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return False
+    import math
+    if not math.isfinite(value):
+        return False
+
+    adjusted = adjust_threshold(rule['threshold'], rule['metric'], field_strength)
+    op = rule.get('operator', rule.get('op', ''))
+    if op in ('<', 'lt'):   return value < adjusted
+    if op in ('>', 'gt'):   return value > adjusted
+    if op in ('<=', 'lte'): return value <= adjusted
+    if op in ('>=', 'gte'): return value >= adjusted
+    if op in ('==', 'eq'):  return abs(value - adjusted) < 1e-9
+    return False

@@ -475,6 +475,8 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
                 'ref_A':             float(A),
                 'ref_B':             float(B),
                 'gap':               float(abs(A - B)),
+                'b_alg_b_joint':     b_feats.get('b_alg_b_joint', float('nan')),
+                'b_pg_center_edge':  b_feats.get('b_pg_center_edge', float('nan')),
                 'mean_fraction':     float(np.nanmean(w_alg[mask])),
                 'std_fraction':      float(np.nanstd(w_alg[mask])),
                 'rms_vs_standard':   rms,
@@ -705,6 +707,14 @@ def _apply_rules(result: dict, rules: list):
             # min_gap fallback -- profile step may not have run
             if val is None and metric == 'min_gap':
                 val = seq.get('gap')
+
+            # fraction fallback -- stored as mean_fraction in seq_result
+            if val is None and metric == 'fraction':
+                val = seq.get('mean_fraction')
+
+            # pg_center_edge fallback -- stored as b_pg_center_edge
+            if val is None and metric == 'pg_center_edge':
+                val = seq.get('b_pg_center_edge')
 
             # run_width_max from list
             if metric == 'run_width_max':
