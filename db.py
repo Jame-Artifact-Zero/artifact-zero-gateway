@@ -130,10 +130,12 @@ def db_init():
             active BOOLEAN NOT NULL DEFAULT TRUE
         )
         """)
-        try:
-            cur.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT")
-        except Exception:
-            conn.rollback()
+        cur.execute("""
+            DO $$ BEGIN
+                ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT;
+            EXCEPTION WHEN duplicate_column THEN NULL;
+            END $$;
+        """)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS api_usage (
             id TEXT PRIMARY KEY,
@@ -179,10 +181,12 @@ def db_init():
             ("last_login_at",     "TIMESTAMPTZ"),
             ("login_count",       "INTEGER NOT NULL DEFAULT 0"),
         ]:
-            try:
-                cur.execute(f"ALTER TABLE users ADD COLUMN {col} {defn}")
-            except Exception:
-                conn.rollback()
+            cur.execute(f"""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN {col} {defn};
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$;
+            """)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS login_history (
             id TEXT PRIMARY KEY,
@@ -203,19 +207,23 @@ def db_init():
             ("revoked_at",   "TIMESTAMPTZ"),
             ("usage_count",  "INTEGER NOT NULL DEFAULT 0"),
         ]:
-            try:
-                cur.execute(f"ALTER TABLE api_keys ADD COLUMN {col} {defn}")
-            except Exception:
-                conn.rollback()
+            cur.execute(f"""
+                DO $$ BEGIN
+                    ALTER TABLE api_keys ADD COLUMN {col} {defn};
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$;
+            """)
         for col, defn in [
             ("user_id",    "TEXT"),
             ("account_id", "TEXT"),
             ("key_type",   "TEXT"),
         ]:
-            try:
-                cur.execute(f"ALTER TABLE api_usage ADD COLUMN {col} {defn}")
-            except Exception:
-                conn.rollback()
+            cur.execute(f"""
+                DO $$ BEGIN
+                    ALTER TABLE api_usage ADD COLUMN {col} {defn};
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$;
+            """)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS webhooks (
             id TEXT PRIMARY KEY,
@@ -250,10 +258,12 @@ def db_init():
             ("account_id", "TEXT"),
             ("key_type",   "TEXT NOT NULL DEFAULT 'live'"),
         ]:
-            try:
-                cur.execute(f"ALTER TABLE credit_transactions ADD COLUMN {col} {defn}")
-            except Exception:
-                conn.rollback()
+            cur.execute(f"""
+                DO $$ BEGIN
+                    ALTER TABLE credit_transactions ADD COLUMN {col} {defn};
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$;
+            """)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS spend_alerts (
             id TEXT PRIMARY KEY,
@@ -341,10 +351,12 @@ def db_init():
             active INTEGER NOT NULL DEFAULT 1
         )
         """)
-        try:
-            cur.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT")
-        except Exception:
-            pass
+        cur.execute("""
+            DO $$ BEGIN
+                ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT;
+            EXCEPTION WHEN duplicate_column THEN NULL;
+            END $$;
+        """)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS api_usage (
             id TEXT PRIMARY KEY,
@@ -461,7 +473,12 @@ def db_init():
             ("credit_transactions", "key_type",          "TEXT NOT NULL DEFAULT 'live'"),
         ]:
             try:
-                cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {defn}")
+                cur.execute(f"""
+                    DO $$ BEGIN
+                        ALTER TABLE {table} ADD COLUMN {col} {defn};
+                    EXCEPTION WHEN duplicate_column THEN NULL;
+                    END $$;
+                """)
             except Exception:
                 pass
 
