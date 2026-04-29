@@ -69,6 +69,7 @@ GOOD_SEQUENCES = {
               'suscept', '2d t2'],
     'STIR':  ['stir', 'short tau'],
     'FLAIR': ['flair'],
+    'T2FS':  ['t2 fs', 't2fs', 't2 fat', 'fsat', 'fat sat', 'fat-sat', 'pdfs', 'pd fs'],
     'T1':    ['t1', 'mprage', 'bravo', 'spgr', 'tfe', 'fspgr', 'irfspgr', 't1w',
               'sag t1', 'cor t1', 'ax t1', '3d t1'],
     'T2':    ['t2', 't2w', 'ax t2', 'sag t2', 'fse', 'tse'],
@@ -100,13 +101,14 @@ def score_sequence(desc, n_slices):
 
     # Score: prefer T1/T2 with many slices
     score = 0
-    if seq_type == 'T2S':   score += 130
-    elif seq_type == 'STIR': score += 110
-    elif seq_type == 'FLAIR':score += 110
-    elif seq_type == 'T1':   score += 100
-    elif seq_type == 'T2':   score += 80
-    elif seq_type == 'PD':   score += 90
-    elif seq_type == 'DWI':  score += 30
+    if seq_type == 'T2S':    score += 130
+    elif seq_type == 'STIR':  score += 110
+    elif seq_type == 'FLAIR': score += 110
+    elif seq_type == 'T2FS':  score += 105
+    elif seq_type == 'T1':    score += 100
+    elif seq_type == 'T2':    score += 80
+    elif seq_type == 'PD':    score += 90
+    elif seq_type == 'DWI':   score += 30
     else: score += 10
 
     # More slices = better coverage

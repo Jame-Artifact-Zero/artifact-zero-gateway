@@ -104,16 +104,48 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
                     desc = str(getattr(ds, 'StudyDescription', '') or '').upper()
                     if any(k in desc for k in ['SPINE', 'CERVICAL', 'CSPINE', 'C-SPINE']):
                         return 'CSPINE'
-                    if any(k in desc for k in ['BRAIN', 'HEAD']):
-                        return 'BRAIN'
                     if any(k in desc for k in ['LUMBAR', 'LSPINE', 'L-SPINE']):
                         return 'LSPINE'
                     if any(k in desc for k in ['THORACIC', 'TSPINE', 'T-SPINE']):
                         return 'TSPINE'
+                    if any(k in desc for k in ['BRAIN', 'HEAD', 'NEURO']):
+                        return 'BRAIN'
+                    if any(k in desc for k in ['KNEE']):
+                        return 'KNEE'
+                    if any(k in desc for k in ['ANKLE', 'HINDFOOT']):
+                        return 'ANKLE'
+                    if any(k in desc for k in ['WRIST', 'CARPAL', 'UPPER JOINT', 'DISTAL RADIUS']):
+                        return 'WRIST'
+                    if any(k in desc for k in ['FOOT', 'FOREFOOT', 'PLANTAR']):
+                        return 'FOOT'
+                    if any(k in desc for k in ['ELBOW', 'CUBITAL']):
+                        return 'ELBOW'
+                    if any(k in desc for k in ['SHOULDER']):
+                        return 'SHOULDER'
+                    if any(k in desc for k in ['HIP', 'FEMUR', 'FEMORAL']):
+                        return 'HIP'
+                    if any(k in desc for k in ['HAND', 'METACARPAL']):
+                        return 'HAND'
+                    if any(k in desc for k in ['PELVIS', 'PELVIC']):
+                        return 'PELVIS'
+                    if any(k in desc for k in ['SACRUM', 'SACRAL', 'SI JOINT', 'SACROILIAC']):
+                        return 'SACRUM'
+                    if any(k in desc for k in ['ABDOMEN', 'LIVER', 'HEPATIC']):
+                        return 'ABDOMEN'
                     return 'UNKNOWN'
-                if bp in ('CSPINE', 'CERVICAL'):
-                    return 'CSPINE'
-                return bp
+                # Map common DICOM tags
+                tag_map = {
+                    'CSPINE': 'CSPINE', 'CERVICAL': 'CSPINE', 'CERVICAL SPINE': 'CSPINE',
+                    'LSPINE': 'LSPINE', 'LUMBAR': 'LSPINE', 'LUMBAR SPINE': 'LSPINE',
+                    'TSPINE': 'TSPINE', 'THORACIC': 'TSPINE', 'THORACIC SPINE': 'TSPINE',
+                    'BRAIN': 'BRAIN', 'HEAD': 'BRAIN',
+                    'KNEE': 'KNEE', 'ANKLE': 'ANKLE', 'FOOT': 'FOOT',
+                    'WRIST': 'WRIST', 'HAND': 'HAND', 'ELBOW': 'ELBOW',
+                    'SHOULDER': 'SHOULDER', 'HIP': 'HIP',
+                    'PELVIS': 'PELVIS', 'PELVIC': 'PELVIS',
+                    'ABDOMEN': 'ABDOMEN', 'SACRUM': 'SACRUM',
+                }
+                return tag_map.get(bp, bp)
 
             series_list = group_series(extracted_paths)
             good = [s for s in series_list if s['score'] > 0]
