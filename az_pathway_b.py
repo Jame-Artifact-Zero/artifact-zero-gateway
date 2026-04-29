@@ -199,6 +199,23 @@ def compute_pathway_b(vol: np.ndarray) -> dict:
     if vol.ndim != 3 or vol.size < 100:
         return nan_result
 
+    # Cap volume size before FFT to prevent OOM on large studies.
+    # Downsample to max 64x64xN_SLICES_MAX using stride subsampling.
+    # Pathway B operators are global (5th percentile, phase gradient mean)
+    # so spatial downsampling does not affect the measurement significantly.
+    MAX_XY = 64
+    MAX_SLICES = 20
+    try:
+        r, c, s = vol.shape
+        sr = max(1, r // MAX_XY)
+        sc = max(1, c // MAX_XY)
+        ss = max(1, s // MAX_SLICES)
+        vol = vol[::sr, ::sc, ::ss]
+        import logging
+        logging.debug(f"[pathway_b] downsampled to {vol.shape} from ({r},{c},{s})")
+    except Exception:
+        return nan_result
+
     try:
         kspace = dicom_volume_to_kspace(vol)
         return {
