@@ -179,6 +179,13 @@ try:
 except Exception as e:
     print(f"[app] azl failed: {e}", flush=True)
 
+try:
+    from preimpression.server import preimpression_bp
+    app.register_blueprint(preimpression_bp)
+    print("[app] preimpression loaded", flush=True)
+except Exception as e:
+    print(f"[app] preimpression failed: {e}", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
