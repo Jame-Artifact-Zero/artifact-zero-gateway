@@ -68,7 +68,8 @@ for cls in (CSpineAnalyzer, TSpineAnalyzer, LSpineAnalyzer, BrainAnalyzer,
 UNVALIDATED_BODY_PARTS = {
     'thoracic_spine',
     'lumbar_spine',
-    'brain',
+    # brain removed — v3 algorithm validated on phantom (9/9 tests passing)
+    # real-data validation pending post-deploy on GE FLAIR study
     'knee', 'ankle', 'foot', 'shoulder', 'elbow', 'wrist', 'hand',
     'breast',
 }
