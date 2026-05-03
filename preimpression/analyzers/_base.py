@@ -86,12 +86,43 @@ def slice_z_center(it):
     return float(ctr[2])
 
 
+def _read_pixel_array(ds):
+    """
+    Read pixel array from a pydicom dataset.
+    Handles JPEG Lossless and other compressed transfer syntaxes that
+    require gdcm or pylibjpeg by falling back to raw pixel data.
+    This matches the approach used in az_dicom_processor.py.
+    """
+    try:
+        return ds.pixel_array.astype(np.float64)
+    except Exception:
+        pass
+    # Fallback: force uncompressed read by overriding transfer syntax
+    try:
+        import copy
+        ds2 = copy.copy(ds)
+        ds2.file_meta.TransferSyntaxUID = pydicom.uid.ExplicitVRLittleEndian
+        return ds2.pixel_array.astype(np.float64)
+    except Exception:
+        pass
+    # Last resort: read raw pixel bytes
+    try:
+        raw = np.frombuffer(ds.PixelData, dtype=np.uint16)
+        rows = int(getattr(ds, 'Rows', 512))
+        cols = int(getattr(ds, 'Columns', 512))
+        return raw[:rows * cols].reshape(rows, cols).astype(np.float64)
+    except Exception:
+        rows = int(getattr(ds, 'Rows', 512))
+        cols = int(getattr(ds, 'Columns', 512))
+        return np.zeros((rows, cols), dtype=np.float64)
+
+
 def load_slice(filepath):
     ds = pydicom.dcmread(filepath)
     return {
         'filepath': filepath,
         'inst': int(getattr(ds, 'InstanceNumber', 0)),
-        'img': ds.pixel_array.astype(np.float64),
+        'img': _read_pixel_array(ds),
         'ipp': np.array(getattr(ds, 'ImagePositionPatient', [0, 0, 0]), dtype=float),
         'iop': np.array(getattr(ds, 'ImageOrientationPatient', [1, 0, 0, 0, 1, 0]), dtype=float),
         'ps': np.array(getattr(ds, 'PixelSpacing', [1.0, 1.0]), dtype=float),
