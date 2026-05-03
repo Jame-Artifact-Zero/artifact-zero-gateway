@@ -70,17 +70,38 @@ def run_pipeline_from_series(series_list, body_part=None, study_meta=None,
 
     analyzer = get_analyzer(detected_bp)
     if analyzer is None:
+        # Distinguish 'unknown body part' from 'known but gated for validation'
+        from .analyzers import _CODE_TO_ANALYZER, ANALYZERS, UNVALIDATED_BODY_PARTS
+        cls = _CODE_TO_ANALYZER.get(detected_bp.upper() if detected_bp else '')
+        if cls is None:
+            for label, klass in ANALYZERS.items():
+                if detected_bp and label.upper() == detected_bp.upper():
+                    cls = klass
+                    break
+
+        if cls is not None and cls.body_part_label in UNVALIDATED_BODY_PARTS:
+            status = 'UNVALIDATED_BODY_PART'
+            reason = (
+                f'{detected_bp} is registered but its detection algorithm '
+                f'has not been validated against real radiologist-reported '
+                f'studies. Flagging is gated until validation completes.'
+            )
+        else:
+            status = 'UNSUPPORTED_BODY_PART'
+            reason = f'no analyzer registered for body part {detected_bp}'
+
         return {
-            'status': 'UNSUPPORTED_BODY_PART',
+            'status': status,
+            'reason': reason,
             'detected_body_part': detected_bp,
             'body_part_source': bp_source,
             'supported_body_parts': supported_body_parts(),
+            'currently_validated_body_parts': ['cervical_spine'],
             'series_seen': [
                 {k: s[k] for k in ('series_description', 'orientation',
                                     'modality', 'n_slices')}
                 for s in series_list
-            ],
-            'timing_ms': {'total': (time.perf_counter() - t0) * 1000},
+            ],'timing_ms': {'total': (time.perf_counter() - t0) * 1000},
         }
 
     t_dispatch = time.perf_counter()
