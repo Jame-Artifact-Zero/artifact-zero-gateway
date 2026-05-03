@@ -89,8 +89,19 @@ def run_pipeline_from_series(series_list, body_part=None, study_meta=None,
 
     # Wrap with shell metadata
     if study_meta is None or scanner_meta is None:
-        ds = next((s.get('sample_ds') for s in series_list
-                   if s.get('sample_ds') is not None), None)
+        # Prefer an MR/CT series over non-image modalities (SR, PR, etc.)
+        ds = None
+        for s in series_list:
+            cand = s.get('sample_ds')
+            if cand is None:
+                continue
+            mod = str(getattr(cand, 'Modality', '')).upper()
+            if mod in ('MR', 'CT', 'PT', 'NM', 'XA', 'CR', 'DX'):
+                ds = cand
+                break
+        if ds is None:
+            ds = next((s.get('sample_ds') for s in series_list
+                       if s.get('sample_ds') is not None), None)
         if ds is not None:
             if study_meta is None:
                 study_meta = {

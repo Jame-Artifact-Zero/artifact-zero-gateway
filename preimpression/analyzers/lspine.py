@@ -129,7 +129,7 @@ class LSpineAnalyzer(BaseAnalyzer):
         # canal, which is the thecal sac at most lumbar levels.
         cord_detections = detect_cords_axial(
             ax_items,
-            intensity_range=(60, 280),  # broader: includes CSF-rich thecal
+            intensity_range=(0, 0),  # signal: use adaptive percentile range
             area_range_mm2=(60, 250),    # thecal sac is bigger than cord
         )
 
