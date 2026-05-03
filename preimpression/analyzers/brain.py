@@ -498,12 +498,40 @@ def detect_flair_lesions(img, brain_mask, ps_mm, ventricle_mask=None):
 # ============================================================================
 # Main analyzer
 # ============================================================================
+# ============================================================================
+# v4 corpus-math internals (loaded after v3 helpers are defined to avoid cycles)
+# ============================================================================
+from .brain_v4 import (
+    measure_midline_shift_v4,
+    bilateral_asymmetry,
+    calibrate_wm_intensity,
+    detect_flair_lesions_v4,
+    sustained_shift_max,
+    BRAIN_ASYMMETRY_SCORE,
+    SUSTAINED_SHIFT_MIN_MAGNITUDE_MM,
+)
+
+
 class BrainAnalyzer(BaseAnalyzer):
     body_part_codes = ('BRAIN', 'HEAD', 'NEURO')
     body_part_label = 'brain'
-    version = 'brain.v3'
+    version = 'brain.v4'
 
     def analyze(self, series_list, work_dir=None):
+        """
+        Brain analyzer v4 — corpus-math grounded, real-data validated.
+
+        Replaces v3 broken internals:
+          - Falx tracer perimeter cost-trough → HARD viscous corridor cutoff (VSP)
+          - Asymmetry/displacement conflated → wavelet-mirror residual gives
+            independent asymmetry metric without needing falx detection
+          - FLAIR lesions calling cortex/fat → volume-calibrated WM threshold
+            + T1 confirmation (real lesions are dark on T1, fat is bright)
+
+        Plus: midline-shift flags only fire on SUSTAINED shifts across multiple
+        consecutive slices. Isolated single-slice anatomic asymmetry doesn't
+        trigger flags (validated against real normal GE FLAIR study).
+        """
         chosen, kind, all_flair, all_t2, all_t1 = select_best_brain_axial(series_list)
         if chosen is None:
             return {
@@ -530,198 +558,328 @@ class BrainAnalyzer(BaseAnalyzer):
             except Exception:
                 flair_items = None
 
+        # T1 axial for lesion confirmation. Prefer T1 with matching geometry
+        # to FLAIR (same IPP/IOP/PixelSpacing). A co-registered T1 lets us
+        # filter subcutaneous fat (bright on both FLAIR and T1) from real
+        # WM hyperintensities (bright on FLAIR, dark on T1). A mis-aligned
+        # T1 (e.g., 3D MP-RAGE volume reformat) would put fat at wrong
+        # voxel positions and produce false confirmations.
+        t1_items = None
+        if all_t1:
+            flair_n = (flair_axial['n_slices']
+                        if flair_axial else chosen['n_slices'])
+            # Score: matching slice count is a strong signal for co-registration
+            def t1_score(s):
+                match_bonus = 1_000_000 if s['n_slices'] == flair_n else 0
+                return match_bonus + s['n_slices']
+            t1_axial = max(all_t1, key=t1_score)
+            try:
+                t1_items_candidate = load_volume(t1_axial['files'])
+                # Verify geometry match against FLAIR (or chosen if FLAIR is chosen)
+                ref_items = (flair_items if flair_items is not None
+                              else ax_items)
+                if (t1_items_candidate and ref_items and
+                        len(t1_items_candidate) == len(ref_items)):
+                    # Check if first slice's IPP matches
+                    ref0 = ref_items[0]
+                    t1_0 = t1_items_candidate[0]
+                    ipp_match = (np.allclose(ref0['ipp'], t1_0['ipp'], atol=2.0)
+                                  and np.allclose(ref0['ps'], t1_0['ps'], atol=0.05))
+                    if ipp_match:
+                        t1_items = t1_items_candidate
+            except Exception:
+                t1_items = None
+
+        # ============= Build z-indexed FLAIR/T1 for co-registration =============
+        flair_z_index = {}
+        flair_volume_items = []  # for WM calibration
+        if flair_items is not None:
+            for it in flair_items:
+                ps_mm_f = float(it['ps'][0])
+                bm_f = detect_brain_mask(it['img'], ps_mm_f)
+                if bm_f is None or bm_f.sum() < 1000:
+                    continue
+                in_b = it['img'][bm_f]
+                if in_b.size == 0:
+                    continue
+                thresh_v = float(np.percentile(in_b, 8))
+                vent_f = (it['img'] < thresh_v) & bm_f
+                flair_volume_items.append((it['img'], bm_f, vent_f))
+                # Index by IPP z-coordinate for co-reg with T1
+                z_key = round(float(it['ipp'][2]), 1)
+                flair_z_index[z_key] = (it['img'], bm_f, vent_f, ps_mm_f, it['inst'])
+
+        t1_z_index = {}
+        if t1_items is not None:
+            for it in t1_items:
+                z_key = round(float(it['ipp'][2]), 1)
+                t1_z_index[z_key] = it['img']
+
+        wm_calib = None
+        if flair_volume_items:
+            ps_mm_calib = float(flair_items[0]['ps'][0])
+            wm_calib = calibrate_wm_intensity(flair_volume_items, ps_mm_calib)
+
+        # ============= Per-slice analysis on primary axial series =============
         slice_records = []
         markers = []
+        all_shift_mm_in_z_order = []
+        z_for_shift_order = []
+
         for it in ax_items:
             ps_mm = float(it['ps'][0])
             brain_mask = detect_brain_mask(it['img'], ps_mm)
             if brain_mask is None or brain_mask.sum() * ps_mm ** 2 < 5000:
                 continue
 
-            mid = measure_midline_shift(it['img'], brain_mask, ps_mm)
-            if mid is None:
-                continue
+            mid = measure_midline_shift_v4(it['img'], brain_mask, ps_mm)
+
+            # Bilateral asymmetry (independent of falx detection)
+            bony_info = find_bony_midline(brain_mask, ps_mm)
+            if bony_info is not None:
+                asym = bilateral_asymmetry(it['img'], brain_mask,
+                                              bony_info['bony_col'], ps_mm)
+            else:
+                asym = None
+
+            # Use mid['bony_col'] if detection got that far; else asym fallback
+            bony_col_for_vent = mid.get('bony_col')
+            if bony_col_for_vent is None and bony_info is not None:
+                bony_col_for_vent = bony_info['bony_col']
+            if bony_col_for_vent is None:
+                continue  # truly cannot orient this slice
 
             left_v, right_v = segment_lateral_ventricles(
                 it['img'], brain_mask, ps_mm, image_kind=kind,
-                bony_col=mid['bony_col'],
+                bony_col=bony_col_for_vent,
             )
             vent_total = left_v + right_v
             vent_asym = ((left_v - right_v) / vent_total) if vent_total > 0 else 0.0
 
             yy, xx = np.indices(brain_mask.shape)
-            left_brain = brain_mask & (xx < mid['bony_col'])
-            right_brain = brain_mask & (xx >= mid['bony_col'])
+            left_brain = brain_mask & (xx < bony_col_for_vent)
+            right_brain = brain_mask & (xx >= bony_col_for_vent)
             left_a = float(left_brain.sum() * ps_mm ** 2)
             right_a = float(right_brain.sum() * ps_mm ** 2)
             tot_a = left_a + right_a
-            brain_asym = ((left_a - right_a) / tot_a) if tot_a > 0 else 0.0
+            brain_asym_geom = ((left_a - right_a) / tot_a) if tot_a > 0 else 0.0
 
-            flags = []
-            shift = abs(mid['shift_mm'])
-            if shift >= BRAIN_MIDLINE_SHIFT['critical_mm']:
-                flags.append({
-                    'label': f"midline shift {mid['shift_mm']:+.1f} mm",
-                    'severity': 'CRITICAL',
-                })
-            elif shift >= BRAIN_MIDLINE_SHIFT['moderate_mm']:
-                flags.append({
-                    'label': f"midline shift {mid['shift_mm']:+.1f} mm",
-                    'severity': 'MODERATE',
-                })
-            elif shift >= BRAIN_MIDLINE_SHIFT['finding_mm']:
-                flags.append({
-                    'label': f"midline shift {mid['shift_mm']:+.1f} mm",
-                    'severity': 'FINDING',
-                })
+            # Per-slice flags: only fire ONLY if shift is detected confidently
+            slice_flags = []
+            shift_mm = mid['shift_mm']
+            if np.isfinite(shift_mm):
+                ash = abs(shift_mm)
+                # Per-slice CRITICAL/MODERATE only if magnitude is large; FINDING
+                # promotion happens only on the volume-level sustained metric below
+                if ash >= BRAIN_MIDLINE_SHIFT['critical_mm']:
+                    slice_flags.append({
+                        'label': f"midline shift {shift_mm:+.1f} mm",
+                        'severity': 'CRITICAL',
+                    })
+                elif ash >= BRAIN_MIDLINE_SHIFT['moderate_mm']:
+                    slice_flags.append({
+                        'label': f"midline shift {shift_mm:+.1f} mm",
+                        'severity': 'MODERATE',
+                    })
+                # No FINDING-level per-slice flag for shift — those are below
+                # the resolution noise floor for an isolated slice
 
+            # Coord transform for markers
             ipp, iop, ps = it['ipp'], it['iop'], it['ps']
             cy_b, cx_b = center_of_mass(brain_mask)
             brain_centroid_xyz = ipp + cx_b*ps[1]*iop[0:3] + cy_b*ps[0]*iop[3:6]
-            bony_xyz = ipp + mid['bony_col']*ps[1]*iop[0:3] + cy_b*ps[0]*iop[3:6]
-            falx_at_row = mid.get('shift_at_row', int(cy_b))
-            falx_col_at_row = mid['falx_col_per_row'][falx_at_row]
-            falx_col = (falx_col_at_row if falx_col_at_row is not None
-                        else mid['bony_col'])
-            falx_xyz = ipp + falx_col*ps[1]*iop[0:3] + falx_at_row*ps[0]*iop[3:6]
+            bony_xyz = ipp + bony_col_for_vent*ps[1]*iop[0:3] + cy_b*ps[0]*iop[3:6]
+
+            falx_col = mid.get('falx_col')
+            if falx_col is None or not np.isfinite(falx_col):
+                falx_col = bony_col_for_vent  # fallback for marker placement
+            falx_xyz = ipp + falx_col*ps[1]*iop[0:3] + cy_b*ps[0]*iop[3:6]
 
             slice_records.append({
                 'inst': it['inst'],
                 'z_mm': float(brain_centroid_xyz[2]),
                 'brain_area_mm2': tot_a,
-                'midline_shift_mm': mid['shift_mm'],
-                'symmetry_score': mid['symmetry_score'],
+                'detection_status': mid['detection_status'],
+                'midline_shift_mm': (float(shift_mm)
+                                       if np.isfinite(shift_mm) else None),
+                # smoothed_mm kept for back-compat; populated post-loop
+                'midline_shift_smoothed_mm': 0.0,
+                'mean_falx_norm': mid.get('mean_falx_norm'),
+                'frac_within_corridor': mid.get('frac_within_corridor'),
+                'asymmetry_score': (asym['total_score'] if asym else None),
+                'asymmetry_side_bias': (asym['side_bias'] if asym else None),
+                'symmetry_score': float(mid.get('symmetry_score', 0.0)),
                 'left_ventricle_mm2': left_v,
                 'right_ventricle_mm2': right_v,
                 'ventricle_asym_lr': vent_asym,
-                'brain_asym_lr': brain_asym,
-                'flags': flags,
+                'brain_asym_lr': brain_asym_geom,
+                'flags': slice_flags,
             })
+
+            all_shift_mm_in_z_order.append(shift_mm)
+            z_for_shift_order.append(float(brain_centroid_xyz[2]))
+
             markers.append({
                 'inst': it['inst'],
                 'z_mm': float(brain_centroid_xyz[2]),
                 'bony_midline_xyz_mm': [round(float(v), 3) for v in bony_xyz],
                 'falx_xyz_mm': [round(float(v), 3) for v in falx_xyz],
-                'brain_centroid_xyz_mm': [round(float(v), 3) for v in brain_centroid_xyz],
-                'midline_shift_mm': round(float(mid['shift_mm']), 2),
-                'shift_direction': ('left' if mid['shift_mm'] > 0
-                                     else 'right' if mid['shift_mm'] < 0
-                                     else 'none'),
-                'symmetry_score': round(float(mid['symmetry_score']), 3),
+                'brain_centroid_xyz_mm': [round(float(v), 3)
+                                             for v in brain_centroid_xyz],
+                'midline_shift_mm': (round(float(shift_mm), 2)
+                                       if np.isfinite(shift_mm) else None),
+                'shift_direction': (
+                    'left' if (np.isfinite(shift_mm) and shift_mm > 0)
+                    else 'right' if (np.isfinite(shift_mm) and shift_mm < 0)
+                    else 'none'
+                ),
+                'detection_status': mid['detection_status'],
+                'symmetry_score': round(float(mid.get('symmetry_score', 0.0)), 3),
+                'asymmetry_score': (round(float(asym['total_score']), 3)
+                                       if asym else None),
                 'ventricle_asym_lr': round(float(vent_asym), 3),
-                'brain_asym_lr': round(float(brain_asym), 3),
-                'severity': max_severity(flags),
+                'brain_asym_lr': round(float(brain_asym_geom), 3),
+                'severity': max_severity(slice_flags),
             })
 
-        # Z-axis consistency: median-filter shifts so single-slice spikes
-        # don't trigger CRITICAL flags
-        if slice_records:
-            shifts = np.array([s['midline_shift_mm'] for s in slice_records])
-            zs = np.array([s['z_mm'] for s in slice_records])
-            order = np.argsort(zs)
-            shifts_sorted = shifts[order]
-            shifts_filtered = median_filter(shifts_sorted, size=5, mode='nearest')
-            inv_order = np.argsort(order)
-            shifts_smoothed = shifts_filtered[inv_order]
-            for i, s in enumerate(slice_records):
-                s['midline_shift_smoothed_mm'] = float(shifts_smoothed[i])
+        # ============= Volume-level metrics =============
+        # Z-order shifts for sustained-shift analysis
+        if z_for_shift_order:
+            order = np.argsort(z_for_shift_order)
+            shifts_in_z = np.array(all_shift_mm_in_z_order, dtype=float)[order]
+            sustained_shift = sustained_shift_max(
+                shifts_in_z,
+                min_consecutive=3,
+                threshold_mm=SUSTAINED_SHIFT_MIN_MAGNITUDE_MM,
+            )
+            # Populate smoothed_mm field for back-compat (NaN-safe median filter)
+            from .brain_v4 import smooth_shifts_across_z
+            smoothed = smooth_shifts_across_z(shifts_in_z, window=5)
+            for i_in_order, smv in enumerate(smoothed):
+                orig_i = int(order[i_in_order])
+                slice_records[orig_i]['midline_shift_smoothed_mm'] = (
+                    float(smv) if np.isfinite(smv) else 0.0
+                )
+        else:
+            sustained_shift = 0.0
 
+        asym_scores = [s['asymmetry_score'] for s in slice_records
+                        if s.get('asymmetry_score') is not None]
+        asym_max = max(asym_scores) if asym_scores else 0.0
+
+        # ============= FLAIR lesion detection (volume-calibrated + T1-confirmed) =============
+        flair_lesion_summary = None
+        all_flair_lesions = []
+        if wm_calib is not None and flair_z_index:
+            lesions_by_slice = {}
+            for z_key, (flair_img, bm_f, vent_f, ps_mm_f, inst_f) in flair_z_index.items():
+                t1_img = t1_z_index.get(z_key)
+                lesions = detect_flair_lesions_v4(
+                    flair_img, bm_f, ps_mm_f,
+                    ventricle_mask=vent_f,
+                    t1_img=t1_img,
+                    wm_calib=wm_calib,
+                )
+                if lesions:
+                    lesions_by_slice[inst_f] = lesions
+                    all_flair_lesions.extend(lesions)
+            flair_lesion_summary = {
+                'lesion_count': len(all_flair_lesions),
+                'lesion_total_area_mm2': sum(L['area_mm2']
+                                                for L in all_flair_lesions),
+                'lesions_by_slice': lesions_by_slice,
+                'wm_calibration': wm_calib,
+                't1_confirmed': bool(t1_z_index),
+            }
+
+        # ============= Volume-level flag generation =============
         all_flags = []
 
-        max_shift_record = None
-        if slice_records:
-            max_shift_record = max(
-                slice_records,
-                key=lambda s: abs(s.get('midline_shift_smoothed_mm', 0.0)),
-            )
-            ms = abs(max_shift_record.get('midline_shift_smoothed_mm', 0.0))
-            shift_value = max_shift_record.get('midline_shift_smoothed_mm', 0.0)
-            level_str = f"z={max_shift_record['z_mm']:.0f}"
-            if ms >= BRAIN_MIDLINE_SHIFT['critical_mm']:
-                all_flags.append({
-                    'label': f"midline shift {shift_value:+.1f} mm (sustained)",
-                    'severity': 'CRITICAL', 'level': level_str,
-                })
-            elif ms >= BRAIN_MIDLINE_SHIFT['moderate_mm']:
-                all_flags.append({
-                    'label': f"midline shift {shift_value:+.1f} mm (sustained)",
-                    'severity': 'MODERATE', 'level': level_str,
-                })
-            elif ms >= BRAIN_MIDLINE_SHIFT['finding_mm']:
-                all_flags.append({
-                    'label': f"midline shift {shift_value:+.1f} mm",
-                    'severity': 'FINDING', 'level': level_str,
-                })
+        # Midline shift (sustained criterion)
+        if abs(sustained_shift) >= BRAIN_MIDLINE_SHIFT['critical_mm']:
+            all_flags.append({
+                'label': f"midline shift {sustained_shift:+.1f} mm (sustained)",
+                'severity': 'CRITICAL', 'level': 'overall',
+            })
+        elif abs(sustained_shift) >= BRAIN_MIDLINE_SHIFT['moderate_mm']:
+            all_flags.append({
+                'label': f"midline shift {sustained_shift:+.1f} mm (sustained)",
+                'severity': 'MODERATE', 'level': 'overall',
+            })
+        elif abs(sustained_shift) >= SUSTAINED_SHIFT_MIN_MAGNITUDE_MM:
+            all_flags.append({
+                'label': f"midline shift {sustained_shift:+.1f} mm (sustained)",
+                'severity': 'FINDING', 'level': 'overall',
+            })
 
+        # Bilateral asymmetry (new — wavelet-mirror residual)
+        if asym_max >= BRAIN_ASYMMETRY_SCORE['critical']:
+            all_flags.append({
+                'label': f"bilateral asymmetry {asym_max:.3f}",
+                'severity': 'CRITICAL', 'level': 'overall',
+            })
+        elif asym_max >= BRAIN_ASYMMETRY_SCORE['moderate']:
+            all_flags.append({
+                'label': f"bilateral asymmetry {asym_max:.3f}",
+                'severity': 'MODERATE', 'level': 'overall',
+            })
+        elif asym_max >= BRAIN_ASYMMETRY_SCORE['finding']:
+            all_flags.append({
+                'label': f"bilateral asymmetry {asym_max:.3f}",
+                'severity': 'FINDING', 'level': 'overall',
+            })
+
+        # Ventricular asymmetry — RELIABLE ONLY ON T2 (ventricles are
+        # bright, well-separable from parenchyma). On FLAIR, CSF is
+        # suppressed so the "ventricle" mask catches a mix of ventricles,
+        # sulci, and edge partial-volume — per-slice asymmetry can swing
+        # from -0.32 to +1.00 on a normal brain. We compute the metric
+        # for transparency but DON'T fire flags from a FLAIR-primary scan.
+        # Validated on real GE FLAIR normal brain: per-slice asym ranges
+        # -0.32 to +1.00, volume total +0.13 — all noise, no real asymmetry.
         total_left_vent = sum(s['left_ventricle_mm2'] for s in slice_records)
         total_right_vent = sum(s['right_ventricle_mm2'] for s in slice_records)
         total_vent = total_left_vent + total_right_vent
         vent_asym_overall = ((total_left_vent - total_right_vent) / total_vent
                               if total_vent > 0 else 0.0)
-        if abs(vent_asym_overall) >= BRAIN_VENTRICLE_ASYM['critical_abs']:
-            all_flags.append({
-                'label': f"marked ventricular asymmetry ({vent_asym_overall:+.2f})",
-                'severity': 'CRITICAL', 'level': 'overall',
-            })
-        elif abs(vent_asym_overall) >= BRAIN_VENTRICLE_ASYM['moderate_abs']:
-            all_flags.append({
-                'label': f"moderate ventricular asymmetry ({vent_asym_overall:+.2f})",
-                'severity': 'MODERATE', 'level': 'overall',
-            })
-        elif abs(vent_asym_overall) >= BRAIN_VENTRICLE_ASYM['finding_abs']:
-            all_flags.append({
-                'label': f"mild ventricular asymmetry ({vent_asym_overall:+.2f})",
-                'severity': 'FINDING', 'level': 'overall',
-            })
-
-        flair_lesion_summary = None
-        if flair_items is not None:
-            total_lesion_count = 0
-            total_lesion_area_mm2 = 0.0
-            lesions_by_slice = {}
-            for it in flair_items:
-                ps_mm = float(it['ps'][0])
-                bm = detect_brain_mask(it['img'], ps_mm)
-                if bm is None:
-                    continue
-                if kind == 'FLAIR' or flair_axial is chosen:
-                    in_b = it['img'][bm]
-                    if in_b.size > 0:
-                        thresh_v = float(np.percentile(in_b, 8))
-                        vent = (it['img'] < thresh_v) & bm
-                    else:
-                        vent = None
-                else:
-                    vent = None
-                lesions = detect_flair_lesions(it['img'], bm, ps_mm,
-                                                ventricle_mask=vent)
-                if lesions:
-                    lesions_by_slice[it['inst']] = lesions
-                    total_lesion_count += len(lesions)
-                    total_lesion_area_mm2 += sum(l['area_mm2'] for l in lesions)
-
-            flair_lesion_summary = {
-                'lesion_count': total_lesion_count,
-                'lesion_total_area_mm2': total_lesion_area_mm2,
-                'lesions_by_slice': lesions_by_slice,
-            }
-            if total_lesion_count >= BRAIN_FLAIR_LESION['critical_count']:
+        ventricle_flagging_reliable = (kind == 'T2')
+        if ventricle_flagging_reliable:
+            if abs(vent_asym_overall) >= BRAIN_VENTRICLE_ASYM['critical_abs']:
                 all_flags.append({
-                    'label': f"high FLAIR lesion burden ({total_lesion_count} foci)",
+                    'label': f"marked ventricular asymmetry ({vent_asym_overall:+.2f})",
                     'severity': 'CRITICAL', 'level': 'overall',
                 })
-            elif total_lesion_count >= BRAIN_FLAIR_LESION['moderate_count']:
+            elif abs(vent_asym_overall) >= BRAIN_VENTRICLE_ASYM['moderate_abs']:
                 all_flags.append({
-                    'label': f"moderate FLAIR lesion burden ({total_lesion_count} foci)",
+                    'label': f"moderate ventricular asymmetry ({vent_asym_overall:+.2f})",
                     'severity': 'MODERATE', 'level': 'overall',
                 })
-            elif total_lesion_count >= BRAIN_FLAIR_LESION['finding_count']:
+            elif abs(vent_asym_overall) >= BRAIN_VENTRICLE_ASYM['finding_abs']:
                 all_flags.append({
-                    'label': f"FLAIR lesions present ({total_lesion_count} foci)",
+                    'label': f"mild ventricular asymmetry ({vent_asym_overall:+.2f})",
                     'severity': 'FINDING', 'level': 'overall',
                 })
 
-        overall = max_severity(all_flags)
+        # FLAIR lesions
+        n_lesions = len(all_flair_lesions)
+        if n_lesions >= BRAIN_FLAIR_LESION['critical_count']:
+            all_flags.append({
+                'label': f"high FLAIR lesion burden ({n_lesions} foci)",
+                'severity': 'CRITICAL', 'level': 'overall',
+            })
+        elif n_lesions >= BRAIN_FLAIR_LESION['moderate_count']:
+            all_flags.append({
+                'label': f"moderate FLAIR lesion burden ({n_lesions} foci)",
+                'severity': 'MODERATE', 'level': 'overall',
+            })
+        elif n_lesions >= BRAIN_FLAIR_LESION['finding_count']:
+            all_flags.append({
+                'label': f"FLAIR lesions present ({n_lesions} foci)",
+                'severity': 'FINDING', 'level': 'overall',
+            })
+
+        # ============= Build response =============
+        overall = max_severity(all_flags) if all_flags else 'normal'
         counts = {'critical': 0, 'moderate': 0, 'finding': 0, 'normal': 0}
         for f in all_flags:
             sev = f['severity'].lower()
@@ -729,12 +887,17 @@ class BrainAnalyzer(BaseAnalyzer):
         if not all_flags:
             counts['normal'] = 1
 
-        if slice_records:
-            mean_symm = float(np.mean([s['symmetry_score'] for s in slice_records]))
-            min_symm = float(min(s['symmetry_score'] for s in slice_records))
-        else:
-            mean_symm = 0.0
-            min_symm = 0.0
+        # Detection breakdown for transparency
+        detection_breakdown = {
+            'detected':      sum(1 for s in slice_records
+                                    if s['detection_status'] == 'detected'),
+            'indeterminate': sum(1 for s in slice_records
+                                    if s['detection_status'] == 'indeterminate'),
+            'no_falx':       sum(1 for s in slice_records
+                                    if s['detection_status'] == 'no_falx'),
+            'no_brain':      sum(1 for s in slice_records
+                                    if s['detection_status'] == 'no_brain'),
+        }
 
         return {
             'status': overall,
@@ -754,6 +917,7 @@ class BrainAnalyzer(BaseAnalyzer):
                         'series_uid': flair_axial['series_uid'],
                     } if flair_axial else None
                 ),
+                't1_axial_for_lesion_confirmation': bool(t1_z_index),
             },
             'levels_detected': {},
             'impression': {
@@ -765,26 +929,16 @@ class BrainAnalyzer(BaseAnalyzer):
             'slice_measurements': slice_records,
             'markers': markers,
             'brain_findings': {
-                'max_midline_shift_mm':
-                    float(max_shift_record.get('midline_shift_smoothed_mm', 0.0))
-                    if max_shift_record else 0.0,
-                'max_shift_at_z_mm':
-                    float(max_shift_record['z_mm']) if max_shift_record else 0.0,
+                'sustained_midline_shift_mm': float(sustained_shift),
+                'max_bilateral_asymmetry_score': float(asym_max),
                 'total_left_ventricle_mm2': total_left_vent,
                 'total_right_ventricle_mm2': total_right_vent,
                 'ventricle_asym_overall': vent_asym_overall,
                 'flair_lesion_summary': flair_lesion_summary,
                 'n_brain_slices_analyzed': len(slice_records),
-                'detection_reliability': {
-                    'mean_symmetry_score': mean_symm,
-                    'min_symmetry_score': min_symm,
-                    'note': (
-                        'symmetry_score reflects skull-edge midpoint '
-                        'consistency across rows. ~1.0 = uniform skull '
-                        '(reliable). Below 0.5 suggests irregular skull '
-                        'contour (post-craniectomy, severe deformity); '
-                        'midline shift values should be reviewed manually.'
-                    ),
-                },
+                'detection_breakdown': detection_breakdown,
+                # Back-compat: keep legacy fields populated
+                'max_midline_shift_mm': float(sustained_shift),
+                'max_shift_at_z_mm': 0.0,
             },
         }
