@@ -119,7 +119,7 @@ class TSpineAnalyzer(BaseAnalyzer):
         levels = detect_levels_tspine(sag_items)
         cord_detections = detect_cords_axial(
             ax_items,
-            intensity_range=(80, 220),
+            intensity_range=(0, 0),  # signal: use adaptive percentile range
             # Thoracic cord narrower than cervical except at lumbar enlargement
             area_range_mm2=(25, 110),
         )

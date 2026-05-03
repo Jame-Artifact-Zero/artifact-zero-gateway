@@ -139,6 +139,9 @@ def load_volume(files):
 def group_series(root):
     """Walk root finding all DICOM files, group by SeriesInstanceUID."""
     series = defaultdict(lambda: {'files': [], 'meta': None})
+    # Non-image DICOM modalities to skip entirely
+    SKIP_MODALITIES = {'SR', 'PR', 'KO', 'DOC', 'OT'}
+
     for f in Path(root).rglob('*'):
         if not f.is_file():
             continue
@@ -150,6 +153,9 @@ def group_series(root):
         except Exception:
             continue
         if not hasattr(ds, 'SeriesInstanceUID'):
+            continue
+        modality = str(getattr(ds, 'Modality', '')).upper()
+        if modality in SKIP_MODALITIES:
             continue
         uid = ds.SeriesInstanceUID
         series[uid]['files'].append(str(f))

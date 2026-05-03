@@ -87,15 +87,39 @@ def find_cord_intensity(img, ps_mm, search_center_rc=None,
     return cands[0]
 
 
+def _compute_cord_intensity_range(img, ps_mm):
+    """Percentile-based cord intensity bracket from in-body voxel distribution.
+
+    Cord on T2 sits at ~25th-70th percentile of in-body voxels regardless
+    of scanner make. Replaces hardcoded (80, 220) range that was calibrated
+    on Philips Ingenia only.
+    """
+    from scipy.ndimage import gaussian_filter
+    smooth = gaussian_filter(img, sigma=1.5)
+    in_body = smooth > (smooth.max() * 0.05)
+    if in_body.sum() < 100:
+        return (80.0, 220.0)  # fallback
+    pcts = np.percentile(smooth[in_body], [25, 70])
+    return (float(pcts[0]), float(pcts[1]))
+
+
 def detect_cords_axial(ax_items, intensity_range=(80, 220),
                         area_range_mm2=(40, 150)):
     """Run cord-first detection across an axial volume.
 
+    intensity_range=(0,0) signals adaptive percentile-based range per slice.
     Returns dict {inst: {'cord_xy', 'cord_rc', 'area_mm2', 'ecc',
                           'recovered': bool, 'z_mm'}}.
     """
     if not ax_items:
         return {}
+
+    # Adaptive intensity range — compute from the mid-slice if (0,0) signalled
+    _use_adaptive = (intensity_range == (0, 0) or intensity_range is None)
+    if _use_adaptive:
+        mid_img = ax_items[len(ax_items) // 2]['img']
+        mid_ps  = float(ax_items[len(ax_items) // 2]['ps'][0])
+        intensity_range = _compute_cord_intensity_range(mid_img, mid_ps)
 
     n = len(ax_items)
     mid_idx = n // 2

@@ -140,9 +140,31 @@ class CSpineAnalyzer(BaseAnalyzer):
         levels = detect_levels_cspine(sag_items)
         cord_detections = detect_cords_axial(
             ax_items,
-            intensity_range=(80, 220),
+            intensity_range=(0, 0),  # signal: use adaptive percentile range
             area_range_mm2=(40, 150),
         )
+
+        # Diagnostic: capture why detection failed if zero cords found
+        if not cord_detections and ax_items:
+            mid = ax_items[len(ax_items) // 2]
+            img = mid['img']
+            in_body = img > 30
+            pcts = {}
+            if in_body.any():
+                pcts = {str(p): float(np.percentile(img[in_body], p))
+                        for p in (5, 25, 50, 75, 92, 98)}
+            detection_diagnostics = {
+                'cord_detection_failed': True,
+                'n_axial_slices': len(ax_items),
+                'mid_slice_intensity_percentiles': pcts,
+                'configured_intensity_range': 'adaptive',
+                'note': 'Zero candidates found — check percentiles vs cord intensity',
+            }
+        else:
+            detection_diagnostics = {
+                'cord_detection_failed': False,
+                'n_cords_found': len(cord_detections),
+            }
 
         slice_records = []
         markers = []
@@ -219,4 +241,5 @@ class CSpineAnalyzer(BaseAnalyzer):
             'slice_measurements': slice_records,
             'markers': markers,
             'cord_track_3d': summarize_cord_track(markers),
+            'detection_diagnostics': detection_diagnostics,
         }
