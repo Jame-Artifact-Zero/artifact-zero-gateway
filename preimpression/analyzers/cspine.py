@@ -164,7 +164,12 @@ class CSpineAnalyzer(BaseAnalyzer):
                 fw = four_walk_v3(it['img'], float(it['ps'][0]), d['cord_rc'], cord_I)
                 lr_sum_mm = float(fw['patient_left']['dist_mm'] + fw['patient_right']['dist_mm'])
                 lesion_side = _classify_lesion_side(fw)
-            except Exception:
+            except Exception as _fw_exc:
+                import logging as _logging
+                _logging.getLogger('preimpression.cspine').warning(
+                    f'[four_walk_v3] inst={it["inst"]} FAILED: '
+                    f'{type(_fw_exc).__name__}: {_fw_exc}'
+                )
                 lr_sum_mm = float('nan')
                 lesion_side = 'unknown'
                 fw = {}
