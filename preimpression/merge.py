@@ -55,6 +55,9 @@ from typing import Optional
 # Callers wanting them should request format=full or use the dedicated
 # /preimpression endpoint.
 PREIMP_SEQ_KEEP_ADDITIONS = {
+    # v3 cspine additions
+    'lr_sum_min_mm', 'lr_sum_mean_mm',
+    'lesion_side',
     # Spine cord-canal geometry
     'space_min_mm', 'space_mean_mm', 'space_max_mm',
     'left_space_mm', 'right_space_mm',
@@ -143,6 +146,23 @@ def _merge_spine(result, preimp):
 
     seq['space_min_mm'] = float(worst_space_min)
     seq['asym_lr_abs'] = float(worst_asym_abs)
+
+    # v3 additions: lr_sum_min and lesion_side from worst level
+    lr_sums = [ls['lr_sum_min_mm'] for ls in level_summaries
+               if ls.get('lr_sum_min_mm') is not None]
+    seq['lr_sum_min_mm'] = float(min(lr_sums)) if lr_sums else None
+
+    # Lesion side from the worst-severity level
+    def _sev_rank(ls):
+        ranks = {'CRITICAL': 3, 'MODERATE': 2, 'FINDING': 1, 'NORMAL': 0}
+        sev = max((f.get('severity', 'NORMAL') for f in ls.get('flags', [])),
+                  key=lambda s: ranks.get(s, 0), default='NORMAL')
+        return ranks.get(sev, 0)
+    if level_summaries:
+        worst_ls = max(level_summaries, key=_sev_rank)
+        seq['lesion_side'] = worst_ls.get('lesion_side', 'unknown')
+    else:
+        seq['lesion_side'] = 'unknown'
     # Per-level detail at the top level
     result['preimpression_levels'] = level_summaries
     result['cord_track_3d'] = preimp.get('cord_track_3d', {})

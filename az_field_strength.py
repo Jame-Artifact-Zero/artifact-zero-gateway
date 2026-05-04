@@ -40,41 +40,37 @@ Background:
 
 # Metrics that scale with field strength (absolute signal values)
 GAP_METRICS = {
-    # Existing
-    "gap", "min_gap", "run_width", "b_alg_b_joint", "alg_B_joint",
-    "hu_mean", "hu_std",
-    # Pre-impression: spine cord-canal geometry (absolute mm)
-    "space_min_mm", "space_mean_mm", "space_max_mm",
-    "left_space_mm", "right_space_mm",
-    # Pre-impression: spine cord cross-section (absolute mm2)
-    "cord_area_mm2", "cord_area_mean_mm2",
-    # Pre-impression: brain (absolute distances and counts)
-    "midline_shift_mm", "midline_shift_abs_mm",
-    "flair_lesion_count", "flair_lesion_total_area_mm2",
-    # Pre-impression: joint volumetric findings (absolute mm3)
-    "effusion_volume_mm3", "marrow_edema_volume_mm3",
-    "effusion_total_area_mm2", "marrow_edema_total_area_mm2",
-    # Pre-impression: breast mass morphology (absolute mm)
-    "mass_diameter_mm", "mass_area_mm2",
+    "gap",
+    "min_gap",
+    "run_width",
+    "b_alg_b_joint",
+    "alg_B_joint",
+    "hu_mean",
+    "hu_std",
 }
 
 # Metrics that are field-strength invariant (normalized ratios)
 # Confirmed invariant in K0 Exp12 (1,738 subjects, three scanners)
 FRACTION_METRICS = {
-    # Existing
-    "fraction", "mean_fraction", "peak_asym", "peak_left_asym",
-    "compression_pct", "std_fraction", "pct_left", "pct_left_dominant",
-    "peak_disagree", "peak_disagree_score", "enhancement_delta",
-    "b_pg_center_edge", "pg_center_edge", "alg_B_fraction",
-    "alg_B_calibrated", "symmetry_index", "asymmetry_index",
-    "uptake_ratio", "lung_field_ratio",
-    # Pre-impression: spine L/R asymmetry (signed and absolute ratios)
-    "asym_lr", "asym_lr_abs", "asym_lr_mean", "asym_lr_max_abs",
-    # Pre-impression: brain asymmetry ratios
-    "ventricle_asym_lr", "ventricle_asym_abs",
-    "brain_asym_lr", "brain_asym_abs",
-    # Pre-impression: breast paired-anatomy ratios
-    "tissue_asym_lr", "tissue_asym_abs", "mass_count_asym",
+    "fraction",
+    "mean_fraction",
+    "peak_asym",
+    "peak_left_asym",
+    "compression_pct",
+    "std_fraction",
+    "pct_left",
+    "pct_left_dominant",
+    "peak_disagree",
+    "peak_disagree_score",
+    "enhancement_delta",
+    "b_pg_center_edge",
+    "pg_center_edge",
+    "alg_B_fraction",
+    "alg_B_calibrated",
+    "symmetry_index",
+    "asymmetry_index",
+    "uptake_ratio",
+    "lung_field_ratio",
 }
 
 REFERENCE_FIELD_STRENGTH = 1.5

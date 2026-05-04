@@ -87,39 +87,15 @@ def find_cord_intensity(img, ps_mm, search_center_rc=None,
     return cands[0]
 
 
-def _compute_cord_intensity_range(img, ps_mm):
-    """Percentile-based cord intensity bracket from in-body voxel distribution.
-
-    Cord on T2 sits at ~25th-70th percentile of in-body voxels regardless
-    of scanner make. Replaces hardcoded (80, 220) range that was calibrated
-    on Philips Ingenia only.
-    """
-    from scipy.ndimage import gaussian_filter
-    smooth = gaussian_filter(img, sigma=1.5)
-    in_body = smooth > (smooth.max() * 0.05)
-    if in_body.sum() < 100:
-        return (80.0, 220.0)  # fallback
-    pcts = np.percentile(smooth[in_body], [25, 70])
-    return (float(pcts[0]), float(pcts[1]))
-
-
 def detect_cords_axial(ax_items, intensity_range=(80, 220),
                         area_range_mm2=(40, 150)):
     """Run cord-first detection across an axial volume.
 
-    intensity_range=(0,0) signals adaptive percentile-based range per slice.
     Returns dict {inst: {'cord_xy', 'cord_rc', 'area_mm2', 'ecc',
                           'recovered': bool, 'z_mm'}}.
     """
     if not ax_items:
         return {}
-
-    # Adaptive intensity range — compute from the mid-slice if (0,0) signalled
-    _use_adaptive = (intensity_range == (0, 0) or intensity_range is None)
-    if _use_adaptive:
-        mid_img = ax_items[len(ax_items) // 2]['img']
-        mid_ps  = float(ax_items[len(ax_items) // 2]['ps'][0])
-        intensity_range = _compute_cord_intensity_range(mid_img, mid_ps)
 
     n = len(ax_items)
     mid_idx = n // 2
@@ -520,3 +496,297 @@ def resample_sag_patient_coords(item, z_range, y_range):
            (1-fr)*fc*img[r0, c1] + fr*fc*img[r1, c1])
     out[~valid] = 0
     return out
+
+
+
+# ── Pathway v3 four-walk measurement additions ──────────────────────────────
+
+
+def get_cord_intensity(smooth, ps_mm, cord_rc, sample_radius_mm=1.5):
+    """Sample cord intensity from ~1.5mm circle around cord centroid."""
+    cy, cx = cord_rc
+    H, W = smooth.shape
+    intens = []
+    for r in np.arange(0, sample_radius_mm, 0.3):
+        for t in np.linspace(0, 2 * np.pi, 8, endpoint=False):
+            yp = int(round(cy + (r / ps_mm) * np.sin(t)))
+            xp = int(round(cx + (r / ps_mm) * np.cos(t)))
+            if 0 <= yp < H and 0 <= xp < W:
+                intens.append(smooth[yp, xp])
+    return float(np.median(intens)) if intens else 0.0
+
+def find_cord_edge_gradient(profile, center_idx, direction, cord_I,
+                              max_step=20, grad_threshold=None):
+    """
+    Find cord edge along profile starting from center_idx going in direction (+1 or -1).
+
+    Cord edge = location where intensity gradient rises sharply (cord→CSF transition).
+    Returns idx of edge or None if not found within max_step.
+
+    NOTE: max_step should be set to cord_AP_radius_mm/ps_mm for vertical (~6mm)
+    or cord_LR_radius_mm/ps_mm for horizontal (~8mm). Going further finds vertebral
+    body marrow which has cord-similar intensity.
+    """
+    if grad_threshold is None:
+        grad_threshold = cord_I * 0.15  # 15% of cord_I per pixel rise
+    n = len(profile)
+    for step in range(2, max_step):
+        idx = center_idx + direction * step
+        if idx < 1 or idx >= n - 1:
+            break
+        prev_idx = idx - direction
+        next_idx = idx + direction
+        if prev_idx < 0 or prev_idx >= n:
+            continue
+        if next_idx < 0 or next_idx >= n:
+            continue
+        local_grad = profile[next_idx] - profile[prev_idx]
+        # First place where gradient is strongly positive (cord → CSF)
+        # AND we're transitioning from cord level
+        if local_grad > grad_threshold and profile[idx] >= cord_I * 0.85:
+            # Verify rising trend continues
+            ne_check = next_idx + direction
+            if 0 <= ne_check < n and profile[ne_check] > profile[idx]:
+                return idx
+    return None
+
+def horizontal_walks_v3(smooth, ps_mm, cord_rc, cord_I,
+                          perp_window_mm=4, walk_max_mm=8,
+                          csf_search_mm=8, csf_rel_thresh=1.30):
+    """
+    L→R and R→L walks with gradient edge detection.
+
+    Tight bounds: walk only 8mm from cord centroid (cord LR radius ~5mm + buffer).
+    """
+    cy, cx = cord_rc
+    H, W = smooth.shape
+    perp_n = int(perp_window_mm / ps_mm)
+    max_step = int(walk_max_mm / ps_mm)
+    csf_search_n = int(csf_search_mm / ps_mm)
+    cord_I_lo = cord_I * 0.80
+    csf_threshold = cord_I * csf_rel_thresh
+
+    rows = list(range(max(0, int(cy) - perp_n), min(H, int(cy) + perp_n + 1)))
+    extents = {}
+    csfs = {}
+    for row in rows:
+        profile = smooth[row, :]
+        # Cord LEFT edge (image-low col, going to patient-right)
+        cl = find_cord_edge_gradient(profile, int(cx), -1, cord_I, max_step)
+        # Cord RIGHT edge (image-high col, going to patient-left)
+        cr = find_cord_edge_gradient(profile, int(cx), +1, cord_I, max_step)
+        if cl is None or cr is None or cr <= cl:
+            continue
+        extents[row] = (cl, cr)
+
+        # PATIENT-RIGHT side (image-LEFT, walk further negative col)
+        pR_W = None; pR_status = 'indeterminate'; pR_peak = None
+        if cl - 3 >= 0:
+            # Peak intensity in the rim region (3px past cord edge to csf_search distance)
+            rim_lo = max(0, cl - csf_search_n)
+            rim_hi = cl  # rim is between cord-edge and (cord-edge - csf_search)
+            if rim_hi > rim_lo:
+                pR_peak = float(np.max(profile[rim_lo:rim_hi]))
+            mi = float(np.mean(profile[max(0, cl - 3):cl]))
+            if mi >= csf_threshold:
+                csf_end = None
+                for col in range(cl - 3, max(0, cl - csf_search_n), -1):
+                    if profile[col] < cord_I:
+                        csf_end = col + 1
+                        break
+                pR_W = (cl - csf_end) * ps_mm if csf_end is not None else float(csf_search_mm)
+                pR_status = 'free'
+            elif mi < cord_I_lo:
+                pR_W = 0.0
+                pR_status = 'contact'
+
+        # PATIENT-LEFT side (image-RIGHT, walk further positive col)
+        pL_W = None; pL_status = 'indeterminate'; pL_peak = None
+        if cr + 3 < W:
+            rim_lo = cr
+            rim_hi = min(W, cr + csf_search_n)
+            if rim_hi > rim_lo:
+                pL_peak = float(np.max(profile[rim_lo:rim_hi]))
+            mi = float(np.mean(profile[cr:min(W, cr + 3)]))
+            if mi >= csf_threshold:
+                csf_end = None
+                for col in range(cr + 3, min(W, cr + csf_search_n)):
+                    if profile[col] < cord_I:
+                        csf_end = col - 1
+                        break
+                pL_W = (csf_end - cr) * ps_mm if csf_end is not None else float(csf_search_mm)
+                pL_status = 'free'
+            elif mi < cord_I_lo:
+                pL_W = 0.0
+                pL_status = 'contact'
+
+        csfs[row] = {
+            'patient_left_W': pL_W, 'patient_left_status': pL_status, 'patient_left_peak': pL_peak,
+            'patient_right_W': pR_W, 'patient_right_status': pR_status, 'patient_right_peak': pR_peak,
+        }
+    return extents, csfs
+
+def vertical_walks_v3(smooth, ps_mm, cord_rc, cord_I,
+                        perp_window_mm=4, walk_max_mm=6,
+                        csf_search_mm=8, csf_rel_thresh=1.30):
+    """
+    T→B and B→T walks with gradient edge detection.
+
+    Tight bounds: walk only 6mm from cord centroid (cord AP radius ~3-4mm + buffer).
+    Going further finds vertebral body marrow.
+    """
+    cy, cx = cord_rc
+    H, W = smooth.shape
+    perp_n = int(perp_window_mm / ps_mm)
+    max_step = int(walk_max_mm / ps_mm)
+    csf_search_n = int(csf_search_mm / ps_mm)
+    cord_I_lo = cord_I * 0.80
+    csf_threshold = cord_I * csf_rel_thresh
+
+    cols = list(range(max(0, int(cx) - perp_n), min(W, int(cx) + perp_n + 1)))
+    extents = {}
+    csfs = {}
+    for col in cols:
+        profile = smooth[:, col]
+        # Cord TOP edge (image-low row, going to patient-anterior)
+        ct = find_cord_edge_gradient(profile, int(cy), -1, cord_I, max_step)
+        # Cord BOTTOM edge (image-high row, going to patient-posterior)
+        cb = find_cord_edge_gradient(profile, int(cy), +1, cord_I, max_step)
+        if ct is None or cb is None or cb <= ct:
+            continue
+        extents[col] = (ct, cb)
+
+        # ANTERIOR side (image-TOP, walk further negative row)
+        anterior_W = None; anterior_status = 'indeterminate'; anterior_peak = None
+        if ct - 3 >= 0:
+            rim_lo = max(0, ct - csf_search_n)
+            rim_hi = ct
+            if rim_hi > rim_lo:
+                anterior_peak = float(np.max(profile[rim_lo:rim_hi]))
+            mi = float(np.mean(profile[max(0, ct - 3):ct]))
+            if mi >= csf_threshold:
+                csf_end = None
+                for row in range(ct - 3, max(0, ct - csf_search_n), -1):
+                    if profile[row] < cord_I:
+                        csf_end = row + 1
+                        break
+                anterior_W = (ct - csf_end) * ps_mm if csf_end is not None else float(csf_search_mm)
+                anterior_status = 'free'
+            elif mi < cord_I_lo:
+                anterior_W = 0.0
+                anterior_status = 'contact'
+
+        # POSTERIOR side (image-BOTTOM, walk further positive row)
+        posterior_W = None; posterior_status = 'indeterminate'; posterior_peak = None
+        if cb + 3 < H:
+            rim_lo = cb
+            rim_hi = min(H, cb + csf_search_n)
+            if rim_hi > rim_lo:
+                posterior_peak = float(np.max(profile[rim_lo:rim_hi]))
+            mi = float(np.mean(profile[cb:min(H, cb + 3)]))
+            if mi >= csf_threshold:
+                csf_end = None
+                for row in range(cb + 3, min(H, cb + csf_search_n)):
+                    if profile[row] < cord_I:
+                        csf_end = row - 1
+                        break
+                posterior_W = (csf_end - cb) * ps_mm if csf_end is not None else float(csf_search_mm)
+                posterior_status = 'free'
+            elif mi < cord_I_lo:
+                posterior_W = 0.0
+                posterior_status = 'contact'
+
+        csfs[col] = {
+            'anterior_W': anterior_W, 'anterior_status': anterior_status, 'anterior_peak': anterior_peak,
+            'posterior_W': posterior_W, 'posterior_status': posterior_status, 'posterior_peak': posterior_peak,
+        }
+    return extents, csfs
+
+def four_walk_v3(smooth, ps_mm, cord_rc, cord_I, band_mm=2):
+    """
+    Run all 4 walks (with v2 tight bounds + gradient edges).
+    Aggregate W per direction at cord centroid ± band_mm.
+    Compute consecutive-run statistics for filtering single-row spurious findings.
+
+    Returns dict with per-direction:
+      mean, min, free_mean, n_free, n_contact, n_indeterminate, n_total
+      contact_run_max, indet_run_max, free_run_max
+    """
+    cy, cx = cord_rc
+    eh, ch = horizontal_walks_v3(smooth, ps_mm, cord_rc, cord_I)
+    ev, cv = vertical_walks_v3(smooth, ps_mm, cord_rc, cord_I)
+    band_n = int(band_mm / ps_mm)
+    band_rows = sorted([r for r in ch if abs(r - cy) <= band_n])
+    band_cols = sorted([c for c in cv if abs(c - cx) <= band_n])
+
+    out = {}
+    for dirname, key, peak_key, src, band, status_key in [
+        ('patient_left', 'patient_left_W', 'patient_left_peak', ch, band_rows, 'patient_left_status'),
+        ('patient_right', 'patient_right_W', 'patient_right_peak', ch, band_rows, 'patient_right_status'),
+        ('anterior', 'anterior_W', 'anterior_peak', cv, band_cols, 'anterior_status'),
+        ('posterior', 'posterior_W', 'posterior_peak', cv, band_cols, 'posterior_status'),
+    ]:
+        all_Ws = [src[k][key] for k in band if src[k][key] is not None]
+        free_Ws = [src[k][key] for k in band if src[k][status_key] == 'free']
+        peaks = [src[k][peak_key] for k in band if src[k].get(peak_key) is not None]
+        statuses = [src[k][status_key] for k in band]
+        contact_runs = find_runs(statuses, lambda s: s == 'contact', 3)
+        indet_runs = find_runs(statuses, lambda s: s == 'indeterminate', 3)
+        free_runs = find_runs(statuses, lambda s: s == 'free', 3)
+        out[dirname] = {
+            'mean': float(np.mean(all_Ws)) if all_Ws else None,
+            'min': float(min(all_Ws)) if all_Ws else None,
+            'free_mean': float(np.mean(free_Ws)) if free_Ws else None,
+            'peak_max': float(max(peaks)) if peaks else None,
+            'peak_median': float(np.median(peaks)) if peaks else None,
+            'n_free': sum(1 for s in statuses if s == 'free'),
+            'n_contact': sum(1 for s in statuses if s == 'contact'),
+            'n_indeterminate': sum(1 for s in statuses if s == 'indeterminate'),
+            'n_total': len(band),
+            'contact_run_max': max([r[1] - r[0] + 1 for r in contact_runs]) if contact_runs else 0,
+            'indet_run_max': max([r[1] - r[0] + 1 for r in indet_runs]) if indet_runs else 0,
+            'free_run_max': max([r[1] - r[0] + 1 for r in free_runs]) if free_runs else 0,
+            'has_sustained_contact': len(contact_runs) > 0,
+            'has_sustained_indet': len(indet_runs) > 0,
+        }
+    return out
+
+def _classify_lesion_side(walk, peak_diff=100.0, max_csf=1500.0):
+    """Determine lesion side from peak CSF intensity in L/R walks.
+
+    Returns 'LEFT', 'RIGHT', or 'CENTRAL'.
+    A lower peak on one side means the CSF rim is compressed or absent
+    (disc/osteophyte intrusion). CSF is bright on T2 (~1400+); disc is dark.
+    """
+    pLpk = walk['patient_left'].get('peak_max')
+    pRpk = walk['patient_right'].get('peak_max')
+    if pLpk is None or pRpk is None:
+        return 'unknown'
+    if pLpk < pRpk - peak_diff and pLpk < max_csf:
+        return 'LEFT'
+    if pRpk < pLpk - peak_diff and pRpk < max_csf:
+        return 'RIGHT'
+    return 'CENTRAL'
+
+
+def _majority_side(slices_at_level, weight_by_severity=True):
+    """Aggregate lesion side across slices at one level.
+
+    Weights CRITICAL slices more heavily so unclassified normal slices
+    don't dilute the signal from the stenotic slice.
+    """
+    severity_weight = {'CRITICAL': 3, 'MODERATE': 2, 'FINDING': 1, 'NORMAL': 0}
+    votes = {'LEFT': 0.0, 'RIGHT': 0.0, 'CENTRAL': 0.0}
+    for s in slices_at_level:
+        side = s.get('lesion_side_signal', 'unknown')
+        if side not in votes:
+            continue
+        if weight_by_severity:
+            sev = max_severity(s.get('flags', []))
+            w = severity_weight.get(sev, 1)
+        else:
+            w = 1
+        votes[side] += w
+    if not any(votes.values()):
+        return 'unknown'
+    return max(votes, key=votes.get)

@@ -20,6 +20,8 @@ from ._spine_common import (
     detect_cords_axial, measure_radial, summarize_cord_track,
     aggregate_levels, classify_per_slice,
     select_best_t2_axsag, resample_sag_patient_coords,
+    four_walk_v3, get_cord_intensity,
+    _classify_lesion_side, _majority_side,
 )
 
 
@@ -140,31 +142,9 @@ class CSpineAnalyzer(BaseAnalyzer):
         levels = detect_levels_cspine(sag_items)
         cord_detections = detect_cords_axial(
             ax_items,
-            intensity_range=(0, 0),  # signal: use adaptive percentile range
+            intensity_range=(80, 220),
             area_range_mm2=(40, 150),
         )
-
-        # Diagnostic: capture why detection failed if zero cords found
-        if not cord_detections and ax_items:
-            mid = ax_items[len(ax_items) // 2]
-            img = mid['img']
-            in_body = img > 30
-            pcts = {}
-            if in_body.any():
-                pcts = {str(p): float(np.percentile(img[in_body], p))
-                        for p in (5, 25, 50, 75, 92, 98)}
-            detection_diagnostics = {
-                'cord_detection_failed': True,
-                'n_axial_slices': len(ax_items),
-                'mid_slice_intensity_percentiles': pcts,
-                'configured_intensity_range': 'adaptive',
-                'note': 'Zero candidates found — check percentiles vs cord intensity',
-            }
-        else:
-            detection_diagnostics = {
-                'cord_detection_failed': False,
-                'n_cords_found': len(cord_detections),
-            }
 
         slice_records = []
         markers = []
@@ -178,6 +158,17 @@ class CSpineAnalyzer(BaseAnalyzer):
             )
             level = assign_level(d['z_mm'], levels)
             flags = classify_per_slice(m, CSPINE_SPACE, CSPINE_ASYM)
+            # v3: four-walk measurement alongside existing radial
+            try:
+                cord_I = get_cord_intensity(it['img'], float(it['ps'][0]), d['cord_rc'])
+                fw = four_walk_v3(it['img'], float(it['ps'][0]), d['cord_rc'], cord_I)
+                lr_sum_mm = float(fw['patient_left']['dist_mm'] + fw['patient_right']['dist_mm'])
+                lesion_side = _classify_lesion_side(fw)
+            except Exception:
+                lr_sum_mm = float('nan')
+                lesion_side = 'unknown'
+                fw = {}
+
             slice_records.append({
                 'inst': it['inst'], 'z_mm': d['z_mm'], 'level': level,
                 'cord_x_mm': d['cord_xy'][0], 'cord_y_mm': d['cord_xy'][1],
@@ -190,6 +181,8 @@ class CSpineAnalyzer(BaseAnalyzer):
                 'right_space_mm': m['right_space_mm'],
                 'asym_lr': m['asym_lr'],
                 'cord_intensity': m['cord_intensity'],
+                'lr_sum_mm': lr_sum_mm,
+                'lesion_side_signal': lesion_side,
                 'flags': flags,
             })
             markers.append({
@@ -211,6 +204,19 @@ class CSpineAnalyzer(BaseAnalyzer):
         level_summaries, all_flags = aggregate_levels(
             slice_records, CSPINE_LEVELS, CSPINE_SPACE, CSPINE_ASYM,
         )
+
+        # v3: add lr_sum and lesion_side to each level summary
+        from collections import defaultdict
+        _by_level = defaultdict(list)
+        for s in slice_records:
+            _by_level[s['level']].append(s)
+        for ls in level_summaries:
+            rows = _by_level.get(ls['level'], [])
+            lr_sums = [s['lr_sum_mm'] for s in rows
+                       if isinstance(s.get('lr_sum_mm'), float) and s['lr_sum_mm'] == s['lr_sum_mm']]
+            ls['lr_sum_min_mm'] = float(min(lr_sums)) if lr_sums else None
+            ls['lr_sum_mean_mm'] = float(sum(lr_sums) / len(lr_sums)) if lr_sums else None
+            ls['lesion_side'] = _majority_side(rows)
 
         overall = max_severity(all_flags)
         counts = {'critical': 0, 'moderate': 0, 'finding': 0, 'normal': 0}
@@ -241,5 +247,4 @@ class CSpineAnalyzer(BaseAnalyzer):
             'slice_measurements': slice_records,
             'markers': markers,
             'cord_track_3d': summarize_cord_track(markers),
-            'detection_diagnostics': detection_diagnostics,
         }
