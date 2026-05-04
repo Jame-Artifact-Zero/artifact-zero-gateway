@@ -160,8 +160,9 @@ class CSpineAnalyzer(BaseAnalyzer):
             flags = classify_per_slice(m, CSPINE_SPACE, CSPINE_ASYM)
             # v3: four-walk measurement alongside existing radial
             try:
-                cord_I = get_cord_intensity(it['img'], float(it['ps'][0]), d['cord_rc'])
-                fw = four_walk_v3(it['img'], float(it['ps'][0]), d['cord_rc'], cord_I)
+                _smooth = gaussian_filter(it['img'].astype(float), sigma=1.5)
+                cord_I = get_cord_intensity(_smooth, float(it['ps'][0]), d['cord_rc'])
+                fw = four_walk_v3(_smooth, float(it['ps'][0]), d['cord_rc'], cord_I)
                 lr_sum_mm = float(fw['patient_left']['dist_mm'] + fw['patient_right']['dist_mm'])
                 lesion_side = _classify_lesion_side(fw)
             except Exception as _fw_exc:
