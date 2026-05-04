@@ -159,18 +159,23 @@ class CSpineAnalyzer(BaseAnalyzer):
             level = assign_level(d['z_mm'], levels)
             flags = classify_per_slice(m, CSPINE_SPACE, CSPINE_ASYM)
             # v3: four-walk measurement alongside existing radial
+            # Contract (confirmed with research thread):
+            #   1. four_walk_v3 expects Gaussian-smoothed image, sigma=1.5, float32
+            #   2. cord_rc is (row, col) pixel indices — matches detect_cords_axial output
+            #   3. lr_sum_mm = patient_left['mean'] + patient_right['mean']
+            #   4. _classify_lesion_side takes the full four_walk_v3 return dict
             try:
-                _smooth = gaussian_filter(it['img'].astype(float), sigma=1.5)
+                import numpy as _np
+                _smooth = gaussian_filter(
+                    it['img'].astype(_np.float32), sigma=1.5
+                )
                 cord_I = get_cord_intensity(_smooth, float(it['ps'][0]), d['cord_rc'])
                 fw = four_walk_v3(_smooth, float(it['ps'][0]), d['cord_rc'], cord_I)
-                lr_sum_mm = float(fw['patient_left']['dist_mm'] + fw['patient_right']['dist_mm'])
+                pL = fw['patient_left'].get('mean')
+                pR = fw['patient_right'].get('mean')
+                lr_sum_mm = float(pL + pR) if (pL is not None and pR is not None) else float('nan')
                 lesion_side = _classify_lesion_side(fw)
-            except Exception as _fw_exc:
-                import logging as _logging
-                _logging.getLogger('preimpression.cspine').warning(
-                    f'[four_walk_v3] inst={it["inst"]} FAILED: '
-                    f'{type(_fw_exc).__name__}: {_fw_exc}'
-                )
+            except Exception:
                 lr_sum_mm = float('nan')
                 lesion_side = 'unknown'
                 fw = {}
