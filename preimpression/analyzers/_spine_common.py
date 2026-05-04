@@ -702,6 +702,26 @@ def vertical_walks_v3(smooth, ps_mm, cord_rc, cord_I,
         }
     return extents, csfs
 
+
+def find_runs(values, predicate, min_length=3):
+    """Find runs of indices where predicate(value) is True.
+    Returns list of (start, end) inclusive."""
+    runs = []
+    i = 0
+    n = len(values)
+    while i < n:
+        if predicate(values[i]):
+            j = i
+            while j < n and predicate(values[j]):
+                j += 1
+            if j - i >= min_length:
+                runs.append((i, j - 1))
+            i = j
+        else:
+            i += 1
+    return runs
+
+
 def four_walk_v3(smooth, ps_mm, cord_rc, cord_I, band_mm=2):
     """
     Run all 4 walks (with v2 tight bounds + gradient edges).
