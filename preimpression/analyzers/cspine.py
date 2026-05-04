@@ -71,14 +71,20 @@ def detect_levels_cspine(sag_items):
         apex = float(cord_zs[int(np.argmax(sm_y))])
 
     # Body peaks (anterior bright band)
+    # Wide initial search, then refine. Philips: y≈-25 to -5.
+    # GE sagittal FOV may differ — try progressively wider bands.
     sm = gaussian_filter(pv, sigma=1.5)
-    ymask = (y_range > -25) & (y_range < -5)
-    if not ymask.any():
-        return {}
-    band = sm[ymask, :].mean(axis=0)
-    band_smooth = gaussian_filter1d(band, sigma=2)
-    peaks, _ = find_peaks(band_smooth, distance=int(8/0.3), prominence=20)
-    body_zs = z_range[peaks]
+    body_zs = np.array([])
+    for y_lo, y_hi in [(-25, -5), (-35, -5), (-40, 0), (-50, 10)]:
+        ymask = (y_range > y_lo) & (y_range < y_hi)
+        if not ymask.any():
+            continue
+        band = sm[ymask, :].mean(axis=0)
+        band_smooth = gaussian_filter1d(band, sigma=2)
+        peaks, _ = find_peaks(band_smooth, distance=int(8/0.3), prominence=15)
+        body_zs = z_range[peaks]
+        if len(body_zs) >= 4:
+            break
     if len(body_zs) < 4:
         return {}
 
@@ -170,19 +176,6 @@ class CSpineAnalyzer(BaseAnalyzer):
                     it['img'].astype(_np.float32), sigma=1.5
                 )
                 cord_I = get_cord_intensity(_smooth, float(it['ps'][0]), d['cord_rc'])
-                # Diagnostic — remove after confirming values match research reference:
-                # cord_rc=(228,213) cord_I~708 ps_mm~0.347 smooth_at_cord~700-750
-                if it['inst'] <= 2:
-                    import logging as _lg
-                    _cy, _cx = d['cord_rc']
-                    _lg.getLogger('preimpression.cspine').warning(
-                        f'[fw_diag] inst={it["inst"]} '
-                        f'shape={_smooth.shape} dtype={_smooth.dtype} '
-                        f'cord_rc={d["cord_rc"]} '
-                        f'cord_I={cord_I:.1f} '
-                        f'ps_mm={float(it["ps"][0]):.4f} '
-                        f'smooth_at_cord={_smooth[int(_cy), int(_cx)]:.1f}'
-                    )
                 fw = four_walk_v3(_smooth, float(it['ps'][0]), d['cord_rc'], cord_I)
                 pL = fw['patient_left'].get('mean')
                 pR = fw['patient_right'].get('mean')
