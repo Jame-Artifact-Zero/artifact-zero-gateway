@@ -170,6 +170,19 @@ class CSpineAnalyzer(BaseAnalyzer):
                     it['img'].astype(_np.float32), sigma=1.5
                 )
                 cord_I = get_cord_intensity(_smooth, float(it['ps'][0]), d['cord_rc'])
+                # Diagnostic — remove after confirming values match research reference:
+                # cord_rc=(228,213) cord_I~708 ps_mm~0.347 smooth_at_cord~700-750
+                if it['inst'] <= 2:
+                    import logging as _lg
+                    _cy, _cx = d['cord_rc']
+                    _lg.getLogger('preimpression.cspine').warning(
+                        f'[fw_diag] inst={it["inst"]} '
+                        f'shape={_smooth.shape} dtype={_smooth.dtype} '
+                        f'cord_rc={d["cord_rc"]} '
+                        f'cord_I={cord_I:.1f} '
+                        f'ps_mm={float(it["ps"][0]):.4f} '
+                        f'smooth_at_cord={_smooth[int(_cy), int(_cx)]:.1f}'
+                    )
                 fw = four_walk_v3(_smooth, float(it['ps'][0]), d['cord_rc'], cord_I)
                 pL = fw['patient_left'].get('mean')
                 pR = fw['patient_right'].get('mean')
