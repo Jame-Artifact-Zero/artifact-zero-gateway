@@ -18,7 +18,7 @@ from scipy.ndimage import (
     center_of_mass, binary_opening, binary_closing,
 )
 
-from ._base import slice_z_center, patient_xy_from_pix, pix_from_patient_xy
+from ._base import slice_z_center, patient_xy_from_pix, pix_from_patient_xy, max_severity
 
 
 def find_cord_intensity(img, ps_mm, search_center_rc=None,
