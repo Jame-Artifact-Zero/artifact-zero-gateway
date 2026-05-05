@@ -1,7 +1,7 @@
 # ============================================
 # Artifact Zero — Test Suite
 # ============================================
-# Runs on: PRs to quality and main, pushes to dev/*
+# Runs on: pushes to dev/*, PRs to quality and main
 # Must pass before merge is allowed
 # ============================================
 
@@ -9,7 +9,7 @@ name: Test Suite
 
 on:
   push:
-    branches: [dev/*, quality]
+    branches: [dev/*]
   pull_request:
     branches: [quality, main]
 
