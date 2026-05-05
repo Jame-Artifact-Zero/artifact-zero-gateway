@@ -1,9 +1,10 @@
 # ============================================
 # Artifact Zero — Deploy to Quality (Staging)
 # ============================================
-# Triggers: push to quality branch (after PR merge from dev)
-# Deploys to: quality.artifact0.com (or staging ECS service)
-# Same image build + ECS deploy, different service/subdomain
+# Triggers: push to quality branch (after PR merge from develop)
+# Deploys to: quality.artifact0.com
+# Uses shared artifact-zero-task family — same family as main,
+# different revision. Service points at quality's revision.
 # ============================================
 
 name: Deploy to Quality
@@ -16,8 +17,8 @@ env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: artifact-zero
   ECS_CLUSTER: artifact-zero-cluster
-  ECS_SERVICE: artifact-zero-quality        # Separate ECS service for staging
-  ECS_TASK_DEFINITION: artifact-zero-quality-task
+  ECS_SERVICE: artifact-zero-quality
+  ECS_TASK_DEFINITION: artifact-zero-task
 
 jobs:
   test:
@@ -67,15 +68,34 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:quality-latest
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Download task definition
+      - name: Download current task definition
         run: |
           aws ecs describe-task-definition \
             --task-definition $ECS_TASK_DEFINITION \
             --query taskDefinition > task-definition.json
 
-      - name: Update task definition image
+      - name: Inject env vars from SSM
+        run: |
+          DB_URL=$(aws ssm get-parameter --name "/artifact-zero/DATABASE_URL" --with-decryption --query "Parameter.Value" --output text --region us-east-1)
+
+          python3 -c "
+          import json, sys
+          with open('task-definition.json') as f:
+              td = json.load(f)
+          env = td['containerDefinitions'][0].get('environment', [])
+          env = [e for e in env if e['name'] != 'DATABASE_URL']
+          env.append({'name': 'DATABASE_URL', 'value': sys.argv[1]})
+          td['containerDefinitions'][0]['environment'] = env
+          for key in ['taskDefinitionArn','revision','status','requiresAttributes','compatibilities','registeredAt','registeredBy']:
+              td.pop(key, None)
+          with open('task-definition.json','w') as f:
+              json.dump(td, f)
+          print(f'DATABASE_URL set. Total env vars: {len(env)}')
+          " "$DB_URL"
+
+      - name: Update task definition with new image
+        id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
-        id: render
         with:
           task-definition: task-definition.json
           container-name: artifact-zero
@@ -84,14 +104,81 @@ jobs:
       - name: Deploy to quality ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.render.outputs.task-definition }}
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      - name: Notify — Quality Deploy
-        if: always()
+      - name: Verify deployment
+        id: verify
         run: |
-          STATUS=${{ job.status }}
+          echo "✅ Deployed ${{ steps.build.outputs.image }}"
+          echo "⏳ Waiting 30s for task to settle..."
+          sleep 30
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://quality.artifact0.com/health || echo "000")
+          echo "Health check response: $RESPONSE"
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ Quality healthy"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Health check failed (HTTP $RESPONSE) — triggering rollback"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "🔄 Rolling back quality to previous stable revision..."
+          CURRENT_ARN=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
+            --query "services[0].taskDefinition" --output text)
+          PREV_ARN=$(aws ecs list-task-definitions --family-prefix $ECS_TASK_DEFINITION \
+            --sort DESC --query "taskDefinitionArns[?@!=\`$CURRENT_ARN\`] | [0]" --output text)
+          if [ "$PREV_ARN" != "None" ] && [ -n "$PREV_ARN" ]; then
+            echo "Rolling back to: $PREV_ARN"
+            aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE \
+              --task-definition "$PREV_ARN" --force-new-deployment
+            echo "✅ Rollback initiated"
+          else
+            echo "❌ No previous task definition found — manual intervention required"
+          fi
+
+      - name: Notify — Quality Deploy Success
+        if: success()
+        run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "Quality deploy $STATUS — $SHORT_SHA"
+          cat > /tmp/email.json << 'EMAILEOF'
+          {
+            "Subject": {"Data": "Quality Deploy OK — SHORTSHA"},
+            "Body": {"Text": {"Data": "Quality deploy succeeded.\n\nCommit: FULLSHA\nBranch: BRANCHNAME\nImage: IMAGETAG\n\nSite: https://quality.artifact0.com\nHealth: https://quality.artifact0.com/health"}}
+          }
+          EMAILEOF
+          sed -i "s|SHORTSHA|$SHORT_SHA|g" /tmp/email.json
+          sed -i "s|FULLSHA|${{ github.sha }}|g" /tmp/email.json
+          sed -i "s|BRANCHNAME|${{ github.ref_name }}|g" /tmp/email.json
+          sed -i "s|IMAGETAG|${{ steps.build.outputs.image }}|g" /tmp/email.json
+          aws ses send-email \
+            --from "Artifact Zero CI <noreply@artifact0.com>" \
+            --destination '{"ToAddresses":["${{ secrets.NOTIFY_EMAIL_TO }}"]}' \
+            --message file:///tmp/email.json \
+            --region us-east-1 || echo "Notification send failed — deploy still succeeded"
+
+      - name: Notify — Quality Deploy Failed
+        if: failure()
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          cat > /tmp/email.json << 'EMAILEOF'
+          {
+            "Subject": {"Data": "QUALITY DEPLOY FAILED — SHORTSHA"},
+            "Body": {"Text": {"Data": "Quality deploy FAILED. Auto-rollback attempted.\n\nCommit: FULLSHA\nBranch: BRANCHNAME\n\nCheck: https://github.com/REPONAME/actions"}}
+          }
+          EMAILEOF
+          sed -i "s|SHORTSHA|$SHORT_SHA|g" /tmp/email.json
+          sed -i "s|FULLSHA|${{ github.sha }}|g" /tmp/email.json
+          sed -i "s|BRANCHNAME|${{ github.ref_name }}|g" /tmp/email.json
+          sed -i "s|REPONAME|${{ github.repository }}|g" /tmp/email.json
+          aws ses send-email \
+            --from "Artifact Zero CI <noreply@artifact0.com>" \
+            --destination '{"ToAddresses":["${{ secrets.NOTIFY_EMAIL_TO }}"]}' \
+            --message file:///tmp/email.json \
+            --region us-east-1 || echo "Notification send failed"
