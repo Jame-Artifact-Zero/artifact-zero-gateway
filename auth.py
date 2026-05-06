@@ -49,7 +49,6 @@ def _ensure_users_table():
             role TEXT NOT NULL DEFAULT 'user',
             stripe_customer_id TEXT, stripe_subscription_id TEXT,
             score_count INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE)""")
-        # Add role column if missing (migration)
         try:
             cur.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
         except Exception:
@@ -129,7 +128,6 @@ def _update_last_login(uid):
     conn.commit()
     conn.close()
 
-
 def _record_login_history(user_id, ip, user_agent, success=True):
     if not user_id:
         return
@@ -149,7 +147,6 @@ def _record_login_history(user_id, ip, user_agent, success=True):
         )
     conn.commit()
     conn.close()
-
 
 def _update_stripe(uid, cust_id, sub_id, tier):
     conn = database.db_connect()
@@ -240,8 +237,9 @@ def signup():
         return render_template("signup.html", error="Account exists. Log in instead."), 400
     try:
         uid = _create_user(email, pw, name)
-    except:
+    except Exception:
         return render_template("signup.html", error="Could not create account."), 500
+    session.permanent = True
     session["user_id"] = uid
     _send_welcome(email, name)
     return redirect("/dashboard")
@@ -259,10 +257,10 @@ def login():
     ua = request.headers.get("User-Agent", "")[:512]
 
     if not user or not verify_password(pw, user["password_hash"]):
-        # Record failed attempt
         _record_login_history(user["id"] if user else None, ip, ua, success=False)
         return render_template("login.html", error="Invalid email or password."), 401
 
+    session.permanent = True
     session["user_id"] = user["id"]
     session["role"] = user.get("role", "user")
     _record_login_history(user["id"], ip, ua, success=True)
@@ -312,6 +310,7 @@ def reset_password():
         return render_template("reset.html", token=token, error="Password must be at least 8 characters.")
     _update_password(user_id, pw)
     _consume_reset_token(token)
+    session.permanent = True
     session["user_id"] = user_id
     return redirect("/dashboard")
 
