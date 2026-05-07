@@ -1,60 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Operator Room — Artifact Zero
-<!-- ── SETTINGS MODAL ──────────────────────────────────────────── -->
-<div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;">
-  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:28px 32px;width:420px;max-width:95vw;font-family:'JetBrains Mono',monospace;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <span style="font-size:12px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;">Operator Settings</span>
-      <button onclick="closeSettings()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:14px;">
-
-      <div>
-        <label style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Push State</label>
-        <input id="setPush" type="text" placeholder="e.g. p0068 active"
-          style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;box-sizing:border-box;">
-      </div>
-
-      <div>
-        <label style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Model</label>
-        <input id="setModel" type="text" placeholder="e.g. claude-sonnet-4-6"
-          style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;box-sizing:border-box;">
-      </div>
-
-      <div>
-        <label style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Anthropic API Key</label>
-        <input id="setAnthropicKey" type="password" placeholder="sk-ant-..."
-          style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;box-sizing:border-box;">
-      </div>
-
-      <div>
-        <label style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Operator NTI Key</label>
-        <input id="setOperatorKey" type="password" placeholder="az_..."
-          style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;box-sizing:border-box;">
-      </div>
-
-      <div>
-        <label style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Patent Status</label>
-        <input id="setPatent" type="text" placeholder="e.g. PROVISIONAL FILED"
-          style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;box-sizing:border-box;">
-      </div>
-
-    </div>
-
-    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-      <button onclick="closeSettings()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">Cancel</button>
-      <button onclick="saveSettings()" style="padding:8px 20px;border-radius:6px;border:none;background:var(--accent);color:#000;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">Save</button>
-    </div>
-  </div>
-</div>
-
-{% endblock %}
+{% block title %}Operator Room - Artifact Zero{% endblock %}
 {% block body_class %}page-operator{% endblock %}
 
 {% block head %}
 <style>
-/* ── OPERATOR ROOM ─────────────────────────────────────────── */
+/* -- OPERATOR ROOM ------------------------------------------- */
 .page-operator .az-main { padding: 0; overflow: hidden; height: calc(100vh - 56px); }
 .page-operator .az-bottomnav { display: none; }
 .page-operator .az-footer { display: none; }
@@ -67,7 +17,7 @@
   overflow: hidden;
 }
 
-/* ── LEFT SIDEBAR — S0 STATE ───────────────────────────────── */
+/* -- LEFT SIDEBAR - S0 STATE --------------------------------- */
 .op-sidebar {
   background: var(--s2);
   border-right: 1px solid var(--border);
@@ -208,7 +158,7 @@
   50% { border-color: transparent; }
 }
 
-/* ── CENTER — CHAT ─────────────────────────────────────────── */
+/* -- CENTER - CHAT ------------------------------------------- */
 .op-chat {
   display: flex;
   flex-direction: column;
@@ -495,7 +445,7 @@
 .op-jos-tag.set { border-color: var(--accent); color: var(--accent); background: rgba(0,232,156,0.05); }
 .op-jos-tag.required { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
 
-/* ── RIGHT SIDEBAR — NTI PANEL ─────────────────────────────── */
+/* -- RIGHT SIDEBAR - NTI PANEL ------------------------------- */
 .op-nti-panel {
   background: var(--s2);
   border-left: 1px solid var(--border);
@@ -684,24 +634,149 @@
   margin-bottom: 8px;
   display: block;
 }
+
+/* -- GEAR BUTTON IN SIDEBAR HEADER --------------------------- */
+.op-gear-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.op-gear-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* -- SETTINGS MODAL ----------------------------------------- */
+.op-modal-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.op-modal-backdrop.open { display: flex; }
+
+.op-modal {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 460px;
+  max-width: 92vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.op-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.op-modal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.op-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.op-modal-close:hover { color: var(--red); }
+
+.op-modal-body { padding: 16px 20px; }
+
+.op-field {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.op-field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.op-field-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--fg);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+}
+.op-field-input:focus { border-color: var(--accent); }
+.op-field-hint {
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.op-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.op-modal-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.op-modal-btn:hover { border-color: var(--accent); color: var(--accent); }
+.op-modal-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+}
+.op-modal-btn.primary:hover { background: #00ffab; color: #000; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="op-shell">
 
-  <!-- ── LEFT SIDEBAR ────────────────────────────────────────── -->
+  <!-- -- LEFT SIDEBAR ------------------------------------------ -->
   <aside class="op-sidebar">
     <div class="op-sidebar-header">
-      <span class="op-logo">itB₀</span>
+      <span class="op-logo">itB0</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">OPERATOR</span>
-      <button onclick="openSettings()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;line-height:1;" title="Settings">&#9881;</button>
+      <button class="op-gear-btn" id="settingsGear" onclick="openSettings()" title="Settings" aria-label="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
     </div>
 
     <!-- S0 Score -->
     <div class="op-s0-block">
-      <div class="op-s0-label">Prior State S₀</div>
-      <div class="op-s0-score moderate" id="s0Display">—</div>
+      <div class="op-s0-label">Prior State S0</div>
+      <div class="op-s0-score moderate" id="s0Display">-</div>
       <div class="op-s0-desc" id="s0Desc">LOADING...</div>
     </div>
 
@@ -710,7 +785,7 @@
       <div class="op-state-title">Active State</div>
       <div class="op-state-item">
         <span class="op-state-key">Push</span>
-        <span class="op-state-val amber" id="sidebarPush">—</span>
+        <span class="op-state-val amber" id="sidebarPush">p0068 active</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Patent</span>
@@ -718,15 +793,15 @@
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Market</span>
-        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">-</span>
       </div>
       <div class="op-state-item">
-        <span class="op-state-key">S₀ delta</span>
-        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">—</span>
+        <span class="op-state-key">S0 delta</span>
+        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">-</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Signal env</span>
-        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">—</span>
+        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">-</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Last tool</span>
@@ -739,15 +814,15 @@
       <div class="op-state-title">JOS Fields</div>
       <div class="op-state-item">
         <span class="op-state-key">Objective</span>
-        <span class="op-state-val" id="josObj" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josObj" style="color:var(--muted)">- not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Constraints</span>
-        <span class="op-state-val" id="josCon" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josCon" style="color:var(--muted)">- not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Done When</span>
-        <span class="op-state-val" id="josDone" style="color:var(--muted)">— not set</span>
+        <span class="op-state-val" id="josDone" style="color:var(--muted)">- not set</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Closure</span>
@@ -759,22 +834,25 @@
     <div class="op-state-section">
       <div class="op-state-title">Tools</div>
       <button class="op-tool-btn" id="toolSignal" onclick="executeTool('signal')">
-        <span class="tool-icon">📡</span> NTI Signal Scanner
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M5.6 5.6l1.4 1.4"></path><path d="M17 17l1.4 1.4"></path><path d="M5.6 18.4l1.4-1.4"></path><path d="M17 7l1.4-1.4"></path><circle cx="12" cy="12" r="3"></circle></svg></span> NTI Signal Scanner
       </button>
       <button class="op-tool-btn" id="toolMarket" onclick="executeTool('market')">
-        <span class="tool-icon">📈</span> S&amp;P itB₀ Model
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg></span> S&amp;P itB0 Model
       </button>
       <button class="op-tool-btn" id="toolFortune" onclick="executeTool('fortune500')">
-        <span class="tool-icon">🏢</span> Fortune 500 Feed
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="13" y2="16"></line></svg></span> Fortune 500 Feed
       </button>
       <button class="op-tool-btn" id="toolScore" onclick="promptScoreText()">
-        <span class="tool-icon">⚡</span> Score Any Text
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="9 14 11 16 15 12"></polyline></svg></span> Score Any Text
       </button>
       <button class="op-tool-btn" id="toolUpload" onclick="triggerUpload()">
-        <span class="tool-icon">📎</span> Upload + Score File
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span> Upload + Score File
       </button>
       <input type="file" id="fileUploadInput" accept=".txt,.pdf,.docx,.csv,.md,.html"
              style="display:none" onchange="handleFileUpload(this)">
+      
+      
+      
     </div>
 
     <!-- Session history placeholder -->
@@ -786,29 +864,29 @@
     </div>
   </aside>
 
-  <!-- ── CENTER CHAT ─────────────────────────────────────────── -->
+  <!-- -- CENTER CHAT ------------------------------------------- -->
   <main class="op-chat">
     <div class="op-chat-header">
       <span class="op-chat-title">OPERATOR ROOM</span>
       <div class="op-chat-meta">
-        <span class="op-nii-live" id="liveNII">NII —</span>
-        <span class="op-model-badge" id="modelBadge">claude-sonnet-4-6</span>
+        <span class="op-nii-live" id="liveNII">NII -</span>
+        <span class="op-model-badge">claude-sonnet-4-6</span>
       </div>
     </div>
 
     <!-- JOS bar -->
     <div class="op-jos-bar">
       <div class="op-jos-tag required" id="josObjTag" onclick="setJOS('objective')">
-        OBJ <span id="josObjShort">— set objective</span>
+        OBJ <span id="josObjShort">- set objective</span>
       </div>
       <div class="op-jos-tag" id="josConTag" onclick="setJOS('constraint')">
-        CON <span id="josConShort">— constraints</span>
+        CON <span id="josConShort">- constraints</span>
       </div>
       <div class="op-jos-tag" id="josNogoTag" onclick="setJOS('nogo')">
-        NO-GO <span id="josNogoShort">—</span>
+        NO-GO <span id="josNogoShort">-</span>
       </div>
       <div class="op-jos-tag" id="josDoneTag" onclick="setJOS('done')">
-        DONE WHEN <span id="josDoneShort">—</span>
+        DONE WHEN <span id="josDoneShort">-</span>
       </div>
       <div class="op-jos-tag set">
         CLOSURE <span>Jame</span>
@@ -821,9 +899,9 @@
         <div class="op-empty-logo">AZ</div>
         <p>Operator workspace. Full project context loaded. NTI V3 governs every response.</p>
         <div class="op-empty-hints">
-          <div class="op-hint-chip" onclick="useHint(this)">What is the current S₀ entering today?</div>
+          <div class="op-hint-chip" onclick="useHint(this)">What is the current S0 entering today?</div>
           <div class="op-hint-chip" onclick="useHint(this)">Score this text through NTI: [paste text]</div>
-          <div class="op-hint-chip" onclick="useHint(this)">Build Tuesday's market S₀ from today's data</div>
+          <div class="op-hint-chip" onclick="useHint(this)">Build Tuesday's market S0 from today's data</div>
           <div class="op-hint-chip" onclick="useHint(this)">What are the three non-negotiables this week?</div>
         </div>
       </div>
@@ -842,25 +920,25 @@
             oninput="autoResize(this)"
           ></textarea>
           <div class="op-input-footer">
-            <span class="op-input-hint" id="inputHint">Enter to send · Shift+Enter for newline</span>
+            <span class="op-input-hint" id="inputHint">Enter to send - Shift+Enter for newline</span>
             <span class="op-input-hint" id="charCount">0</span>
           </div>
         </div>
         <button class="op-send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 13V3M8 3L3 8M8 3L13 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
         </button>
       </div>
     </div>
   </main>
 
-  <!-- ── RIGHT PANEL — NTI LIVE ──────────────────────────────── -->
+  <!-- -- RIGHT PANEL - NTI LIVE -------------------------------- -->
   <aside class="op-nti-panel">
     <div class="op-panel-header">NTI ANALYSIS</div>
     <div class="op-panel-body" id="ntiPanel">
 
       <!-- Score ring -->
       <div class="op-score-ring">
-        <div class="op-ring-num" id="ntiScore">—</div>
+        <div class="op-ring-num" id="ntiScore">-</div>
         <div class="op-ring-label" id="ntiLabel">WAITING</div>
       </div>
 
@@ -894,11 +972,11 @@
         <div class="op-state-title" style="margin-bottom:6px;">V3 ENFORCEMENT</div>
         <div class="op-fm-row">
           <span class="op-fm-key">Passed</span>
-          <span class="op-fm-val false" id="v3Passed">—</span>
+          <span class="op-fm-val false" id="v3Passed">-</span>
         </div>
         <div class="op-fm-row">
           <span class="op-fm-key">Actions</span>
-          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">—</span>
+          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">-</span>
         </div>
       </div>
 
@@ -911,15 +989,27 @@
         </div>
         <div class="op-session-stat">
           <span class="op-session-key">Avg NII</span>
-          <span class="op-session-val" id="statAvgNII">—</span>
+          <span class="op-session-val" id="statAvgNII">-</span>
         </div>
         <div class="op-session-stat">
           <span class="op-session-key">Flagged</span>
           <span class="op-session-val red" id="statFlagged">0</span>
         </div>
         <div class="op-session-stat">
-          <span class="op-session-key">S₀ delta</span>
+          <span class="op-session-key">S0 delta</span>
           <span class="op-session-val" id="statS0Delta">+0.000</span>
+        </div>
+      </div>
+
+
+      <!-- Memory Log -->
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+        <div class="op-state-title" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span>MEMORY LOG</span>
+          <span onclick="loadMemory()" style="cursor:pointer;color:var(--accent);font-size:9px;">? REFRESH</span>
+        </div>
+        <div id="memoryLog" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);max-height:180px;overflow-y:auto;">
+          Loading...
         </div>
       </div>
 
@@ -939,13 +1029,50 @@
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div id="settingsModal" class="op-modal-backdrop" onclick="if(event.target===this)closeSettings()">
+  <div class="op-modal">
+    <div class="op-modal-header">
+      <span class="op-modal-title">Operator Settings</span>
+      <button class="op-modal-close" onclick="closeSettings()" aria-label="Close">&times;</button>
+    </div>
+    <div class="op-modal-body">
+      <div class="op-field">
+        <label class="op-field-label" for="setPush">Push State</label>
+        <input class="op-field-input" id="setPush" type="text" placeholder="p0068 active" autocomplete="off">
+        <span class="op-field-hint">Shown in sidebar and injected into system prompt.</span>
+      </div>
+      <div class="op-field">
+        <label class="op-field-label" for="setModel">Model</label>
+        <input class="op-field-input" id="setModel" type="text" placeholder="claude-sonnet-4-6" autocomplete="off">
+        <span class="op-field-hint">Sent to /operator/api/chat. Falls back to server CLAUDE_MODEL.</span>
+      </div>
+      <div class="op-field">
+        <label class="op-field-label" for="setAnthropicKey">Anthropic API Key</label>
+        <input class="op-field-input" id="setAnthropicKey" type="password" placeholder="leave blank to use ECS env var" autocomplete="off">
+        <span class="op-field-hint">Stored in this browser only. Never sent to server.</span>
+      </div>
+      <div class="op-field">
+        <label class="op-field-label" for="setOperatorKey">Operator NTI Key</label>
+        <input class="op-field-input" id="setOperatorKey" type="password" placeholder="leave blank to use ECS env var" autocomplete="off">
+        <span class="op-field-hint">Sent with chat/score calls when set.</span>
+      </div>
+    </div>
+    <div class="op-modal-footer">
+      <button class="op-modal-btn" onclick="closeSettings()">Cancel</button>
+      <button class="op-modal-btn primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ── STATE ─────────────────────────────────────────────────────
+
+// -- STATE -----------------------------------------------------
 const CLAUDE_API = '/operator/api/chat';
-const NTI_API    = '/api/v1/score';
+const NTI_API = '/operator/score';
 
 let messages      = [];
 let josState      = { objective:'', constraint:'', nogo:'', done:'' };
@@ -953,10 +1080,19 @@ let sessionStats  = { count:0, niiSum:0, flagged:0 };
 let isLoading     = false;
 let currentJOS    = null;
 
+// -- OPERATOR SETTINGS ----------------------------------------
+// Stored in sessionStorage. Never sent to server (except model + operator_key
+// passed in chat fetch body). Anthropic key stays browser-side only.
+const SETTINGS_KEY = 'az_operator_settings';
+
+function getOperatorSettings() {
+  try { return JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
 function buildSystem() {
   const s = getOperatorSettings();
-  const push   = s.push   || 'p0068 active';
-  const patent = s.patent || 'NOT FILED';
+  const push = s.push || 'p0068 active';
   return `You are operating inside the Artifact Zero Operator Room.
 
 OPERATOR: Jame Houghton, Founder, Artifact Zero Labs, Knoxville TN.
@@ -966,8 +1102,8 @@ itB0 = (Q, S0). Every output requires a prior state. R = Phi(Q, S0). S1 = Psi(S0
 Proven across 10 foundational mathematical structures. NTI is the implementation.
 
 CURRENT STATE:
-- Patent: ${patent}
 - Push: ${push}
+- Patent: NOT FILED - provisional target (itB runtime + NTI)
 - Fortune 500: 415 companies scored daily
 - Live feed: 13 sources, NTI scoring active
 
@@ -983,17 +1119,52 @@ RULES:
 
 NTI V3 governs every response you produce. You are the typist. NTI is the governor.
 When asked to score text, the operator room will call the internal NTI endpoint.
-When asked to run tools, use the /operator/run endpoint.\`;
+When asked to run tools, use the /operator/run endpoint.`;
 }
-const SYSTEM = buildSystem();
 
-// ── INIT ──────────────────────────────────────────────────────
+function applySettingsToUI() {
+  const s = getOperatorSettings();
+  // Sidebar push label
+  const pushEl = document.getElementById('sidebarPush');
+  if (pushEl && s.push) pushEl.textContent = s.push;
+  // Model badge
+  const modelBadge = document.querySelector('.op-model-badge');
+  if (modelBadge && s.model) modelBadge.textContent = s.model;
+}
+
+function openSettings() {
+  const s = getOperatorSettings();
+  document.getElementById('setPush').value          = s.push          || '';
+  document.getElementById('setModel').value         = s.model         || '';
+  document.getElementById('setAnthropicKey').value  = s.anthropicKey  || '';
+  document.getElementById('setOperatorKey').value   = s.operatorKey   || '';
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+function saveSettings() {
+  const s = {
+    push:         document.getElementById('setPush').value.trim(),
+    model:        document.getElementById('setModel').value.trim(),
+    anthropicKey: document.getElementById('setAnthropicKey').value.trim(),
+    operatorKey:  document.getElementById('setOperatorKey').value.trim(),
+  };
+  sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  applySettingsToUI();
+  closeSettings();
+}
+
+// -- INIT ------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+  applySettingsToUI();
   document.getElementById('msgInput').focus();
-  loadSessions();
+  loadSessions(); loadMemory();
 });
 
-// ── CHAT ──────────────────────────────────────────────────────
+// -- CHAT ------------------------------------------------------
 async function sendMessage() {
   const input = document.getElementById('msgInput');
   const text  = input.value.trim();
@@ -1015,6 +1186,7 @@ async function sendMessage() {
   setLoading(true);
 
   try {
+    const settings = getOperatorSettings();
     const res = await fetch(CLAUDE_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1022,8 +1194,9 @@ async function sendMessage() {
         system: buildSystem(),
         messages: messages,
         jos: josState,
-        model: getOperatorSettings().model || 'claude-sonnet-4-6',
-        operator_key: getOperatorSettings().operatorKey || '',
+        model:        settings.model        || undefined,
+        operator_key: settings.operatorKey  || undefined,
+        anthropic_key: settings.anthropicKey || undefined,
       })
     });
 
@@ -1081,7 +1254,7 @@ function updateLastMessageNTI(ntiData) {
   const cls     = score >= 70 ? 'good' : score >= 50 ? 'warn' : 'bad';
   const label   = score >= 70 ? 'HIGH INTEGRITY' : score >= 50 ? 'MODERATE' : 'LOW INTEGRITY';
 
-  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% — ${label}</span>`;
+  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% - ${label}</span>`;
 
   sessionStats.niiSum += score;
   if (hasFlag) sessionStats.flagged++;
@@ -1091,15 +1264,12 @@ function updateLastMessageNTI(ntiData) {
   document.getElementById('statFlagged').textContent = sessionStats.flagged;
 }
 
-// ── NTI SCORING ───────────────────────────────────────────────
+// -- NTI SCORING -----------------------------------------------
 async function scoreText(text, context) {
   try {
     const res = await fetch(NTI_API, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': '{{ api_key | default("") }}'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
     const data = await res.json();
@@ -1164,10 +1334,10 @@ function updateNTIPanel(data, ctx) {
   // V3
   document.getElementById('v3Passed').textContent = v3.passed ? 'YES' : 'NO';
   document.getElementById('v3Passed').className = 'op-fm-val ' + (v3.passed ? 'false' : 'conf');
-  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '—';
+  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '-';
 }
 
-// ── JOS ───────────────────────────────────────────────────────
+// -- JOS -------------------------------------------------------
 function setJOS(field) {
   currentJOS = field;
   const labels = { objective:'SET OBJECTIVE', constraint:'SET CONSTRAINTS', nogo:'SET NO-GO ZONES', done:'DONE WHEN' };
@@ -1196,19 +1366,19 @@ function saveJOS() {
 
   if (val) {
     tagEl.className   = 'op-jos-tag set';
-    shortEl.textContent = val.length > 20 ? val.slice(0,20)+'…' : val;
+    shortEl.textContent = val.length > 20 ? val.slice(0,20)+'-' : val;
   }
 
   // Update sidebar
   if (currentJOS === 'objective') {
-    document.getElementById('josObj').textContent = val || '— not set';
+    document.getElementById('josObj').textContent = val || '- not set';
     document.getElementById('josObj').style.color = val ? 'var(--text)' : 'var(--muted)';
   }
 
   closeJOS();
 }
 
-// ── TOOLS — SERVER-SIDE EXECUTION ─────────────────────────────
+// -- TOOLS - SERVER-SIDE EXECUTION -----------------------------
 async function executeTool(tool) {
   const btnMap = { signal: 'toolSignal', market: 'toolMarket', fortune500: 'toolFortune' };
   const btnId  = btnMap[tool];
@@ -1219,7 +1389,7 @@ async function executeTool(tool) {
   // Show running state
   if (btn) btn.classList.add('running');
 
-  const label = { signal: 'NTI Signal Scanner', market: 'S&P itB₀ Model', fortune500: 'Fortune 500 Feed' }[tool] || tool;
+  const label = { signal: 'NTI Signal Scanner', market: 'S&P itB0 Model', fortune500: 'Fortune 500 Feed' }[tool] || tool;
   addToolMessage(`Running ${label}...`, true);
 
   try {
@@ -1241,7 +1411,7 @@ async function executeTool(tool) {
         const avg   = data.summary.avg_nii;
         document.getElementById('sidebarSignal').textContent  = `NII avg ${avg}%`;
         document.getElementById('sidebarSignal').style.color  = avg >= 70 ? 'var(--accent)' : avg >= 50 ? 'var(--amber)' : 'var(--red)';
-        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '—';
+        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '-';
         document.getElementById('sidebarS0Delta').style.color = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--red)' : 'var(--muted)';
 
         // Update S0 display
@@ -1256,11 +1426,11 @@ async function executeTool(tool) {
       if (tool === 'market' && data.summary) {
         const s0  = data.summary.s0_computed;
         const call = data.summary.call;
-        document.getElementById('sidebarMarket').textContent = call || '—';
+        document.getElementById('sidebarMarket').textContent = call || '-';
         document.getElementById('sidebarMarket').style.color = call === 'UP' ? 'var(--accent)' : call === 'DOWN' ? 'var(--red)' : 'var(--amber)';
         if (s0 !== undefined && s0 !== null) {
           document.getElementById('s0Display').textContent = s0.toFixed(3);
-          document.getElementById('s0Desc').textContent    = `itB₀ model: call ${call}`;
+          document.getElementById('s0Desc').textContent    = `itB0 model: call ${call}`;
           const cls = s0 >= 0.65 ? 'strong' : s0 >= 0.50 ? 'moderate' : s0 >= 0.35 ? 'weak' : 'critical';
           document.getElementById('s0Display').className = 'op-s0-score ' + cls;
         }
@@ -1366,7 +1536,7 @@ function updateLastToolMessage(text) {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ── SESSION HISTORY ───────────────────────────────────────────
+// -- SESSION HISTORY -------------------------------------------
 async function loadSessions() {
   try {
     const res  = await fetch('/operator/sessions');
@@ -1378,7 +1548,7 @@ async function loadSessions() {
     }
     el.innerHTML = data.sessions.slice(0,8).map(s => `
       <div style="padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="loadSession('${s.id}')">
-        <div style="color:var(--dim);margin-bottom:2px;">${s.summary?.slice(0,35) || 'Session'}…</div>
+        <div style="color:var(--dim);margin-bottom:2px;">${s.summary?.slice(0,35) || 'Session'}-</div>
         <div style="font-size:9px;color:var(--muted)">${s.created_at?.slice(0,16) || ''}</div>
       </div>
     `).join('');
@@ -1387,7 +1557,29 @@ async function loadSessions() {
   }
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
+// -- HELPERS ---------------------------------------------------
+
+async function loadMemory() {
+  const el = document.getElementById('memoryLog');
+  if (!el) return;
+  try {
+    const res  = await fetch('/operator/context?limit=10');
+    const data = await res.json();
+    if (!data.rows?.length) {
+      el.textContent = 'No memory entries';
+      return;
+    }
+    el.innerHTML = data.rows.map(r => `
+      <div style="padding:5px 0;border-bottom:1px solid var(--border);">
+        <div style="color:var(--dim);font-size:9px;margin-bottom:2px;">${r.summary?.slice(0,40) || r.push || 'ctx'}&#8230;</div>
+        <div style="color:var(--muted);font-size:8px;">${r.created_at?.slice(0,16) || ''} &middot; ${r.source || ''}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.textContent = 'Not available';
+  }
+}
+
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -1451,60 +1643,5 @@ function escHtml(str) {
 document.getElementById('josModal').addEventListener('click', function(e) {
   if (e.target === this) closeJOS();
 });
-
-// ── SETTINGS ──────────────────────────────────────────────────
-const SETTINGS_KEY = 'az_operator_settings';
-
-function loadSettings() {
-  try {
-    const s = JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || '{}');
-    if (s.push)  document.getElementById('sidebarPush').textContent = s.push;
-    if (s.model) document.getElementById('modelBadge').textContent  = s.model;
-    if (s.patent) {
-      const el = document.querySelector('.op-state-val.red');
-      if (el) { el.textContent = s.patent; el.style.color = s.patent.toLowerCase().includes('filed') ? 'var(--accent)' : ''; }
-    }
-    return s;
-  } catch(e) { return {}; }
-}
-
-function openSettings() {
-  const s = JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || '{}');
-  document.getElementById('setPush').value        = s.push || '';
-  document.getElementById('setModel').value       = s.model || 'claude-sonnet-4-6';
-  document.getElementById('setAnthropicKey').value= s.anthropicKey || '';
-  document.getElementById('setOperatorKey').value = s.operatorKey || '';
-  document.getElementById('setPatent').value      = s.patent || '';
-  const modal = document.getElementById('settingsModal');
-  modal.style.display = 'flex';
-}
-
-function closeSettings() {
-  document.getElementById('settingsModal').style.display = 'none';
-}
-
-function saveSettings() {
-  const s = {
-    push:         document.getElementById('setPush').value.trim(),
-    model:        document.getElementById('setModel').value.trim() || 'claude-sonnet-4-6',
-    anthropicKey: document.getElementById('setAnthropicKey').value.trim(),
-    operatorKey:  document.getElementById('setOperatorKey').value.trim(),
-    patent:       document.getElementById('setPatent').value.trim(),
-  };
-  sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-  loadSettings();
-  closeSettings();
-}
-
-function getOperatorSettings() {
-  try { return JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || '{}'); }
-  catch(e) { return {}; }
-}
-
-// Call on page load
-document.addEventListener('DOMContentLoaded', () => {
-  loadSettings();
-});
-
 </script>
 {% endblock %}
