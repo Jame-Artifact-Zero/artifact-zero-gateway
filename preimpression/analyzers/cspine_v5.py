@@ -678,9 +678,17 @@ def classify_slice_v5(walk_summary, neighbor_summaries=None):
     if neighbor_summaries is None:
         neighbor_summaries = []
 
+    # v5.2 quality gate: count directions with valid (non-None) measurements.
+    # If fewer than 2 directions have data, the slice is poorly measured;
+    # cap any flag at FINDING severity to avoid false positives from a single
+    # noisy direction.
+    valid_dir_count = sum(1 for info in walk_summary.values()
+                           if info.get('mean') is not None or info.get('n_free', 0) > 0)
+    poor_quality = valid_dir_count < 2
+
     contact_dirs = [d for d, info in walk_summary.items()
                      if info.get('has_sustained_contact')]
-    if contact_dirs:
+    if contact_dirs and not poor_quality:
         flags.append({
             'severity': 'CRITICAL',
             'label': f'cord-canal contact ({", ".join(contact_dirs)})',
@@ -699,7 +707,7 @@ def classify_slice_v5(walk_summary, neighbor_summaries=None):
             )
             if neighbor_free_in_d:
                 compression_dirs.append(d)
-    if compression_dirs:
+    if compression_dirs and not poor_quality:
         flags.append({
             'severity': 'MODERATE',
             'label': f'CSF obliteration ({", ".join(compression_dirs)})',
@@ -714,7 +722,7 @@ def classify_slice_v5(walk_summary, neighbor_summaries=None):
             min_W = info['min']
             min_dir = d
 
-    if min_dir is not None and min_W < CSPINE_SPACE['critical_min_mm']:
+    if min_dir is not None and min_W < CSPINE_SPACE['critical_min_mm'] and not poor_quality:
         ws = walk_summary[min_dir]
         if ws.get('contact_run_max', 0) >= SUSTAINED_RUN_MIN:
             if not flags or flags[0]['severity'] != 'CRITICAL':
@@ -723,7 +731,7 @@ def classify_slice_v5(walk_summary, neighbor_summaries=None):
                     'label': f'critical narrowing ({min_dir})',
                     'min_W': min_W,
                 })
-    elif min_dir is not None and min_W < CSPINE_SPACE['moderate_min_mm']:
+    elif min_dir is not None and min_W < CSPINE_SPACE['moderate_min_mm'] and not poor_quality:
         ws = walk_summary[min_dir]
         if (ws.get('contact_run_max', 0) >= SUSTAINED_RUN_MIN
             or ws.get('indet_run_max', 0) >= SUSTAINED_RUN_MIN):
@@ -852,10 +860,15 @@ def detect_cord_volume_v5(ax_items_sorted):
     Detect cord across an axial volume by anchoring each slice from the patient
     origin (0, 0).
 
-    v5.1: simpler than propagation. The cord on cervical anatomy is consistently
-    within ~5mm of patient origin (x ≈ 0, y ≈ 0). Anchoring each slice
-    independently from that point avoids propagation-drift errors where one
-    slice's bad detection cascades through the volume.
+    v5.1: cord on cervical anatomy is consistently within ~5mm of patient
+    origin, so anchoring each slice independently from that point avoids
+    propagation-drift errors.
+
+    v5.2 update (Fix 2): adds recovery pass — after per-slice detection, the
+    cord trajectory is smoothed, and slices whose cord position deviates >5mm
+    from the smoothed trajectory get re-detected using the smoothed trajectory
+    as anchor. This handles slices where the patient-origin anchor finds wrong
+    tissue (e.g., upper-thoracic where cord drifts laterally with kyphosis).
 
     Returns dict idx → {rc, area, ecc, cord_intensity, z, recovered, ...}
     """
@@ -868,11 +881,6 @@ def detect_cord_volume_v5(ax_items_sorted):
             row0, col0 = pix_from_patient_xy(it, 0, 0)
         except Exception:
             continue
-        # Try multiple anchor radii. Start tight (8mm) to lock onto cord rather
-        # than vertebral body marrow at slices where they're close. Widen if
-        # nothing found. The 12mm-only default missed real cords on slices
-        # where the percentile-threshold search returned no candidate at that
-        # specific radius.
         det = None
         for r_mm in (8, 10, 12, 15):
             det = detect_cord_anchored(it['img'], ps_mm, (row0, col0),
@@ -895,7 +903,72 @@ def detect_cord_volume_v5(ax_items_sorted):
             'orientation_rad': float(det.get('orientation_rad', 0)),
             'smooth': smooth,
         }
+
+    # Fix 2: recovery pass. Smooth the cord trajectory and re-detect slices
+    # whose cord position is >5mm from the smoothed trajectory.
+    if len(detections) >= 5:
+        sorted_idxs = sorted(detections.keys())
+        zs = np.array([detections[i]['z'] for i in sorted_idxs])
+        rs = np.array([detections[i]['rc'][0] for i in sorted_idxs])
+        cs = np.array([detections[i]['rc'][1] for i in sorted_idxs])
+        rs_smooth = gaussian_filter1d(rs, sigma=2.5)
+        cs_smooth = gaussian_filter1d(cs, sigma=2.5)
+
+        for j, idx in enumerate(sorted_idxs):
+            it = ax_items_sorted[idx]
+            ps_mm = float(it['ps'][0])
+            cur_rc = detections[idx]['rc']
+            traj_rc = (float(rs_smooth[j]), float(cs_smooth[j]))
+            drift_mm = float(np.hypot(cur_rc[0] - traj_rc[0],
+                                        cur_rc[1] - traj_rc[1])) * ps_mm
+            if drift_mm > 5.0:
+                # Re-detect using smoothed-trajectory anchor
+                re_det = None
+                for r_mm in (8, 10, 12):
+                    re_det = detect_cord_anchored(it['img'], ps_mm, traj_rc,
+                                                    anchor_radius_mm=r_mm)
+                    if re_det is not None:
+                        break
+                if re_det is not None:
+                    smooth = gaussian_filter(it['img'].astype(np.float32), sigma=1.5)
+                    cord_I = get_cord_intensity(smooth, ps_mm, re_det['rc'])
+                    detections[idx] = {
+                        'rc': re_det['rc'],
+                        'area': float(re_det['area']),
+                        'ecc': float(re_det['ecc']),
+                        'cord_intensity': float(cord_I),
+                        'z': float(it['ipp'][2]),
+                        'recovered': True,
+                        'major_axis_mm': float(re_det.get('major_axis_mm', 0)),
+                        'minor_axis_mm': float(re_det.get('minor_axis_mm', 0)),
+                        'orientation_rad': float(re_det.get('orientation_rad', 0)),
+                        'smooth': smooth,
+                    }
+
     return detections
+
+
+def assign_level_v5(z_mm, levels):
+    """
+    Map a z position to the closest labeled vertebra/disc level.
+
+    v5.2 update (Fix 3): caps cervical labeling at T1. Slices more than 6mm
+    caudal of the T1 z-position get labeled 'below_T1' so they don't pool
+    into the T1 bucket and trigger false aggregate findings from upper-thoracic
+    measurements.
+    """
+    if not levels:
+        return 'unknown'
+    real_levels = {k: v for k, v in levels.items() if not k.startswith('_')}
+    if not real_levels:
+        return 'unknown'
+
+    # Fix 3: below-T1 cap
+    t1_z = real_levels.get('T1')
+    if t1_z is not None and z_mm < t1_z - 6.0:
+        return 'below_T1'
+
+    return min(real_levels.items(), key=lambda kv: abs(kv[1] - z_mm))[0]
 
 
 def analyze_cspine_v5(ax_items, sag_items):
@@ -961,7 +1034,7 @@ def analyze_cspine_v5(ax_items, sag_items):
         ws = walk_summaries[idx]
         cls = classifications[idx]
         z_mm = det['z']
-        level = assign_level(z_mm, levels)
+        level = assign_level_v5(z_mm, levels)
         rec = slice_record_from_walks(slc, det, ws, cls, level)
         rec['recovered'] = det['recovered']
         slice_records.append(rec)
@@ -986,6 +1059,13 @@ def analyze_cspine_v5(ax_items, sag_items):
     level_summaries, all_flags = aggregate_levels(
         slice_records, CSPINE_LEVELS, CSPINE_SPACE, CSPINE_ASYM,
     )
+
+    # Fix 1: severity escalation from sustained low-rim runs and cord deformation.
+    # Fix 4: disc-level severity inheritance from adjacent vertebra findings.
+    level_summaries, all_flags = _apply_severity_escalation_v5(
+        level_summaries, all_flags, slice_records,
+    )
+
     overall = max_severity(all_flags)
 
     return {
@@ -997,3 +1077,174 @@ def analyze_cspine_v5(ax_items, sag_items):
         'overall': overall,
         'cord_track_3d': summarize_cord_track(markers),
     }
+
+
+def _apply_severity_escalation_v5(level_summaries, all_flags, slice_records):
+    """
+    v5.2 escalation logic. Two fixes applied here:
+
+    Fix 1: Level severity should escalate when:
+      - Sustained-low-rim run: ≥2 consecutive slices at the same level have
+        space_min_mm below moderate threshold (1.5mm). One noisy slice doesn't
+        flag, but two adjacent slices = real finding. Escalate FINDING→MODERATE.
+      - Cord deformation: cord ecc > 0.80 on the slice with min space, and
+        space_min_mm < 2.0mm. The cord is being squeezed. Escalate one level.
+      Both are pattern-recognition signals that distinguish true compression
+      from measurement noise.
+
+    Fix 4: Disc-level severity inheritance. If a vertebra-level (C5, C6, etc.)
+    flags MODERATE or CRITICAL, its adjacent disc levels (C4-C5 above, C5-C6
+    below) get a FINDING-level "adjacent-vertebra compression" flag UNLESS
+    they already have an equal-or-higher-severity flag. Matches how
+    radiologists read: a disc lesion's effect spans the vertebra below the
+    disc, so vertebra-level findings indirectly signal disc pathology.
+    """
+    from collections import defaultdict
+    from ._base import max_severity
+
+    # Build slice records by level for sustained-run / deformation analysis
+    by_level = defaultdict(list)
+    for s in slice_records:
+        by_level[s['level']].append(s)
+
+    SEVERITY_RANK = {'CRITICAL': 3, 'MODERATE': 2, 'FINDING': 1, 'NORMAL': 0}
+
+    def _level_max_severity_rank(summary):
+        flags = summary.get('flags', [])
+        if not flags:
+            return 0
+        return max(SEVERITY_RANK.get(f.get('severity', 'NORMAL'), 0) for f in flags)
+
+    # Fix 1: scan each level summary for sustained-low or deformation patterns
+    for summary in level_summaries:
+        level = summary.get('level')
+        rows = by_level.get(level, [])
+        if not rows:
+            continue
+
+        # Sort by z to detect "consecutive" slices
+        rows_sorted = sorted(rows, key=lambda r: r.get('z_mm', 0))
+
+        # Sustained-low-rim run check
+        sustained_low_run = 0
+        max_run = 0
+        for r in rows_sorted:
+            sm = r.get('space_min_mm')
+            if sm is not None and not (sm != sm) and sm < 1.5:  # sm < 1.5 and not NaN
+                sustained_low_run += 1
+                max_run = max(max_run, sustained_low_run)
+            else:
+                sustained_low_run = 0
+        has_sustained_low = max_run >= 2
+
+        # Cord deformation check on the slice with min space
+        deformed = False
+        if rows_sorted:
+            min_row = min(rows_sorted,
+                           key=lambda r: r.get('space_min_mm', 99) if r.get('space_min_mm') is not None and not (r.get('space_min_mm') != r.get('space_min_mm')) else 99)
+            min_sm = min_row.get('space_min_mm', 99)
+            ecc = min_row.get('cord_ecc', 0)
+            if (min_sm is not None and not (min_sm != min_sm)
+                and min_sm < 2.0 and ecc > 0.80):
+                deformed = True
+
+        # Apply escalation if either trigger fires
+        cur_rank = _level_max_severity_rank(summary)
+        new_severity = None
+        new_label = None
+        if has_sustained_low and cur_rank < 3:
+            # FINDING (1) → MODERATE (2), MODERATE (2) → CRITICAL (3)
+            if cur_rank <= 1:
+                new_severity = 'MODERATE'
+                new_label = f'sustained narrowing ({max_run} consecutive slices)'
+            elif cur_rank == 2:
+                new_severity = 'CRITICAL'
+                new_label = f'sustained critical narrowing ({max_run} consecutive slices)'
+        if deformed and cur_rank < 3:
+            esc = 'CRITICAL' if cur_rank == 2 else 'MODERATE'
+            if new_severity is None or SEVERITY_RANK[esc] > SEVERITY_RANK.get(new_severity, 0):
+                new_severity = esc
+                new_label = 'cord deformation with narrowing'
+
+        if new_severity is not None:
+            summary.setdefault('flags', []).append({
+                'label': new_label,
+                'severity': new_severity,
+            })
+            all_flags.append({
+                'label': new_label,
+                'severity': new_severity,
+                'level': level,
+            })
+
+    # Fix 4: disc-level inheritance from adjacent vertebra findings.
+    # If a vertebra body level (C5 etc.) shows narrowing AND the adjacent disc
+    # has at least some directional concern (any non-NaN direction below
+    # finding threshold), inherit. If the disc measures clean across all
+    # directions, do NOT inherit — radiology often distinguishes disc
+    # narrowing from vertebra-level findings.
+    summaries_by_level = {s['level']: s for s in level_summaries}
+    DISC_TO_VERTEBRAE = {
+        'C2-C3': ('C2', 'C3'),
+        'C3-C4': ('C3', 'C4'),
+        'C4-C5': ('C4', 'C5'),
+        'C5-C6': ('C5', 'C6'),
+        'C6-C7': ('C6', 'C7'),
+        'C7-T1': ('C7', 'T1'),
+    }
+    by_level = defaultdict(list)
+    for s in slice_records:
+        by_level[s['level']].append(s)
+
+    for disc_level, (above, below) in DISC_TO_VERTEBRAE.items():
+        disc_summary = summaries_by_level.get(disc_level)
+        if disc_summary is None:
+            continue
+        disc_rank = _level_max_severity_rank(disc_summary)
+
+        # Check if disc itself has any directional concern (any direction
+        # measurement below finding threshold).
+        disc_rows = by_level.get(disc_level, [])
+        has_directional_concern = False
+        for r in disc_rows:
+            for fld in ('left_space_mm', 'right_space_mm',
+                         'anterior_space_mm', 'posterior_space_mm'):
+                v = r.get(fld)
+                if v is None:
+                    continue
+                if isinstance(v, float) and v != v:  # NaN
+                    continue
+                if v < 2.5:  # below finding threshold
+                    has_directional_concern = True
+                    break
+            if has_directional_concern:
+                break
+
+        if not has_directional_concern:
+            continue  # disc measures clean — don't inherit
+
+        for adj in (above, below):
+            adj_summary = summaries_by_level.get(adj)
+            if adj_summary is None:
+                continue
+            adj_rank = _level_max_severity_rank(adj_summary)
+            if adj_rank >= 1 and disc_rank < adj_rank:
+                if adj_rank == 3:
+                    inherit_severity = 'MODERATE'
+                elif adj_rank == 2:
+                    inherit_severity = 'FINDING'
+                else:
+                    inherit_severity = 'FINDING'
+                inherit_label = f'adjacent-vertebra finding at {adj}'
+                disc_summary.setdefault('flags', []).append({
+                    'label': inherit_label,
+                    'severity': inherit_severity,
+                })
+                all_flags.append({
+                    'label': inherit_label,
+                    'severity': inherit_severity,
+                    'level': disc_level,
+                })
+                disc_rank = max(disc_rank, SEVERITY_RANK[inherit_severity])
+
+    return level_summaries, all_flags
