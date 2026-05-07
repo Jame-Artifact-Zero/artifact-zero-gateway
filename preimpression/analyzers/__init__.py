@@ -24,6 +24,7 @@ from .cspine_v6_analyzer import CSpineV6Analyzer
 from .tspine import TSpineAnalyzer
 from .lspine import LSpineAnalyzer
 from .brain import BrainAnalyzer
+from .brain_v6 import BrainV6Analyzer
 from .knee import KneeAnalyzer
 from .ankle import AnkleAnalyzer
 from .foot import FootAnalyzer
@@ -41,6 +42,7 @@ ANALYZERS = {
     'thoracic_spine':    TSpineAnalyzer,
     'lumbar_spine':      LSpineAnalyzer,
     'brain':             BrainAnalyzer,
+    'brain_v6':          BrainV6Analyzer,
     'knee':              KneeAnalyzer,
     'ankle':             AnkleAnalyzer,
     'foot':              FootAnalyzer,
@@ -52,12 +54,13 @@ ANALYZERS = {
 }
 
 # Map common body-part codes to analyzer classes.
-# CSpineV5Analyzer and CSpineV6Analyzer have empty body_part_codes -- only
-# reachable via explicit body_part override. detect_body_part() will never
-# auto-route a study to v5 or v6, preserving current production behavior.
+# CSpineV5Analyzer, CSpineV6Analyzer, BrainV6Analyzer have empty body_part_codes
+# -- only reachable via explicit body_part override. detect_body_part() will
+# never auto-route a study to v5/v6, preserving current production behavior.
 _CODE_TO_ANALYZER = {}
 for cls in (CSpineAnalyzer, CSpineV5Analyzer, CSpineV6Analyzer,
-            TSpineAnalyzer, LSpineAnalyzer, BrainAnalyzer,
+            TSpineAnalyzer, LSpineAnalyzer,
+            BrainAnalyzer, BrainV6Analyzer,
             KneeAnalyzer, AnkleAnalyzer, FootAnalyzer, ShoulderAnalyzer,
             ElbowAnalyzer, WristAnalyzer, HandAnalyzer, BreastAnalyzer):
     for code in cls.body_part_codes:
@@ -74,10 +77,10 @@ for cls in (CSpineAnalyzer, CSpineV5Analyzer, CSpineV6Analyzer,
 #   3. False-negative rate characterized and documented
 #   4. DB threshold tuning happened DURING validation
 #
-# Note on cervical_spine_v5 and cervical_spine_v6: deliberately NOT gated
-# here. The point of side-by-side registration is to allow direct API calls
-# to compare v4 vs v5 vs v6 outputs. They inherit validation status
-# discussion from cspine -- comparison output is how that status gets settled.
+# Note on cervical_spine_v5, cervical_spine_v6, brain_v6: deliberately NOT
+# gated here. The point of side-by-side registration is to allow direct API
+# calls to compare versions. They inherit validation status discussion from
+# their primary body part -- comparison output is how that gets settled.
 UNVALIDATED_BODY_PARTS = {
     'thoracic_spine',
     'lumbar_spine',
@@ -86,8 +89,6 @@ UNVALIDATED_BODY_PARTS = {
     'knee', 'ankle', 'foot', 'shoulder', 'elbow', 'wrist', 'hand',
     'breast',
 }
-# Currently validated: cervical_spine (1 real study, Philips; GE regression
-# under investigation in hf06)
 
 
 def get_analyzer(body_part_or_code: str) -> Optional[BaseAnalyzer]:
