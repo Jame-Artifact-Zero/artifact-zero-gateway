@@ -158,6 +158,34 @@ try:
 except ImportError:
     print("[app] operator_room not found, skipping", flush=True)
 
+try:
+    from rh_toolkit import bp as rh_toolkit_bp
+    app.register_blueprint(rh_toolkit_bp)
+    print("[app] rh_toolkit loaded", flush=True)
+except Exception as e:
+    print(f"[app] rh_toolkit failed: {e}", flush=True)
+
+try:
+    from dicom_blueprint import dicom_bp
+    app.register_blueprint(dicom_bp, url_prefix='/dicom')
+    print("[app] dicom pipeline loaded", flush=True)
+except Exception as e:
+    print(f"[app] dicom pipeline failed: {e}", flush=True)
+
+try:
+    from azl_blueprint import bp as azl_bp
+    app.register_blueprint(azl_bp)
+    print("[app] azl loaded", flush=True)
+except Exception as e:
+    print(f"[app] azl failed: {e}", flush=True)
+
+try:
+    from preimpression.server import preimpression_bp
+    app.register_blueprint(preimpression_bp)
+    print("[app] preimpression loaded", flush=True)
+except Exception as e:
+    print(f"[app] preimpression failed: {e}", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)

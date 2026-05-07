@@ -1,28 +1,25 @@
-# SQLite databases — never commit, causes CI lock failures
+# SQLite databases - never commit, causes CI lock failures
 *.db
 *.db-wal
 *.db-shm
-
-# Local startup scripts with credentials — never commit
+# Local startup scripts with credentials - never commit
 az_start.bat
-
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-
 # Environment
 .env
 .env.*
-
 # OS
 .DS_Store
 Thumbs.db
-
 taskdef_edit.json
 taskdef_clean.json
 taskdef_current.json
 taskdef_new.json
 taskdef_final.json
+# Dump files - never commit
+*_dump.txt
