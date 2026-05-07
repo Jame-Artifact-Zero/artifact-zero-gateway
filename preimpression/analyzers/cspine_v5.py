@@ -117,19 +117,8 @@ CSPINE_ASYM = {
 CSPINE_LEVELS = ['C2', 'C2-C3', 'C3', 'C3-C4', 'C4', 'C4-C5',
                   'C5', 'C5-C6', 'C6', 'C6-C7', 'C7', 'C7-T1', 'T1']
 
-# Cervical anatomy parameters
-CERVICAL_BODY_SPACING_MM = (10.0, 25.0)   # observed cervical body z-spacing range
-                                            # (real cspine has variation incl. disc disease)
-CERVICAL_DISC_SPACE_MM = (3.0, 15.0)      # trough-to-peak distance on body band
-CERVICAL_INTENSITY_RATIO = (0.4, 1.8)     # peak intensity must be within this
-                                            # fraction of median peak intensity
-LARGE_GAP_THRESHOLD_MM = 28.0             # gap > this = non-cervical break
-                                            # (separates cervical run from skull/thorax noise)
+# Cervical anatomy parameters (used by detect_levels_v5)
 CERVICAL_SEQUENCE = ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'T1']
-
-# Anchor detection (C2 dens / T1 rib articulation) — see detect_levels_v5
-DENS_RATIO_THRESHOLD = 0.55  # band signal 5-15mm above cranial peak / peak intensity
-                              # > threshold = dens present = cranial peak IS C2
 
 # Cord geometry parameters
 CORD_AREA_MM2 = (40.0, 150.0)             # axial cord cross-section
@@ -154,194 +143,109 @@ def detect_levels_v5(sag_items):
     """
     Detect vertebral level z-positions from midline sagittal T2.
 
-    Strategy:
-      1. Find vertebral body peaks via 3-stage validation (no kyphosis assumption)
-      2. Detect C2 dens if present (continued bone signal above cranial-most peak)
-      3. Anchor labeling:
-         - If dens detected → cranial-most peak is C2
-         - Otherwise → cranial-most peak is C3 if 6+ peaks, C4 if 5 peaks,
-           C5 if 4 peaks (estimate from peak count vs typical FOV coverage)
-      4. Label downward from anchor: C2, C3, C4, C5, C6, C7, T1
+    v5.1 update: replaced the dens-anchor approach (which produced false
+    positives on FOV-truncated scans) with the kyphosis-anchored approach
+    that v4 hf07 validated against the 2024 Philips study. Adds hf07's
+    progressive band widening (tries y=(-25,-5), (-35,-5), (-40,0),
+    (-50,10), stops at first band yielding ≥4 peaks). The kyphosis sanity
+    check (apex should land at C4) shifts labels when the cranial-most
+    peak isn't C2.
 
-    Returns dict mapping label → z_mm with optional confidence:
-      {'C2': 12.4, 'C2-C3': 0.5, 'C3': -11.4, ...,
-       '_anchor': 'dens'|'inferred',
-       '_anchor_confidence': 'high'|'medium'|'low'}
-
-    Confidence is 'high' when dens detected, 'medium' when peak count strongly
-    suggests anchor, 'low' when ambiguous. Empty dict if validation fails.
+    Returns dict mapping label → z_mm, with disc midpoints as 'CX-CY'.
     """
     from ._spine_common import resample_sag_patient_coords
 
     if not sag_items:
         return {}
-
     mid_idx = int(np.argmin([abs(it['ipp'][0]) for it in sag_items]))
     sag_mid = sag_items[mid_idx]
     z_range = np.arange(-100, 110, 0.3)
     y_range = np.arange(-50, 60, 0.3)
     pv = resample_sag_patient_coords(sag_mid, z_range, y_range)
-    sm = gaussian_filter(pv, sigma=1.5)
 
-    body_zs = _find_validated_body_peaks(sm, z_range, y_range)
-    if len(body_zs) < 4:
+    # Cord centerline (kyphosis trace)
+    smoothed = gaussian_filter(pv, sigma=2.0)
+    cord_zs = []; cord_ys = []
+    for zi, z in enumerate(z_range):
+        col = smoothed[:, zi]
+        if col.max() < 30:
+            continue
+        ymask = (y_range > -15) & (y_range < 30)
+        if not ymask.any():
+            continue
+        sub = col.copy(); sub[~ymask] = 0
+        peak_idx = int(np.argmax(sub))
+        if sub[peak_idx] < 30:
+            continue
+        cord_zs.append(z)
+        cord_ys.append(float(y_range[peak_idx]))
+    cord_zs = np.array(cord_zs); cord_ys = np.array(cord_ys)
+
+    # Kyphosis apex
+    apex = None
+    if len(cord_zs) >= 5:
+        sm_y = gaussian_filter1d(cord_ys, sigma=3)
+        apex = float(cord_zs[int(np.argmax(sm_y))])
+
+    # Body peaks (anterior bright band) — hf07 progressive widening
+    # NB: prominence=50 (not 20) drops spurious low-prominence peaks like
+    # one at z≈46 in the 2024 Philips study which had prom=27.4 vs real
+    # cervical bodies at prom=200-1000. Using 20 caused local-v4 to find
+    # 8 peaks where deployed-v4 (prom=50) finds 7, shifting labels by 1
+    # and putting C5-C6 at z=21.65 instead of the correct z=0.35.
+    sm = gaussian_filter(pv, sigma=1.5)
+    body_zs = None
+    for ylo, yhi in [(-25, -5), (-35, -5), (-40, 0), (-50, 10)]:
+        ymask = (y_range > ylo) & (y_range < yhi)
+        if not ymask.any():
+            continue
+        band = sm[ymask, :].mean(axis=0)
+        band_smooth = gaussian_filter1d(band, sigma=2)
+        peaks, _ = find_peaks(band_smooth, distance=int(8/0.3), prominence=50)
+        candidate_zs = z_range[peaks]
+        if len(candidate_zs) >= 4:
+            body_zs = candidate_zs
+            break
+    if body_zs is None or len(body_zs) < 4:
         return {}
 
-    body_zs = np.sort(body_zs)[::-1]  # cranial → caudal
+    # Label C2-T1 cranial→caudal with kyphosis sanity check
+    body_zs_sorted = np.sort(body_zs)[::-1]
+    sequence = ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'T1']
+    n_take = min(len(body_zs_sorted), len(sequence))
+    labels = {sequence[i]: float(body_zs_sorted[i]) for i in range(n_take)}
 
-    # Detect C2 dens above cranial-most peak
-    cranial_z = float(body_zs[0])
-    has_dens = _detect_c2_dens(sm, z_range, y_range, cranial_z)
+    if apex is not None and labels:
+        apex_label = min(labels.items(), key=lambda kv: abs(kv[1] - apex))[0]
+        target_idx = 2  # apex should be near C4
+        cur_idx = sequence.index(apex_label)
+        shift = cur_idx - target_idx
+        if shift > 0 and shift < n_take:
+            new_labels = {}
+            for i in range(min(n_take, len(sequence) - shift)):
+                if (i + shift) < len(body_zs_sorted):
+                    new_labels[sequence[i]] = float(body_zs_sorted[i + shift])
+            if new_labels:
+                labels = new_labels
 
-    # Determine anchor
-    if has_dens:
-        anchor_idx = 0  # cranial-most = C2
-        anchor_kind = 'dens'
-        confidence = 'high'
-    else:
-        # No dens visible. Estimate based on peak count.
-        # Cervical FOV typical: 6-8 peaks (C2/C3 to T1)
-        # If 7+ peaks, cranial-most is likely C2 still (just dens may be partial)
-        # If 6 peaks, likely C3
-        # If 5 peaks, likely C3 or C4
-        # If 4 peaks, ambiguous (could be C3-C6 or C4-C7)
-        n = len(body_zs)
-        if n >= 7:
-            anchor_idx = 0  # C2
-            confidence = 'medium'
-            anchor_kind = 'count'
-        elif n == 6:
-            anchor_idx = 1  # treat cranial-most as C3 (offset by 1)
-            confidence = 'medium'
-            anchor_kind = 'count'
-        elif n == 5:
-            anchor_idx = 2  # cranial-most is C4
-            confidence = 'low'
-            anchor_kind = 'count_low'
-        else:  # n == 4
-            anchor_idx = 2  # default cranial-most = C4 (cervical mid-FOV)
-            confidence = 'low'
-            anchor_kind = 'count_low'
-
-    # Label peaks
-    n_take = min(len(body_zs), len(CERVICAL_SEQUENCE) - anchor_idx)
-    labels = {}
-    for i in range(n_take):
-        seq_idx = anchor_idx + i
-        if seq_idx < len(CERVICAL_SEQUENCE):
-            labels[CERVICAL_SEQUENCE[seq_idx]] = float(body_zs[i])
-
-    # Add disc midpoints
+    # Disc midpoints
     levels = dict(labels)
-    for k in range(len(CERVICAL_SEQUENCE) - 1):
-        a, b = CERVICAL_SEQUENCE[k], CERVICAL_SEQUENCE[k+1]
+    for k in range(len(sequence) - 1):
+        a, b = sequence[k], sequence[k+1]
         if a in labels and b in labels:
             levels[f'{a}-{b}'] = (labels[a] + labels[b]) / 2.0
-
-    levels['_anchor'] = anchor_kind
-    levels['_anchor_confidence'] = confidence
     return levels
 
 
-def _detect_c2_dens(sm, z_range, y_range, cranial_z):
+def _legacy_dens_anchor_kept_for_reference(sm, z_range, y_range, cranial_z):
+    """[DEPRECATED — kept for reference]
+    Earlier v5 attempt that used continued-bone-signal-above-cranial-peak
+    to detect C2 dens. Produced false positives on FOV-truncated scans
+    where soft tissue above the cranial-most cervical body had similar
+    intensity to bone marrow. Replaced by kyphosis-apex sanity check
+    in detect_levels_v5.
     """
-    Detect C2 dens by checking for continued bone signal above the cranial-most
-    body peak.
-
-    The dens (odontoid) extends 12-18mm superior of the C2 body and shows
-    bone-marrow intensity throughout that span. If cranial-most is C3 or below,
-    the FOV truncates and intensity drops sharply within a few mm above the peak.
-
-    Returns True if dens is detected.
-    """
-    ymask_body = (y_range > -25) & (y_range < -5)
-    if not ymask_body.any():
-        return False
-    band = sm[ymask_body, :].mean(axis=0)
-    band_smooth = gaussian_filter1d(band, sigma=2)
-
-    # Intensity at cranial peak
-    peak_idx = int(np.argmin(np.abs(z_range - cranial_z)))
-    peak_intensity = float(band_smooth[peak_idx])
-    if peak_intensity < 50:
-        return False
-
-    # Mean intensity 5-15mm above cranial peak (the dens region)
-    above_window = (z_range > cranial_z + 5) & (z_range < cranial_z + 15)
-    if not above_window.any():
-        return False
-    above_mean = float(band_smooth[above_window].mean())
-
-    ratio = above_mean / peak_intensity if peak_intensity > 0 else 0
-    return ratio > DENS_RATIO_THRESHOLD
-
-
-def _find_validated_body_peaks(sm, z_range, y_range):
-    """
-    Three-stage peak validation:
-      1. Trough on both sides at 3-15mm (real disc spaces flank vertebrae)
-      2. Intensity within 0.4-1.8x median (filter occiput / skull-base brightness)
-      3. Trim across LARGE GAPS (>28mm) which separate cervical run from
-         non-cervical noise. Within-cervical spacings of 10-25mm are kept
-         (real cspine has variation incl. disc disease).
-
-    Returns array of z values for validated peaks.
-    """
-    ymask = (y_range > -25) & (y_range < -5)
-    if not ymask.any():
-        return np.array([])
-    band = sm[ymask, :].mean(axis=0)
-    band_smooth = gaussian_filter1d(band, sigma=2)
-
-    peaks, _ = find_peaks(band_smooth, distance=int(8/0.3), prominence=20)
-    troughs, _ = find_peaks(-band_smooth, distance=int(8/0.3), prominence=20)
-    if len(peaks) == 0:
-        return np.array([])
-
-    # Stage 1: trough on both sides at disc-space distance
-    stage1 = []
-    for pi in peaks:
-        z_peak = z_range[pi]
-        ta = [t for t in troughs if t > pi]
-        tb = [t for t in troughs if t < pi]
-        ad = (z_range[min(ta)] - z_peak) if ta else None
-        bd = (z_peak - z_range[max(tb)]) if tb else None
-        ha = ad is not None and CERVICAL_DISC_SPACE_MM[0] < ad < CERVICAL_DISC_SPACE_MM[1]
-        hb = bd is not None and CERVICAL_DISC_SPACE_MM[0] < bd < CERVICAL_DISC_SPACE_MM[1]
-        if ha and hb:
-            stage1.append({'z': float(z_peak), 'intensity': float(band_smooth[pi])})
-
-    if len(stage1) < 4:
-        return np.array(sorted([s['z'] for s in stage1]))
-
-    # Stage 2: intensity ratio
-    intensities = [s['intensity'] for s in stage1]
-    median_i = float(np.median(intensities))
-    stage2 = [s for s in stage1
-               if CERVICAL_INTENSITY_RATIO[0] <= s['intensity']/median_i <= CERVICAL_INTENSITY_RATIO[1]]
-    if len(stage2) < 4:
-        return np.array(sorted([s['z'] for s in stage1]))
-
-    # Stage 3: trim across LARGE GAPS — separates cervical from non-cervical noise
-    stage2_sorted = sorted(stage2, key=lambda s: s['z'])
-    while len(stage2_sorted) > 4:
-        zs = [s['z'] for s in stage2_sorted]
-        spacings = [zs[i+1] - zs[i] for i in range(len(zs)-1)]
-        if not spacings:
-            break
-        max_spacing = max(spacings)
-        if max_spacing < LARGE_GAP_THRESHOLD_MM:
-            break  # all gaps reasonable
-        gap_idx = spacings.index(max_spacing)
-        # Drop the side with fewer peaks (the spurious end)
-        n_below = gap_idx + 1
-        n_above = len(stage2_sorted) - n_below
-        if n_below >= n_above:
-            stage2_sorted = stage2_sorted[:gap_idx + 1]
-        else:
-            stage2_sorted = stage2_sorted[gap_idx + 1:]
-
-    return np.array([s['z'] for s in stage2_sorted])
+    pass
 
 
 # ============================================================================
@@ -885,9 +789,18 @@ def slice_record_from_walks(it, det, walk_summary, classification, level):
       left_space_mm = patient_left mean
       right_space_mm = patient_right mean
       asym_lr = (L - R) / (L + R) if both present
+
+    v5.1 fix: cord_x_mm and cord_y_mm now correctly convert pixel (row, col)
+    to patient coordinates via patient_xy_from_pix. v5.0 was emitting raw
+    pixel indices in fields labeled mm.
     """
-    cord_rc = det['rc']
+    from ._base import patient_xy_from_pix
+
+    cord_rc = det['rc']  # (row, col) in pixels
     cord_I = det['cord_intensity']
+
+    # Convert cord pixel position to patient coordinates
+    cord_xyz = patient_xy_from_pix(it, cord_rc[0], cord_rc[1])
 
     means = [walk_summary[d]['mean'] for d in walk_summary
               if walk_summary[d]['mean'] is not None]
@@ -909,8 +822,8 @@ def slice_record_from_walks(it, det, walk_summary, classification, level):
         'inst': it['inst'],
         'z_mm': float(it['ipp'][2]),
         'level': level,
-        'cord_x_mm': float(cord_rc[1]),  # patient-x via col idx
-        'cord_y_mm': float(cord_rc[0]),  # patient-y via row idx
+        'cord_x_mm': float(cord_xyz[0]),  # patient x in mm (LPS)
+        'cord_y_mm': float(cord_xyz[1]),  # patient y in mm (LPS, +=posterior)
         'cord_area_mm2': float(det['area']),
         'cord_ecc': float(det['ecc']),
         'cord_intensity': float(cord_I),
@@ -934,11 +847,67 @@ def slice_record_from_walks(it, det, walk_summary, classification, level):
 # ============================================================================
 # Top-level analyzer entry point
 # ============================================================================
+def detect_cord_volume_v5(ax_items_sorted):
+    """
+    Detect cord across an axial volume by anchoring each slice from the patient
+    origin (0, 0).
+
+    v5.1: simpler than propagation. The cord on cervical anatomy is consistently
+    within ~5mm of patient origin (x ≈ 0, y ≈ 0). Anchoring each slice
+    independently from that point avoids propagation-drift errors where one
+    slice's bad detection cascades through the volume.
+
+    Returns dict idx → {rc, area, ecc, cord_intensity, z, recovered, ...}
+    """
+    from ._base import pix_from_patient_xy
+
+    detections = {}
+    for idx, it in enumerate(ax_items_sorted):
+        ps_mm = float(it['ps'][0])
+        try:
+            row0, col0 = pix_from_patient_xy(it, 0, 0)
+        except Exception:
+            continue
+        # Try multiple anchor radii. Start tight (8mm) to lock onto cord rather
+        # than vertebral body marrow at slices where they're close. Widen if
+        # nothing found. The 12mm-only default missed real cords on slices
+        # where the percentile-threshold search returned no candidate at that
+        # specific radius.
+        det = None
+        for r_mm in (8, 10, 12, 15):
+            det = detect_cord_anchored(it['img'], ps_mm, (row0, col0),
+                                         anchor_radius_mm=r_mm)
+            if det is not None:
+                break
+        if det is None:
+            continue
+        smooth = gaussian_filter(it['img'].astype(np.float32), sigma=1.5)
+        cord_I = get_cord_intensity(smooth, ps_mm, det['rc'])
+        detections[idx] = {
+            'rc': det['rc'],
+            'area': float(det['area']),
+            'ecc': float(det['ecc']),
+            'cord_intensity': float(cord_I),
+            'z': float(it['ipp'][2]),
+            'recovered': False,
+            'major_axis_mm': float(det.get('major_axis_mm', 0)),
+            'minor_axis_mm': float(det.get('minor_axis_mm', 0)),
+            'orientation_rad': float(det.get('orientation_rad', 0)),
+            'smooth': smooth,
+        }
+    return detections
+
+
 def analyze_cspine_v5(ax_items, sag_items):
     """
     Entry point. Pass loaded axial T2 + sagittal T2 item lists; returns a dict
     matching the schema CSpineAnalyzer.analyze() returns (without the wrapping
     'series_used' / 'status' fields, which the analyzer class adds).
+
+    v5.1 update: cord detection uses detect_cord_volume_v5 (anchor-from-middle
+    + propagate + recovery), which is more reliable than v5.0's sagittal-projection
+    that locked onto vertebral body marrow at vertebra-level slices. Sagittal is
+    now used only for level detection, not cord position.
 
     Args:
       ax_items: list of dicts {'img', 'ipp', 'iop', 'ps', 'inst'} sorted by z
@@ -954,26 +923,23 @@ def analyze_cspine_v5(ax_items, sag_items):
     # Sort axial by z
     ax_items_sorted = sorted(ax_items, key=lambda s: s['ipp'][2])
 
-    # Pick midline sagittal
     if not sag_items:
         return {'levels_detected': {}, 'slice_records': [], 'markers': [],
-                'level_summaries': [], 'all_flags': [], 'overall': 'INSUFFICIENT_DATA'}
-    mid_idx = int(np.argmin([abs(it['ipp'][0]) for it in sag_items]))
-    sag_mid = sag_items[mid_idx]
+                'level_summaries': [], 'all_flags': [], 'overall': 'INSUFFICIENT_DATA',
+                'cord_track_3d': {}}
 
-    # Vertebral levels
+    # Vertebral levels via sagittal (v5.1: kyphosis-anchored + progressive widening)
     levels = detect_levels_v5(sag_items)
 
-    # Cord trajectory across all axial slices
-    cord_traj = build_cord_trajectory(ax_items_sorted, sag_mid)
+    # Cord detection via v5.1 anchor-and-propagate (no sagittal projection)
+    cord_info = detect_cord_volume_v5(ax_items_sorted)
 
-    # Compute walk summary for each slice with detected cord
+    # Compute walk summaries for each slice with cord
     walk_summaries = {}
-    for idx, det in cord_traj.items():
-        slc = ax_items_sorted[idx]
-        smooth = gaussian_filter(slc['img'].astype(np.float32), sigma=1.5)
-        ps_mm = float(slc['ps'][0])
-        cord_I = get_cord_intensity(smooth, ps_mm, det['rc'])
+    for idx, det in cord_info.items():
+        smooth = det['smooth']
+        ps_mm = float(ax_items_sorted[idx]['ps'][0])
+        cord_I = det['cord_intensity']
         walk_summaries[idx] = four_walk(smooth, ps_mm, det['rc'], cord_I)
 
     # Classify each slice with neighbor context
@@ -989,14 +955,15 @@ def analyze_cspine_v5(ax_items, sag_items):
     # Build slice records + markers
     slice_records = []
     markers = []
-    for idx in sorted(cord_traj.keys()):
+    for idx in sorted(cord_info.keys()):
         slc = ax_items_sorted[idx]
-        det = cord_traj[idx]
+        det = cord_info[idx]
         ws = walk_summaries[idx]
         cls = classifications[idx]
         z_mm = det['z']
         level = assign_level(z_mm, levels)
         rec = slice_record_from_walks(slc, det, ws, cls, level)
+        rec['recovered'] = det['recovered']
         slice_records.append(rec)
         markers.append({
             'inst': slc['inst'],
@@ -1005,7 +972,7 @@ def analyze_cspine_v5(ax_items, sag_items):
                             round(rec['cord_y_mm'], 3),
                             round(z_mm, 3)],
             'cord_area_mm2': round(rec['cord_area_mm2'], 2),
-            'recovered': False,
+            'recovered': det['recovered'],
             'space_min_mm': rec['space_min_mm'],
             'space_mean_mm': rec['space_mean_mm'],
             'asym_lr': round(rec['asym_lr'], 3),
@@ -1016,11 +983,9 @@ def analyze_cspine_v5(ax_items, sag_items):
             'cord_minor_axis_mm': rec['cord_minor_axis_mm'],
         })
 
-    # Aggregate per level using the same machinery cspine.py used
     level_summaries, all_flags = aggregate_levels(
         slice_records, CSPINE_LEVELS, CSPINE_SPACE, CSPINE_ASYM,
     )
-
     overall = max_severity(all_flags)
 
     return {
