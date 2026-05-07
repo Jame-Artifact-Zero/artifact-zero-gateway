@@ -19,6 +19,7 @@ from ._base import (
     load_slice, load_volume, group_series, detect_body_part,
 )
 from .cspine import CSpineAnalyzer
+from .cspine_v5_analyzer import CSpineV5Analyzer
 from .tspine import TSpineAnalyzer
 from .lspine import LSpineAnalyzer
 from .brain import BrainAnalyzer
@@ -33,23 +34,28 @@ from .breast import BreastAnalyzer
 
 
 ANALYZERS = {
-    'cervical_spine': CSpineAnalyzer,
-    'thoracic_spine': TSpineAnalyzer,
-    'lumbar_spine':   LSpineAnalyzer,
-    'brain':          BrainAnalyzer,
-    'knee':           KneeAnalyzer,
-    'ankle':          AnkleAnalyzer,
-    'foot':           FootAnalyzer,
-    'shoulder':       ShoulderAnalyzer,
-    'elbow':          ElbowAnalyzer,
-    'wrist':          WristAnalyzer,
-    'hand':           HandAnalyzer,
-    'breast':         BreastAnalyzer,
+    'cervical_spine':    CSpineAnalyzer,
+    'cervical_spine_v5': CSpineV5Analyzer,
+    'thoracic_spine':    TSpineAnalyzer,
+    'lumbar_spine':      LSpineAnalyzer,
+    'brain':             BrainAnalyzer,
+    'knee':              KneeAnalyzer,
+    'ankle':             AnkleAnalyzer,
+    'foot':              FootAnalyzer,
+    'shoulder':          ShoulderAnalyzer,
+    'elbow':             ElbowAnalyzer,
+    'wrist':             WristAnalyzer,
+    'hand':              HandAnalyzer,
+    'breast':            BreastAnalyzer,
 }
 
 # Map common body-part codes to analyzer classes
+# CSpineV5Analyzer has empty body_part_codes — only reachable via explicit
+# body_part=cervical_spine_v5 override on the API. detect_body_part() will
+# never auto-route a study to v5, preserving current production behavior.
 _CODE_TO_ANALYZER = {}
-for cls in (CSpineAnalyzer, TSpineAnalyzer, LSpineAnalyzer, BrainAnalyzer,
+for cls in (CSpineAnalyzer, CSpineV5Analyzer,
+            TSpineAnalyzer, LSpineAnalyzer, BrainAnalyzer,
             KneeAnalyzer, AnkleAnalyzer, FootAnalyzer, ShoulderAnalyzer,
             ElbowAnalyzer, WristAnalyzer, HandAnalyzer, BreastAnalyzer):
     for code in cls.body_part_codes:
@@ -65,6 +71,11 @@ for cls in (CSpineAnalyzer, TSpineAnalyzer, LSpineAnalyzer, BrainAnalyzer,
 #   2. False-positive rate acceptable to clinical stakeholder
 #   3. False-negative rate characterized and documented
 #   4. DB threshold tuning happened DURING validation
+#
+# Note on cervical_spine_v5: deliberately NOT gated here, because the entire
+# point of the side-by-side registration is to allow direct API calls to
+# compare v5 against the existing v4 analyzer. v5 inherits validation status
+# discussion from cspine — comparison output is how that status gets settled.
 UNVALIDATED_BODY_PARTS = {
     'thoracic_spine',
     'lumbar_spine',

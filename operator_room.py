@@ -50,14 +50,19 @@ def operator_room():
 
 @operator_bp.route('/operator/api/chat', methods=['POST'])
 def operator_chat():
-    anthropic_key = _get_anthropic_key()
-    if not anthropic_key:
-        return jsonify({'error': 'ANTHROPIC_API_KEY not configured in ECS'}), 500
-
     payload  = request.get_json() or {}
     system   = payload.get('system', '')
     messages = payload.get('messages', [])
     jos      = payload.get('jos', {})
+
+    # ── Per-request overrides (fall back to env vars) ─────────────────────────
+    req_model         = (payload.get('model')         or '').strip() or CLAUDE_MODEL
+    req_operator_key  = (payload.get('operator_key')  or '').strip()  # currently unused server-side
+    req_anthropic_key = (payload.get('anthropic_key') or '').strip()
+
+    anthropic_key = req_anthropic_key or _get_anthropic_key()
+    if not anthropic_key:
+        return jsonify({'error': 'ANTHROPIC_API_KEY not configured in ECS'}), 500
 
     jos_context = []
     if jos.get('objective'):  jos_context.append(f"OBJECTIVE: {jos['objective']}")
@@ -75,7 +80,7 @@ def operator_chat():
         system = "PRIOR SESSION CONTEXT:\n" + prior + "\n\n" + system
 
     claude_payload = {
-        'model':      CLAUDE_MODEL,
+        'model':      req_model,
         'max_tokens': 4096,
         'system':     system,
         'messages':   messages[-40:],

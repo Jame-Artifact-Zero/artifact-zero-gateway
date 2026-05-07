@@ -634,6 +634,129 @@
   margin-bottom: 8px;
   display: block;
 }
+
+/* -- GEAR BUTTON IN SIDEBAR HEADER --------------------------- */
+.op-gear-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.op-gear-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* -- SETTINGS MODAL ----------------------------------------- */
+.op-modal-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.op-modal-backdrop.open { display: flex; }
+
+.op-modal {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 460px;
+  max-width: 92vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.op-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.op-modal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.op-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.op-modal-close:hover { color: var(--red); }
+
+.op-modal-body { padding: 16px 20px; }
+
+.op-field {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.op-field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.op-field-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--fg);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+}
+.op-field-input:focus { border-color: var(--accent); }
+.op-field-hint {
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.op-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.op-modal-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.op-modal-btn:hover { border-color: var(--accent); color: var(--accent); }
+.op-modal-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+}
+.op-modal-btn.primary:hover { background: #00ffab; color: #000; }
 </style>
 {% endblock %}
 
@@ -645,6 +768,9 @@
     <div class="op-sidebar-header">
       <span class="op-logo">itB0</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">OPERATOR</span>
+      <button class="op-gear-btn" id="settingsGear" onclick="openSettings()" title="Settings" aria-label="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
     </div>
 
     <!-- S0 Score -->
@@ -659,7 +785,7 @@
       <div class="op-state-title">Active State</div>
       <div class="op-state-item">
         <span class="op-state-key">Push</span>
-        <span class="op-state-val amber" id="sidebarPush">p0044 active</span>
+        <span class="op-state-val amber" id="sidebarPush">p0068 active</span>
       </div>
       <div class="op-state-item">
         <span class="op-state-key">Patent</span>
@@ -708,19 +834,19 @@
     <div class="op-state-section">
       <div class="op-state-title">Tools</div>
       <button class="op-tool-btn" id="toolSignal" onclick="executeTool('signal')">
-        <span class="tool-icon">??</span> NTI Signal Scanner
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M5.6 5.6l1.4 1.4"></path><path d="M17 17l1.4 1.4"></path><path d="M5.6 18.4l1.4-1.4"></path><path d="M17 7l1.4-1.4"></path><circle cx="12" cy="12" r="3"></circle></svg></span> NTI Signal Scanner
       </button>
       <button class="op-tool-btn" id="toolMarket" onclick="executeTool('market')">
-        <span class="tool-icon">??</span> S&amp;P itB0 Model
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg></span> S&amp;P itB0 Model
       </button>
       <button class="op-tool-btn" id="toolFortune" onclick="executeTool('fortune500')">
-        <span class="tool-icon">??</span> Fortune 500 Feed
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="13" y2="16"></line></svg></span> Fortune 500 Feed
       </button>
       <button class="op-tool-btn" id="toolScore" onclick="promptScoreText()">
-        <span class="tool-icon">?</span> Score Any Text
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="9 14 11 16 15 12"></polyline></svg></span> Score Any Text
       </button>
       <button class="op-tool-btn" id="toolUpload" onclick="triggerUpload()">
-        <span class="tool-icon">??</span> Upload + Score File
+        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span> Upload + Score File
       </button>
       <input type="file" id="fileUploadInput" accept=".txt,.pdf,.docx,.csv,.md,.html"
              style="display:none" onchange="handleFileUpload(this)">
@@ -799,7 +925,7 @@
           </div>
         </div>
         <button class="op-send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
-          ?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
         </button>
       </div>
     </div>
@@ -903,6 +1029,42 @@
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div id="settingsModal" class="op-modal-backdrop" onclick="if(event.target===this)closeSettings()">
+  <div class="op-modal">
+    <div class="op-modal-header">
+      <span class="op-modal-title">Operator Settings</span>
+      <button class="op-modal-close" onclick="closeSettings()" aria-label="Close">&times;</button>
+    </div>
+    <div class="op-modal-body">
+      <div class="op-field">
+        <label class="op-field-label" for="setPush">Push State</label>
+        <input class="op-field-input" id="setPush" type="text" placeholder="p0068 active" autocomplete="off">
+        <span class="op-field-hint">Shown in sidebar and injected into system prompt.</span>
+      </div>
+      <div class="op-field">
+        <label class="op-field-label" for="setModel">Model</label>
+        <input class="op-field-input" id="setModel" type="text" placeholder="claude-sonnet-4-6" autocomplete="off">
+        <span class="op-field-hint">Sent to /operator/api/chat. Falls back to server CLAUDE_MODEL.</span>
+      </div>
+      <div class="op-field">
+        <label class="op-field-label" for="setAnthropicKey">Anthropic API Key</label>
+        <input class="op-field-input" id="setAnthropicKey" type="password" placeholder="leave blank to use ECS env var" autocomplete="off">
+        <span class="op-field-hint">Stored in this browser only. Never sent to server.</span>
+      </div>
+      <div class="op-field">
+        <label class="op-field-label" for="setOperatorKey">Operator NTI Key</label>
+        <input class="op-field-input" id="setOperatorKey" type="password" placeholder="leave blank to use ECS env var" autocomplete="off">
+        <span class="op-field-hint">Sent with chat/score calls when set.</span>
+      </div>
+    </div>
+    <div class="op-modal-footer">
+      <button class="op-modal-btn" onclick="closeSettings()">Cancel</button>
+      <button class="op-modal-btn primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -918,7 +1080,20 @@ let sessionStats  = { count:0, niiSum:0, flagged:0 };
 let isLoading     = false;
 let currentJOS    = null;
 
-const SYSTEM = `You are operating inside the Artifact Zero Operator Room.
+// -- OPERATOR SETTINGS ----------------------------------------
+// Stored in sessionStorage. Never sent to server (except model + operator_key
+// passed in chat fetch body). Anthropic key stays browser-side only.
+const SETTINGS_KEY = 'az_operator_settings';
+
+function getOperatorSettings() {
+  try { return JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function buildSystem() {
+  const s = getOperatorSettings();
+  const push = s.push || 'p0068 active';
+  return `You are operating inside the Artifact Zero Operator Room.
 
 OPERATOR: Jame Houghton, Founder, Artifact Zero Labs, Knoxville TN.
 
@@ -927,14 +1102,10 @@ itB0 = (Q, S0). Every output requires a prior state. R = Phi(Q, S0). S1 = Psi(S0
 Proven across 10 foundational mathematical structures. NTI is the implementation.
 
 CURRENT STATE:
-- Patent: NOT FILED - provisional target this week (itB runtime + NTI)
-- Push: p0044 active - operator room tool execution, file upload, API key fix, sidebar dynamic state
-- Market: March 16 call was DOWN, actual was UP +1.1% (Bessent/Hormuz variable fired - named in advance)
-- FOMC: March 18 - no cut (4% probability CME FedWatch)
+- Push: ${push}
+- Patent: NOT FILED - provisional target (itB runtime + NTI)
 - Fortune 500: 415 companies scored daily
 - Live feed: 13 sources, NTI scoring active
-- OPERATOR_API_KEY: enterprise tier fix in p0044 scope (NII badge showing 0% until fixed)
-- ANTHROPIC_API_KEY: must be set in ECS for operator chat to function
 
 RULES:
 - Be terse. Voice-to-text style input is normal. Parse intent.
@@ -949,9 +1120,46 @@ RULES:
 NTI V3 governs every response you produce. You are the typist. NTI is the governor.
 When asked to score text, the operator room will call the internal NTI endpoint.
 When asked to run tools, use the /operator/run endpoint.`;
+}
+
+function applySettingsToUI() {
+  const s = getOperatorSettings();
+  // Sidebar push label
+  const pushEl = document.getElementById('sidebarPush');
+  if (pushEl && s.push) pushEl.textContent = s.push;
+  // Model badge
+  const modelBadge = document.querySelector('.op-model-badge');
+  if (modelBadge && s.model) modelBadge.textContent = s.model;
+}
+
+function openSettings() {
+  const s = getOperatorSettings();
+  document.getElementById('setPush').value          = s.push          || '';
+  document.getElementById('setModel').value         = s.model         || '';
+  document.getElementById('setAnthropicKey').value  = s.anthropicKey  || '';
+  document.getElementById('setOperatorKey').value   = s.operatorKey   || '';
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+function saveSettings() {
+  const s = {
+    push:         document.getElementById('setPush').value.trim(),
+    model:        document.getElementById('setModel').value.trim(),
+    anthropicKey: document.getElementById('setAnthropicKey').value.trim(),
+    operatorKey:  document.getElementById('setOperatorKey').value.trim(),
+  };
+  sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  applySettingsToUI();
+  closeSettings();
+}
 
 // -- INIT ------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+  applySettingsToUI();
   document.getElementById('msgInput').focus();
   loadSessions(); loadMemory();
 });
@@ -978,13 +1186,17 @@ async function sendMessage() {
   setLoading(true);
 
   try {
+    const settings = getOperatorSettings();
     const res = await fetch(CLAUDE_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: SYSTEM,
+        system: buildSystem(),
         messages: messages,
         jos: josState,
+        model:        settings.model        || undefined,
+        operator_key: settings.operatorKey  || undefined,
+        anthropic_key: settings.anthropicKey || undefined,
       })
     });
 
@@ -1070,8 +1282,10 @@ async function scoreText(text, context) {
 
 function extractNII(d) {
   if (!d) return 0;
+  // Server returns { nii, failure_modes, flags, tilt } at the top level.
+  // Older/alternate shapes nest under d.score — try both.
   const sc = d.score || {};
-  let v = sc.nii ?? sc.nii_score ?? 0;
+  let v = d.nii ?? d.nii_score ?? sc.nii ?? sc.nii_score ?? 0;
   if (v <= 1) v = Math.round(v * 100);
   return v;
 }
@@ -1087,7 +1301,8 @@ function updateNTIPanel(data, ctx) {
 
   const score  = extractNII(data);
   const fm     = data.failure_modes || {};
-  const tilt   = (data.tilt?.tags || []);
+  // Server returns tilt as a flat array; older shape was { tilt: { tags: [...] } }
+  const tilt   = Array.isArray(data.tilt) ? data.tilt : (data.tilt?.tags || []);
   const v3     = data.v3 || {};
   const hasF   = hasFailures(data);
 
