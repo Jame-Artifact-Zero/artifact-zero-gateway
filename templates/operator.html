@@ -1282,8 +1282,10 @@ async function scoreText(text, context) {
 
 function extractNII(d) {
   if (!d) return 0;
+  // Server returns { nii, failure_modes, flags, tilt } at the top level.
+  // Older/alternate shapes nest under d.score — try both.
   const sc = d.score || {};
-  let v = sc.nii ?? sc.nii_score ?? 0;
+  let v = d.nii ?? d.nii_score ?? sc.nii ?? sc.nii_score ?? 0;
   if (v <= 1) v = Math.round(v * 100);
   return v;
 }
@@ -1299,7 +1301,8 @@ function updateNTIPanel(data, ctx) {
 
   const score  = extractNII(data);
   const fm     = data.failure_modes || {};
-  const tilt   = (data.tilt?.tags || []);
+  // Server returns tilt as a flat array; older shape was { tilt: { tags: [...] } }
+  const tilt   = Array.isArray(data.tilt) ? data.tilt : (data.tilt?.tags || []);
   const v3     = data.v3 || {};
   const hasF   = hasFailures(data);
 
