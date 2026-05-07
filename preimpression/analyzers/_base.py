@@ -136,20 +136,104 @@ def load_volume(files):
     return items
 
 
+def _is_likely_dicom(filepath):
+    """Quick magic-byte check: real DICOM files have 'DICM' at byte offset 128.
+    Returns False fast for executables, PDFs, archives, etc. that happen to be
+    inside a CD-distribution zip alongside the actual DICOM files."""
+    try:
+        with open(filepath, 'rb') as fh:
+            preamble = fh.read(132)
+        if len(preamble) < 132:
+            return False
+        # Standard DICOM file: 128-byte preamble then "DICM"
+        if preamble[128:132] == b'DICM':
+            return True
+        # Some CD-burned DICOM lacks the 128-byte preamble. Fall back to
+        # checking common DICOM data-element opening tags. A real DICOM
+        # always starts with a known group/element pair.
+        # Group 0x0002 (file meta) or 0x0008 (identifying) is what we'd see
+        # in the first 4 bytes of an implicit-VR DICOM with no preamble.
+        first4 = preamble[0:4]
+        if first4[:2] in (b'\x02\x00', b'\x08\x00'):
+            return True
+        return False
+    except Exception:
+        return False
+
+
+# File extensions that are definitely not DICOM. Skip them without opening.
+_NON_DICOM_EXTS = {
+    # Image / text / data already in original list
+    '.PNG', '.JPG', '.JPEG', '.JSON', '.TXT', '.HTML', '.MD', '.CSV',
+    # CD-distribution junk that's typically in hospital-burned DICOM zips
+    '.EXE', '.DLL', '.SO', '.DYLIB', '.APP',
+    '.PDF', '.DOC', '.DOCX', '.XLS', '.XLSX', '.PPT', '.PPTX',
+    '.INI', '.INF', '.LNK', '.URL', '.LOG',
+    '.ZIP', '.RAR', '.7Z', '.TAR', '.GZ',
+    '.BMP', '.GIF', '.TIFF', '.TIF', '.SVG', '.WEBP',
+    '.MP4', '.MOV', '.AVI', '.MP3', '.WAV',
+    '.XML', '.YAML', '.YML',
+    '.DS_STORE',
+}
+
+# Filename patterns that are definitely not DICOM (no extension or unusual).
+_NON_DICOM_NAMES = {
+    'DICOMDIR',  # DICOM directory index file -- not an image, do not load
+    'AUTORUN',
+    'README',
+    'LICENSE',
+    'INDEX',
+    'LOCKFILE',
+}
+
+
 def group_series(root):
-    """Walk root finding all DICOM files, group by SeriesInstanceUID."""
+    """Walk root finding all DICOM image files, group by SeriesInstanceUID.
+
+    Memory-safe scan:
+      1. Skip non-DICOM file extensions (CD-distribution viewer binaries,
+         PDFs, autorun.inf, README.txt, etc.) without opening them.
+      2. Skip known non-image filenames like DICOMDIR (directory index, not
+         an image).
+      3. Magic-byte pre-check before pydicom.dcmread() -- avoids force=True
+         memory leak on binary files that happen to have a non-skippable
+         extension or no extension at all.
+      4. Use stop_before_pixels=True so the header scan does NOT load the
+         pixel array of each file. The pixel array is only loaded later in
+         load_volume() for the chosen series. This is the dominant memory
+         savings on multi-series CD-distribution zips.
+    """
     series = defaultdict(lambda: {'files': [], 'meta': None})
-    # Non-image DICOM modalities to skip entirely
+    # Non-image DICOM modalities to skip entirely (structured reports,
+    # presentation states, key object selections, etc.)
     SKIP_MODALITIES = {'SR', 'PR', 'KO', 'DOC', 'OT'}
 
     for f in Path(root).rglob('*'):
         if not f.is_file():
             continue
-        if f.suffix.upper() in ('.PNG', '.JPG', '.JPEG', '.JSON',
-                                  '.TXT', '.HTML', '.MD', '.CSV'):
+
+        # Cheap filters first: extension and filename
+        suffix_upper = f.suffix.upper()
+        if suffix_upper in _NON_DICOM_EXTS:
             continue
+        if f.stem.upper() in _NON_DICOM_NAMES:
+            continue
+
+        # Magic-byte pre-check before opening with pydicom. This is the
+        # critical fix: pydicom.dcmread(force=True) on a non-DICOM file
+        # like a viewer executable would parse arbitrary bytes as DICOM
+        # tags and could allocate hundreds of MB before failing.
+        if not _is_likely_dicom(str(f)):
+            continue
+
         try:
-            ds = pydicom.dcmread(str(f), stop_before_pixels=False, force=True)
+            # stop_before_pixels=True: only read header tags, NOT the pixel
+            # array. Pixel arrays are large (hundreds of KB to several MB
+            # per slice). For a 47-slice study with multiple series, loading
+            # all pixels just to check SeriesInstanceUID would consume
+            # hundreds of MB. We only need pixels later, in load_volume(),
+            # for the one series the analyzer actually uses.
+            ds = pydicom.dcmread(str(f), stop_before_pixels=True, force=True)
         except Exception:
             continue
         if not hasattr(ds, 'SeriesInstanceUID'):
