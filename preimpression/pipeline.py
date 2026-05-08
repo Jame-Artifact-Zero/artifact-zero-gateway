@@ -159,6 +159,121 @@ def run_pipeline_from_series(series_list, body_part=None, study_meta=None,
     return result
 
 
+# ============================================================================
+# Selective extraction (p0073)
+# ============================================================================
+# Hospital-burned DICOM zips often ship as CD-distribution packages with an
+# embedded viewer application (Windows .exe + DLLs, or macOS .app bundles
+# with frameworks, fonts, and helper binaries). On a 1GB ECS task the viewer
+# payload can push the worker over its memory limit during unpack -- before
+# the analyzer ever runs. The JH MRI C-Spine zip seen on dev was 78 MB of
+# real DICOM wrapped in 279 MB of macOS viewer.app, totaling 374 MB extracted
+# to disk.
+#
+# This filter rejects entries by path/extension before extraction, so the
+# work dir only contains files that could plausibly be DICOM. The same
+# magic-byte check in group_series() (p0072) is the second layer of defense.
+
+# Path components that mark macOS / packaged-app payloads. If any segment
+# of the zip entry's path equals or ends with one of these, skip the entry.
+_BUNDLE_PATH_SUFFIXES = (
+    '.app', '.framework', '.bundle', '.kext', '.lproj', '.xcassets',
+    '.appex', '.plugin', '.dSYM', '__MACOSX',
+)
+
+# Extensions that are definitely not DICOM. Mirrors and extends the
+# group_series() blocklist with formats commonly seen inside .app bundles
+# (fonts, source code, web resources, package manifests).
+_BUNDLE_NON_DICOM_EXTS = {
+    # CD-distribution viewer payloads
+    '.EXE', '.DLL', '.SO', '.DYLIB', '.APP',
+    # Documents
+    '.PDF', '.DOC', '.DOCX', '.XLS', '.XLSX', '.PPT', '.PPTX', '.RTF',
+    # Config / shortcuts / logs
+    '.INI', '.INF', '.LNK', '.URL', '.LOG', '.CFG', '.CONF', '.PLIST',
+    # Archives nested inside the outer zip
+    '.ZIP', '.RAR', '.7Z', '.TAR', '.GZ', '.TGZ', '.BZ2',
+    # Images
+    '.PNG', '.JPG', '.JPEG', '.BMP', '.GIF', '.TIFF', '.TIF',
+    '.SVG', '.WEBP', '.ICO', '.ICNS',
+    # Fonts (very common in macOS app bundles)
+    '.TTF', '.OTF', '.EOT', '.WOFF', '.WOFF2', '.FNT',
+    # Web / markup / data
+    '.HTML', '.HTM', '.CSS', '.JS', '.MAP',
+    '.JSON', '.XML', '.YAML', '.YML', '.MD', '.TXT', '.CSV', '.TSV',
+    # Source code / headers (frameworks ship .h public headers)
+    '.H', '.HPP', '.C', '.CPP', '.CC', '.M', '.MM', '.SWIFT', '.PY', '.RB',
+    # Media
+    '.MP4', '.MOV', '.AVI', '.MKV', '.MP3', '.WAV', '.OGG', '.FLAC',
+    # OS metadata
+    '.DS_STORE',
+}
+
+# Filenames that are definitely not DICOM regardless of extension.
+_BUNDLE_NON_DICOM_NAMES = {
+    'DICOMDIR', 'AUTORUN', 'README', 'LICENSE', 'INDEX', 'LOCKFILE',
+    'INFO', 'MANIFEST', 'PKGINFO', 'CODERESOURCES',
+}
+
+
+def _is_dicom_candidate(zip_entry_name):
+    """Return True if a zip entry could plausibly be a DICOM file.
+
+    Used to filter zipfile.ZipFile.namelist() before extraction so that
+    viewer payloads are skipped at unpack time, not after they hit disk.
+    """
+    # Directory entries
+    if zip_entry_name.endswith('/'):
+        return False
+
+    # Reject anything inside a known bundle/package path component.
+    # Path separator inside zips is always '/', regardless of OS.
+    parts = zip_entry_name.split('/')
+    for part in parts[:-1]:  # check directory components only
+        upper = part.upper()
+        for suf in _BUNDLE_PATH_SUFFIXES:
+            if upper.endswith(suf.upper()):
+                return False
+
+    # Just the basename for extension and filename checks
+    basename = parts[-1]
+    if not basename:
+        return False
+
+    # Hidden / metadata files
+    if basename.startswith('.') or basename.startswith('._'):
+        return False
+
+    # Filename blocklist (covers e.g. DICOMDIR which has DICM magic bytes
+    # but is a directory index, not an image)
+    stem_upper = basename.rsplit('.', 1)[0].upper() if '.' in basename else basename.upper()
+    if stem_upper in _BUNDLE_NON_DICOM_NAMES:
+        return False
+
+    # Extension blocklist
+    if '.' in basename:
+        ext = '.' + basename.rsplit('.', 1)[1].upper()
+        if ext in _BUNDLE_NON_DICOM_EXTS:
+            return False
+
+    return True
+
+
+def _selective_extract(zf, work_dir):
+    """Extract only entries that could plausibly be DICOM, into work_dir.
+
+    Mirrors zipfile.ZipFile.extractall() behavior for accepted entries
+    (preserves directory structure, uses zf.extract() so path traversal
+    protections are honored). Rejected entries are silently skipped.
+    """
+    for name in zf.namelist():
+        if _is_dicom_candidate(name):
+            zf.extract(name, work_dir)
+
+
+# ============================================================================
+# Public API (cont.)
+# ============================================================================
 def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
                   keep_work=False):
     """Standalone dispatch — used by /preimpression endpoint and CLI.
@@ -183,7 +298,7 @@ def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
     try:
         if zip_path is not None:
             with zipfile.ZipFile(zip_path) as zf:
-                zf.extractall(work_dir)
+                _selective_extract(zf, work_dir)
         t_unpack = time.perf_counter()
 
         series_list = group_series(work_dir)
