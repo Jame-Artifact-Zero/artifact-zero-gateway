@@ -30,11 +30,14 @@ from datetime import datetime, timezone
 from .analyzers import (
     get_analyzer, supported_body_parts, ANALYZERS,
     group_series, detect_body_part, max_severity,
+    classify_orientation,
 )
 
 # Phase 1 LZW integration. Drop-in replacement for unpack-and-classify.
 # Per integration spec: lzw.py is shipped untouched, only the call site moves.
 from . import lzw
+
+import pydicom
 
 
 # ============================================================================
@@ -276,6 +279,98 @@ def _selective_extract(zf, work_dir):
 
 
 # ============================================================================
+# Manifest-driven series list (p0075 — Fix 1)
+# ============================================================================
+# Reads the LZW manifest and produces the same series-list shape that
+# group_series(work_dir) produced before. The key difference: we trust the
+# manifest's dedupe contract (one entry per SOPInstanceUID) instead of
+# rescanning the directory and re-grouping any undeleted duplicate files.
+#
+# Why a separate path: group_series() in analyzers/_base.py rglob's the
+# work_dir directly. When lzw.walk recursively extracts a customer-side
+# nested DICOM.zip (like MRI_C_Spine_2024.zip's outer + inner copies of
+# the same DICOM tree), the files exist on disk twice. The manifest knows
+# they are duplicates (logs DUPLICATE_SOP_INSTANCE rejections); group_series
+# does not. Re-grouping the directory contents inflates n_slices and breaks
+# select_best_t2_axsag downstream.
+#
+# This helper consumes manifest.files (deduped) and produces the exact
+# same dict shape that group_series produces, so all downstream code is
+# unaffected.
+
+def _series_list_from_manifest(manifest):
+    """Build the group_series-shaped list from an LZW Manifest.
+
+    Output shape per series (identical to group_series() in _base.py):
+        {
+          'series_uid': str,
+          'series_description': str,
+          'modality': str,
+          'orientation': str,
+          'n_slices': int,
+          'files': list[str]  (sorted),
+          'sample_ds': pydicom.Dataset,
+        }
+
+    Filtering: only files with headers.is_imaging_modality=True are
+    included. This matches group_series's SKIP_MODALITIES = {'SR', 'PR',
+    'KO', 'DOC', 'OT'} exclusion.
+    """
+    # Group manifest.files by SeriesInstanceUID
+    by_series = {}
+    for fe in manifest.files:
+        h = fe.headers
+        if h is None or not h.is_imaging_modality:
+            continue
+        uid = h.series_instance_uid
+        if not uid:
+            continue
+        if uid not in by_series:
+            by_series[uid] = []
+        by_series[uid].append(fe)
+
+    # Build the output. For each series, sort files by InstanceNumber for
+    # stable ordering (matches group_series's `sorted(s['files'])` since
+    # the manifest already uses InstanceNumber for ordering downstream).
+    out = []
+    for uid, members in by_series.items():
+        # Sort by instance_number, with None last
+        members.sort(key=lambda fe: (
+            fe.headers.instance_number if fe.headers.instance_number is not None else 999_999_999
+        ))
+
+        # Read the first file once with pydicom to populate sample_ds.
+        # Downstream (select_best_t2_axsag, is_t2, classify_orientation,
+        # detect_body_part) all access this as a pydicom Dataset, not as
+        # HeaderFacts. One read per series, not per file.
+        first_path = members[0].extraction.extracted_path
+        try:
+            sample_ds = pydicom.dcmread(first_path, stop_before_pixels=True, force=True)
+        except Exception:
+            # Manifest said the file had readable headers; if it can't be
+            # read now, something is off. Skip this series rather than
+            # crash the pipeline.
+            continue
+
+        files_sorted = sorted(fe.extraction.extracted_path for fe in members)
+
+        # Use HeaderFacts for stable fields; sample_ds only as a vehicle
+        # for downstream getattr() access.
+        h0 = members[0].headers
+        out.append({
+            'series_uid': uid,
+            'series_description': h0.series_description or '',
+            'modality': h0.modality or '',
+            'orientation': classify_orientation(h0.image_orientation_patient),
+            'n_slices': len(members),
+            'files': files_sorted,
+            'sample_ds': sample_ds,
+        })
+
+    return out
+
+
+# ============================================================================
 # Public API (cont.)
 # ============================================================================
 def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
@@ -305,11 +400,21 @@ def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
             # Phase 1 LZW: replace _selective_extract with lzw.walk.
             # lzw.walk performs the same unpack + filter work and additionally
             # writes manifest.json to work_dir, builds a series_index, and a
-            # study_summary. group_series(work_dir) is unchanged downstream.
+            # study_summary.
             manifest = lzw.walk(zip_path, work_dir=work_dir, write_manifest=True)
         t_unpack = time.perf_counter()
 
-        series_list = group_series(work_dir)
+        # Series-list discovery:
+        #   - LZW path (manifest available): build the series list from
+        #     manifest.files. This consumes the dedupe contract: every
+        #     SOPInstanceUID appears at most once. Avoids re-grouping
+        #     undeleted duplicates that may exist on disk.
+        #   - No-zip / direct-directory path (manifest is None): fall back
+        #     to group_series(work_dir) which scans the disk directly.
+        if manifest is not None:
+            series_list = _series_list_from_manifest(manifest)
+        else:
+            series_list = group_series(work_dir)
         t_scan = time.perf_counter()
 
         result = run_pipeline_from_series(

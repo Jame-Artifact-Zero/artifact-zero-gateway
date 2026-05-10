@@ -670,6 +670,14 @@ def _dedupe_by_sop_instance_uid(
                 reason_code='DUPLICATE_SOP_INSTANCE',
                 reason_detail=f'sop={sop} kept_at={keep.extraction.extracted_path}',
             ))
+            # Defensive: unlink the rejected file from disk so directory
+            # rescans get the same answer as manifest reads.
+            try:
+                from pathlib import Path as _P
+                _P(drop.extraction.extracted_path).unlink()
+            except OSError as e:
+                log.debug("Could not unlink duplicate %s: %s",
+                          drop.extraction.extracted_path, e)
             seen[sop] = keep
             # Replace the kept entry in `out` if needed
             for i, existing_in_out in enumerate(out):
