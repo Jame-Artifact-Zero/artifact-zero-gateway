@@ -32,6 +32,10 @@ from .analyzers import (
     group_series, detect_body_part, max_severity,
 )
 
+# Phase 1 LZW integration. Drop-in replacement for unpack-and-classify.
+# Per integration spec: lzw.py is shipped untouched, only the call site moves.
+from . import lzw
+
 
 # ============================================================================
 # Public API
@@ -295,10 +299,14 @@ def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
         cleanup = False
         os.makedirs(work_dir, exist_ok=True)
 
+    manifest = None
     try:
         if zip_path is not None:
-            with zipfile.ZipFile(zip_path) as zf:
-                _selective_extract(zf, work_dir)
+            # Phase 1 LZW: replace _selective_extract with lzw.walk.
+            # lzw.walk performs the same unpack + filter work and additionally
+            # writes manifest.json to work_dir, builds a series_index, and a
+            # study_summary. group_series(work_dir) is unchanged downstream.
+            manifest = lzw.walk(zip_path, work_dir=work_dir, write_manifest=True)
         t_unpack = time.perf_counter()
 
         series_list = group_series(work_dir)
@@ -317,6 +325,16 @@ def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
             'total':  (time.perf_counter() - t0) * 1000,
         })
         result['timing_ms'] = timing
+
+        # Per Phase 1 spec: when a study fails analysis, include
+        # manifest.study_summary in the error response JSON.
+        status = str(result.get('status', '')).upper()
+        if manifest is not None and status in ('ERROR', 'INSUFFICIENT_DATA',
+                                                'UNSUPPORTED_BODY_PART',
+                                                'NO_DICOM_FOUND'):
+            from dataclasses import asdict
+            result['study_summary'] = asdict(manifest.study_summary)
+
         return result
 
     finally:
