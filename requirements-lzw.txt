@@ -1,8 +1,0 @@
-# LZW Phase 1 codec dependencies
-# These are required for pixel decode of compressed-transfer-syntax DICOMs
-# (JPEG-Lossless, JPEG2000, RLE) that previously failed downstream.
-# Add these lines to the existing requirements.txt and rebuild the ECS image.
-pylibjpeg
-pylibjpeg-libjpeg
-pylibjpeg-openjpeg
-python-gdcm
