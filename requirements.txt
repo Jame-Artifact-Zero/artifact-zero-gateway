@@ -22,3 +22,4 @@ pylibjpeg-libjpeg>=2.1
 pylibjpeg-openjpeg>=2.0
 pylibjpeg-rle>=2.0
 python-gdcm>=3.0.10
+./wheels/cspine_k7_pipeline-7.0.0-py3-none-any.whl
