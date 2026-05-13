@@ -18,17 +18,18 @@ Routing strategy:
        'CERVICAL_SPINE_V7', 'BRAIN', etc.).
     2. Exact match against ANALYZERS (lowercase label keys: 'cervical_spine',
        'cervical_spine_v7', 'brain', etc.), case-insensitive.
-    3. Substring match (case-insensitive) against _SUBSTRING_RULES — catches
+    3. Substring match (case-insensitive) against _SUBSTRING_RULES - catches
        vendor-prefixed body-part strings like 'SMG MRI CERVICAL' that don't
        exact-match anything in the registry but obviously route to CSPINE.
        Defensive routing: stays correct regardless of what
        detect_body_part_from_dicom returns.
 
     The keyword list and ordering match detect_body_part_from_dicom so the
-    two routers agree on every input. CERVICAL→CSPINE, LUMBAR→LSPINE,
-    THORACIC→TSPINE, BRAIN→BRAIN (and BRAIN keywords HEAD, NEURO).
-    Opt-in codes (e.g. CERVICAL_SPINE_V7) only match exact stage 1/2 so
-    they cannot be hijacked by substring routing on the bare keyword.
+    two routers agree on every input. CERVICAL->CSPINE, LUMBAR->LSPINE,
+    THORACIC->TSPINE, BRAIN->BRAIN (and BRAIN keywords HEAD, NEURO).
+    Opt-in codes (e.g. CERVICAL_SPINE_V7, CERVICAL_SPINE_K7) only match
+    exact stage 1/2 so they cannot be hijacked by substring routing on the
+    bare keyword.
 """
 from __future__ import annotations
 from typing import Optional
@@ -39,6 +40,7 @@ from ._base import (
 )
 from .cspine import CSpineAnalyzer
 from .cervical_spine_v7 import CSpineV7Analyzer
+from .cspine_k7_analyzer import CSpineK7Analyzer
 from .tspine import TSpineAnalyzer
 from .lspine import LSpineAnalyzer
 from .brain import BrainAnalyzer
@@ -55,6 +57,7 @@ from .breast import BreastAnalyzer
 ANALYZERS = {
     'cervical_spine':    CSpineAnalyzer,
     'cervical_spine_v7': CSpineV7Analyzer,
+    'cervical_spine_k7': CSpineK7Analyzer,
     'thoracic_spine':    TSpineAnalyzer,
     'lumbar_spine':      LSpineAnalyzer,
     'brain':             BrainAnalyzer,
@@ -70,7 +73,7 @@ ANALYZERS = {
 
 # Map common body-part codes to analyzer classes
 _CODE_TO_ANALYZER = {}
-for cls in (CSpineAnalyzer, CSpineV7Analyzer,
+for cls in (CSpineAnalyzer, CSpineV7Analyzer, CSpineK7Analyzer,
             TSpineAnalyzer, LSpineAnalyzer, BrainAnalyzer,
             KneeAnalyzer, AnkleAnalyzer, FootAnalyzer, ShoulderAnalyzer,
             ElbowAnalyzer, WristAnalyzer, HandAnalyzer, BreastAnalyzer):
@@ -78,7 +81,7 @@ for cls in (CSpineAnalyzer, CSpineV7Analyzer,
         _CODE_TO_ANALYZER[code.upper()] = cls
 
 
-# Substring routing rules — ordered, first-match wins. Keys are uppercase
+# Substring routing rules - ordered, first-match wins. Keys are uppercase
 # keyword fragments to search inside any body-part string. Values are the
 # canonical body-part code that drives _CODE_TO_ANALYZER lookup.
 #
@@ -133,7 +136,7 @@ def _route_by_substring(key_upper: str) -> Optional[str]:
 UNVALIDATED_BODY_PARTS = {
     'thoracic_spine',
     'lumbar_spine',
-    # brain removed — v3 algorithm validated on phantom (9/9 tests passing)
+    # brain removed - v3 algorithm validated on phantom (9/9 tests passing)
     # real-data validation pending post-deploy on GE FLAIR study
     'knee', 'ankle', 'foot', 'shoulder', 'elbow', 'wrist', 'hand',
     'breast',
@@ -141,6 +144,8 @@ UNVALIDATED_BODY_PARTS = {
 # Currently validated: cervical_spine (1 real study, Philips; GE regression
 # under investigation in hf06)
 # cervical_spine_v7 is opt-in via explicit ?body_part=cervical_spine_v7 and
+# is NOT in UNVALIDATED_BODY_PARTS so that opt-in routing reaches it.
+# cervical_spine_k7 is opt-in via explicit ?body_part=cervical_spine_k7 and
 # is NOT in UNVALIDATED_BODY_PARTS so that opt-in routing reaches it.
 
 
@@ -152,29 +157,31 @@ def get_analyzer(body_part_or_code: str) -> Optional[BaseAnalyzer]:
     Three-stage lookup:
       1. Exact match in _CODE_TO_ANALYZER (uppercase codes).
       2. Exact match in ANALYZERS (lowercase labels, case-insensitive).
-      3. Substring match against _SUBSTRING_RULES — catches vendor-prefixed
+      3. Substring match against _SUBSTRING_RULES - catches vendor-prefixed
          body-part strings like 'SMG MRI CERVICAL'.
 
-    Opt-in routing (e.g. 'cervical_spine_v7') only matches stage 1 or 2 by
-    exact code/label so it never gets auto-selected via substring.
+    Opt-in routing (e.g. 'cervical_spine_v7', 'cervical_spine_k7') only
+    matches stage 1 or 2 by exact code/label so it never gets auto-selected
+    via substring.
     """
     if not body_part_or_code:
         return None
     key = body_part_or_code.strip().upper()
 
-    # Stage 1 — exact code
+    # Stage 1 - exact code
     cls = _CODE_TO_ANALYZER.get(key)
 
-    # Stage 2 — exact label (case-insensitive)
+    # Stage 2 - exact label (case-insensitive)
     if cls is None:
         for label, klass in ANALYZERS.items():
             if label.upper() == key:
                 cls = klass
                 break
 
-    # Stage 3 — substring routing for vendor-prefixed bp strings.
+    # Stage 3 - substring routing for vendor-prefixed bp strings.
     # Only applied when the key is NOT a known exact code/label, so opt-in
-    # codes like CERVICAL_SPINE_V7 cannot be hijacked by 'CERVICAL' substring.
+    # codes like CERVICAL_SPINE_V7 and CERVICAL_SPINE_K7 cannot be hijacked
+    # by 'CERVICAL' substring.
     if cls is None:
         canonical = _route_by_substring(key)
         if canonical is not None:
@@ -183,7 +190,7 @@ def get_analyzer(body_part_or_code: str) -> Optional[BaseAnalyzer]:
     if cls is None:
         return None
 
-    # Gate unvalidated body parts — return None so pipeline emits
+    # Gate unvalidated body parts - return None so pipeline emits
     # UNVALIDATED_BODY_PART instead of running broken detection
     if cls.body_part_label in UNVALIDATED_BODY_PARTS:
         return None
