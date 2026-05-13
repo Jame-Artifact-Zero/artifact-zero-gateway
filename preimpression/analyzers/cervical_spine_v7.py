@@ -3,19 +3,27 @@ analyzers/cervical_spine_v7.py
 ==============================
 Cervical spine v7 — z-profile architecture.
 
-Replaces the legacy series-list-based cspine pipeline with:
+Pipeline:
   1. data_extract.run_from_series(series_list) → SliceFacts rows
-  2. measure_spine.run(slice_facts_csv, out_dir) → cord_canal_per_slice.csv
-                                                    + level_severity.csv (if vertebrae.csv present)
-                                                    + disc_spacing.csv
-  3. profile_spine.run(per_slice_csv, out_dir) → continuous_profile.csv
-                                                  + anomaly_profile.csv
+  2. measure_spine.run(slice_facts_csv) → cord_canal_per_slice.csv
+                                          + disc_spacing.csv
+                                          (level_severity.csv only if
+                                           vertebrae.csv is present)
+  3. _write_synthesized_vertebrae_csv(cord_canal_csv) → vertebrae.csv
+       Kyphosis-apex anchored: finds the most posterior point of the cord
+       track (apex of cervical lordosis = C4-C5 disc level anatomically) and
+       walks outward at known cervical inter-vertebra spacings.
+  4. measure_spine.run(slice_facts_csv) AGAIN, now with vertebrae.csv
+       present → emits level_severity.csv with proper C-level labels.
+  5. profile_spine.run(per_slice_csv) → continuous_profile.csv
+                                        + anomaly_profile.csv
 
-Wired into the existing dispatcher: registers under code 'CSPINE_V7' and label
-'cervical_spine_v7' so requests with `?body_part=cervical_spine_v7` route here.
+Wired into the existing dispatcher: registers under code 'CSPINE_V7' and
+label 'cervical_spine_v7' so requests with `?body_part=cervical_spine_v7`
+route here.
 
-The legacy CSpineAnalyzer (v3/v4/v5/v6) remains the default for ?body_part=
-cervical_spine and for auto-routed CSPINE. v7 is opt-in for now.
+The legacy CSpineAnalyzer (v3/v4/v5/v6) remains the default for
+?body_part=cervical_spine and for auto-routed CSPINE. v7 is opt-in for now.
 
 Author: Jame Houghton / Artifact Zero, May 2026
 """
@@ -29,6 +37,22 @@ from pathlib import Path
 from typing import Optional
 
 from ._base import BaseAnalyzer
+
+
+# Cervical inter-vertebra spacings (centroid to centroid), in mm.
+# Indexed by superior level: SPACING_MM[level] = distance from level to the
+# next inferior level. C4-C5 spacing is the distance C4 → C5, etc.
+_SPACING_MM = {
+    ('C2', 'C3'): 15.0,
+    ('C3', 'C4'): 16.0,
+    ('C4', 'C5'): 17.0,
+    ('C5', 'C6'): 17.0,
+    ('C6', 'C7'): 18.0,
+    ('C7', 'T1'): 20.0,
+}
+
+# Anatomic order, superior to inferior
+_LEVEL_ORDER = ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'T1']
 
 
 class CSpineV7Analyzer(BaseAnalyzer):
@@ -70,31 +94,43 @@ class CSpineV7Analyzer(BaseAnalyzer):
                     ],
                 }
 
-            # ── 1b. Synthesize vertebrae.csv inline ─────────────────────────
-            # measure_spine's level classifier requires vertebrae.csv with
-            # V_idx + centroid_z_mm (and uses centroid_x/y for cord anchor).
-            # Rather than require a pre-existing vertebrae.csv from a separate
-            # detection stage, we synthesize vertebra centroids by evenly
-            # spacing N levels across the axial T2 z-range at typical
-            # cervical anatomic spacing (~17 mm centroid-to-centroid).
-            # measure_spine._classify_levels handles the C2/C3..T1 naming
-            # automatically based on the count of vertebrae we emit.
-            self._write_synthesized_vertebrae_csv(
-                axial_t2_rows=axial_t2_rows,
-                out_csv=scratch / 'vertebrae.csv',
-            )
-
-            # ── 2. measure_spine: per-slice cord/canal/CSF measurements ─────
-            #     With vertebrae.csv now present at scratch/, measure_spine's
-            #     _find_vertebrae_csv() picks it up and emits level_severity.csv
-            #     in the same run.
+            # ── 2. First measure_spine pass: cord measurements per slice ────
+            # No vertebrae.csv yet, so this pass emits cord_canal_per_slice.csv
+            # and disc_spacing.csv but NOT level_severity.csv. Cord-finding
+            # uses anchor (0,0) by default — unchanged from the pre-vertebrae
+            # baseline behavior.
             _ms.run(str(slice_facts_csv), out_dir=str(scratch))
             per_slice_csv = scratch / 'cord_canal_per_slice.csv'
 
-            # ── 3. profile_spine: continuous + anomaly profile ──────────────
+            # ── 3. Synthesize vertebrae.csv from the cord track ─────────────
+            # Kyphosis-apex anchored: finds the most posterior point of the
+            # cord track (max cord_y in LPS coords = anatomically C4-C5) and
+            # places vertebrae outward at known cervical spacings. Robust to
+            # asymmetric FOV in a way that even-spacing-from-bounds is not.
+            try:
+                self._write_synthesized_vertebrae_csv(
+                    cord_canal_csv=per_slice_csv,
+                    out_csv=scratch / 'vertebrae.csv',
+                )
+                vertebrae_synthesized = True
+            except ValueError as e:
+                # No cord-found rows at all — skip vertebrae synthesis. The
+                # level_severity.csv will simply not be emitted, and
+                # _assemble_result will return empty level_summaries.
+                print(f'cervical_spine_v7: vertebra synthesis skipped: {e}')
+                vertebrae_synthesized = False
+
+            # ── 4. Second measure_spine pass: with vertebrae.csv present ───
+            # measure_spine._find_vertebrae_csv now picks up the just-written
+            # vertebrae.csv, recomputes the cord-anchor from its median x/y,
+            # and emits level_severity.csv with proper C-level labels.
+            if vertebrae_synthesized:
+                _ms.run(str(slice_facts_csv), out_dir=str(scratch))
+
+            # ── 5. profile_spine: continuous + anomaly profile ──────────────
             _ps.run(str(per_slice_csv), out_dir=str(scratch))
 
-            # ── 4. Assemble result dict in the existing analyzer schema ─────
+            # ── 6. Assemble result dict in the existing analyzer schema ─────
             return self._assemble_result(
                 series_list=series_list,
                 slice_rows=slice_rows,
@@ -291,109 +327,163 @@ class CSpineV7Analyzer(BaseAnalyzer):
             },
         }
 
-    # ── helpers ─────────────────────────────────────────────────────────────
-
-    # Typical cervical vertebral-body centroid-to-centroid spacing in mm.
-    # C2-C3 ≈ 16, C3-C4 ≈ 17, C4-C5 ≈ 17, C5-C6 ≈ 18, C6-C7 ≈ 19, C7-T1 ≈ 22.
-    # 17 mm is the median and works as a uniform spacing for an MVP.
-    _CERVICAL_VERTEBRA_SPACING_MM = 17.0
-
-    # Anatomic prior on z-range coverage: a cervical scan FOV almost always
-    # covers C3-T1 (6 vertebrae) at minimum and often extends to C2 or T2.
-    # We clamp the synthesized count to [4, 9] so degenerate z-ranges still
-    # produce a plausible vertebra count rather than 0 or 50.
-    _MIN_VERTEBRAE = 4
-    _MAX_VERTEBRAE = 9
-
-    def _write_synthesized_vertebrae_csv(self,
-                                          axial_t2_rows: list,
-                                          out_csv: Path) -> int:
-        """Synthesize vertebra centroids from the axial T2 z-range and write
-        them to `out_csv` as a vertebrae.csv that measure_spine can consume.
-
-        Strategy:
-          1. Take z_position_mm from every axial T2 SliceFacts row.
-          2. Compute z_min, z_max. Total span = z_max - z_min.
-          3. Vertebra count N = round(span / 17.0), clamped to [4, 9].
-          4. Place vertebra centroids evenly across the span. centroid_x/y
-             default to 0.0 (matches measure_spine's no-vertebrae anchor
-             fallback, so cord-finding behavior is unchanged from the
-             unsynthesized baseline).
-          5. Write rows with columns V_idx, centroid_x_mm, centroid_y_mm,
-             centroid_z_mm (the four columns measure_spine reads).
-
-        Returns the number of vertebrae written. Returns 0 (and writes an
-        empty CSV with headers) if the z-range is too small to host
-        _MIN_VERTEBRAE at the assumed spacing.
-
-        This is heuristic: real anatomic spacing varies (C2-C3 ≈ 16mm vs
-        C7-T1 ≈ 22mm). Even spacing is a defensible MVP that the
-        measure_spine._classify_levels naming logic handles cleanly
-        (C3-top for ≤7, C2-top for 8+, sequential L{idx} extension beyond).
-        Production-quality vertebra detection from sagittal T2 image
-        intensities is out of scope for this push.
-        """
-        zs = []
-        for r in axial_t2_rows:
-            z = r.get('z_position_mm')
-            try:
-                zs.append(float(z))
-            except (TypeError, ValueError):
-                continue
-        if not zs:
-            self._write_vertebrae_rows([], out_csv)
-            return 0
-
-        z_min = min(zs)
-        z_max = max(zs)
-        span = z_max - z_min
-
-        # How many vertebrae fit at the typical spacing?
-        n_est = int(round(span / self._CERVICAL_VERTEBRA_SPACING_MM)) + 1
-        n_vert = max(self._MIN_VERTEBRAE, min(self._MAX_VERTEBRAE, n_est))
-
-        # If span is too small to host even _MIN_VERTEBRAE at meaningful
-        # spacing, emit empty so measure_spine's no-vertebrae fallback kicks
-        # in (cord_canal_per_slice.csv still gets written, just no
-        # level_severity.csv).
-        if span < (self._MIN_VERTEBRAE - 1) * 1.0:
-            self._write_vertebrae_rows([], out_csv)
-            return 0
-
-        # Evenly space n_vert centroids across [z_min, z_max].
-        if n_vert == 1:
-            zs_centroids = [(z_min + z_max) / 2.0]
-        else:
-            step = span / (n_vert - 1)
-            zs_centroids = [z_min + i * step for i in range(n_vert)]
-
-        # Vertebrae are typically labeled superior-to-inferior (top-down).
-        # In LPS patient coordinates, larger z = more superior. So V_idx=1
-        # goes to the LARGEST z. measure_spine._classify_levels reads rows
-        # in CSV order (it doesn't re-sort by z), and its naming walks the
-        # sequence cranial→caudal, so we emit rows in descending z order.
-        zs_centroids.sort(reverse=True)
-
-        rows = []
-        for i, z in enumerate(zs_centroids, start=1):
-            rows.append({
-                'V_idx':          i,
-                'centroid_x_mm':  0.0,
-                'centroid_y_mm':  0.0,
-                'centroid_z_mm':  round(z, 4),
-            })
-        self._write_vertebrae_rows(rows, out_csv)
-        return len(rows)
+    # ── vertebra synthesis (kyphosis-apex anchored) ─────────────────────────
 
     @staticmethod
-    def _write_vertebrae_rows(rows: list, out_csv: Path) -> None:
-        """Write vertebrae rows in the CSV format measure_spine expects."""
-        cols = ['V_idx', 'centroid_x_mm', 'centroid_y_mm', 'centroid_z_mm']
+    def _median(values: list) -> float:
+        """Median without numpy dependency."""
+        s = sorted(values)
+        n = len(s)
+        if n == 0:
+            return 0.0
+        if n % 2 == 1:
+            return s[n // 2]
+        return (s[n // 2 - 1] + s[n // 2]) / 2
+
+    def _write_synthesized_vertebrae_csv(
+        self,
+        cord_canal_csv,
+        out_csv,
+    ):
+        """Build vertebrae.csv anchored at the kyphosis apex.
+
+        Steps:
+          1. Read cord_canal_per_slice.csv. Use only rows where cord_found=True
+             AND cord_confidence != INVALID.
+          2. Find the z-position of maximum cord_y_mm. In LPS patient coords
+             posterior = +y, so max cord_y = the most posterior cord point =
+             kyphosis apex = anatomically the C4-C5 disc level.
+          3. Anchor C4-C5 disc midpoint at apex_z. Place C4 superior by half
+             the C4-C5 spacing, C5 inferior by half. Walk outward from there
+             using _SPACING_MM.
+          4. Centroid x and y are taken from the median cord position across
+             all cord-found slices (the cord track sits posterior to the
+             vertebra column by a near-constant offset, so the cord median is
+             a stable x,y reference even though the y is the cord y rather
+             than the vertebra body y — downstream code uses these only as
+             an anatomic anchor for matching axial slices to levels).
+
+        Args:
+          cord_canal_csv: path to cord_canal_per_slice.csv (output of
+                          measure_spine.py)
+          out_csv:        path to write vertebrae.csv
+
+        Returns:
+          Path to the written vertebrae.csv
+
+        Raises:
+          ValueError when no cord-found rows are present in the input.
+        """
+        cord_canal_csv = Path(cord_canal_csv)
+        out_csv = Path(out_csv)
+
+        # Step 1: load cord track from cord-found rows only
+        track = []
+        high_track = []
+        with open(cord_canal_csv, newline='') as f:
+            for r in csv.DictReader(f):
+                if r.get('cord_found', 'False') != 'True':
+                    continue
+                conf = r.get('cord_confidence', '')
+                if conf == 'INVALID':
+                    continue
+                try:
+                    z = float(r['z_mm'])
+                    cx = float(r['cord_x_mm'])
+                    cy = float(r['cord_y_mm'])
+                except (KeyError, ValueError, TypeError):
+                    continue
+                point = {'z': z, 'cx': cx, 'cy': cy, 'conf': conf}
+                track.append(point)
+                if conf == 'HIGH':
+                    high_track.append(point)
+
+        if not track:
+            raise ValueError(
+                f'No cord-found rows in {cord_canal_csv} — cannot synthesize '
+                f'vertebrae. Pipeline upstream produced no usable measurements.'
+            )
+
+        # Step 2: kyphosis apex = z position of maximum cord_y_mm
+        # (most posterior cord point in LPS patient coords).
+        # Use HIGH-confidence rows only when available — LOW-confidence cord_y
+        # values can include large outliers from the detector locking onto
+        # non-cord structures, which would pull the apex to an anatomically
+        # impossible location.
+        # Also restrict to the central portion of the cord track: the cervical
+        # apex sits anatomically in the middle of the cervical FOV (around
+        # C4-C5), not at the top of the stack (skull base) or the bottom
+        # (cervicothoracic junction). Drop EDGE_MARGIN_MM from each end of the
+        # z range when picking the apex.
+        EDGE_MARGIN_MM = 25.0
+        apex_pool = high_track if high_track else track
+        if len(apex_pool) >= 3:
+            z_lo = min(t['z'] for t in apex_pool)
+            z_hi = max(t['z'] for t in apex_pool)
+            z_span = z_hi - z_lo
+            # If the stack is too short to apply the full margin, use a
+            # smaller one.
+            margin = min(EDGE_MARGIN_MM, z_span / 4)
+            central = [t for t in apex_pool
+                       if z_lo + margin <= t['z'] <= z_hi - margin]
+            if central:
+                apex_pool = central
+        apex_row = max(apex_pool, key=lambda t: t['cy'])
+        apex_z = apex_row['z']
+
+        # Step 3: place vertebrae outward from C4-C5 disc at apex_z
+        # C4-C5 disc midpoint = apex_z
+        # C4 centroid_z = apex_z + (C4-C5 spacing) / 2  (superior)
+        # C5 centroid_z = apex_z - (C4-C5 spacing) / 2  (inferior)
+        c45 = _SPACING_MM[('C4', 'C5')]
+        z_of = {
+            'C4': apex_z + c45 / 2,
+            'C5': apex_z - c45 / 2,
+        }
+        # Walk superior from C4
+        z_of['C3'] = z_of['C4'] + _SPACING_MM[('C3', 'C4')]
+        z_of['C2'] = z_of['C3'] + _SPACING_MM[('C2', 'C3')]
+        # Walk inferior from C5
+        z_of['C6'] = z_of['C5'] - _SPACING_MM[('C5', 'C6')]
+        z_of['C7'] = z_of['C6'] - _SPACING_MM[('C6', 'C7')]
+        z_of['T1'] = z_of['C7'] - _SPACING_MM[('C7', 'T1')]
+
+        # Step 4: median cord position for centroid_x/centroid_y.
+        # Use HIGH-confidence rows when available — same reason as apex
+        # selection.
+        median_pool = high_track if high_track else track
+        med_cx = self._median([t['cx'] for t in median_pool])
+        med_cy = self._median([t['cy'] for t in median_pool])
+
+        # Build output rows in superior-to-inferior order (V1 = C2, V7 = T1)
+        rows = []
+        for i, level in enumerate(_LEVEL_ORDER, start=1):
+            rows.append({
+                'V_idx':          i,
+                'centroid_z_mm':  round(z_of[level], 3),
+                'centroid_x_mm':  round(med_cx, 3),
+                'centroid_y_mm':  round(med_cy, 3),
+            })
+
+        # Write CSV
+        out_csv.parent.mkdir(parents=True, exist_ok=True)
         with open(out_csv, 'w', newline='') as f:
-            w = csv.DictWriter(f, fieldnames=cols)
+            w = csv.DictWriter(f, fieldnames=['V_idx', 'centroid_z_mm',
+                                              'centroid_x_mm', 'centroid_y_mm'])
             w.writeheader()
             for r in rows:
-                w.writerow({c: r.get(c, '') for c in cols})
+                w.writerow(r)
+
+        # Diagnostic print (kept; runs once per /preimpression call)
+        print(f'cervical_spine_v7: kyphosis apex at z={apex_z:+.2f}mm '
+              f'(max cord_y={apex_row["cy"]:+.2f})')
+        print(f'cervical_spine_v7: cord track median position: '
+              f'x={med_cx:+.2f}, y={med_cy:+.2f}')
+        print(f'cervical_spine_v7: synthesized vertebrae (V_idx → level → z):')
+        for i, level in enumerate(_LEVEL_ORDER, start=1):
+            print(f'  V{i} = {level}: z = {z_of[level]:+.2f} mm')
+
+        return out_csv
 
     # ── result-extraction helpers ──────────────────────────────────────────
 
@@ -419,7 +509,7 @@ class CSpineV7Analyzer(BaseAnalyzer):
                 return None
 
     @staticmethod
-    def _summarize_cord_track(markers: list[dict]) -> dict:
+    def _summarize_cord_track(markers: list) -> dict:
         """Compact 3D cord-track summary from marker centroids."""
         if not markers:
             return {'n_markers': 0}
