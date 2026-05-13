@@ -308,7 +308,37 @@ def detect_body_part(series_list):
 
 
 def _local_detect_body_part(series_list):
-    """Standalone fallback when dicom_processor_api is not available."""
+    """Standalone fallback when dicom_processor_api is not available.
+
+    Substring-matches the same keyword set as
+    dicom_processor_api.detect_body_part_from_dicom and analyzers.__init__
+    _SUBSTRING_RULES, so all three routers agree on input like
+    'SMG MRI CERVICAL' -> 'CSPINE'.
+    """
+    SUBSTRING_RULES = [
+        (('CSPINE', 'C-SPINE', 'C SPINE', 'CERVICAL', 'CERVIC'), 'CSPINE'),
+        (('LSPINE', 'L-SPINE', 'L SPINE', 'LUMBAR'),             'LSPINE'),
+        (('TSPINE', 'T-SPINE', 'T SPINE', 'THORACIC', 'THORAC'), 'TSPINE'),
+        (('BRAIN', 'HEAD', 'NEURO'),                             'BRAIN'),
+        (('KNEE',),                                              'KNEE'),
+        (('ANKLE', 'HINDFOOT'),                                  'ANKLE'),
+        (('WRIST', 'CARPAL'),                                    'WRIST'),
+        (('FOOT', 'FOREFOOT', 'PLANTAR'),                        'FOOT'),
+        (('ELBOW', 'CUBITAL'),                                   'ELBOW'),
+        (('SHOULDER',),                                          'SHOULDER'),
+        (('HAND', 'METACARPAL', 'FINGER'),                       'HAND'),
+        (('BREAST',),                                            'BREAST'),
+    ]
+
+    def _match(text):
+        if not text:
+            return None
+        for kws, code in SUBSTRING_RULES:
+            if any(k in text for k in kws):
+                return code
+        return None
+
+    # 1. BodyPartExamined substring match — primary signal
     counts = defaultdict(int)
     for s in series_list:
         ds = s['sample_ds']
@@ -316,21 +346,22 @@ def _local_detect_body_part(series_list):
         if bp:
             counts[bp] += 1
     if counts:
-        return max(counts.items(), key=lambda kv: kv[1])[0]
+        # Substring-match the most-common bp string. If it matches, return
+        # the canonical code; if it doesn't, fall back to the raw bp string
+        # (preserves prior behavior for any oddball tag a downstream rule
+        # might still recognize).
+        primary_bp = max(counts.items(), key=lambda kv: kv[1])[0]
+        matched = _match(primary_bp)
+        if matched is not None:
+            return matched
+        return primary_bp
+
+    # 2. StudyDescription substring match — fallback when BodyPartExamined empty
     for s in series_list:
         sd = str(getattr(s['sample_ds'], 'StudyDescription', '')).upper()
-        for kw, code in [
-            ('CERVIC', 'CSPINE'), ('C-SPINE', 'CSPINE'), ('C SPINE', 'CSPINE'),
-            ('THORAC', 'TSPINE'), ('T-SPINE', 'TSPINE'), ('T SPINE', 'TSPINE'),
-            ('LUMBAR', 'LSPINE'), ('L-SPINE', 'LSPINE'), ('L SPINE', 'LSPINE'),
-            ('BRAIN', 'BRAIN'), ('HEAD', 'BRAIN'),
-            ('KNEE', 'KNEE'), ('ANKLE', 'ANKLE'), ('FOOT', 'FOOT'),
-            ('SHOULDER', 'SHOULDER'), ('ELBOW', 'ELBOW'),
-            ('WRIST', 'WRIST'), ('HAND', 'HAND'), ('FINGER', 'HAND'),
-            ('BREAST', 'BREAST'),
-        ]:
-            if kw in sd:
-                return code
+        matched = _match(sd)
+        if matched is not None:
+            return matched
     return 'UNKNOWN'
 
 
