@@ -208,7 +208,15 @@ def group_series(root):
     # presentation states, key object selections, etc.)
     SKIP_MODALITIES = {'SR', 'PR', 'KO', 'DOC', 'OT'}
 
-    for f in Path(root).rglob('*'):
+    # Sort the file list before iterating. Path.rglob returns entries in
+    # filesystem (inode) order, which is non-deterministic across runs and
+    # across machines. Sorting here ensures the "first-arrival" file we
+    # pick for series[uid]['meta'] is reproducibly the alphabetically-first
+    # file in the series — same `sample_ds` chosen every run, every host.
+    # This eliminates the 0.3-1mm marker xyz drift observed on pelvis
+    # cspine_v6 runs where which slice's IPP/IOP gets stored as the
+    # series representative depended on filesystem layout.
+    for f in sorted(Path(root).rglob('*')):
         if not f.is_file():
             continue
 
