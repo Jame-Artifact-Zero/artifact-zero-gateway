@@ -23,12 +23,15 @@ Analysis levels:
 import io
 import os
 import time
+import shutil
 import tempfile
 import warnings
 import logging
 import traceback
 from pathlib import Path
 from typing import Optional
+from flask import Flask, request, jsonify, render_template, make_response
+from generate_report import generate_report
 
 warnings.filterwarnings('ignore')
 
@@ -100,52 +103,54 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
             def detect_body_part_from_dicom(ds):
                 bp = getattr(ds, 'BodyPartExamined', '') or ''
                 bp = bp.upper().strip()
-                if not bp:
-                    desc = str(getattr(ds, 'StudyDescription', '') or '').upper()
-                    if any(k in desc for k in ['SPINE', 'CERVICAL', 'CSPINE', 'C-SPINE']):
-                        return 'CSPINE'
-                    if any(k in desc for k in ['LUMBAR', 'LSPINE', 'L-SPINE']):
-                        return 'LSPINE'
-                    if any(k in desc for k in ['THORACIC', 'TSPINE', 'T-SPINE']):
-                        return 'TSPINE'
-                    if any(k in desc for k in ['BRAIN', 'HEAD', 'NEURO']):
-                        return 'BRAIN'
-                    if any(k in desc for k in ['KNEE']):
-                        return 'KNEE'
-                    if any(k in desc for k in ['ANKLE', 'HINDFOOT']):
-                        return 'ANKLE'
-                    if any(k in desc for k in ['WRIST', 'CARPAL', 'UPPER JOINT', 'DISTAL RADIUS']):
-                        return 'WRIST'
-                    if any(k in desc for k in ['FOOT', 'FOREFOOT', 'PLANTAR']):
-                        return 'FOOT'
-                    if any(k in desc for k in ['ELBOW', 'CUBITAL']):
-                        return 'ELBOW'
-                    if any(k in desc for k in ['SHOULDER']):
-                        return 'SHOULDER'
-                    if any(k in desc for k in ['HIP', 'FEMUR', 'FEMORAL']):
-                        return 'HIP'
-                    if any(k in desc for k in ['HAND', 'METACARPAL']):
-                        return 'HAND'
-                    if any(k in desc for k in ['PELVIS', 'PELVIC']):
-                        return 'PELVIS'
-                    if any(k in desc for k in ['SACRUM', 'SACRAL', 'SI JOINT', 'SACROILIAC']):
-                        return 'SACRUM'
-                    if any(k in desc for k in ['ABDOMEN', 'LIVER', 'HEPATIC']):
-                        return 'ABDOMEN'
-                    return 'UNKNOWN'
-                # Map common DICOM tags
-                tag_map = {
-                    'CSPINE': 'CSPINE', 'CERVICAL': 'CSPINE', 'CERVICAL SPINE': 'CSPINE',
-                    'LSPINE': 'LSPINE', 'LUMBAR': 'LSPINE', 'LUMBAR SPINE': 'LSPINE',
-                    'TSPINE': 'TSPINE', 'THORACIC': 'TSPINE', 'THORACIC SPINE': 'TSPINE',
-                    'BRAIN': 'BRAIN', 'HEAD': 'BRAIN',
-                    'KNEE': 'KNEE', 'ANKLE': 'ANKLE', 'FOOT': 'FOOT',
-                    'WRIST': 'WRIST', 'HAND': 'HAND', 'ELBOW': 'ELBOW',
-                    'SHOULDER': 'SHOULDER', 'HIP': 'HIP',
-                    'PELVIS': 'PELVIS', 'PELVIC': 'PELVIS',
-                    'ABDOMEN': 'ABDOMEN', 'SACRUM': 'SACRUM',
-                }
-                return tag_map.get(bp, bp)
+                desc = str(getattr(ds, 'StudyDescription', '') or '').upper().strip()
+
+                # Keyword substring rules used against BOTH BodyPartExamined
+                # and StudyDescription. The bp field often contains
+                # institution-prefixed strings like 'SMG MRI CERVICAL' which
+                # don't exact-match the tag_map below; substring matching
+                # against the same keyword set handles those uniformly.
+                KEYWORD_RULES = [
+                    (['CSPINE', 'C-SPINE', 'CERVICAL', 'C SPINE'], 'CSPINE'),
+                    (['LSPINE', 'L-SPINE', 'LUMBAR', 'L SPINE'], 'LSPINE'),
+                    (['TSPINE', 'T-SPINE', 'THORACIC', 'T SPINE'], 'TSPINE'),
+                    (['BRAIN', 'HEAD', 'NEURO'], 'BRAIN'),
+                    (['KNEE'], 'KNEE'),
+                    (['ANKLE', 'HINDFOOT'], 'ANKLE'),
+                    (['WRIST', 'CARPAL', 'DISTAL RADIUS'], 'WRIST'),
+                    (['FOOT', 'FOREFOOT', 'PLANTAR'], 'FOOT'),
+                    (['ELBOW', 'CUBITAL'], 'ELBOW'),
+                    (['SHOULDER'], 'SHOULDER'),
+                    (['HIP', 'FEMUR', 'FEMORAL'], 'HIP'),
+                    (['HAND', 'METACARPAL'], 'HAND'),
+                    (['PELVIS', 'PELVIC'], 'PELVIS'),
+                    (['SACRUM', 'SACRAL', 'SI JOINT', 'SACROILIAC'], 'SACRUM'),
+                    (['ABDOMEN', 'LIVER', 'HEPATIC'], 'ABDOMEN'),
+                ]
+
+                def _match_keywords(text):
+                    if not text:
+                        return None
+                    for kws, code in KEYWORD_RULES:
+                        if any(k in text for k in kws):
+                            return code
+                    return None
+
+                # 1. Try keyword substring match on BodyPartExamined.
+                #    Catches 'SMG MRI CERVICAL', 'CERVICAL SPINE', etc.
+                bp_match = _match_keywords(bp)
+                if bp_match:
+                    return bp_match
+
+                # 2. Fall back to StudyDescription if bp gave no signal.
+                desc_match = _match_keywords(desc)
+                if desc_match:
+                    return desc_match
+
+                # 3. Last resort: return the raw bp tag (preserves behavior
+                #    for any non-keyword-matching tag a downstream rule
+                #    might still recognize), or UNKNOWN if bp is empty.
+                return bp if bp else 'UNKNOWN'
 
             series_list = group_series(extracted_paths)
             good = [s for s in series_list if s['score'] > 0]
@@ -205,6 +210,18 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
                 if 'agreement' in steps:
                     _run_agreement(tmp_path, result)
                 if 'impression' in steps:
+                    from preimpression.merge import run_preimpression_step
+                    preimp_body_part = (
+                        'cervical_spine_k7'
+                        if result.get('body_part', '') in CSPINE_BODY_PARTS
+                        else result.get('body_part', 'UNKNOWN')
+                    )
+                    run_preimpression_step(
+                        result,
+                        work_dir=str(tmp_path),
+                        series_list=good,
+                        body_part=preimp_body_part,
+                    )
                     rules = _load_impression_rules(result.get('body_part', 'UNKNOWN'))
                     if rules:
                         _apply_rules(result, rules)
@@ -253,6 +270,17 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
 
             # ── STEP 6: Impression rules ──────────────────────────
             if 'impression' in steps:
+                from preimpression.merge import run_preimpression_step
+                preimp_body_part = (
+                    'cervical_spine_k7'
+                    if result.get('body_part', '') in CSPINE_BODY_PARTS
+                    else result.get('body_part', 'UNKNOWN')
+                )
+                run_preimpression_step(
+                    result,
+                    work_dir=str(tmp_path),
+                    body_part=preimp_body_part,
+                )
                 rules = _load_impression_rules(result.get('body_part', 'UNKNOWN'))
                 if rules:
                     _apply_rules(result, rules)
@@ -377,25 +405,43 @@ def _run_decomposition(dcm_path: Path, tmp_path: Path, params: dict) -> dict:
     )
 
     def detect_body_part_from_dicom(ds):
-        """Detect body part from DICOM metadata."""
-        bp = getattr(ds, 'BodyPartExamined', '') or ''
-        bp = bp.upper().strip()
-        if not bp:
-            desc = str(getattr(ds, 'StudyDescription', '') or '').upper()
-            if any(k in desc for k in ['SPINE', 'CERVICAL', 'CSPINE', 'C-SPINE']):
-                return 'CSPINE'
-            if any(k in desc for k in ['BRAIN', 'HEAD']):
-                return 'BRAIN'
-            if any(k in desc for k in ['LUMBAR', 'LSPINE', 'L-SPINE']):
-                return 'LSPINE'
-            if any(k in desc for k in ['THORACIC', 'TSPINE', 'T-SPINE']):
-                return 'TSPINE'
-            if any(k in desc for k in ['KNEE', 'ANKLE', 'FOOT', 'SHOULDER', 'HIP']):
-                return desc.split()[0]
-            return 'UNKNOWN'
-        if bp in ('CSPINE', 'CERVICAL', 'CSPINE_SPINE'):
-            return 'CSPINE'
-        return bp
+        """Detect body part from DICOM metadata.
+
+        Strategy: substring-match the SAME keyword set against
+        BodyPartExamined first (catches institution-prefixed tags like
+        'SMG MRI CERVICAL'), then against StudyDescription if bp gave no
+        signal. Falls back to returning the raw bp tag (or UNKNOWN if
+        empty) so any downstream rule that recognizes oddball values
+        still works.
+        """
+        bp = (getattr(ds, 'BodyPartExamined', '') or '').upper().strip()
+        desc = str(getattr(ds, 'StudyDescription', '') or '').upper().strip()
+
+        KEYWORD_RULES = [
+            (['CSPINE', 'C-SPINE', 'CERVICAL', 'C SPINE'], 'CSPINE'),
+            (['LSPINE', 'L-SPINE', 'LUMBAR', 'L SPINE'], 'LSPINE'),
+            (['TSPINE', 'T-SPINE', 'THORACIC', 'T SPINE'], 'TSPINE'),
+            (['BRAIN', 'HEAD'], 'BRAIN'),
+        ]
+
+        def _match_keywords(text):
+            if not text:
+                return None
+            for kws, code in KEYWORD_RULES:
+                if any(k in text for k in kws):
+                    return code
+            return None
+
+        bp_match = _match_keywords(bp)
+        if bp_match:
+            return bp_match
+        desc_match = _match_keywords(desc)
+        if desc_match:
+            return desc_match
+        # Limb / region keywords from StudyDescription (preserves prior behavior)
+        if desc and any(k in desc for k in ['KNEE', 'ANKLE', 'FOOT', 'SHOULDER', 'HIP']):
+            return desc.split()[0]
+        return bp if bp else 'UNKNOWN'
 
     # Find all DICOM files — could be a single file or a folder
     # For API use: single file. For folder use: multiple files.
