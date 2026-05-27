@@ -30,7 +30,14 @@ from datetime import datetime, timezone
 from .analyzers import (
     get_analyzer, supported_body_parts, ANALYZERS,
     group_series, detect_body_part, max_severity,
+    classify_orientation,
 )
+
+# Phase 1 LZW integration. Drop-in replacement for unpack-and-classify.
+# Per integration spec: lzw.py is shipped untouched, only the call site moves.
+from . import lzw
+
+import pydicom
 
 
 # ============================================================================
@@ -159,6 +166,213 @@ def run_pipeline_from_series(series_list, body_part=None, study_meta=None,
     return result
 
 
+# ============================================================================
+# Selective extraction (p0073)
+# ============================================================================
+# Hospital-burned DICOM zips often ship as CD-distribution packages with an
+# embedded viewer application (Windows .exe + DLLs, or macOS .app bundles
+# with frameworks, fonts, and helper binaries). On a 1GB ECS task the viewer
+# payload can push the worker over its memory limit during unpack -- before
+# the analyzer ever runs. The JH MRI C-Spine zip seen on dev was 78 MB of
+# real DICOM wrapped in 279 MB of macOS viewer.app, totaling 374 MB extracted
+# to disk.
+#
+# This filter rejects entries by path/extension before extraction, so the
+# work dir only contains files that could plausibly be DICOM. The same
+# magic-byte check in group_series() (p0072) is the second layer of defense.
+
+# Path components that mark macOS / packaged-app payloads. If any segment
+# of the zip entry's path equals or ends with one of these, skip the entry.
+_BUNDLE_PATH_SUFFIXES = (
+    '.app', '.framework', '.bundle', '.kext', '.lproj', '.xcassets',
+    '.appex', '.plugin', '.dSYM', '__MACOSX',
+)
+
+# Extensions that are definitely not DICOM. Mirrors and extends the
+# group_series() blocklist with formats commonly seen inside .app bundles
+# (fonts, source code, web resources, package manifests).
+_BUNDLE_NON_DICOM_EXTS = {
+    # CD-distribution viewer payloads
+    '.EXE', '.DLL', '.SO', '.DYLIB', '.APP',
+    # Documents
+    '.PDF', '.DOC', '.DOCX', '.XLS', '.XLSX', '.PPT', '.PPTX', '.RTF',
+    # Config / shortcuts / logs
+    '.INI', '.INF', '.LNK', '.URL', '.LOG', '.CFG', '.CONF', '.PLIST',
+    # Archives nested inside the outer zip
+    '.ZIP', '.RAR', '.7Z', '.TAR', '.GZ', '.TGZ', '.BZ2',
+    # Images
+    '.PNG', '.JPG', '.JPEG', '.BMP', '.GIF', '.TIFF', '.TIF',
+    '.SVG', '.WEBP', '.ICO', '.ICNS',
+    # Fonts (very common in macOS app bundles)
+    '.TTF', '.OTF', '.EOT', '.WOFF', '.WOFF2', '.FNT',
+    # Web / markup / data
+    '.HTML', '.HTM', '.CSS', '.JS', '.MAP',
+    '.JSON', '.XML', '.YAML', '.YML', '.MD', '.TXT', '.CSV', '.TSV',
+    # Source code / headers (frameworks ship .h public headers)
+    '.H', '.HPP', '.C', '.CPP', '.CC', '.M', '.MM', '.SWIFT', '.PY', '.RB',
+    # Media
+    '.MP4', '.MOV', '.AVI', '.MKV', '.MP3', '.WAV', '.OGG', '.FLAC',
+    # OS metadata
+    '.DS_STORE',
+}
+
+# Filenames that are definitely not DICOM regardless of extension.
+_BUNDLE_NON_DICOM_NAMES = {
+    'DICOMDIR', 'AUTORUN', 'README', 'LICENSE', 'INDEX', 'LOCKFILE',
+    'INFO', 'MANIFEST', 'PKGINFO', 'CODERESOURCES',
+}
+
+
+def _is_dicom_candidate(zip_entry_name):
+    """Return True if a zip entry could plausibly be a DICOM file.
+
+    Used to filter zipfile.ZipFile.namelist() before extraction so that
+    viewer payloads are skipped at unpack time, not after they hit disk.
+    """
+    # Directory entries
+    if zip_entry_name.endswith('/'):
+        return False
+
+    # Reject anything inside a known bundle/package path component.
+    # Path separator inside zips is always '/', regardless of OS.
+    parts = zip_entry_name.split('/')
+    for part in parts[:-1]:  # check directory components only
+        upper = part.upper()
+        for suf in _BUNDLE_PATH_SUFFIXES:
+            if upper.endswith(suf.upper()):
+                return False
+
+    # Just the basename for extension and filename checks
+    basename = parts[-1]
+    if not basename:
+        return False
+
+    # Hidden / metadata files
+    if basename.startswith('.') or basename.startswith('._'):
+        return False
+
+    # Filename blocklist (covers e.g. DICOMDIR which has DICM magic bytes
+    # but is a directory index, not an image)
+    stem_upper = basename.rsplit('.', 1)[0].upper() if '.' in basename else basename.upper()
+    if stem_upper in _BUNDLE_NON_DICOM_NAMES:
+        return False
+
+    # Extension blocklist
+    if '.' in basename:
+        ext = '.' + basename.rsplit('.', 1)[1].upper()
+        if ext in _BUNDLE_NON_DICOM_EXTS:
+            return False
+
+    return True
+
+
+def _selective_extract(zf, work_dir):
+    """Extract only entries that could plausibly be DICOM, into work_dir.
+
+    Mirrors zipfile.ZipFile.extractall() behavior for accepted entries
+    (preserves directory structure, uses zf.extract() so path traversal
+    protections are honored). Rejected entries are silently skipped.
+    """
+    for name in zf.namelist():
+        if _is_dicom_candidate(name):
+            zf.extract(name, work_dir)
+
+
+# ============================================================================
+# Manifest-driven series list (p0075 — Fix 1)
+# ============================================================================
+# Reads the LZW manifest and produces the same series-list shape that
+# group_series(work_dir) produced before. The key difference: we trust the
+# manifest's dedupe contract (one entry per SOPInstanceUID) instead of
+# rescanning the directory and re-grouping any undeleted duplicate files.
+#
+# Why a separate path: group_series() in analyzers/_base.py rglob's the
+# work_dir directly. When lzw.walk recursively extracts a customer-side
+# nested DICOM.zip (like MRI_C_Spine_2024.zip's outer + inner copies of
+# the same DICOM tree), the files exist on disk twice. The manifest knows
+# they are duplicates (logs DUPLICATE_SOP_INSTANCE rejections); group_series
+# does not. Re-grouping the directory contents inflates n_slices and breaks
+# select_best_t2_axsag downstream.
+#
+# This helper consumes manifest.files (deduped) and produces the exact
+# same dict shape that group_series produces, so all downstream code is
+# unaffected.
+
+def _series_list_from_manifest(manifest):
+    """Build the group_series-shaped list from an LZW Manifest.
+
+    Output shape per series (identical to group_series() in _base.py):
+        {
+          'series_uid': str,
+          'series_description': str,
+          'modality': str,
+          'orientation': str,
+          'n_slices': int,
+          'files': list[str]  (sorted),
+          'sample_ds': pydicom.Dataset,
+        }
+
+    Filtering: only files with headers.is_imaging_modality=True are
+    included. This matches group_series's SKIP_MODALITIES = {'SR', 'PR',
+    'KO', 'DOC', 'OT'} exclusion.
+    """
+    # Group manifest.files by SeriesInstanceUID
+    by_series = {}
+    for fe in manifest.files:
+        h = fe.headers
+        if h is None or not h.is_imaging_modality:
+            continue
+        uid = h.series_instance_uid
+        if not uid:
+            continue
+        if uid not in by_series:
+            by_series[uid] = []
+        by_series[uid].append(fe)
+
+    # Build the output. For each series, sort files by InstanceNumber for
+    # stable ordering (matches group_series's `sorted(s['files'])` since
+    # the manifest already uses InstanceNumber for ordering downstream).
+    out = []
+    for uid, members in by_series.items():
+        # Sort by instance_number, with None last
+        members.sort(key=lambda fe: (
+            fe.headers.instance_number if fe.headers.instance_number is not None else 999_999_999
+        ))
+
+        # Read the first file once with pydicom to populate sample_ds.
+        # Downstream (select_best_t2_axsag, is_t2, classify_orientation,
+        # detect_body_part) all access this as a pydicom Dataset, not as
+        # HeaderFacts. One read per series, not per file.
+        first_path = members[0].extraction.extracted_path
+        try:
+            sample_ds = pydicom.dcmread(first_path, stop_before_pixels=True, force=True)
+        except Exception:
+            # Manifest said the file had readable headers; if it can't be
+            # read now, something is off. Skip this series rather than
+            # crash the pipeline.
+            continue
+
+        files_sorted = sorted(fe.extraction.extracted_path for fe in members)
+
+        # Use HeaderFacts for stable fields; sample_ds only as a vehicle
+        # for downstream getattr() access.
+        h0 = members[0].headers
+        out.append({
+            'series_uid': uid,
+            'series_description': h0.series_description or '',
+            'modality': h0.modality or '',
+            'orientation': classify_orientation(h0.image_orientation_patient),
+            'n_slices': len(members),
+            'files': files_sorted,
+            'sample_ds': sample_ds,
+        })
+
+    return out
+
+
+# ============================================================================
+# Public API (cont.)
+# ============================================================================
 def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
                   keep_work=False):
     """Standalone dispatch — used by /preimpression endpoint and CLI.
@@ -180,13 +394,27 @@ def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
         cleanup = False
         os.makedirs(work_dir, exist_ok=True)
 
+    manifest = None
     try:
         if zip_path is not None:
-            with zipfile.ZipFile(zip_path) as zf:
-                zf.extractall(work_dir)
+            # Phase 1 LZW: replace _selective_extract with lzw.walk.
+            # lzw.walk performs the same unpack + filter work and additionally
+            # writes manifest.json to work_dir, builds a series_index, and a
+            # study_summary.
+            manifest = lzw.walk(zip_path, work_dir=work_dir, write_manifest=True)
         t_unpack = time.perf_counter()
 
-        series_list = group_series(work_dir)
+        # Series-list discovery:
+        #   - LZW path (manifest available): build the series list from
+        #     manifest.files. This consumes the dedupe contract: every
+        #     SOPInstanceUID appears at most once. Avoids re-grouping
+        #     undeleted duplicates that may exist on disk.
+        #   - No-zip / direct-directory path (manifest is None): fall back
+        #     to group_series(work_dir) which scans the disk directly.
+        if manifest is not None:
+            series_list = _series_list_from_manifest(manifest)
+        else:
+            series_list = group_series(work_dir)
         t_scan = time.perf_counter()
 
         result = run_pipeline_from_series(
@@ -202,6 +430,16 @@ def run_pipeline(zip_path=None, body_part_override=None, work_dir=None,
             'total':  (time.perf_counter() - t0) * 1000,
         })
         result['timing_ms'] = timing
+
+        # Per Phase 1 spec: when a study fails analysis, include
+        # manifest.study_summary in the error response JSON.
+        status = str(result.get('status', '')).upper()
+        if manifest is not None and status in ('ERROR', 'INSUFFICIENT_DATA',
+                                                'UNSUPPORTED_BODY_PART',
+                                                'NO_DICOM_FOUND'):
+            from dataclasses import asdict
+            result['study_summary'] = asdict(manifest.study_summary)
+
         return result
 
     finally:

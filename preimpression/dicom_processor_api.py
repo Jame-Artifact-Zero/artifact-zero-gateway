@@ -23,15 +23,12 @@ Analysis levels:
 import io
 import os
 import time
-import shutil
 import tempfile
 import warnings
 import logging
 import traceback
 from pathlib import Path
 from typing import Optional
-from flask import Flask, request, jsonify, render_template, make_response
-from generate_report import generate_report
 
 warnings.filterwarnings('ignore')
 
@@ -210,18 +207,6 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
                 if 'agreement' in steps:
                     _run_agreement(tmp_path, result)
                 if 'impression' in steps:
-                    from preimpression.merge import run_preimpression_step
-                    preimp_body_part = (
-                        'cervical_spine_k7'
-                        if result.get('body_part', '') in CSPINE_BODY_PARTS
-                        else result.get('body_part', 'UNKNOWN')
-                    )
-                    run_preimpression_step(
-                        result,
-                        work_dir=str(tmp_path),
-                        series_list=good,
-                        body_part=preimp_body_part,
-                    )
                     rules = _load_impression_rules(result.get('body_part', 'UNKNOWN'))
                     if rules:
                         _apply_rules(result, rules)
@@ -270,17 +255,6 @@ def process_dicom_bytes(raw_bytes: bytes, params: dict = None,
 
             # ── STEP 6: Impression rules ──────────────────────────
             if 'impression' in steps:
-                from preimpression.merge import run_preimpression_step
-                preimp_body_part = (
-                    'cervical_spine_k7'
-                    if result.get('body_part', '') in CSPINE_BODY_PARTS
-                    else result.get('body_part', 'UNKNOWN')
-                )
-                run_preimpression_step(
-                    result,
-                    work_dir=str(tmp_path),
-                    body_part=preimp_body_part,
-                )
                 rules = _load_impression_rules(result.get('body_part', 'UNKNOWN'))
                 if rules:
                     _apply_rules(result, rules)
