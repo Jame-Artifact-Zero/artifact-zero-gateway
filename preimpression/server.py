@@ -40,7 +40,10 @@ import shutil
 from datetime import datetime, timezone
 
 import numpy as np
-from flask import Blueprint, request, jsonify, Response, g
+from flask import (
+    Blueprint, request, jsonify, Response, g,
+    render_template, make_response,
+)
 
 # Existing project auth — same decorators used by /dicom/analyze
 from api_auth import require_api_key
@@ -53,6 +56,9 @@ from .analyzers import (
 from .analyzers._spine_common import (
     select_best_t2_axsag, resample_sag_patient_coords,
 )
+
+# Report generator for /spine_report (lives at repo root)
+from generate_report import generate_report
 
 
 preimpression_bp = Blueprint('preimpression', __name__)
@@ -124,6 +130,69 @@ def preimpression():
     if fmt == 'text':
         return Response(render_text(result), mimetype='text/plain')
     return jsonify(result)
+
+
+# ============================================================================
+# /spine_report — user-facing HTML report endpoint (no auth, browser flow)
+# ============================================================================
+@preimpression_bp.route('/spine_report', methods=['GET', 'POST'])
+def spine_report():
+    """Browser-facing endpoint that runs the k7 measurement pipeline and
+    returns the rendered HTML report inline.
+
+    GET  → renders the upload form (templates/spine_report_upload.html).
+    POST → accepts a multipart upload (field name 'dicom'), runs the
+           pipeline with body_part_override='cervical_spine_k7', passes
+           the result through generate_report(), and returns the HTML
+           inline with Content-Type text/html.
+
+    Intentionally open (no @require_api_key) — this is a user-facing
+    browser tool, not an API consumer.
+    """
+    if request.method == 'GET':
+        return render_template('spine_report_upload.html')
+
+    f = request.files.get('dicom')
+    if not f or not f.filename:
+        return ('No file uploaded. Please choose a DICOM .zip file.',
+                400, {'Content-Type': 'text/plain; charset=utf-8'})
+    if not f.filename.lower().endswith('.zip'):
+        return ('Uploaded file must be a .zip archive.',
+                400, {'Content-Type': 'text/plain; charset=utf-8'})
+
+    tmp_dir = tempfile.mkdtemp(prefix='spine_report_')
+    try:
+        zip_path = os.path.join(tmp_dir, 'study.zip')
+        f.save(zip_path)
+
+        try:
+            result = run_pipeline(
+                zip_path,
+                body_part_override='cervical_spine_k7',
+            )
+        except Exception as e:
+            return (f'Pipeline error: {e}',
+                    500, {'Content-Type': 'text/plain; charset=utf-8'})
+
+        if not result:
+            return ('Pipeline returned no result.',
+                    500, {'Content-Type': 'text/plain; charset=utf-8'})
+
+        html_path = os.path.join(tmp_dir, 'report.html')
+        try:
+            generate_report(result, zip_path, html_path)
+        except Exception as e:
+            return (f'Report generation failed: {e}',
+                    500, {'Content-Type': 'text/plain; charset=utf-8'})
+
+        with open(html_path, 'r', encoding='utf-8') as fh:
+            html_text = fh.read()
+
+        resp = make_response(html_text)
+        resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return resp
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 # ============================================================================
