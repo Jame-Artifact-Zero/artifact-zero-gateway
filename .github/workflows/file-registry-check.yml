@@ -1,0 +1,21 @@
+name: File Registry Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  file-registry-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Enforce file registry
+        run: python ops/profiler.py --enforce-registry
