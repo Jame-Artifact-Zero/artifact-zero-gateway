@@ -6,8 +6,8 @@ cur = conn.cursor()
 
 cur.execute('''
     SELECT c.slug, c.name, 
-           string_agg(cp.page_type || E'\n' || cp.content, E'\n\n---\n\n' ORDER BY cp.page_type) as combined,
-           sum(length(cp.content)) as total_chars,
+           string_agg(cp.page_type || E'\n' || cp.raw_text, E'\n\n---\n\n' ORDER BY cp.page_type) as combined,
+           sum(length(cp.raw_text)) as total_chars,
            count(*) as page_count
     FROM companies c
     JOIN company_pages cp ON cp.company_id = c.id AND cp.is_current = TRUE
