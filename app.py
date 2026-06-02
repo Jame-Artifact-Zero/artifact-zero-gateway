@@ -1417,6 +1417,7 @@ def nti_run():
         return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
 
     # axis2_compiler — inbound pre-processor (silent transform)
+    original_text = text  # preserve for highlight_map — spans must match what user sees
     try:
         from axis2_compiler import compile_planned as axis2_compile
         _compiled = axis2_compile(text)
@@ -1433,9 +1434,10 @@ def nti_run():
     framing = detect_l2_framing(text)
 
     # Highlights: backend owns spans, frontend only renders
+    # Use original_text so character offsets match the displayed text, not compiled text
     try:
         from highlight_map import get_highlights
-        axis2, highlights = get_highlights(text, framing=framing)
+        axis2, highlights = get_highlights(original_text, framing=framing)
     except Exception:
         axis2, highlights = None, []
 
