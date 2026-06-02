@@ -332,6 +332,25 @@ def record_exchange(
     }
 
 
+def get_history(session_id: str) -> list:
+    """
+    Return full conversation history for a session as a list of
+    {"source": str, "content": str} dicts, ordered oldest first.
+    Used by nti_relay_routes to pass history to the LLM call.
+    """
+    thread = None
+    with _lock:
+        thread = _cache.get(session_id)
+    if thread is None:
+        thread = _db_load(session_id)
+    if thread is None:
+        return []
+    return [
+        {"source": r.source, "content": r.content}
+        for r in thread._monitor.records
+    ]
+
+
 def get_blob_for_next_call(session_id: str) -> Optional[str]:
     """
     If the session has a pending blob from the last relay,
