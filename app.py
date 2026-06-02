@@ -1431,10 +1431,10 @@ def nti_run():
     obj = objective_extract(prompt or text)
     drift = objective_drift(prompt or "", answer or "")
 
-    framing = detect_l2_framing(text)
+    framing = detect_l2_framing(original_text)  # must use original — framing stores char offsets
 
     # Highlights: backend owns spans, frontend only renders
-    # Use original_text so character offsets match the displayed text, not compiled text
+    # Both framing and get_highlights use original_text — offsets must match displayed text
     try:
         from highlight_map import get_highlights
         axis2, highlights = get_highlights(original_text, framing=framing)
