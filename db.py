@@ -550,6 +550,16 @@ def db_init():
     logger.info("Database initialized (PG=%s)", USE_PG)
 
 
+def init_loop4_tables():
+    """Stub — loop4 table initialization. No-op until loop4 schema is defined."""
+    logger.info("init_loop4_tables called (stub, no-op)")
+
+
+def init_loop5_tables():
+    """Stub — loop5 table initialization. No-op until loop5 schema is defined."""
+    logger.info("init_loop5_tables called (stub, no-op)")
+
+
 def record_request(request_id, route, ip, user_agent, session_id, latency_ms, payload_json, error=None):
     conn = db_connect()
     cur = conn.cursor()
