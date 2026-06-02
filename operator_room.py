@@ -2,7 +2,6 @@ import os, json, time, io, re, secrets, threading
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
-from operator_prompt_builder import build_operator_prompt
 
 operator_bp = Blueprint('operator', __name__)
 
@@ -49,17 +48,6 @@ def operator_room():
 
 # ── CHAT PROXY ─────────────────────────────────────────────────────────────────
 
-def _get_active_push_label() -> str:
-    try:
-        import db as database
-        conn = database.db_connect()
-        cur = conn.cursor()
-        push = _get_active_push(cur, database.USE_PG)
-        conn.close()
-        return push or ""
-    except Exception:
-        return ""
-
 @operator_bp.route('/operator/api/chat', methods=['POST'])
 def operator_chat():
     payload  = request.get_json() or {}
@@ -87,12 +75,9 @@ def operator_chat():
         system += "\n\nCURRENT JOS:\n" + "\n".join(jos_context)
 
     # ── Inject prior session context ──────────────────────────────────────────
-    prior = build_operator_prompt(
-        db_url=os.environ.get("DATABASE_URL", ""),
-        push=_get_active_push_label()
-    )
+    prior = _get_prior_session_context()
     if prior:
-        system = prior + "\n\n" + system
+        system = "PRIOR SESSION CONTEXT:\n" + prior + "\n\n" + system
 
     claude_payload = {
         'model':      req_model,
@@ -134,11 +119,70 @@ def operator_chat():
 
 # ── TOOL EXECUTION ─────────────────────────────────────────────────────────────
 
+@operator_bp.route('/shelf/upload', methods=['POST'])
+def shelf_upload():
+    """
+    Accepts a file and writes it to shelf_files.
+    Expects JSON body:
+    {
+        "filename": "operator_room.py",
+        "content": "...full file content...",
+        "repo": "artifact-zero-gateway",
+        "branch": "develop",
+        "filepath": "operator_room.py",
+        "owner_user_id": "jame"
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "no body"}), 400
+
+        filename      = data.get("filename", "")
+        content       = data.get("content", "")
+        repo          = data.get("repo", "")
+        branch        = data.get("branch", "develop")
+        filepath      = data.get("filepath", filename)
+        owner_user_id = data.get("owner_user_id", "jame")
+        extension     = filename.rsplit(".", 1)[-1] if "." in filename else ""
+        char_count    = len(content)
+        now           = datetime.utcnow().isoformat()
+        file_id       = f"shelf_{filename}_{branch}".replace("/", "_").replace(" ", "_")
+
+        import db as database
+        conn = database.db_connect()
+        cur  = conn.cursor()
+        cur.execute("""
+            INSERT INTO shelf_files (id, created_at, updated_at, filepath, filename, extension, content, char_count, repo, branch, owner_user_id, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                content       = EXCLUDED.content,
+                updated_at    = EXCLUDED.updated_at,
+                char_count    = EXCLUDED.char_count,
+                status        = EXCLUDED.status
+        """, (
+            file_id, now, now, filepath, filename, extension,
+            content, char_count, repo, branch, owner_user_id, "active"
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "status":     "ok",
+            "id":         file_id,
+            "filename":   filename,
+            "char_count": char_count
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @operator_bp.route('/operator/run', methods=['POST'])
 def operator_run():
     payload = request.get_json() or {}
     tool    = payload.get('tool', '')
-    command = (payload.get('command') or tool or '').strip()
 
     if tool == 'signal':
         return _run_signal_scan()
@@ -151,40 +195,30 @@ def operator_run():
         if not text:
             return jsonify({'error': 'No text provided'}), 400
         return _run_nti_score(text)
-    elif command.startswith('shelf_read'):
-        parts = command.split()
-        target = parts[1] if len(parts) > 1 else 'both'
-        results = []
+    elif tool == 'shelf_get':
+        target_filename = payload.get('filename', '').strip()
+        if not target_filename:
+            return jsonify({"result": "Usage: shelf_get requires filename field"})
         try:
             import db as database
             conn = database.db_connect()
-            cur = conn.cursor()
-            if target in ('documents', 'both'):
-                cur.execute("""
-                    SELECT id, created_at, filename, doc_type, status, char_count
-                    FROM shelf_documents
-                    ORDER BY created_at DESC
-                    LIMIT 20
-                """)
-                rows = cur.fetchall()
-                results.append(f'[SHELF DOCUMENTS — {len(rows)} rows]')
-                for r in rows:
-                    results.append(f'  {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} | {r[5]} chars')
-            if target in ('files', 'both'):
-                cur.execute("""
-                    SELECT id, created_at, filename, extension, repo, branch, status, char_count
-                    FROM shelf_files
-                    ORDER BY created_at DESC
-                    LIMIT 20
-                """)
-                rows = cur.fetchall()
-                results.append(f'[SHELF FILES — {len(rows)} rows]')
-                for r in rows:
-                    results.append(f'  {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]}/{r[5]} | {r[6]} | {r[7]} chars')
+            cur  = conn.cursor()
+            cur.execute("""
+                SELECT id, filename, repo, branch, char_count, content
+                FROM shelf_files
+                WHERE filename = %s
+                ORDER BY updated_at DESC
+                LIMIT 1
+            """, (target_filename,))
+            row = cur.fetchone()
             conn.close()
+            if not row:
+                return jsonify({"result": f"[SHELF] No file found: {target_filename}"})
+            file_id, fname, repo, branch, char_count, content = row
+            header = f"[SHELF FILE: {fname} | repo={repo} | branch={branch} | {char_count} chars]\n"
+            return jsonify({"result": header + content})
         except Exception as e:
-            results.append(f'[SHELF READ ERROR: {e}]')
-        return jsonify({'result': '\n'.join(results)})
+            return jsonify({"result": f"[SHELF GET ERROR: {e}]"})
     else:
         return jsonify({'error': f'Unknown tool: {tool}'}), 400
 
@@ -799,7 +833,6 @@ def _upsert_push_state(push: str):
         pass
 
 
-# RETIRED p0068 — replaced by operator_prompt_builder.build_operator_prompt()
 # ── PRIOR SESSION CONTEXT ──────────────────────────────────────────────────────
 
 def _get_prior_session_context() -> str:
