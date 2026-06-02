@@ -690,11 +690,6 @@ def build_injected_prompt(user_message: str, session_id: str = "default") -> dic
     mode = detect_mode(user_message)
     msg_meta = store_message("user", user_message, session_id)
 
-    artifacts, retrieval_meta = get_artifacts_by_topic(
-        retrieval_meta["topic"] if (retrieval_meta := None) else "general",
-        user_message=user_message
-    )
-    # Note: retrieval_meta is set correctly inside get_artifacts_by_topic
     artifacts, retrieval_meta = get_artifacts_by_topic("general", user_message=user_message)
 
     recent = get_recent_messages(session_id, limit=6)

@@ -2,6 +2,7 @@ import os, json, time, io, re, secrets, threading
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template, session
 import http.client, ssl
+from operator_prompt_builder import build_operator_prompt
 
 operator_bp = Blueprint('operator', __name__)
 
@@ -48,6 +49,17 @@ def operator_room():
 
 # ── CHAT PROXY ─────────────────────────────────────────────────────────────────
 
+def _get_active_push_label() -> str:
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        push = _get_active_push(cur, database.USE_PG)
+        conn.close()
+        return push or ""
+    except Exception:
+        return ""
+
 @operator_bp.route('/operator/api/chat', methods=['POST'])
 def operator_chat():
     payload  = request.get_json() or {}
@@ -75,9 +87,12 @@ def operator_chat():
         system += "\n\nCURRENT JOS:\n" + "\n".join(jos_context)
 
     # ── Inject prior session context ──────────────────────────────────────────
-    prior = _get_prior_session_context()
+    prior = build_operator_prompt(
+        db_url=os.environ.get("DATABASE_URL", ""),
+        push=_get_active_push_label()
+    )
     if prior:
-        system = "PRIOR SESSION CONTEXT:\n" + prior + "\n\n" + system
+        system = prior + "\n\n" + system
 
     claude_payload = {
         'model':      req_model,
@@ -749,6 +764,7 @@ def _upsert_push_state(push: str):
         pass
 
 
+# RETIRED p0068 — replaced by operator_prompt_builder.build_operator_prompt()
 # ── PRIOR SESSION CONTEXT ──────────────────────────────────────────────────────
 
 def _get_prior_session_context() -> str:
