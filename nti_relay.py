@@ -81,6 +81,10 @@ def resolve_governance(request_gov: Optional[dict], stored_profile: Optional[dic
 # V2 INBOUND GATE
 # ═══════════════════════════════════════════════════════════════════════════
 
+MIN_WORDS_STANDARD = 2   # was 4 in pre_score_gate — reduced to allow natural short inputs
+MIN_WORDS_STRICT   = 3
+
+
 def run_inbound_gate(text: str, gate_mode: str) -> dict:
     """
     gate_mode strict      -> block if any v2 violation detected
@@ -88,6 +92,15 @@ def run_inbound_gate(text: str, gate_mode: str) -> dict:
     gate_mode permissive  -> warn only, never block
     """
     result = {"pass": True, "reason": "", "signals": {}}
+
+    # Word count gate — permissive mode bypasses entirely
+    if gate_mode != "permissive":
+        word_count = len(text.split())
+        min_words = MIN_WORDS_STRICT if gate_mode == "strict" else MIN_WORDS_STANDARD
+        if word_count < min_words:
+            result["pass"] = False
+            result["reason"] = f"Message too short. Write at least {min_words} words."
+            return result
 
     # Pre-score gate (gibberish / junk filter)
     if _HAS_GATE:
@@ -125,6 +138,22 @@ def run_inbound_gate(text: str, gate_mode: str) -> dict:
 # LLM CALLER — CUSTOMER KEY
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _build_messages(history: list, user_text: str) -> list:
+    """
+    Build the messages array for the LLM call.
+    Maps source labels human/ai to role labels user/assistant.
+    """
+    role_map = {"human": "user", "ai": "assistant"}
+    messages = []
+    for entry in (history or []):
+        role = role_map.get(entry.get("source", ""), "user")
+        content = entry.get("content", "")
+        if content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": user_text})
+    return messages
+
+
 def call_customer_llm(
     provider: str,
     api_key: str,
@@ -133,10 +162,14 @@ def call_customer_llm(
     user_text: str,
     token_ceiling: int,
     timeout: int = 90,
+    history: Optional[list] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
-    """Returns (response_text, error_message)."""
+    """Returns (response_text, error_message).
+    history: list of {"source": "human"|"ai", "content": str} — prior turns.
+    """
 
     provider = provider.lower().strip()
+    messages = _build_messages(history, user_text)
 
     if provider == "anthropic":
         _model = model or "claude-sonnet-4-20250514"
@@ -144,7 +177,7 @@ def call_customer_llm(
             "model": _model,
             "max_tokens": token_ceiling,
             "system": system_prompt,
-            "messages": [{"role": "user", "content": user_text}],
+            "messages": messages,
         }).encode()
         req = Request(
             "https://api.anthropic.com/v1/messages",
@@ -170,10 +203,7 @@ def call_customer_llm(
         body = json.dumps({
             "model": _model,
             "max_tokens": token_ceiling,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_text},
-            ],
+            "messages": [{"role": "system", "content": system_prompt}] + messages,
         }).encode()
         req = Request(
             "https://api.openai.com/v1/chat/completions",
@@ -195,9 +225,13 @@ def call_customer_llm(
 
     elif provider == "google":
         _model = model or "gemini-1.5-flash"
+        contents = []
+        for m in messages:
+            role = "user" if m["role"] == "user" else "model"
+            contents.append({"role": role, "parts": [{"text": m["content"]}]})
         body = json.dumps({
             "system_instruction": {"parts": [{"text": system_prompt}]},
-            "contents": [{"parts": [{"text": user_text}]}],
+            "contents": contents,
             "generationConfig": {"maxOutputTokens": token_ceiling},
         }).encode()
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={api_key}"
@@ -217,10 +251,7 @@ def call_customer_llm(
         body = json.dumps({
             "model": _model,
             "max_tokens": token_ceiling,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_text},
-            ],
+            "messages": [{"role": "system", "content": system_prompt}] + messages,
         }).encode()
         req = Request(
             "https://api.x.ai/v1/chat/completions",
@@ -337,6 +368,7 @@ def process_relay(
     governance: dict,
     webhook_url: Optional[str] = None,
     request_id: Optional[str] = None,
+    history: Optional[list] = None,
 ) -> dict:
     rid = request_id or str(uuid.uuid4())
     t0 = time.time()
@@ -378,6 +410,7 @@ def process_relay(
         system_prompt=system_prompt,
         user_text=text,
         token_ceiling=governance["token_ceiling"],
+        history=history,
     )
 
     if llm_error or not llm_text:
