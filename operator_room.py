@@ -138,6 +138,7 @@ def operator_chat():
 def operator_run():
     payload = request.get_json() or {}
     tool    = payload.get('tool', '')
+    command = (payload.get('command') or tool or '').strip()
 
     if tool == 'signal':
         return _run_signal_scan()
@@ -150,6 +151,40 @@ def operator_run():
         if not text:
             return jsonify({'error': 'No text provided'}), 400
         return _run_nti_score(text)
+    elif command.startswith('shelf_read'):
+        parts = command.split()
+        target = parts[1] if len(parts) > 1 else 'both'
+        results = []
+        try:
+            import db as database
+            conn = database.db_connect()
+            cur = conn.cursor()
+            if target in ('documents', 'both'):
+                cur.execute("""
+                    SELECT id, created_at, filename, doc_type, status, char_count
+                    FROM shelf_documents
+                    ORDER BY created_at DESC
+                    LIMIT 20
+                """)
+                rows = cur.fetchall()
+                results.append(f'[SHELF DOCUMENTS — {len(rows)} rows]')
+                for r in rows:
+                    results.append(f'  {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} | {r[5]} chars')
+            if target in ('files', 'both'):
+                cur.execute("""
+                    SELECT id, created_at, filename, extension, repo, branch, status, char_count
+                    FROM shelf_files
+                    ORDER BY created_at DESC
+                    LIMIT 20
+                """)
+                rows = cur.fetchall()
+                results.append(f'[SHELF FILES — {len(rows)} rows]')
+                for r in rows:
+                    results.append(f'  {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]}/{r[5]} | {r[6]} | {r[7]} chars')
+            conn.close()
+        except Exception as e:
+            results.append(f'[SHELF READ ERROR: {e}]')
+        return jsonify({'result': '\n'.join(results)})
     else:
         return jsonify({'error': f'Unknown tool: {tool}'}), 400
 
