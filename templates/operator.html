@@ -11,20 +11,19 @@
 
 .op-shell {
   display: grid;
-  grid-template-columns: 260px 1fr 280px;
+  grid-template-columns: 260px 1fr;
   height: 100%;
   background: var(--bg);
   overflow: hidden;
 }
 
-/* -- LEFT SIDEBAR - S0 STATE --------------------------------- */
+/* -- LEFT SIDEBAR -------------------------------------------- */
 .op-sidebar {
   background: var(--s2);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .op-sidebar-header {
@@ -33,6 +32,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .op-sidebar-header .op-logo {
@@ -43,119 +43,127 @@
   letter-spacing: 2px;
 }
 
-.op-s0-block {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.op-s0-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 2px;
+/* New thread button */
+.op-new-thread-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
   color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.op-s0-score {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.op-s0-score.critical { color: var(--red); }
-.op-s0-score.weak     { color: var(--amber); }
-.op-s0-score.moderate { color: var(--blue); }
-.op-s0-score.strong   { color: var(--accent); }
-
-.op-s0-desc {
-  font-size: 11px;
-  color: var(--dim);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.op-state-section {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.op-state-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.op-state-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 4px 0;
-  gap: 8px;
-}
-
-.op-state-key {
-  font-size: 11px;
-  color: var(--dim);
-  font-family: 'JetBrains Mono', monospace;
-  flex-shrink: 0;
-}
-
-.op-state-val {
-  font-size: 11px;
-  color: var(--text);
-  text-align: right;
-  font-family: 'DM Sans', sans-serif;
-  line-height: 1.3;
-}
-
-.op-state-val.green  { color: var(--accent); }
-.op-state-val.red    { color: var(--red); }
-.op-state-val.amber  { color: var(--amber); }
-.op-state-val.blue   { color: var(--blue); }
-
-.op-tool-btn {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--dim);
+  gap: 4px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.op-new-thread-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Gear button */
+.op-gear-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.15s;
-  margin-bottom: 4px;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.op-gear-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Thread list */
+.op-thread-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
 }
 
-.op-tool-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(0,232,156,0.04);
+.op-thread-list::-webkit-scrollbar { width: 3px; }
+.op-thread-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+.op-thread-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border: 1px solid transparent;
 }
 
-.op-tool-btn .tool-icon {
-  font-size: 13px;
+.op-thread-item:hover { background: var(--s3); }
+.op-thread-item.active { background: var(--s3); border-color: var(--border); }
+
+.op-thread-title {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.op-thread-item.active .op-thread-title { color: var(--text); }
+
+.op-thread-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
   flex-shrink: 0;
 }
 
-.op-tool-btn.running {
-  border-color: var(--accent);
-  color: var(--accent);
-  animation: pulse-border 1s infinite;
+.op-thread-rename-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
-@keyframes pulse-border {
-  0%, 100% { border-color: var(--accent); }
-  50% { border-color: transparent; }
+.op-thread-item:hover .op-thread-rename-btn,
+.op-thread-item.active .op-thread-rename-btn { display: flex; }
+
+.op-thread-rename-btn:hover { color: var(--accent); }
+
+.op-thread-rename-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 5px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  outline: none;
+  min-width: 0;
+}
+
+.op-thread-empty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 12px 8px;
+  text-align: center;
 }
 
 /* -- CENTER - CHAT ------------------------------------------- */
@@ -165,60 +173,6 @@
   height: 100%;
   overflow: hidden;
   background: var(--bg);
-}
-
-.op-chat-header {
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-.op-chat-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: 1px;
-}
-
-.op-chat-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.op-nii-live {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  color: var(--dim);
-  transition: all 0.3s;
-}
-
-.op-nii-live.scored {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(0,232,156,0.06);
-}
-
-.op-nii-live.flagged {
-  border-color: var(--amber);
-  color: var(--amber);
-  background: rgba(245,158,11,0.06);
-}
-
-.op-model-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-  padding: 3px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
 }
 
 /* Messages */
@@ -365,8 +319,27 @@
   border-color: var(--accent);
 }
 
+.op-input-top {
+  display: flex;
+  align-items: flex-end;
+}
+
+.op-attach-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 12px 8px 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.op-attach-btn:hover { color: var(--accent); }
+
 .op-textarea {
-  width: 100%;
+  flex: 1;
   background: transparent;
   border: none;
   outline: none;
@@ -374,11 +347,12 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  padding: 12px 16px;
+  padding: 12px 16px 12px 4px;
   resize: none;
   min-height: 44px;
   max-height: 180px;
   overflow-y: auto;
+  width: 100%;
 }
 
 .op-textarea::placeholder { color: var(--muted); }
@@ -387,7 +361,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 12px 10px;
+  padding: 4px 12px 10px;
 }
 
 .op-input-hint {
@@ -413,144 +387,6 @@
 
 .op-send-btn:hover { background: #00ffab; transform: scale(1.04); }
 .op-send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
-
-/* JOS fields */
-.op-jos-bar {
-  display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  flex-shrink: 0;
-}
-
-.op-jos-bar::-webkit-scrollbar { display: none; }
-
-.op-jos-tag {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--s2);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--dim);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-}
-
-.op-jos-tag.set { border-color: var(--accent); color: var(--accent); background: rgba(0,232,156,0.05); }
-.op-jos-tag.required { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
-
-/* -- RIGHT SIDEBAR - NTI PANEL ------------------------------- */
-.op-nti-panel {
-  background: var(--s2);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.op-panel-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.op-panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-}
-
-.op-panel-body::-webkit-scrollbar { width: 3px; }
-.op-panel-body::-webkit-scrollbar-thumb { background: var(--border); }
-
-.op-score-ring {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
-}
-
-.op-ring-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--text);
-  transition: all 0.4s;
-}
-
-.op-ring-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 2px;
-  margin-top: 4px;
-}
-
-.op-fm-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.op-fm-key {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--dim);
-}
-
-.op-fm-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.op-fm-val.false  { color: var(--accent); }
-.op-fm-val.prob   { color: var(--amber); }
-.op-fm-val.conf   { color: var(--red); }
-
-.op-tilt-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  background: rgba(245,158,11,0.1);
-  color: var(--amber);
-  border: 1px solid rgba(245,158,11,0.2);
-  margin: 2px;
-}
-
-.op-session-stat {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-}
-
-.op-session-key {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.op-session-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--text);
-}
 
 /* Empty state */
 .op-empty {
@@ -580,39 +416,6 @@
   max-width: 320px;
 }
 
-.op-empty-hints {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  max-width: 380px;
-  margin-top: 8px;
-}
-
-.op-hint-chip {
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--s2);
-  font-size: 13px;
-  color: var(--dim);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
-}
-
-.op-hint-chip:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .op-shell { grid-template-columns: 0 1fr 0; }
-  .op-sidebar, .op-nti-panel { display: none; }
-}
-
 /* Tool result block */
 .op-tool-result {
   background: var(--s3);
@@ -634,24 +437,6 @@
   margin-bottom: 8px;
   display: block;
 }
-
-/* -- GEAR BUTTON IN SIDEBAR HEADER --------------------------- */
-.op-gear-btn {
-  margin-left: auto;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: color 0.15s, border-color 0.15s;
-}
-.op-gear-btn:hover { color: var(--accent); border-color: var(--accent); }
 
 /* -- SETTINGS MODAL ----------------------------------------- */
 .op-modal-backdrop {
@@ -757,171 +542,132 @@
   color: #000;
 }
 .op-modal-btn.primary:hover { background: #00ffab; color: #000; }
+
+/* -- RESPONSIVE / MOBILE DRAWERS ----------------------------- */
+/* Mobile bar — hidden on desktop */
+.az-op-mobile-bar { display: none; }
+
+@media (max-width: 900px) {
+  .op-shell {
+    grid-template-columns: 1fr;
+    position: relative;
+  }
+
+  .op-sidebar {
+    position: fixed;
+    top: 56px;
+    bottom: 0;
+    left: 0;
+    width: 280px;
+    z-index: 500;
+    transition: transform 0.25s ease;
+    transform: translateX(-100%);
+  }
+
+  .op-shell.op-sidebar-open .op-sidebar { transform: translateX(0); }
+
+  .op-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 499;
+  }
+  .op-drawer-backdrop.open { display: block; }
+
+  .az-op-mobile-bar {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--s1);
+    flex-shrink: 0;
+  }
+
+  .az-op-mobile-bar .op-mob-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .az-op-mobile-bar .op-mob-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="az-op-mobile-bar">
+  <button class="op-mob-btn" onclick="toggleOpDrawer('sidebar')" aria-label="Open thread list">
+    &#9776; THREADS
+  </button>
+</div>
+<div class="op-drawer-backdrop" id="opDrawerBackdrop" onclick="closeAllOpDrawers()"></div>
 <div class="op-shell">
 
-  <!-- -- LEFT SIDEBAR ------------------------------------------ -->
+  <!-- -- LEFT SIDEBAR: THREAD LIST ----------------------------- -->
   <aside class="op-sidebar">
     <div class="op-sidebar-header">
       <span class="op-logo">itB0</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">OPERATOR</span>
+      <button class="op-new-thread-btn" onclick="newThread()" title="New thread" aria-label="New thread">
+        + NEW
+      </button>
       <button class="op-gear-btn" id="settingsGear" onclick="openSettings()" title="Settings" aria-label="Settings">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
       </button>
     </div>
-
-    <!-- S0 Score -->
-    <div class="op-s0-block">
-      <div class="op-s0-label">Prior State S0</div>
-      <div class="op-s0-score moderate" id="s0Display">-</div>
-      <div class="op-s0-desc" id="s0Desc">LOADING...</div>
-    </div>
-
-    <!-- Active State -->
-    <div class="op-state-section">
-      <div class="op-state-title">Active State</div>
-      <div class="op-state-item">
-        <span class="op-state-key">Push</span>
-        <span class="op-state-val amber" id="sidebarPush">p0068 active</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Patent</span>
-        <span class="op-state-val red">NOT FILED</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Market</span>
-        <span class="op-state-val" id="sidebarMarket" style="color:var(--muted)">-</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">S0 delta</span>
-        <span class="op-state-val" id="sidebarS0Delta" style="color:var(--muted)">-</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Signal env</span>
-        <span class="op-state-val" id="sidebarSignal" style="color:var(--muted)">-</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Last tool</span>
-        <span class="op-state-val" id="sidebarLastTool" style="color:var(--muted)">none</span>
-      </div>
-    </div>
-
-    <!-- JOS State -->
-    <div class="op-state-section">
-      <div class="op-state-title">JOS Fields</div>
-      <div class="op-state-item">
-        <span class="op-state-key">Objective</span>
-        <span class="op-state-val" id="josObj" style="color:var(--muted)">- not set</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Constraints</span>
-        <span class="op-state-val" id="josCon" style="color:var(--muted)">- not set</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Done When</span>
-        <span class="op-state-val" id="josDone" style="color:var(--muted)">- not set</span>
-      </div>
-      <div class="op-state-item">
-        <span class="op-state-key">Closure</span>
-        <span class="op-state-val green">Jame</span>
-      </div>
-    </div>
-
-    <!-- Tools -->
-    <div class="op-state-section">
-      <div class="op-state-title">Tools</div>
-      <button class="op-tool-btn" id="toolSignal" onclick="executeTool('signal')">
-        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M5.6 5.6l1.4 1.4"></path><path d="M17 17l1.4 1.4"></path><path d="M5.6 18.4l1.4-1.4"></path><path d="M17 7l1.4-1.4"></path><circle cx="12" cy="12" r="3"></circle></svg></span> NTI Signal Scanner
-      </button>
-      <button class="op-tool-btn" id="toolMarket" onclick="executeTool('market')">
-        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg></span> S&amp;P itB0 Model
-      </button>
-      <button class="op-tool-btn" id="toolFortune" onclick="executeTool('fortune500')">
-        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="13" y2="16"></line></svg></span> Fortune 500 Feed
-      </button>
-      <button class="op-tool-btn" id="toolScore" onclick="promptScoreText()">
-        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="9 14 11 16 15 12"></polyline></svg></span> Score Any Text
-      </button>
-      <button class="op-tool-btn" id="toolUpload" onclick="triggerUpload()">
-        <span class="tool-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span> Upload + Score File
-      </button>
-      <input type="file" id="fileUploadInput" accept=".txt,.pdf,.docx,.csv,.md,.html"
-             style="display:none" onchange="handleFileUpload(this)">
-      
-      
-      
-    </div>
-
-    <!-- Session history placeholder -->
-    <div class="op-state-section" style="flex:1;">
-      <div class="op-state-title">Recent Sessions</div>
-      <div id="sessionList" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">
-        Loading...
-      </div>
+    <div class="op-thread-list" id="threadList">
+      <div class="op-thread-empty">Loading threads...</div>
     </div>
   </aside>
 
   <!-- -- CENTER CHAT ------------------------------------------- -->
   <main class="op-chat">
-    <div class="op-chat-header">
-      <span class="op-chat-title">OPERATOR ROOM</span>
-      <div class="op-chat-meta">
-        <span class="op-nii-live" id="liveNII">NII -</span>
-        <span class="op-model-badge">claude-sonnet-4-6</span>
-      </div>
-    </div>
-
-    <!-- JOS bar -->
-    <div class="op-jos-bar">
-      <div class="op-jos-tag required" id="josObjTag" onclick="setJOS('objective')">
-        OBJ <span id="josObjShort">- set objective</span>
-      </div>
-      <div class="op-jos-tag" id="josConTag" onclick="setJOS('constraint')">
-        CON <span id="josConShort">- constraints</span>
-      </div>
-      <div class="op-jos-tag" id="josNogoTag" onclick="setJOS('nogo')">
-        NO-GO <span id="josNogoShort">-</span>
-      </div>
-      <div class="op-jos-tag" id="josDoneTag" onclick="setJOS('done')">
-        DONE WHEN <span id="josDoneShort">-</span>
-      </div>
-      <div class="op-jos-tag set">
-        CLOSURE <span>Jame</span>
-      </div>
-    </div>
 
     <!-- Messages -->
     <div class="op-messages" id="messages">
       <div class="op-empty" id="emptyState">
         <div class="op-empty-logo">AZ</div>
         <p>Operator workspace. Full project context loaded. NTI V3 governs every response.</p>
-        <div class="op-empty-hints">
-          <div class="op-hint-chip" onclick="useHint(this)">What is the current S0 entering today?</div>
-          <div class="op-hint-chip" onclick="useHint(this)">Score this text through NTI: [paste text]</div>
-          <div class="op-hint-chip" onclick="useHint(this)">Build Tuesday's market S0 from today's data</div>
-          <div class="op-hint-chip" onclick="useHint(this)">What are the three non-negotiables this week?</div>
-        </div>
       </div>
     </div>
 
     <!-- Input -->
     <div class="op-input-area">
+      <input type="file" id="fileUploadInput" accept=".txt,.pdf,.docx,.csv,.md,.html"
+             style="display:none" onchange="handleFileUpload(this)">
       <div class="op-input-row">
         <div class="op-input-wrap">
-          <textarea
-            class="op-textarea"
-            id="msgInput"
-            placeholder="Message the operator room..."
-            rows="1"
-            onkeydown="handleKey(event)"
-            oninput="autoResize(this)"
-          ></textarea>
+          <div class="op-input-top">
+            <button class="op-attach-btn" onclick="triggerUpload()" title="Attach file" aria-label="Attach file">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            </button>
+            <textarea
+              class="op-textarea"
+              id="msgInput"
+              placeholder="Message the operator room..."
+              rows="1"
+              onkeydown="handleKey(event)"
+              oninput="autoResize(this)"
+            ></textarea>
+          </div>
           <div class="op-input-footer">
-            <span class="op-input-hint" id="inputHint">Enter to send - Shift+Enter for newline</span>
-            <span class="op-input-hint" id="charCount">0</span>
+            <span class="op-input-hint" id="inputHint">Enter to send · Shift+Enter for newline</span>
+            <span class="op-input-hint" id="charCount"></span>
           </div>
         </div>
         <button class="op-send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
@@ -931,102 +677,6 @@
     </div>
   </main>
 
-  <!-- -- RIGHT PANEL - NTI LIVE -------------------------------- -->
-  <aside class="op-nti-panel">
-    <div class="op-panel-header">NTI ANALYSIS</div>
-    <div class="op-panel-body" id="ntiPanel">
-
-      <!-- Score ring -->
-      <div class="op-score-ring">
-        <div class="op-ring-num" id="ntiScore">-</div>
-        <div class="op-ring-label" id="ntiLabel">WAITING</div>
-      </div>
-
-      <!-- Failure modes -->
-      <div style="margin-bottom:12px;">
-        <div class="op-state-title" style="margin-bottom:6px;">FAILURE MODES</div>
-        <div class="op-fm-row">
-          <span class="op-fm-key">UDDS</span>
-          <span class="op-fm-val false" id="fmUDDS">FALSE</span>
-        </div>
-        <div class="op-fm-row">
-          <span class="op-fm-key">DCE</span>
-          <span class="op-fm-val false" id="fmDCE">FALSE</span>
-        </div>
-        <div class="op-fm-row">
-          <span class="op-fm-key">CCA</span>
-          <span class="op-fm-val false" id="fmCCA">FALSE</span>
-        </div>
-      </div>
-
-      <!-- Tilt -->
-      <div style="margin-bottom:12px;">
-        <div class="op-state-title" style="margin-bottom:6px;">TILT DETECTED</div>
-        <div id="tiltTags" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">
-          None
-        </div>
-      </div>
-
-      <!-- V3 -->
-      <div style="margin-bottom:12px;">
-        <div class="op-state-title" style="margin-bottom:6px;">V3 ENFORCEMENT</div>
-        <div class="op-fm-row">
-          <span class="op-fm-key">Passed</span>
-          <span class="op-fm-val false" id="v3Passed">-</span>
-        </div>
-        <div class="op-fm-row">
-          <span class="op-fm-key">Actions</span>
-          <span class="op-fm-val" id="v3Actions" style="color:var(--muted);">-</span>
-        </div>
-      </div>
-
-      <!-- Session stats -->
-      <div>
-        <div class="op-state-title" style="margin-bottom:6px;">SESSION</div>
-        <div class="op-session-stat">
-          <span class="op-session-key">Messages</span>
-          <span class="op-session-val" id="statMsgs">0</span>
-        </div>
-        <div class="op-session-stat">
-          <span class="op-session-key">Avg NII</span>
-          <span class="op-session-val" id="statAvgNII">-</span>
-        </div>
-        <div class="op-session-stat">
-          <span class="op-session-key">Flagged</span>
-          <span class="op-session-val red" id="statFlagged">0</span>
-        </div>
-        <div class="op-session-stat">
-          <span class="op-session-key">S0 delta</span>
-          <span class="op-session-val" id="statS0Delta">+0.000</span>
-        </div>
-      </div>
-
-
-      <!-- Memory Log -->
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
-        <div class="op-state-title" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-          <span>MEMORY LOG</span>
-          <span onclick="loadMemory()" style="cursor:pointer;color:var(--accent);font-size:9px;">? REFRESH</span>
-        </div>
-        <div id="memoryLog" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);max-height:180px;overflow-y:auto;">
-          Loading...
-        </div>
-      </div>
-
-    </div>
-  </aside>
-</div>
-
-<!-- JOS Modal -->
-<div id="josModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
-  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:90vw;">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);margin-bottom:16px;" id="josModalTitle">SET OBJECTIVE</div>
-    <textarea id="josModalInput" style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:80px;outline:none;resize:vertical;" placeholder="Enter value..."></textarea>
-    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-      <button onclick="closeJOS()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">CANCEL</button>
-      <button onclick="saveJOS()" style="padding:8px 16px;border-radius:6px;border:none;background:var(--accent);color:#000;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">SET</button>
-    </div>
-  </div>
 </div>
 
 <!-- Settings Modal -->
@@ -1040,7 +690,7 @@
       <div class="op-field">
         <label class="op-field-label" for="setPush">Push State</label>
         <input class="op-field-input" id="setPush" type="text" placeholder="p0068 active" autocomplete="off">
-        <span class="op-field-hint">Shown in sidebar and injected into system prompt.</span>
+        <span class="op-field-hint">Injected into system prompt.</span>
       </div>
       <div class="op-field">
         <label class="op-field-label" for="setModel">Model</label>
@@ -1069,20 +719,25 @@
 
 {% block scripts %}
 <script>
+window.AZ_CONFIG = {
+  push_state:    "{{ push_state | default('p0068 active') | e }}",
+  patent_status: "{{ patent_status | default('NOT FILED') | e }}",
+  operator_name: "{{ operator_name | default('Jame') | e }}",
+  default_model: "{{ default_model | default('claude-sonnet-4-6') | e }}"
+};
+</script>
+<script>
 
 // -- STATE -----------------------------------------------------
 const CLAUDE_API = '/operator/api/chat';
-const NTI_API = '/operator/score';
+const NTI_API    = '/operator/score';
 
-let messages      = [];
-let josState      = { objective:'', constraint:'', nogo:'', done:'' };
-let sessionStats  = { count:0, niiSum:0, flagged:0 };
-let isLoading     = false;
-let currentJOS    = null;
+let messages     = [];
+let sessionStats = { count: 0, niiSum: 0, flagged: 0 };
+let isLoading    = false;
+let currentThreadId = null;
 
 // -- OPERATOR SETTINGS ----------------------------------------
-// Stored in sessionStorage. Never sent to server (except model + operator_key
-// passed in chat fetch body). Anthropic key stays browser-side only.
 const SETTINGS_KEY = 'az_operator_settings';
 
 function getOperatorSettings() {
@@ -1091,8 +746,9 @@ function getOperatorSettings() {
 }
 
 function buildSystem() {
-  const s = getOperatorSettings();
-  const push = s.push || 'p0068 active';
+  const s    = getOperatorSettings();
+  const cfg  = window.AZ_CONFIG || {};
+  const push = s.push || cfg.push_state || 'p0068 active';
   return `You are operating inside the Artifact Zero Operator Room.
 
 OPERATOR: Jame Houghton, Founder, Artifact Zero Labs, Knoxville TN.
@@ -1122,22 +778,12 @@ When asked to score text, the operator room will call the internal NTI endpoint.
 When asked to run tools, use the /operator/run endpoint.`;
 }
 
-function applySettingsToUI() {
-  const s = getOperatorSettings();
-  // Sidebar push label
-  const pushEl = document.getElementById('sidebarPush');
-  if (pushEl && s.push) pushEl.textContent = s.push;
-  // Model badge
-  const modelBadge = document.querySelector('.op-model-badge');
-  if (modelBadge && s.model) modelBadge.textContent = s.model;
-}
-
 function openSettings() {
   const s = getOperatorSettings();
-  document.getElementById('setPush').value          = s.push          || '';
-  document.getElementById('setModel').value         = s.model         || '';
-  document.getElementById('setAnthropicKey').value  = s.anthropicKey  || '';
-  document.getElementById('setOperatorKey').value   = s.operatorKey   || '';
+  document.getElementById('setPush').value         = s.push         || '';
+  document.getElementById('setModel').value        = s.model        || '';
+  document.getElementById('setAnthropicKey').value = s.anthropicKey || '';
+  document.getElementById('setOperatorKey').value  = s.operatorKey  || '';
   document.getElementById('settingsModal').classList.add('open');
 }
 
@@ -1153,15 +799,170 @@ function saveSettings() {
     operatorKey:  document.getElementById('setOperatorKey').value.trim(),
   };
   sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-  applySettingsToUI();
   closeSettings();
+}
+
+// -- MOBILE DRAWER TOGGLES ------------------------------------
+function toggleOpDrawer(which) {
+  const shell    = document.querySelector('.op-shell');
+  const backdrop = document.getElementById('opDrawerBackdrop');
+  if (!shell) return;
+  const isOpen = shell.classList.toggle('op-sidebar-open');
+  backdrop.classList.toggle('open', isOpen);
+}
+
+function closeAllOpDrawers() {
+  const shell    = document.querySelector('.op-shell');
+  const backdrop = document.getElementById('opDrawerBackdrop');
+  if (!shell) return;
+  shell.classList.remove('op-sidebar-open');
+  backdrop.classList.remove('open');
+}
+
+// -- THREAD LIST -----------------------------------------------
+let threadList = []; // { id, name, created_at }
+
+function renderThreadList() {
+  const el = document.getElementById('threadList');
+  if (!threadList.length) {
+    el.innerHTML = '<div class="op-thread-empty">No threads yet</div>';
+    return;
+  }
+  el.innerHTML = threadList.map(t => `
+    <div class="op-thread-item${t.id === currentThreadId ? ' active' : ''}"
+         id="thread_${t.id}" onclick="switchThread('${t.id}')">
+      <span class="op-thread-title" id="threadTitle_${t.id}">${escHtml(t.name || t.summary || 'Untitled')}</span>
+      <span class="op-thread-date">${t.created_at ? t.created_at.slice(5,10) : ''}</span>
+      <button class="op-thread-rename-btn" onclick="startRename(event,'${t.id}')" title="Rename" aria-label="Rename thread">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      </button>
+    </div>
+  `).join('');
+}
+
+function newThread() {
+  messages        = [];
+  currentThreadId = null;
+  sessionStats    = { count: 0, niiSum: 0, flagged: 0 };
+
+  const msgsEl = document.getElementById('messages');
+  msgsEl.innerHTML = '';
+  const empty = document.createElement('div');
+  empty.className = 'op-empty';
+  empty.id = 'emptyState';
+  empty.innerHTML = '<div class="op-empty-logo">AZ</div><p>Operator workspace. Full project context loaded. NTI V3 governs every response.</p>';
+  msgsEl.appendChild(empty);
+
+  renderThreadList();
+  document.getElementById('msgInput').focus();
+  closeAllOpDrawers();
+}
+
+async function switchThread(id) {
+  if (id === currentThreadId) { closeAllOpDrawers(); return; }
+
+  try {
+    const res  = await fetch(`/operator/sessions/${id}`);
+    const data = await res.json();
+
+    currentThreadId = id;
+    messages        = data.messages || [];
+    sessionStats    = { count: 0, niiSum: 0, flagged: 0 };
+
+    const msgsEl = document.getElementById('messages');
+    msgsEl.innerHTML = '';
+    messages.forEach(m => renderMessage(m.role, m.content));
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    renderThreadList();
+    closeAllOpDrawers();
+    document.getElementById('msgInput').focus();
+  } catch (e) {
+    console.error('Failed to load session:', e);
+  }
+}
+
+function startRename(e, id) {
+  e.stopPropagation();
+  const titleEl = document.getElementById('threadTitle_' + id);
+  if (!titleEl) return;
+  const thread = threadList.find(t => t.id === id);
+  if (!thread) return;
+
+  const input = document.createElement('input');
+  input.className = 'op-thread-rename-input';
+  input.value = thread.name || thread.summary || '';
+  titleEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const commit = async () => {
+    const newName = input.value.trim() || 'Untitled';
+    thread.name = newName;
+    const span = document.createElement('span');
+    span.className = 'op-thread-title';
+    span.id = 'threadTitle_' + id;
+    span.textContent = newName;
+    input.replaceWith(span);
+    try {
+      await fetch(`/operator/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+    } catch (_) {}
+  };
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e2 => {
+    if (e2.key === 'Enter') { e2.preventDefault(); input.blur(); }
+    if (e2.key === 'Escape') { input.value = thread.name || thread.summary || ''; input.blur(); }
+  });
+}
+
+async function autoSaveThread() {
+  if (!messages.length) return;
+
+  const firstUser = messages.find(m => m.role === 'user');
+  const summary   = firstUser
+    ? firstUser.content.slice(0, 40) + (firstUser.content.length > 40 ? '…' : '')
+    : 'Untitled';
+
+  try {
+    const res  = await fetch('/operator/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: currentThreadId || undefined, messages, summary }),
+    });
+    const data = await res.json();
+
+    // Server may return the saved session id
+    if (data.id && !currentThreadId) {
+      currentThreadId = data.id;
+      // Prepend to local list so sidebar updates without a full reload
+      threadList.unshift({ id: data.id, name: data.name || summary, summary, created_at: data.created_at || new Date().toISOString() });
+      renderThreadList();
+    }
+  } catch (_) {}
+}
+
+async function loadThreadsFromServer() {
+  const el = document.getElementById('threadList');
+  el.innerHTML = '<div class="op-thread-empty">Loading…</div>';
+  try {
+    const res  = await fetch('/operator/sessions');
+    const data = await res.json();
+    threadList  = data.sessions || [];
+    renderThreadList();
+  } catch (e) {
+    el.innerHTML = '<div class="op-thread-empty">Not available</div>';
+  }
 }
 
 // -- INIT ------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-  applySettingsToUI();
+  loadThreadsFromServer();
   document.getElementById('msgInput').focus();
-  loadSessions(); loadMemory();
 });
 
 // -- CHAT ------------------------------------------------------
@@ -1170,18 +971,13 @@ async function sendMessage() {
   const text  = input.value.trim();
   if (!text || isLoading) return;
 
-  // Hide empty state
-  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('emptyState') && (document.getElementById('emptyState').style.display = 'none');
 
-  // Add user message
   addMessage('user', text);
   messages.push({ role: 'user', content: text });
   input.value = '';
   autoResize(input);
   updateCharCount('');
-
-  // Score user input through NTI
-  scoreText(text, 'input');
 
   setLoading(true);
 
@@ -1191,11 +987,10 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: buildSystem(),
-        messages: messages,
-        jos: josState,
-        model:        settings.model        || undefined,
-        operator_key: settings.operatorKey  || undefined,
+        system:        buildSystem(),
+        messages:      messages,
+        model:         settings.model       || undefined,
+        operator_key:  settings.operatorKey || undefined,
         anthropic_key: settings.anthropicKey || undefined,
       })
     });
@@ -1203,18 +998,19 @@ async function sendMessage() {
     const data = await res.json();
 
     if (data.error) {
-      addMessage('assistant', `Error: ${data.error}`, null);
+      addMessage('assistant', `Error: ${data.error}`);
     } else {
       const reply = data.content?.[0]?.text || data.text || '';
-      addMessage('assistant', reply, null);
+      addMessage('assistant', reply);
       messages.push({ role: 'assistant', content: reply });
 
-      // Score assistant response
       if (reply) {
-        const ntiResult = await scoreText(reply, 'output');
-        // Update last message with NTI score
+        const ntiResult = await scoreText(reply);
         updateLastMessageNTI(ntiResult);
       }
+
+      // Auto-save after every assistant response
+      autoSaveThread();
     }
   } catch (e) {
     addMessage('assistant', `Connection error: ${e.message}`);
@@ -1223,8 +1019,9 @@ async function sendMessage() {
   setLoading(false);
 }
 
-function addMessage(role, text, ntiData) {
-  const msgs    = document.getElementById('messages');
+// Renders a message bubble into #messages (used for both live and replay)
+function renderMessage(role, text) {
+  const msgs     = document.getElementById('messages');
   const initials = role === 'user' ? 'JH' : 'AZ';
 
   const div = document.createElement('div');
@@ -1233,20 +1030,22 @@ function addMessage(role, text, ntiData) {
     <div class="op-msg-avatar">${initials}</div>
     <div class="op-msg-body">
       <div class="op-msg-bubble">${escHtml(text)}</div>
-      <div class="op-msg-nii" id="msgNTI_${sessionStats.count}"></div>
+      ${role === 'assistant' ? `<div class="op-msg-nii" id="msgNTI_${sessionStats.count}"></div>` : ''}
     </div>
   `;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
+}
 
+function addMessage(role, text) {
+  renderMessage(role, text);
   sessionStats.count++;
-  document.getElementById('statMsgs').textContent = sessionStats.count;
 }
 
 function updateLastMessageNTI(ntiData) {
   if (!ntiData) return;
-  const idx     = sessionStats.count - 1;
-  const el      = document.getElementById(`msgNTI_${idx}`);
+  const idx = sessionStats.count - 1;
+  const el  = document.getElementById(`msgNTI_${idx}`);
   if (!el) return;
 
   const score   = extractNII(ntiData);
@@ -1254,36 +1053,28 @@ function updateLastMessageNTI(ntiData) {
   const cls     = score >= 70 ? 'good' : score >= 50 ? 'warn' : 'bad';
   const label   = score >= 70 ? 'HIGH INTEGRITY' : score >= 50 ? 'MODERATE' : 'LOW INTEGRITY';
 
-  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% - ${label}</span>`;
+  el.innerHTML = `<span class="op-nii-chip ${cls}">NII ${score}% · ${label}</span>`;
 
   sessionStats.niiSum += score;
   if (hasFlag) sessionStats.flagged++;
-
-  const avg = sessionStats.count > 0 ? Math.round(sessionStats.niiSum / sessionStats.count) : 0;
-  document.getElementById('statAvgNII').textContent = avg + '%';
-  document.getElementById('statFlagged').textContent = sessionStats.flagged;
 }
 
 // -- NTI SCORING -----------------------------------------------
-async function scoreText(text, context) {
+async function scoreText(text) {
   try {
-    const res = await fetch(NTI_API, {
+    const res  = await fetch(NTI_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
-    const data = await res.json();
-    updateNTIPanel(data, context);
-    return data;
-  } catch(e) {
+    return await res.json();
+  } catch (e) {
     return null;
   }
 }
 
 function extractNII(d) {
   if (!d) return 0;
-  // Server returns { nii, failure_modes, flags, tilt } at the top level.
-  // Older/alternate shapes nest under d.score — try both.
   const sc = d.score || {};
   let v = d.nii ?? d.nii_score ?? sc.nii ?? sc.nii_score ?? 0;
   if (v <= 1) v = Math.round(v * 100);
@@ -1296,175 +1087,7 @@ function hasFailures(d) {
   return Object.values(fm).some(v => String(v).includes('CONFIRMED') || String(v).includes('PROBABLE'));
 }
 
-function updateNTIPanel(data, ctx) {
-  if (!data || data.error) return;
-
-  const score  = extractNII(data);
-  const fm     = data.failure_modes || {};
-  // Server returns tilt as a flat array; older shape was { tilt: { tags: [...] } }
-  const tilt   = Array.isArray(data.tilt) ? data.tilt : (data.tilt?.tags || []);
-  const v3     = data.v3 || {};
-  const hasF   = hasFailures(data);
-
-  // Score ring
-  const ringEl = document.getElementById('ntiScore');
-  ringEl.textContent = score + '%';
-  ringEl.style.color = score >= 70 ? 'var(--accent)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
-
-  const label = score >= 80 ? 'HIGH INTEGRITY' : score >= 65 ? 'SOLID' : score >= 50 ? 'MODERATE' : score >= 35 ? 'WEAK' : 'FAILING';
-  document.getElementById('ntiLabel').textContent = label;
-
-  // Live NII badge in header
-  const liveBadge = document.getElementById('liveNII');
-  liveBadge.textContent = `NII ${score}%`;
-  liveBadge.className = 'op-nii-live ' + (score >= 70 ? 'scored' : 'flagged');
-
-  // Failure modes
-  const fmKeys = { UDDS: 'fmUDDS', DCE: 'fmDCE', CCA: 'fmCCA' };
-  Object.entries(fmKeys).forEach(([key, elId]) => {
-    const el  = document.getElementById(elId);
-    const val = String(fm[key] || 'FALSE');
-    el.textContent = val.includes('CONFIRMED') ? 'CONFIRMED' : val.includes('PROBABLE') ? 'PROBABLE' : 'FALSE';
-    el.className   = 'op-fm-val ' + (val.includes('CONFIRMED') ? 'conf' : val.includes('PROBABLE') ? 'prob' : 'false');
-  });
-
-  // Tilt
-  const tiltEl = document.getElementById('tiltTags');
-  tiltEl.innerHTML = tilt.length
-    ? tilt.map(t => `<span class="op-tilt-tag">${t}</span>`).join('')
-    : '<span style="color:var(--muted)">None</span>';
-
-  // V3
-  document.getElementById('v3Passed').textContent = v3.passed ? 'YES' : 'NO';
-  document.getElementById('v3Passed').className = 'op-fm-val ' + (v3.passed ? 'false' : 'conf');
-  document.getElementById('v3Actions').textContent = v3.actions_taken ?? '-';
-}
-
-// -- JOS -------------------------------------------------------
-function setJOS(field) {
-  currentJOS = field;
-  const labels = { objective:'SET OBJECTIVE', constraint:'SET CONSTRAINTS', nogo:'SET NO-GO ZONES', done:'DONE WHEN' };
-  document.getElementById('josModalTitle').textContent = labels[field] || 'SET';
-  document.getElementById('josModalInput').value = josState[field] || '';
-  const modal = document.getElementById('josModal');
-  modal.style.display = 'flex';
-  document.getElementById('josModalInput').focus();
-}
-
-function closeJOS() {
-  document.getElementById('josModal').style.display = 'none';
-  currentJOS = null;
-}
-
-function saveJOS() {
-  const val = document.getElementById('josModalInput').value.trim();
-  if (!currentJOS) return;
-  josState[currentJOS] = val;
-
-  const tagMap = { objective:'josObjTag', constraint:'josConTag', nogo:'josNogoTag', done:'josDoneTag' };
-  const shortMap = { objective:'josObjShort', constraint:'josConShort', nogo:'josNogoShort', done:'josDoneShort' };
-
-  const tagEl   = document.getElementById(tagMap[currentJOS]);
-  const shortEl = document.getElementById(shortMap[currentJOS]);
-
-  if (val) {
-    tagEl.className   = 'op-jos-tag set';
-    shortEl.textContent = val.length > 20 ? val.slice(0,20)+'-' : val;
-  }
-
-  // Update sidebar
-  if (currentJOS === 'objective') {
-    document.getElementById('josObj').textContent = val || '- not set';
-    document.getElementById('josObj').style.color = val ? 'var(--text)' : 'var(--muted)';
-  }
-
-  closeJOS();
-}
-
-// -- TOOLS - SERVER-SIDE EXECUTION -----------------------------
-async function executeTool(tool) {
-  const btnMap = { signal: 'toolSignal', market: 'toolMarket', fortune500: 'toolFortune' };
-  const btnId  = btnMap[tool];
-  const btn    = btnId ? document.getElementById(btnId) : null;
-
-  document.getElementById('emptyState').style.display = 'none';
-
-  // Show running state
-  if (btn) btn.classList.add('running');
-
-  const label = { signal: 'NTI Signal Scanner', market: 'S&P itB0 Model', fortune500: 'Fortune 500 Feed' }[tool] || tool;
-  addToolMessage(`Running ${label}...`, true);
-
-  try {
-    const res  = await fetch('/operator/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tool }),
-    });
-    const data = await res.json();
-
-    if (data.error) {
-      updateLastToolMessage(`Tool error: ${data.error}`);
-    } else {
-      updateLastToolMessage(data.result || 'No result returned');
-
-      // Update sidebar state from tool result
-      if (tool === 'signal' && data.summary) {
-        const delta = data.summary.s0_delta;
-        const avg   = data.summary.avg_nii;
-        document.getElementById('sidebarSignal').textContent  = `NII avg ${avg}%`;
-        document.getElementById('sidebarSignal').style.color  = avg >= 70 ? 'var(--accent)' : avg >= 50 ? 'var(--amber)' : 'var(--red)';
-        document.getElementById('sidebarS0Delta').textContent = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(3) : '-';
-        document.getElementById('sidebarS0Delta').style.color = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--red)' : 'var(--muted)';
-
-        // Update S0 display
-        if (delta !== undefined) {
-          const currentS0 = parseFloat(document.getElementById('s0Display').textContent) || 0.5;
-          const newS0     = Math.max(0, Math.min(1, currentS0 + delta)).toFixed(3);
-          document.getElementById('s0Display').textContent = newS0;
-          document.getElementById('s0Desc').textContent    = `Signal scan: delta ${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
-        }
-      }
-
-      if (tool === 'market' && data.summary) {
-        const s0  = data.summary.s0_computed;
-        const call = data.summary.call;
-        document.getElementById('sidebarMarket').textContent = call || '-';
-        document.getElementById('sidebarMarket').style.color = call === 'UP' ? 'var(--accent)' : call === 'DOWN' ? 'var(--red)' : 'var(--amber)';
-        if (s0 !== undefined && s0 !== null) {
-          document.getElementById('s0Display').textContent = s0.toFixed(3);
-          document.getElementById('s0Desc').textContent    = `itB0 model: call ${call}`;
-          const cls = s0 >= 0.65 ? 'strong' : s0 >= 0.50 ? 'moderate' : s0 >= 0.35 ? 'weak' : 'critical';
-          document.getElementById('s0Display').className = 'op-s0-score ' + cls;
-        }
-      }
-
-      document.getElementById('sidebarLastTool').textContent = label;
-      document.getElementById('sidebarLastTool').style.color = 'var(--accent)';
-
-      // Update S0 delta stat
-      if (data.s0_delta !== undefined && data.s0_delta !== null) {
-        const cur = parseFloat(document.getElementById('statS0Delta').textContent) || 0;
-        document.getElementById('statS0Delta').textContent = (cur + data.s0_delta >= 0 ? '+' : '') + (cur + data.s0_delta).toFixed(3);
-      }
-    }
-  } catch (e) {
-    updateLastToolMessage(`Connection error: ${e.message}`);
-  }
-
-  if (btn) btn.classList.remove('running');
-}
-
-function promptScoreText() {
-  const input = document.getElementById('msgInput');
-  input.value = 'Score this text through NTI: ';
-  autoResize(input);
-  input.focus();
-  // Position cursor after the colon
-  const pos = input.value.length;
-  input.setSelectionRange(pos, pos);
-}
-
+// -- FILE UPLOAD -----------------------------------------------
 function triggerUpload() {
   document.getElementById('fileUploadInput').click();
 }
@@ -1473,10 +1096,9 @@ async function handleFileUpload(inputEl) {
   const file = inputEl.files[0];
   if (!file) return;
 
-  document.getElementById('emptyState').style.display = 'none';
+  const emptyEl = document.getElementById('emptyState');
+  if (emptyEl) emptyEl.style.display = 'none';
 
-  const btn = document.getElementById('toolUpload');
-  btn.classList.add('running');
   addToolMessage(`Uploading ${file.name}...`, true);
 
   const formData = new FormData();
@@ -1490,22 +1112,11 @@ async function handleFileUpload(inputEl) {
       updateLastToolMessage(`Upload error: ${data.error}`);
     } else {
       updateLastToolMessage(data.result || 'Upload processed');
-
-      // Update sidebar
-      document.getElementById('sidebarLastTool').textContent = `upload: ${file.name.slice(0, 20)}`;
-      document.getElementById('sidebarLastTool').style.color = 'var(--accent)';
-
-      // Score the upload through NTI panel
-      if (data.summary) {
-        updateNTIPanel(data.summary, 'upload');
-      }
     }
   } catch (e) {
     updateLastToolMessage(`Upload error: ${e.message}`);
   }
 
-  btn.classList.remove('running');
-  // Reset file input so same file can be re-uploaded
   inputEl.value = '';
 }
 
@@ -1526,63 +1137,17 @@ function addToolMessage(text, isLoading) {
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   sessionStats.count++;
-  document.getElementById('statMsgs').textContent = sessionStats.count;
 }
 
 function updateLastToolMessage(text) {
   const idx = sessionStats.count - 1;
   const el  = document.getElementById('toolResult_' + idx);
-  if (el) {
-    el.innerHTML = `<span class="tool-label">TOOL OUTPUT</span>${escHtml(text)}`;
-  }
+  if (el) el.innerHTML = `<span class="tool-label">TOOL OUTPUT</span>${escHtml(text)}`;
   const msgs = document.getElementById('messages');
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-// -- SESSION HISTORY -------------------------------------------
-async function loadSessions() {
-  try {
-    const res  = await fetch('/operator/sessions');
-    const data = await res.json();
-    const el   = document.getElementById('sessionList');
-    if (!data.sessions?.length) {
-      el.textContent = 'No previous sessions';
-      return;
-    }
-    el.innerHTML = data.sessions.slice(0,8).map(s => `
-      <div style="padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="loadSession('${s.id}')">
-        <div style="color:var(--dim);margin-bottom:2px;">${s.summary?.slice(0,35) || 'Session'}-</div>
-        <div style="font-size:9px;color:var(--muted)">${s.created_at?.slice(0,16) || ''}</div>
-      </div>
-    `).join('');
-  } catch(e) {
-    document.getElementById('sessionList').textContent = 'Not available';
-  }
-}
-
 // -- HELPERS ---------------------------------------------------
-
-async function loadMemory() {
-  const el = document.getElementById('memoryLog');
-  if (!el) return;
-  try {
-    const res  = await fetch('/operator/context?limit=10');
-    const data = await res.json();
-    if (!data.rows?.length) {
-      el.textContent = 'No memory entries';
-      return;
-    }
-    el.innerHTML = data.rows.map(r => `
-      <div style="padding:5px 0;border-bottom:1px solid var(--border);">
-        <div style="color:var(--dim);font-size:9px;margin-bottom:2px;">${r.summary?.slice(0,40) || r.push || 'ctx'}&#8230;</div>
-        <div style="color:var(--muted);font-size:8px;">${r.created_at?.slice(0,16) || ''} &middot; ${r.source || ''}</div>
-      </div>
-    `).join('');
-  } catch(e) {
-    el.textContent = 'Not available';
-  }
-}
-
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -1598,14 +1163,8 @@ function autoResize(el) {
 }
 
 function updateCharCount(text) {
-  document.getElementById('charCount').textContent = text.length || '';
-}
-
-function useHint(el) {
-  const input = document.getElementById('msgInput');
-  input.value = el.textContent.trim();
-  autoResize(input);
-  input.focus();
+  const el = document.getElementById('charCount');
+  if (el) el.textContent = text.length || '';
 }
 
 function setLoading(v) {
@@ -1634,7 +1193,7 @@ function setLoading(v) {
 }
 
 function escHtml(str) {
-  return str
+  return String(str)
     .replace(/&/g,'&amp;')
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;')
@@ -1642,9 +1201,5 @@ function escHtml(str) {
     .replace(/\n/g,'<br>');
 }
 
-// Close JOS modal on backdrop click
-document.getElementById('josModal').addEventListener('click', function(e) {
-  if (e.target === this) closeJOS();
-});
 </script>
 {% endblock %}
