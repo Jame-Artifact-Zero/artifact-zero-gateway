@@ -1,25 +1,19 @@
-# SQLite databases - never commit, causes CI lock failures
-*.db
-*.db-wal
-*.db-shm
-# Local startup scripts with credentials - never commit
-az_start.bat
-# Python
+# Python runtime artifacts
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-# Environment
-.env
-.env.*
-# OS
-.DS_Store
-Thumbs.db
-taskdef_edit.json
-taskdef_clean.json
-taskdef_current.json
-taskdef_new.json
-taskdef_final.json
-# Dump files - never commit
-*_dump.txt
+*.py[cod]
+*$py.class
+
+# Local scratch / diagnostics
+chk.py
+
+# Cookie / credential / session artifacts
+cookies.txt
+
+# Local operational runners
+run_f500.ps1
+
+# Local seed scripts with private endpoints or keys
+seed_operator_memory.py
+
+# AWS/ECS local task-definition drafts
+cstore-task-def*.json
