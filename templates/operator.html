@@ -903,7 +903,7 @@ function renderThreadList() {
   el.innerHTML = threadList.map(t => `
     <div class="op-thread-item${t.id === currentThreadId ? ' active' : ''}"
          id="thread_${t.id}" onclick="switchThread('${t.id}')">
-      <span class="op-thread-title" id="threadTitle_${t.id}">${escHtml(t.title || 'Untitled')}</span>
+      <span class="op-thread-title" id="threadTitle_${t.id}">${escHtml(t.name || t.summary || 'Untitled')}</span>
       <span class="op-thread-date">${t.created_at ? t.created_at.slice(5,10) : ''}</span>
       <button class="op-thread-rename-btn" onclick="startRename(event,'${t.id}')" title="Rename" aria-label="Rename thread">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -945,9 +945,15 @@ async function switchThread(id) {
     messages        = data.messages || [];
     sessionStats    = { count: 0, niiSum: 0, flagged: 0 };
 
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.style.display = 'none';
+
     const msgsEl = document.getElementById('messages');
     msgsEl.innerHTML = '';
-    messages.forEach(m => renderMessage(m.role, m.content));
+    messages.forEach(m => {
+      renderMessage(m.role, m.content);
+      if (m.role === 'assistant') sessionStats.count++;
+    });
     msgsEl.scrollTop = msgsEl.scrollHeight;
 
     renderThreadList();
@@ -1090,7 +1096,7 @@ async function sendMessage() {
       }
 
       // Auto-save after every assistant response
-      autoSaveThread();
+      await autoSaveThread();
     }
   } catch (e) {
     addMessage('assistant', `Connection error: ${e.message}`);
