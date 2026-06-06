@@ -5,14 +5,15 @@
 {% block head %}
 <style>
 /* -- OPERATOR ROOM ------------------------------------------- */
-.page-operator .az-main { padding: 0; overflow: hidden; height: calc(100vh - 56px); }
+.page-operator .az-main { padding: 0; overflow: hidden; height: calc(100vh - 56px); display: flex; flex-direction: column; }
 .page-operator .az-bottomnav { display: none; }
 .page-operator .az-footer { display: none; }
 
 .op-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: var(--bg);
   overflow: hidden;
 }
@@ -337,6 +338,18 @@
   flex-shrink: 0;
 }
 .op-attach-btn:hover { color: var(--accent); }
+.op-mic-btn {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  padding: 12px 14px 12px 8px; display: flex; align-items: center;
+  justify-content: center; transition: color 0.15s; flex-shrink: 0;
+}
+.op-mic-btn:hover { color: var(--accent); }
+.op-mic-btn.recording { color: var(--red); animation: mic-pulse 1s infinite; }
+@keyframes mic-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 
 .op-textarea {
   flex: 1;
@@ -606,6 +619,62 @@
     color: var(--accent);
   }
 }
+
+/* -- MARKDOWN RENDERING -------------------------------------- */
+.op-msg-bubble.md h1,.op-msg-bubble.md h2,.op-msg-bubble.md h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600; margin: 16px 0 6px; color: var(--text); line-height: 1.3;
+}
+.op-msg-bubble.md h1 { font-size: 18px; }
+.op-msg-bubble.md h2 { font-size: 15px; }
+.op-msg-bubble.md h3 { font-size: 13px; letter-spacing: 0.5px; }
+.op-msg-bubble.md p  { margin: 0 0 10px; }
+.op-msg-bubble.md p:last-child { margin-bottom: 0; }
+.op-msg-bubble.md strong { font-weight: 700; color: var(--text); }
+.op-msg-bubble.md em     { font-style: italic; color: var(--dim); }
+.op-msg-bubble.md hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+.op-msg-bubble.md ul,
+.op-msg-bubble.md ol { margin: 6px 0 10px; padding-left: 20px; }
+.op-msg-bubble.md li { margin-bottom: 4px; line-height: 1.5; }
+.op-msg-bubble.md > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  background: var(--s3); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px; color: var(--accent);
+}
+.op-msg-bubble.md code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  background: var(--s3); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px; color: var(--accent);
+}
+.op-msg-bubble.md pre {
+  background: var(--s3); border: 1px solid var(--border);
+  border-radius: 7px; margin: 10px 0; overflow: hidden;
+}
+.op-msg-bubble.md .pre-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--s2);
+}
+.op-msg-bubble.md .pre-lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  letter-spacing: 1px; color: var(--muted); text-transform: uppercase;
+}
+.op-msg-bubble.md .pre-copy {
+  background: transparent; border: 1px solid var(--border); border-radius: 3px;
+  color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  letter-spacing: 1px; padding: 2px 8px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.op-msg-bubble.md .pre-copy:hover,
+.op-msg-bubble.md .pre-copy.copied { color: var(--accent); border-color: var(--accent); }
+.op-msg-bubble.md pre code {
+  display: block; padding: 14px 16px; font-size: 12px; line-height: 1.6;
+  overflow-x: auto; background: transparent; border: none; border-radius: 0;
+  color: var(--dim); white-space: pre;
+}
+.op-msg-bubble.md blockquote {
+  border-left: 3px solid var(--accent); margin: 8px 0;
+  padding: 4px 12px; color: var(--dim); font-style: italic;
+}
 </style>
 {% endblock %}
 
@@ -664,6 +733,9 @@
               onkeydown="handleKey(event)"
               oninput="autoResize(this)"
             ></textarea>
+            <button class="op-mic-btn" id="micBtn" onclick="toggleMic()" title="Voice input" aria-label="Voice input">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </button>
           </div>
           <div class="op-input-footer">
             <span class="op-input-hint" id="inputHint">Enter to send · Shift+Enter for newline</span>
@@ -820,7 +892,7 @@ function closeAllOpDrawers() {
 }
 
 // -- THREAD LIST -----------------------------------------------
-let threadList = []; // { id, name, created_at }
+let threadList = []; // { id, title, created_at, messages }
 
 function renderThreadList() {
   const el = document.getElementById('threadList');
@@ -831,7 +903,7 @@ function renderThreadList() {
   el.innerHTML = threadList.map(t => `
     <div class="op-thread-item${t.id === currentThreadId ? ' active' : ''}"
          id="thread_${t.id}" onclick="switchThread('${t.id}')">
-      <span class="op-thread-title" id="threadTitle_${t.id}">${escHtml(t.name || t.summary || 'Untitled')}</span>
+      <span class="op-thread-title" id="threadTitle_${t.id}">${escHtml(t.title || 'Untitled')}</span>
       <span class="op-thread-date">${t.created_at ? t.created_at.slice(5,10) : ''}</span>
       <button class="op-thread-rename-btn" onclick="startRename(event,'${t.id}')" title="Rename" aria-label="Rename thread">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -840,7 +912,9 @@ function renderThreadList() {
   `).join('');
 }
 
-function newThread() {
+async function newThread() {
+  if (messages.length) await autoSaveThread();
+
   messages        = [];
   currentThreadId = null;
   sessionStats    = { count: 0, niiSum: 0, flagged: 0 };
@@ -853,13 +927,15 @@ function newThread() {
   empty.innerHTML = '<div class="op-empty-logo">AZ</div><p>Operator workspace. Full project context loaded. NTI V3 governs every response.</p>';
   msgsEl.appendChild(empty);
 
-  renderThreadList();
+  await loadThreadsFromServer();
   document.getElementById('msgInput').focus();
   closeAllOpDrawers();
 }
 
 async function switchThread(id) {
   if (id === currentThreadId) { closeAllOpDrawers(); return; }
+
+  if (messages.length) await autoSaveThread();
 
   try {
     const res  = await fetch(`/operator/sessions/${id}`);
@@ -936,12 +1012,15 @@ async function autoSaveThread() {
     });
     const data = await res.json();
 
-    // Server may return the saved session id
-    if (data.id && !currentThreadId) {
+    if (data.id) {
       currentThreadId = data.id;
-      // Prepend to local list so sidebar updates without a full reload
-      threadList.unshift({ id: data.id, name: data.name || summary, summary, created_at: data.created_at || new Date().toISOString() });
-      renderThreadList();
+      const existing = threadList.find(t => t.id === data.id);
+      if (existing) {
+        existing.messages = [...messages];
+      } else {
+        threadList.unshift({ id: data.id, name: data.name || summary, summary, created_at: data.created_at || new Date().toISOString() });
+        renderThreadList();
+      }
     }
   } catch (_) {}
 }
@@ -964,6 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadThreadsFromServer();
   document.getElementById('msgInput').focus();
 });
+
 
 // -- CHAT ------------------------------------------------------
 async function sendMessage() {
@@ -1024,18 +1104,110 @@ function renderMessage(role, text) {
   const msgs     = document.getElementById('messages');
   const initials = role === 'user' ? 'JH' : 'AZ';
 
+  const avatar = document.createElement('div');
+  avatar.className = 'op-msg-avatar';
+  avatar.textContent = initials;
+
+  const bubble = document.createElement('div');
+  if (role === 'assistant') {
+    bubble.className = 'op-msg-bubble md';
+    bubble.innerHTML = renderMarkdown(text);
+    bubble.querySelectorAll('.pre-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const code = btn.closest('pre').querySelector('code');
+        navigator.clipboard.writeText(code.innerText).then(() => {
+          btn.textContent = 'COPIED';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 1500);
+        });
+      });
+    });
+  } else {
+    bubble.className = 'op-msg-bubble';
+    bubble.innerHTML = escHtml(text);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'op-msg-body';
+  body.appendChild(bubble);
+  if (role === 'assistant') {
+    const nii = document.createElement('div');
+    nii.className = 'op-msg-nii';
+    nii.id = 'msgNTI_' + sessionStats.count;
+    body.appendChild(nii);
+  }
+
   const div = document.createElement('div');
-  div.className = `op-msg ${role}`;
-  div.innerHTML = `
-    <div class="op-msg-avatar">${initials}</div>
-    <div class="op-msg-body">
-      <div class="op-msg-bubble">${escHtml(text)}</div>
-      ${role === 'assistant' ? `<div class="op-msg-nii" id="msgNTI_${sessionStats.count}"></div>` : ''}
-    </div>
-  `;
+  div.className = 'op-msg ' + role;
+  div.appendChild(avatar);
+  div.appendChild(body);
+
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 }
+
+// -- MARKDOWN RENDERER -----------------------------------------
+function renderMarkdown(raw) {
+  // 1. Extract fenced code blocks to protect them
+  const blocks = [];
+  let text = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+    blocks.push({ lang: lang || 'text', code: code });
+    return 'CODEBLOCK_' + (blocks.length - 1) + '_END';
+  });
+
+  // 2. Escape HTML in remaining text
+  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // 3. Structural elements
+  text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  text = text.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+  text = text.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+  text = text.replace(/^(---|===|\*\*\*)$/gm, '<hr>');
+
+  // 4. Inline formatting
+  text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  text = text.replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>');
+  text = text.replace(/__(.+?)__/g,         '<strong>$1</strong>');
+  text = text.replace(/\*([^*\n]+?)\*/g,    '<em>$1</em>');
+  text = text.replace(/_([^_\n]+?)_/g,      '<em>$1</em>');
+  text = text.replace(/`([^`]+)`/g,         '<code>$1</code>');
+
+  // 5. Blockquotes
+  text = text.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+  // 6. Lists — collect consecutive lines
+  text = text.replace(/((?:^[-*] .+\n?)+)/gm, function(match) {
+    var items = match.trim().split('\n').map(function(l) {
+      return '<li>' + l.replace(/^[-*] /, '') + '</li>';
+    }).join('');
+    return '<ul>' + items + '</ul>';
+  });
+  text = text.replace(/((?:^\d+\. .+\n?)+)/gm, function(match) {
+    var items = match.trim().split('\n').map(function(l) {
+      return '<li>' + l.replace(/^\d+\. /, '') + '</li>';
+    }).join('');
+    return '<ol>' + items + '</ol>';
+  });
+
+  // 7. Paragraphs — wrap double-newline blocks
+  var sections = text.split(/\n{2,}/);
+  text = sections.map(function(block) {
+    block = block.trim();
+    if (!block) return '';
+    if (/^<(h[1-3]|ul|ol|hr|blockquote|pre|CODEBLOCK)/.test(block)) return block;
+    return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+  }).join('\n');
+
+  // 8. Restore code blocks
+  text = text.replace(/CODEBLOCK_(\d+)_END/g, function(_, i) {
+    var b    = blocks[parseInt(i)];
+    var safe = b.code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<pre><div class="pre-header"><span class="pre-lang">' + b.lang + '</span><button class="pre-copy" type="button">COPY</button></div><code>' + safe + '</code></pre>';
+  });
+
+  return text;
+}
+
 
 function addMessage(role, text) {
   renderMessage(role, text);
@@ -1145,6 +1317,65 @@ function updateLastToolMessage(text) {
   if (el) el.innerHTML = `<span class="tool-label">TOOL OUTPUT</span>${escHtml(text)}`;
   const msgs = document.getElementById('messages');
   msgs.scrollTop = msgs.scrollHeight;
+}
+
+// -- VOICE INPUT ----------------------------------------------
+let mediaRecorder = null;
+let audioChunks   = [];
+let isRecording   = false;
+
+function toggleMic() {
+  if (isRecording) { stopMic(); } else { startMic(); }
+}
+
+async function startMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Microphone not supported in this browser.'); return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks  = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = function(e) { if (e.data.size) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      var blob = new Blob(audioChunks, { type: 'audio/webm' });
+      await transcribeAudio(blob);
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById('micBtn').classList.add('recording');
+    document.getElementById('micBtn').title = 'Stop recording';
+    document.getElementById('inputHint').textContent = 'Recording… click mic to stop';
+  } catch (e) {
+    alert('Microphone access denied.');
+  }
+}
+
+function stopMic() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  isRecording = false;
+  document.getElementById('micBtn').classList.remove('recording');
+  document.getElementById('micBtn').title = 'Voice input';
+  document.getElementById('inputHint').textContent = 'Enter to send · Shift+Enter for newline';
+}
+
+async function transcribeAudio(blob) {
+  var hint = document.getElementById('inputHint');
+  hint.textContent = 'Transcribing…';
+  try {
+    var formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    var res  = await fetch('/operator/transcribe', { method: 'POST', body: formData });
+    var data = await res.json();
+    if (data.text) {
+      var input = document.getElementById('msgInput');
+      input.value += (input.value ? ' ' : '') + data.text.trim();
+      autoResize(input);
+      input.focus();
+    }
+  } catch (e) { /* transcription endpoint not yet available */ }
+  hint.textContent = 'Enter to send · Shift+Enter for newline';
 }
 
 // -- HELPERS ---------------------------------------------------
