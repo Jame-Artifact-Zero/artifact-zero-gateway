@@ -1012,21 +1012,29 @@ async function autoSaveThread() {
     ? firstUser.content.slice(0, 40) + (firstUser.content.length > 40 ? '…' : '')
     : 'Untitled';
 
+  if (!currentThreadId) {
+    currentThreadId = 'thread_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
   try {
     const res  = await fetch('/operator/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: currentThreadId || undefined, messages, summary }),
+      body: JSON.stringify({ id: currentThreadId, messages, summary }),
     });
     const data = await res.json();
 
-    if (data.id) {
-      currentThreadId = data.id;
-      const existing = threadList.find(t => t.id === data.id);
+    if (data.ok) {
+      const existing = threadList.find(t => t.id === currentThreadId);
       if (existing) {
         existing.messages = [...messages];
       } else {
-        threadList.unshift({ id: data.id, name: data.name || summary, summary, created_at: data.created_at || new Date().toISOString() });
+        threadList.unshift({
+          id: currentThreadId,
+          name: summary,
+          summary,
+          created_at: new Date().toISOString()
+        });
         renderThreadList();
       }
     }

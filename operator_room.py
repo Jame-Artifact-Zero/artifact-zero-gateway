@@ -869,9 +869,67 @@ def operator_session_patch(thread_id):
 
 @operator_bp.route('/operator/transcribe', methods=['POST'])
 def operator_transcribe():
-    if 'audio' not in request.files:
+    audio = request.files.get('audio')
+    if not audio:
         return jsonify({'error': 'no audio file'}), 400
-    return jsonify({'error': 'transcription not available'}), 501
+
+    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    if not api_key:
+        return jsonify({'error': 'OPENAI_API_KEY not configured'}), 503
+
+    audio_bytes = audio.read()
+    if not audio_bytes:
+        return jsonify({'error': 'empty audio file'}), 400
+    if len(audio_bytes) > 25 * 1024 * 1024:
+        return jsonify({'error': 'audio file exceeds 25MB limit'}), 413
+
+    filename = audio.filename or 'recording.webm'
+    content_type = audio.mimetype or 'audio/webm'
+    boundary = '----AZOperator' + secrets.token_hex(16)
+    crlf = b'\r\n'
+
+    parts = [
+        b'--' + boundary.encode() + crlf,
+        b'Content-Disposition: form-data; name="model"' + crlf + crlf,
+        b'whisper-1' + crlf,
+        b'--' + boundary.encode() + crlf,
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode() + crlf,
+        f'Content-Type: {content_type}'.encode() + crlf + crlf,
+        audio_bytes + crlf,
+        b'--' + boundary.encode() + b'--' + crlf,
+    ]
+    body = b''.join(parts)
+
+    try:
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection('api.openai.com', 443, context=ctx, timeout=90)
+        conn.request('POST', '/v1/audio/transcriptions', body=body, headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'Content-Length': str(len(body)),
+            'Connection': 'close',
+        })
+        response = conn.getresponse()
+        raw = response.read()
+        status = response.status
+        conn.close()
+
+        try:
+            data = json.loads(raw.decode('utf-8'))
+        except Exception:
+            data = {}
+
+        if status < 200 or status >= 300:
+            detail = data.get('error', {}).get('message') if isinstance(data.get('error'), dict) else None
+            return jsonify({'error': detail or f'transcription service returned {status}'}), 502
+
+        text = (data.get('text') or '').strip()
+        if not text:
+            return jsonify({'error': 'transcription returned no text'}), 502
+        return jsonify({'text': text})
+
+    except Exception as e:
+        return jsonify({'error': f'transcription failed: {str(e)[:200]}'}), 502
 
 
 
