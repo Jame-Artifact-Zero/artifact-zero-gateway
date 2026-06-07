@@ -23,3 +23,19 @@ taskdef_new.json
 taskdef_final.json
 # Dump files - never commit
 *_dump.txt
+
+# Local diagnostic scratch files - never commit
+chk.py
+
+# Cookie/session artifacts - never commit
+cookies.txt
+
+# Local AWS/ECS task definition drafts - never commit
+cstore-task-def*.json
+taskdef*.json
+
+# Local operational runners with credentials - never commit
+run_f500.ps1
+
+# Local one-time seed scripts with keys/endpoints - never commit
+seed_operator_memory.py
