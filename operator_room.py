@@ -9,6 +9,23 @@ OPERATOR_NTI_KEY = os.environ.get('OPERATOR_API_KEY', 'az_21f0f7405b504f38840334
 CLAUDE_MODEL     = 'claude-sonnet-4-6'
 
 
+def _migrate_sessions_table():
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("ALTER TABLE operator_sessions ADD COLUMN IF NOT EXISTS name TEXT DEFAULT ''")
+            cur.execute("ALTER TABLE operator_sessions ADD COLUMN IF NOT EXISTS thread_id TEXT DEFAULT ''")
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+_migrate_sessions_table()
+
+
+
 def _get_anthropic_key():
     return os.environ.get('ANTHROPIC_API_KEY', '')
 
@@ -764,20 +781,98 @@ def operator_sessions():
         conn = database.db_connect()
         cur  = conn.cursor()
         if database.USE_PG:
-            cur.execute("""
-                SELECT id, created_at, summary
-                FROM operator_sessions
-                ORDER BY created_at DESC
-                LIMIT 20
-            """)
+            cur.execute("SELECT id, thread_id, created_at, summary, name FROM operator_sessions WHERE thread_id != '' ORDER BY created_at DESC LIMIT 50")
             rows     = cur.fetchall()
-            sessions = [{'id': r[0], 'created_at': str(r[1]), 'summary': r[2]} for r in rows]
+            sessions = [{'id': r[1] or r[0], 'created_at': str(r[2]), 'summary': r[3] or '', 'name': r[4] or ''} for r in rows]
         else:
             sessions = []
         conn.close()
         return jsonify({'sessions': sessions})
     except Exception as e:
-        return jsonify({'sessions': [], 'note': str(e)})
+        return jsonify({'sessions': [], 'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/sessions', methods=['POST'])
+def operator_sessions_upsert():
+    try:
+        data = request.get_json(force=True)
+        thread_id = data.get('id', '')
+        messages = data.get('messages', [])
+        summary = data.get('summary', '')
+        name = data.get('name', '')
+        if not thread_id:
+            return jsonify({'error': 'id required'}), 400
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT id FROM operator_sessions WHERE thread_id = %s", (thread_id,))
+            existing = cur.fetchone()
+            if existing:
+                cur.execute(
+                    "UPDATE operator_sessions SET messages_json=%s, summary=%s, name=%s, created_at=NOW() WHERE thread_id=%s",
+                    (json.dumps(messages), summary, name, thread_id)
+                )
+            else:
+                cur.execute(
+                    "INSERT INTO operator_sessions (id, thread_id, messages_json, summary, name) VALUES (%s, %s, %s, %s, %s)",
+                    (thread_id, thread_id, json.dumps(messages), summary, name)
+                )
+            conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/sessions/<thread_id>', methods=['GET'])
+def operator_session_get(thread_id):
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        row = None
+        if database.USE_PG:
+            cur.execute(
+                "SELECT messages_json, summary, name FROM operator_sessions WHERE thread_id = %s",
+                (thread_id,)
+            )
+            row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({'error': 'not found'}), 404
+        messages = json.loads(row[0]) if row[0] else []
+        return jsonify({'messages': messages, 'summary': row[1] or '', 'name': row[2] or ''})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/sessions/<thread_id>', methods=['PATCH'])
+def operator_session_patch(thread_id):
+    try:
+        data = request.get_json(force=True)
+        name = data.get('name', '')
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute(
+                "UPDATE operator_sessions SET name=%s WHERE thread_id=%s",
+                (name, thread_id)
+            )
+            conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/transcribe', methods=['POST'])
+def operator_transcribe():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'no audio file'}), 400
+    return jsonify({'error': 'transcription not available'}), 501
+
 
 
 # ── PUSH STATE PERSISTENCE ─────────────────────────────────────────────────────
