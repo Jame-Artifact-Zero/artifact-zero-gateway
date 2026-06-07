@@ -25,6 +25,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 .op-sidebar-header {
@@ -171,7 +172,8 @@
 .op-chat {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   background: var(--bg);
 }
@@ -1154,23 +1156,20 @@ function renderMessage(role, text) {
 
 // -- MARKDOWN RENDERER -----------------------------------------
 function renderMarkdown(raw) {
-  // 1. Extract fenced code blocks to protect them
-  const blocks = [];
-  let text = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+  var blocks = [];
+  var fence = /```(\w*)\n?([\s\S]*?)```/g;
+  var text = raw.replace(fence, function(_, lang, code) {
     blocks.push({ lang: lang || 'text', code: code });
     return 'CODEBLOCK_' + (blocks.length - 1) + '_END';
   });
 
-  // 2. Escape HTML in remaining text
   text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // 3. Structural elements
   text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   text = text.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
   text = text.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
   text = text.replace(/^(---|===|\*\*\*)$/gm, '<hr>');
 
-  // 4. Inline formatting
   text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
   text = text.replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>');
   text = text.replace(/__(.+?)__/g,         '<strong>$1</strong>');
@@ -1178,16 +1177,15 @@ function renderMarkdown(raw) {
   text = text.replace(/_([^_\n]+?)_/g,      '<em>$1</em>');
   text = text.replace(/`([^`]+)`/g,         '<code>$1</code>');
 
-  // 5. Blockquotes
   text = text.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
 
-  // 6. Lists — collect consecutive lines
   text = text.replace(/((?:^[-*] .+\n?)+)/gm, function(match) {
     var items = match.trim().split('\n').map(function(l) {
       return '<li>' + l.replace(/^[-*] /, '') + '</li>';
     }).join('');
     return '<ul>' + items + '</ul>';
   });
+
   text = text.replace(/((?:^\d+\. .+\n?)+)/gm, function(match) {
     var items = match.trim().split('\n').map(function(l) {
       return '<li>' + l.replace(/^\d+\. /, '') + '</li>';
@@ -1195,7 +1193,6 @@ function renderMarkdown(raw) {
     return '<ol>' + items + '</ol>';
   });
 
-  // 7. Paragraphs — wrap double-newline blocks
   var sections = text.split(/\n{2,}/);
   text = sections.map(function(block) {
     block = block.trim();
@@ -1204,7 +1201,6 @@ function renderMarkdown(raw) {
     return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
   }).join('\n');
 
-  // 8. Restore code blocks
   text = text.replace(/CODEBLOCK_(\d+)_END/g, function(_, i) {
     var b    = blocks[parseInt(i)];
     var safe = b.code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
