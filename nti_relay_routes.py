@@ -191,7 +191,7 @@ def relay_health():
 @require_api_key
 def relay_session_call():
     try:
-        from relay_session import get_or_create_session, record_exchange
+        from relay_session import get_or_create_session, record_exchange, get_history
     except ImportError as e:
         return jsonify({"status": "error", "error": f"relay_session unavailable: {e}"}), 500
 
@@ -227,6 +227,9 @@ def relay_session_call():
     else:
         system_prompt = base_system_prompt
 
+    # Build conversation history from session for LLM context
+    history = get_history(session_id)
+
     # Standard relay pipeline: v2 gate -> LLM -> v3 governance
     relay_result = process_relay(
         text=text,
@@ -237,6 +240,7 @@ def relay_session_call():
         governance=governance,
         webhook_url=webhook_url,
         request_id=str(uuid.uuid4()),
+        history=history,
     )
 
     # Record exchange in session thread (persists to RDS via p0040)

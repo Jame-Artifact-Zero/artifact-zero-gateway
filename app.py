@@ -186,6 +186,22 @@ try:
 except Exception as e:
     print(f"[app] preimpression failed: {e}", flush=True)
 
+try:
+    from safecheck_engine import generate_observations
+    @app.route("/safecheck", methods=["POST"])
+    def safecheck():
+        payload = request.get_json(force=True) or {}
+        text = payload.get("text", "")
+        nii_result = payload.get("nii_result", {})
+        l2_result = payload.get("l2_result", {})
+        tilt_tags = payload.get("tilt_tags", [])
+        edge_result = payload.get("edge_result", None)
+        cards = generate_observations(text, nii_result, l2_result, tilt_tags, edge_result)
+        return jsonify({"cards": cards, "count": len(cards)})
+    print("[app] safecheck /safecheck loaded", flush=True)
+except ImportError:
+    print("[app] safecheck_engine not found, skipping", flush=True)
+
 
 # ============================================================
 # CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
@@ -1294,15 +1310,14 @@ def canonical_status():
 # V3 ROUTES — Axis 2 + Full Integration
 # ═══════════════════════════════════════
 
-@app.route("/nti-friction", methods=["POST"])
-def nti_friction():
-    """E04 — Axis 2 conversational friction scoring."""
-    try:
-        from axis2_endpoint import handle_request as axis2_handle
-        payload = request.get_json(force=True) or {}
-        return jsonify(axis2_handle(payload))
-    except Exception as e:
-        return jsonify({"error": str(e), "axis": 2}), 500
+try:
+    from axis2_endpoint import handle_request as axis2_handle
+    @app.route("/nti-friction", methods=["POST"])
+    def nti_friction():
+        return jsonify(axis2_handle(request.get_json(force=True)))
+    print("[app] axis2 /nti-friction loaded", flush=True)
+except ImportError:
+    print("[app] axis2_endpoint not found, skipping", flush=True)
 
 
 @app.route("/nti-full", methods=["POST"])
@@ -1401,17 +1416,28 @@ def nti_run():
     if not gate["pass"]:
         return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
 
+    # axis2_compiler — inbound pre-processor (silent transform)
+    original_text = text  # preserve for highlight_map — spans must match what user sees
+    try:
+        from axis2_compiler import compile_planned as axis2_compile
+        _compiled = axis2_compile(text)
+        if _compiled["accepted"]:
+            text = _compiled["compiled"]
+    except ImportError:
+        pass
+
     l0_constraints = detect_l0_constraints(text)
 
     obj = objective_extract(prompt or text)
     drift = objective_drift(prompt or "", answer or "")
 
-    framing = detect_l2_framing(text)
+    framing = detect_l2_framing(original_text)  # must use original — framing stores char offsets
 
     # Highlights: backend owns spans, frontend only renders
+    # Both framing and get_highlights use original_text — offsets must match displayed text
     try:
         from highlight_map import get_highlights
-        axis2, highlights = get_highlights(text, framing=framing)
+        axis2, highlights = get_highlights(original_text, framing=framing)
     except Exception:
         axis2, highlights = None, []
 
@@ -1558,6 +1584,14 @@ def nti_run():
         }
     except Exception as e:
         result["v3"] = {"error": str(e), "passed": True}
+
+    # axis3_clarity — outbound clarity scorer
+    try:
+        from axis3_clarity import analyze_clarity
+        _obj_text = result.get("layers", {}).get("L1_input_freeze", {}).get("objective", text)
+        result["axis3_clarity"] = analyze_clarity(_obj_text)
+    except ImportError:
+        pass
 
     return jsonify(result)
 

@@ -9,6 +9,23 @@ OPERATOR_NTI_KEY = os.environ.get('OPERATOR_API_KEY', 'az_21f0f7405b504f38840334
 CLAUDE_MODEL     = 'claude-sonnet-4-6'
 
 
+def _migrate_sessions_table():
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("ALTER TABLE operator_sessions ADD COLUMN IF NOT EXISTS name TEXT DEFAULT ''")
+            cur.execute("ALTER TABLE operator_sessions ADD COLUMN IF NOT EXISTS thread_id TEXT DEFAULT ''")
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+_migrate_sessions_table()
+
+
+
 def _get_anthropic_key():
     return os.environ.get('ANTHROPIC_API_KEY', '')
 
@@ -119,6 +136,66 @@ def operator_chat():
 
 # ── TOOL EXECUTION ─────────────────────────────────────────────────────────────
 
+@operator_bp.route('/shelf/upload', methods=['POST'])
+def shelf_upload():
+    """
+    Accepts a file and writes it to shelf_files.
+    Expects JSON body:
+    {
+        "filename": "operator_room.py",
+        "content": "...full file content...",
+        "repo": "artifact-zero-gateway",
+        "branch": "develop",
+        "filepath": "operator_room.py",
+        "owner_user_id": "jame"
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "no body"}), 400
+
+        filename      = data.get("filename", "")
+        content       = data.get("content", "")
+        repo          = data.get("repo", "")
+        branch        = data.get("branch", "develop")
+        filepath      = data.get("filepath", filename)
+        owner_user_id = data.get("owner_user_id", "jame")
+        extension     = filename.rsplit(".", 1)[-1] if "." in filename else ""
+        char_count    = len(content)
+        now           = datetime.utcnow().isoformat()
+        file_id       = f"shelf_{filename}_{branch}".replace("/", "_").replace(" ", "_")
+
+        import db as database
+        conn = database.db_connect()
+        cur  = conn.cursor()
+        cur.execute("""
+            INSERT INTO shelf_files (id, created_at, updated_at, filepath, filename, extension, content, char_count, repo, branch, owner_user_id, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                content       = EXCLUDED.content,
+                updated_at    = EXCLUDED.updated_at,
+                char_count    = EXCLUDED.char_count,
+                status        = EXCLUDED.status
+        """, (
+            file_id, now, now, filepath, filename, extension,
+            content, char_count, repo, branch, owner_user_id, "active"
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "status":     "ok",
+            "id":         file_id,
+            "filename":   filename,
+            "char_count": char_count
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @operator_bp.route('/operator/run', methods=['POST'])
 def operator_run():
     payload = request.get_json() or {}
@@ -135,6 +212,30 @@ def operator_run():
         if not text:
             return jsonify({'error': 'No text provided'}), 400
         return _run_nti_score(text)
+    elif tool == 'shelf_get':
+        target_filename = payload.get('filename', '').strip()
+        if not target_filename:
+            return jsonify({"result": "Usage: shelf_get requires filename field"})
+        try:
+            import db as database
+            conn = database.db_connect()
+            cur  = conn.cursor()
+            cur.execute("""
+                SELECT id, filename, repo, branch, char_count, content
+                FROM shelf_files
+                WHERE filename = %s
+                ORDER BY updated_at DESC
+                LIMIT 1
+            """, (target_filename,))
+            row = cur.fetchone()
+            conn.close()
+            if not row:
+                return jsonify({"result": f"[SHELF] No file found: {target_filename}"})
+            file_id, fname, repo, branch, char_count, content = row
+            header = f"[SHELF FILE: {fname} | repo={repo} | branch={branch} | {char_count} chars]\n"
+            return jsonify({"result": header + content})
+        except Exception as e:
+            return jsonify({"result": f"[SHELF GET ERROR: {e}]"})
     else:
         return jsonify({'error': f'Unknown tool: {tool}'}), 400
 
@@ -680,20 +781,156 @@ def operator_sessions():
         conn = database.db_connect()
         cur  = conn.cursor()
         if database.USE_PG:
-            cur.execute("""
-                SELECT id, created_at, summary
-                FROM operator_sessions
-                ORDER BY created_at DESC
-                LIMIT 20
-            """)
+            cur.execute("SELECT id, thread_id, created_at, summary, name FROM operator_sessions WHERE thread_id != '' ORDER BY created_at DESC LIMIT 50")
             rows     = cur.fetchall()
-            sessions = [{'id': r[0], 'created_at': str(r[1]), 'summary': r[2]} for r in rows]
+            sessions = [{'id': r[1] or r[0], 'created_at': str(r[2]), 'summary': r[3] or '', 'name': r[4] or ''} for r in rows]
         else:
             sessions = []
         conn.close()
         return jsonify({'sessions': sessions})
     except Exception as e:
-        return jsonify({'sessions': [], 'note': str(e)})
+        return jsonify({'sessions': [], 'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/sessions', methods=['POST'])
+def operator_sessions_upsert():
+    try:
+        data = request.get_json(force=True)
+        thread_id = data.get('id', '')
+        messages = data.get('messages', [])
+        summary = data.get('summary', '')
+        name = data.get('name', '')
+        if not thread_id:
+            return jsonify({'error': 'id required'}), 400
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute("SELECT id FROM operator_sessions WHERE thread_id = %s", (thread_id,))
+            existing = cur.fetchone()
+            if existing:
+                cur.execute(
+                    "UPDATE operator_sessions SET messages_json=%s, summary=%s, name=%s, created_at=NOW() WHERE thread_id=%s",
+                    (json.dumps(messages), summary, name, thread_id)
+                )
+            else:
+                cur.execute(
+                    "INSERT INTO operator_sessions (id, thread_id, messages_json, summary, name) VALUES (%s, %s, %s, %s, %s)",
+                    (thread_id, thread_id, json.dumps(messages), summary, name)
+                )
+            conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/sessions/<thread_id>', methods=['GET'])
+def operator_session_get(thread_id):
+    try:
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        row = None
+        if database.USE_PG:
+            cur.execute(
+                "SELECT messages_json, summary, name FROM operator_sessions WHERE thread_id = %s",
+                (thread_id,)
+            )
+            row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({'error': 'not found'}), 404
+        messages = json.loads(row[0]) if row[0] else []
+        return jsonify({'messages': messages, 'summary': row[1] or '', 'name': row[2] or ''})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/sessions/<thread_id>', methods=['PATCH'])
+def operator_session_patch(thread_id):
+    try:
+        data = request.get_json(force=True)
+        name = data.get('name', '')
+        import db as database
+        conn = database.db_connect()
+        cur = conn.cursor()
+        if database.USE_PG:
+            cur.execute(
+                "UPDATE operator_sessions SET name=%s WHERE thread_id=%s",
+                (name, thread_id)
+            )
+            conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@operator_bp.route('/operator/transcribe', methods=['POST'])
+def operator_transcribe():
+    audio = request.files.get('audio')
+    if not audio:
+        return jsonify({'error': 'no audio file'}), 400
+
+    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    if not api_key:
+        return jsonify({'error': 'OPENAI_API_KEY not configured'}), 503
+
+    audio_bytes = audio.read()
+    if not audio_bytes:
+        return jsonify({'error': 'empty audio file'}), 400
+    if len(audio_bytes) > 25 * 1024 * 1024:
+        return jsonify({'error': 'audio file exceeds 25MB limit'}), 413
+
+    filename = audio.filename or 'recording.webm'
+    content_type = audio.mimetype or 'audio/webm'
+    boundary = '----AZOperator' + secrets.token_hex(16)
+    crlf = b'\r\n'
+
+    parts = [
+        b'--' + boundary.encode() + crlf,
+        b'Content-Disposition: form-data; name="model"' + crlf + crlf,
+        b'whisper-1' + crlf,
+        b'--' + boundary.encode() + crlf,
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode() + crlf,
+        f'Content-Type: {content_type}'.encode() + crlf + crlf,
+        audio_bytes + crlf,
+        b'--' + boundary.encode() + b'--' + crlf,
+    ]
+    body = b''.join(parts)
+
+    try:
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection('api.openai.com', 443, context=ctx, timeout=90)
+        conn.request('POST', '/v1/audio/transcriptions', body=body, headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'Content-Length': str(len(body)),
+            'Connection': 'close',
+        })
+        response = conn.getresponse()
+        raw = response.read()
+        status = response.status
+        conn.close()
+
+        try:
+            data = json.loads(raw.decode('utf-8'))
+        except Exception:
+            data = {}
+
+        if status < 200 or status >= 300:
+            detail = data.get('error', {}).get('message') if isinstance(data.get('error'), dict) else None
+            return jsonify({'error': detail or f'transcription service returned {status}'}), 502
+
+        text = (data.get('text') or '').strip()
+        if not text:
+            return jsonify({'error': 'transcription returned no text'}), 502
+        return jsonify({'text': text})
+
+    except Exception as e:
+        return jsonify({'error': f'transcription failed: {str(e)[:200]}'}), 502
+
 
 
 # ── PUSH STATE PERSISTENCE ─────────────────────────────────────────────────────
