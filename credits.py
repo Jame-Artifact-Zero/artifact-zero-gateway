@@ -53,15 +53,14 @@ SITE_URL = os.getenv("SITE_URL", "https://artifact0.com")
 def ensure_credit_tables():
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("""CREATE TABLE IF NOT EXISTS credit_balances (
+    cur.execute("""CREATE TABLE IF NOT EXISTS credit_balances (
             user_id TEXT PRIMARY KEY REFERENCES users(id),
             balance_cents INTEGER NOT NULL DEFAULT 0,
             total_deposited_cents INTEGER NOT NULL DEFAULT 0,
             total_spent_cents INTEGER NOT NULL DEFAULT 0,
             low_balance_notified BOOLEAN NOT NULL DEFAULT FALSE,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS credit_transactions (
+    cur.execute("""CREATE TABLE IF NOT EXISTS credit_transactions (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL REFERENCES users(id),
             type TEXT NOT NULL,
@@ -71,26 +70,8 @@ def ensure_credit_tables():
             stripe_session_id TEXT,
             api_key_id TEXT,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_ct_user ON credit_transactions(user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_ct_created ON credit_transactions(created_at)")
-    else:
-        cur.execute("""CREATE TABLE IF NOT EXISTS credit_balances (
-            user_id TEXT PRIMARY KEY,
-            balance_cents INTEGER NOT NULL DEFAULT 0,
-            total_deposited_cents INTEGER NOT NULL DEFAULT 0,
-            total_spent_cents INTEGER NOT NULL DEFAULT 0,
-            low_balance_notified INTEGER NOT NULL DEFAULT 0,
-            updated_at TEXT NOT NULL DEFAULT (datetime('now')))""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS credit_transactions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            type TEXT NOT NULL,
-            amount_cents INTEGER NOT NULL,
-            balance_after_cents INTEGER NOT NULL,
-            description TEXT,
-            stripe_session_id TEXT,
-            api_key_id TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')))""")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_ct_user ON credit_transactions(user_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_ct_created ON credit_transactions(created_at)")
     conn.commit()
     conn.close()
 
@@ -99,28 +80,25 @@ def get_balance(user_id):
     """Get user's current balance in cents. Returns 0 if no record."""
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT balance_cents FROM credit_balances WHERE user_id=%s" if database.USE_PG else "SELECT balance_cents FROM credit_balances WHERE user_id=?"
+    q = "SELECT balance_cents FROM credit_balances WHERE user_id=%s"
     cur.execute(q, (user_id,))
     row = cur.fetchone()
     conn.close()
     if not row: return 0
-    return row[0] if database.USE_PG else row["balance_cents"]
+    return row[0]
 
 
 def get_balance_info(user_id):
     """Get full balance info. Returns dict."""
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT balance_cents, total_deposited_cents, total_spent_cents FROM credit_balances WHERE user_id=%s" if database.USE_PG else "SELECT balance_cents, total_deposited_cents, total_spent_cents FROM credit_balances WHERE user_id=?"
+    q = "SELECT balance_cents, total_deposited_cents, total_spent_cents FROM credit_balances WHERE user_id=%s"
     cur.execute(q, (user_id,))
     row = cur.fetchone()
     conn.close()
     if not row:
         return {"balance": 0.0, "total_deposited": 0.0, "total_spent": 0.0, "scores_remaining_api": 0, "scores_remaining_dashboard": 0}
-    if database.USE_PG:
-        bal, dep, spent = row[0], row[1], row[2]
-    else:
-        bal, dep, spent = row["balance_cents"], row["total_deposited_cents"], row["total_spent_cents"]
+    bal, dep, spent = row[0], row[1], row[2]
     return {
         "balance": bal / 100,
         "total_deposited": dep / 100,
@@ -135,35 +113,20 @@ def add_credits(user_id, amount_cents, description, stripe_session_id=None):
     conn = database.db_connect()
     cur = conn.cursor()
     tx_id = "tx_" + uuid.uuid4().hex[:16]
-
-    if database.USE_PG:
-        # Upsert balance
-        cur.execute("""INSERT INTO credit_balances (user_id, balance_cents, total_deposited_cents)
+    # Upsert balance
+    cur.execute("""INSERT INTO credit_balances (user_id, balance_cents, total_deposited_cents)
             VALUES (%s, %s, %s)
             ON CONFLICT (user_id) DO UPDATE SET
                 balance_cents = credit_balances.balance_cents + %s,
                 total_deposited_cents = credit_balances.total_deposited_cents + %s,
                 low_balance_notified = FALSE,
                 updated_at = NOW()""",
-            (user_id, amount_cents, amount_cents, amount_cents, amount_cents))
-        cur.execute("SELECT balance_cents FROM credit_balances WHERE user_id=%s", (user_id,))
-        new_bal = cur.fetchone()[0]
-        cur.execute("""INSERT INTO credit_transactions (id, user_id, type, amount_cents, balance_after_cents, description, stripe_session_id)
+        (user_id, amount_cents, amount_cents, amount_cents, amount_cents))
+    cur.execute("SELECT balance_cents FROM credit_balances WHERE user_id=%s", (user_id,))
+    new_bal = cur.fetchone()[0]
+    cur.execute("""INSERT INTO credit_transactions (id, user_id, type, amount_cents, balance_after_cents, description, stripe_session_id)
             VALUES (%s, %s, 'deposit', %s, %s, %s, %s)""",
-            (tx_id, user_id, amount_cents, new_bal, description, stripe_session_id))
-    else:
-        cur.execute("SELECT balance_cents FROM credit_balances WHERE user_id=?", (user_id,))
-        row = cur.fetchone()
-        if row:
-            new_bal = row["balance_cents"] + amount_cents
-            cur.execute("UPDATE credit_balances SET balance_cents=?, total_deposited_cents=total_deposited_cents+?, low_balance_notified=0, updated_at=datetime('now') WHERE user_id=?",
-                (new_bal, amount_cents, user_id))
-        else:
-            new_bal = amount_cents
-            cur.execute("INSERT INTO credit_balances (user_id, balance_cents, total_deposited_cents) VALUES (?, ?, ?)",
-                (user_id, amount_cents, amount_cents))
-        cur.execute("INSERT INTO credit_transactions (id, user_id, type, amount_cents, balance_after_cents, description, stripe_session_id) VALUES (?, ?, 'deposit', ?, ?, ?, ?)",
-            (tx_id, user_id, amount_cents, new_bal, description, stripe_session_id))
+        (tx_id, user_id, amount_cents, new_bal, description, stripe_session_id))
     conn.commit()
     conn.close()
     print(f"[credits] +${amount_cents/100:.2f} for {user_id}. Balance: ${new_bal/100:.2f}", flush=True)
@@ -178,12 +141,12 @@ def deduct_credit(user_id, cost_type, api_key_id=None):
         try:
             conn0 = database.db_connect()
             cur0 = conn0.cursor()
-            p0 = "%s" if database.USE_PG else "?"
+            p0 = "%s"
             cur0.execute(f"SELECT key_type FROM api_keys WHERE id={p0}", (api_key_id,))
             kt_row = cur0.fetchone()
             conn0.close()
             if kt_row:
-                kt = kt_row[0] if database.USE_PG else kt_row["key_type"]
+                kt = kt_row[0]
                 if kt == "test":
                     return True, -1  # -1 = test mode, not charged
         except Exception:
@@ -191,47 +154,26 @@ def deduct_credit(user_id, cost_type, api_key_id=None):
     cost_cents = int(COST_PER_SCORE.get(cost_type, 0.01) * 100)
     conn = database.db_connect()
     cur = conn.cursor()
-
-    if database.USE_PG:
-        cur.execute("SELECT balance_cents, low_balance_notified FROM credit_balances WHERE user_id=%s FOR UPDATE", (user_id,))
-        row = cur.fetchone()
-        if not row or row[0] < cost_cents:
-            conn.close()
-            return False, 0
-        new_bal = row[0] - cost_cents
-        was_notified = row[1]
-        cur.execute("UPDATE credit_balances SET balance_cents=%s, total_spent_cents=total_spent_cents+%s, updated_at=NOW() WHERE user_id=%s",
-            (new_bal, cost_cents, user_id))
-        tx_id = "tx_" + uuid.uuid4().hex[:16]
-        cur.execute("""INSERT INTO credit_transactions (id, user_id, type, amount_cents, balance_after_cents, description, api_key_id)
+    cur.execute("SELECT balance_cents, low_balance_notified FROM credit_balances WHERE user_id=%s FOR UPDATE", (user_id,))
+    row = cur.fetchone()
+    if not row or row[0] < cost_cents:
+        conn.close()
+        return False, 0
+    new_bal = row[0] - cost_cents
+    was_notified = row[1]
+    cur.execute("UPDATE credit_balances SET balance_cents=%s, total_spent_cents=total_spent_cents+%s, updated_at=NOW() WHERE user_id=%s",
+        (new_bal, cost_cents, user_id))
+    tx_id = "tx_" + uuid.uuid4().hex[:16]
+    cur.execute("""INSERT INTO credit_transactions (id, user_id, type, amount_cents, balance_after_cents, description, api_key_id)
             VALUES (%s, %s, 'score', %s, %s, %s, %s)""",
-            (tx_id, user_id, -cost_cents, new_bal, f"{cost_type} score", api_key_id))
-        # Low balance check
-        if new_bal <= int(LOW_BALANCE_THRESHOLD * 100) and not was_notified:
-            cur.execute("UPDATE credit_balances SET low_balance_notified=TRUE WHERE user_id=%s", (user_id,))
-            conn.commit()
-            conn.close()
-            _send_low_balance_alert(user_id, new_bal)
-            return True, new_bal
-    else:
-        cur.execute("SELECT balance_cents, low_balance_notified FROM credit_balances WHERE user_id=?", (user_id,))
-        row = cur.fetchone()
-        if not row or row["balance_cents"] < cost_cents:
-            conn.close()
-            return False, 0
-        new_bal = row["balance_cents"] - cost_cents
-        was_notified = row["low_balance_notified"]
-        cur.execute("UPDATE credit_balances SET balance_cents=?, total_spent_cents=total_spent_cents+?, updated_at=datetime('now') WHERE user_id=?",
-            (new_bal, cost_cents, user_id))
-        tx_id = "tx_" + uuid.uuid4().hex[:16]
-        cur.execute("INSERT INTO credit_transactions (id, user_id, type, amount_cents, balance_after_cents, description, api_key_id) VALUES (?, ?, 'score', ?, ?, ?, ?)",
-            (tx_id, user_id, -cost_cents, new_bal, f"{cost_type} score", api_key_id))
-        if new_bal <= int(LOW_BALANCE_THRESHOLD * 100) and not was_notified:
-            cur.execute("UPDATE credit_balances SET low_balance_notified=1 WHERE user_id=?", (user_id,))
-            conn.commit()
-            conn.close()
-            _send_low_balance_alert(user_id, new_bal)
-            return True, new_bal
+        (tx_id, user_id, -cost_cents, new_bal, f"{cost_type} score", api_key_id))
+    # Low balance check
+    if new_bal <= int(LOW_BALANCE_THRESHOLD * 100) and not was_notified:
+        cur.execute("UPDATE credit_balances SET low_balance_notified=TRUE WHERE user_id=%s", (user_id,))
+        conn.commit()
+        conn.close()
+        _send_low_balance_alert(user_id, new_bal)
+        return True, new_bal
 
     conn.commit()
     conn.close()
@@ -242,19 +184,12 @@ def get_transactions(user_id, limit=50):
     """Get recent transactions for a user."""
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("SELECT id, type, amount_cents, balance_after_cents, description, created_at FROM credit_transactions WHERE user_id=%s ORDER BY created_at DESC LIMIT %s",
-            (user_id, limit))
-        rows = cur.fetchall()
-        conn.close()
-        keys = ["id", "type", "amount_cents", "balance_after_cents", "description", "created_at"]
-        return [dict(zip(keys, r)) for r in rows]
-    else:
-        cur.execute("SELECT id, type, amount_cents, balance_after_cents, description, created_at FROM credit_transactions WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
-            (user_id, limit))
-        rows = cur.fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+    cur.execute("SELECT id, type, amount_cents, balance_after_cents, description, created_at FROM credit_transactions WHERE user_id=%s ORDER BY created_at DESC LIMIT %s",
+        (user_id, limit))
+    rows = cur.fetchall()
+    conn.close()
+    keys = ["id", "type", "amount_cents", "balance_after_cents", "description", "created_at"]
+    return [dict(zip(keys, r)) for r in rows]
 
 
 def get_user_id_for_api_key(api_key_id):
@@ -262,16 +197,12 @@ def get_user_id_for_api_key(api_key_id):
     conn = database.db_connect()
     cur = conn.cursor()
     # Try owner_user_id first (new column), fall back to email lookup
-    q = "SELECT owner_user_id, owner_email FROM api_keys WHERE id=%s" if database.USE_PG else "SELECT owner_user_id, owner_email FROM api_keys WHERE id=?"
+    q = "SELECT owner_user_id, owner_email FROM api_keys WHERE id=%s"
     cur.execute(q, (api_key_id,))
     row = cur.fetchone()
     conn.close()
     if not row: return None
-
-    if database.USE_PG:
-        owner_uid, email = row[0], row[1]
-    else:
-        owner_uid, email = row["owner_user_id"], row["owner_email"]
+    owner_uid, email = row[0], row[1]
 
     # Direct lookup if owner_user_id is set
     if owner_uid:
@@ -279,14 +210,14 @@ def get_user_id_for_api_key(api_key_id):
 
     # Legacy fallback: find user by email
     if not email: return None
-    q2 = "SELECT id FROM users WHERE email=%s" if database.USE_PG else "SELECT id FROM users WHERE email=?"
+    q2 = "SELECT id FROM users WHERE email=%s"
     conn = database.db_connect()
     cur = conn.cursor()
     cur.execute(q2, (email,))
     urow = cur.fetchone()
     conn.close()
     if not urow: return None
-    return urow[0] if database.USE_PG else urow["id"]
+    return urow[0]
 
 
 # ═══════════════════════════════════════
@@ -358,13 +289,13 @@ def _send_low_balance_alert(user_id, balance_cents):
     # Look up user email
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT email, name FROM users WHERE id=%s" if database.USE_PG else "SELECT email, name FROM users WHERE id=?"
+    q = "SELECT email, name FROM users WHERE id=%s"
     cur.execute(q, (user_id,))
     row = cur.fetchone()
     conn.close()
     if not row: return
-    email = row[0] if database.USE_PG else row["email"]
-    name = row[1] if database.USE_PG else row["name"]
+    email = row[0]
+    name = row[1]
 
     greeting = f"Hi {name}," if name else "Hi,"
     bal_str = f"${balance_cents/100:.2f}"
@@ -421,13 +352,13 @@ def api_topup():
     # Look up user email
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT email FROM users WHERE id=%s" if database.USE_PG else "SELECT email FROM users WHERE id=?"
+    q = "SELECT email FROM users WHERE id=%s"
     cur.execute(q, (user_id,))
     row = cur.fetchone()
     conn.close()
     if not row:
         return jsonify({"error": "User not found"}), 404
-    email = row[0] if database.USE_PG else row["email"]
+    email = row[0]
 
     # Determine amount
     pack = data.get("pack")
