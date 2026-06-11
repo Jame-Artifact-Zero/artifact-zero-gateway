@@ -42,34 +42,24 @@ def _get_or_create_account(user_id, email):
     """Return account_id for a user. Create personal account if none exists."""
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     # Check if user already has an account
     cur.execute(f"SELECT account_id FROM users WHERE id={p}", (user_id,))
     row = cur.fetchone()
-    acct_id = (row[0] if database.USE_PG else row["account_id"]) if row else None
+    acct_id = row[0] if row else None
 
     if not acct_id:
         acct_id = "acct_" + uuid.uuid4().hex[:16]
         name = email.split("@")[0]
-        if database.USE_PG:
-            cur.execute(
-                "INSERT INTO accounts (id, name, owner_user_id) VALUES (%s, %s, %s)",
-                (acct_id, name, user_id)
-            )
-            cur.execute(
-                "UPDATE users SET account_id=%s WHERE id=%s",
-                (acct_id, user_id)
-            )
-        else:
-            cur.execute(
-                "INSERT INTO accounts (id, created_at, name, owner_user_id) VALUES (?, datetime('now'), ?, ?)",
-                (acct_id, name, user_id)
-            )
-            cur.execute(
-                "UPDATE users SET account_id=? WHERE id=?",
-                (acct_id, user_id)
-            )
+        cur.execute(
+            "INSERT INTO accounts (id, name, owner_user_id) VALUES (%s, %s, %s)",
+            (acct_id, name, user_id)
+        )
+        cur.execute(
+            "UPDATE users SET account_id=%s WHERE id=%s",
+            (acct_id, user_id)
+        )
         conn.commit()
 
     conn.close()
@@ -79,7 +69,7 @@ def _get_or_create_account(user_id, email):
 def _keys_for_user(user_id):
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
     cur.execute(
         f"SELECT id, name, key_type, tier, monthly_limit, active, created_at, last_used_at, usage_count, revoked_at "
         f"FROM api_keys WHERE owner_user_id={p} ORDER BY created_at DESC",
@@ -91,7 +81,7 @@ def _keys_for_user(user_id):
             "created_at", "last_used_at", "usage_count", "revoked_at"]
     result = []
     for row in rows:
-        d = dict(zip(cols, row)) if database.USE_PG else dict(row)
+        d = dict(zip(cols, row))
         # Mask key — show prefix only
         d["key_preview"] = d["id"][:12] + "..." + d["id"][-4:]
         d["created_at"] = str(d["created_at"]) if d["created_at"] else None
@@ -106,18 +96,11 @@ def _create_key(user_id, account_id, name, tier, key_type):
     monthly_limit = _TIER_LIMITS.get(tier, _TIER_LIMITS["free"])["monthly"]
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute(
-            "INSERT INTO api_keys (id, created_at, owner_email, owner_user_id, account_id, name, key_type, tier, monthly_limit, active) "
-            "VALUES (%s, NOW(), (SELECT email FROM users WHERE id=%s), %s, %s, %s, %s, %s, %s, TRUE)",
-            (key_id, user_id, user_id, account_id, name, key_type, tier, monthly_limit)
-        )
-    else:
-        cur.execute(
-            "INSERT INTO api_keys (id, created_at, owner_email, owner_user_id, account_id, name, key_type, tier, monthly_limit, active) "
-            "VALUES (?, datetime('now'), (SELECT email FROM users WHERE id=?), ?, ?, ?, ?, ?, ?, 1)",
-            (key_id, user_id, user_id, account_id, name, key_type, tier, monthly_limit)
-        )
+    cur.execute(
+        "INSERT INTO api_keys (id, created_at, owner_email, owner_user_id, account_id, name, key_type, tier, monthly_limit, active) "
+        "VALUES (%s, NOW(), (SELECT email FROM users WHERE id=%s), %s, %s, %s, %s, %s, %s, TRUE)",
+        (key_id, user_id, user_id, account_id, name, key_type, tier, monthly_limit)
+    )
     conn.commit()
     conn.close()
     return key_id, monthly_limit
@@ -127,17 +110,11 @@ def _revoke_key(key_id, user_id):
     """Revoke key only if it belongs to this user."""
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
-    if database.USE_PG:
-        cur.execute(
-            "UPDATE api_keys SET active=FALSE, revoked_at=NOW() WHERE id=%s AND owner_user_id=%s",
-            (key_id, user_id)
-        )
-    else:
-        cur.execute(
-            "UPDATE api_keys SET active=0, revoked_at=datetime('now') WHERE id=? AND owner_user_id=?",
-            (key_id, user_id)
-        )
+    p = "%s"
+    cur.execute(
+        "UPDATE api_keys SET active=FALSE, revoked_at=NOW() WHERE id=%s AND owner_user_id=%s",
+        (key_id, user_id)
+    )
     affected = cur.rowcount
     conn.commit()
     conn.close()
@@ -148,16 +125,10 @@ def _update_key_last_used(key_id):
     """Called by require_api_key after each successful request."""
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute(
-            "UPDATE api_keys SET last_used_at=NOW(), usage_count=usage_count+1 WHERE id=%s",
-            (key_id,)
-        )
-    else:
-        cur.execute(
-            "UPDATE api_keys SET last_used_at=datetime('now'), usage_count=usage_count+1 WHERE id=?",
-            (key_id,)
-        )
+    cur.execute(
+        "UPDATE api_keys SET last_used_at=NOW(), usage_count=usage_count+1 WHERE id=%s",
+        (key_id,)
+    )
     conn.commit()
     conn.close()
 
@@ -226,7 +197,7 @@ def key_usage(key_id):
     user = request._user
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     # Verify ownership
     cur.execute(f"SELECT id, tier, usage_count, last_used_at FROM api_keys WHERE id={p} AND owner_user_id={p}",
@@ -237,30 +208,20 @@ def key_usage(key_id):
         return jsonify({"error": "Key not found"}), 404
 
     cols = ["id", "tier", "usage_count", "last_used_at"]
-    key = dict(zip(cols, row)) if database.USE_PG else dict(row)
-
-    # Usage breakdown — last 30 days
-    if database.USE_PG:
-        cur.execute(
-            "SELECT endpoint, COUNT(*) as cnt, AVG(latency_ms) as avg_ms "
-            "FROM api_usage WHERE api_key_id=%s AND created_at >= NOW() - INTERVAL '30 days' "
-            "GROUP BY endpoint ORDER BY cnt DESC",
-            (key_id,)
-        )
-    else:
-        cur.execute(
-            "SELECT endpoint, COUNT(*) as cnt, AVG(latency_ms) as avg_ms "
-            "FROM api_usage WHERE api_key_id=? AND created_at >= datetime('now', '-30 days') "
-            "GROUP BY endpoint ORDER BY cnt DESC",
-            (key_id,)
-        )
+    key = dict(zip(cols, row))
+    cur.execute(
+        "SELECT endpoint, COUNT(*) as cnt, AVG(latency_ms) as avg_ms "
+        "FROM api_usage WHERE api_key_id=%s AND created_at >= NOW() - INTERVAL '30 days' "
+        "GROUP BY endpoint ORDER BY cnt DESC",
+        (key_id,)
+    )
     usage_rows = cur.fetchall()
     conn.close()
 
     breakdown = [
-        {"endpoint": r[0] if database.USE_PG else r["endpoint"],
-         "count": r[1] if database.USE_PG else r["cnt"],
-         "avg_latency_ms": round(r[2] or 0, 1) if database.USE_PG else round(r["avg_ms"] or 0, 1)}
+        {"endpoint": r[0],
+         "count": r[1],
+         "avg_latency_ms": round(r[2] or 0, 1)}
         for r in usage_rows
     ]
 
@@ -285,7 +246,7 @@ def get_account():
 
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     cur.execute(f"SELECT id, name, plan, active, created_at FROM accounts WHERE id={p}", (account_id,))
     row = cur.fetchone()
@@ -295,7 +256,7 @@ def get_account():
         return jsonify({"error": "Account not found"}), 404
 
     cols = ["id", "name", "plan", "active", "created_at"]
-    acct = dict(zip(cols, row)) if database.USE_PG else dict(row)
+    acct = dict(zip(cols, row))
     acct["created_at"] = str(acct["created_at"]) if acct["created_at"] else None
 
     return jsonify({
@@ -316,27 +277,19 @@ def login_history():
     user = request._user
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
-
-    if database.USE_PG:
-        cur.execute(
-            "SELECT id, created_at, ip, user_agent, success FROM login_history "
-            "WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
-            (user["id"],)
-        )
-    else:
-        cur.execute(
-            "SELECT id, created_at, ip, user_agent, success FROM login_history "
-            "WHERE user_id=? ORDER BY created_at DESC LIMIT 50",
-            (user["id"],)
-        )
+    p = "%s"
+    cur.execute(
+        "SELECT id, created_at, ip, user_agent, success FROM login_history "
+        "WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
+        (user["id"],)
+    )
     rows = cur.fetchall()
     conn.close()
 
     cols = ["id", "created_at", "ip", "user_agent", "success"]
     history = []
     for row in rows:
-        d = dict(zip(cols, row)) if database.USE_PG else dict(row)
+        d = dict(zip(cols, row))
         d["created_at"] = str(d["created_at"]) if d["created_at"] else None
         history.append(d)
 
@@ -354,7 +307,7 @@ def list_webhooks():
     account_id = _get_or_create_account(user["id"], user["email"])
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     cur.execute(
         f"SELECT id, url, events, active, created_at, last_triggered_at, failure_count "
@@ -367,7 +320,7 @@ def list_webhooks():
     cols = ["id", "url", "events", "active", "created_at", "last_triggered_at", "failure_count"]
     result = []
     for row in rows:
-        d = dict(zip(cols, row)) if database.USE_PG else dict(row)
+        d = dict(zip(cols, row))
         d["events"] = json.loads(d["events"]) if isinstance(d["events"], str) else d["events"]
         d["created_at"] = str(d["created_at"]) if d["created_at"] else None
         d["last_triggered_at"] = str(d["last_triggered_at"]) if d["last_triggered_at"] else None
@@ -383,7 +336,7 @@ def create_webhook():
     data = request.get_json() or {}
 
     url = (data.get("url") or "").strip()
-    events = data.get("events", ["score.completed"])
+    events = data.get("events", ["check.complete"])
 
     if not url or not url.startswith("https://"):
         return jsonify({"error": "url must be a valid https:// URL"}), 400
@@ -394,22 +347,56 @@ def create_webhook():
     wh_id = "wh_" + uuid.uuid4().hex[:16]
     secret = "whsec_" + secrets.token_hex(24)
     secret_hash = hashlib.sha256(secret.encode()).hexdigest()
+    webhook_encryption_key = os.getenv(
+        "WEBHOOK_ENCRYPTION_KEY",
+        "",
+    ).strip()
+
+    if not webhook_encryption_key:
+        return jsonify({
+            "error": "WEBHOOK_ENCRYPTION_KEY not configured"
+        }), 500
+
+    try:
+        from cryptography.fernet import Fernet
+
+        cipher = Fernet(
+            webhook_encryption_key.encode()
+        )
+
+        secret_encrypted = cipher.encrypt(
+            secret.encode()
+        ).decode()
+
+    except Exception as error:
+        print(
+            f"[account] Webhook secret encryption failed: {error}",
+            flush=True,
+        )
+
+        return jsonify({
+            "error": "Webhook encryption configuration invalid"
+        }), 500
+
     events_json = json.dumps(events)
 
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute(
-            "INSERT INTO webhooks (id, account_id, user_id, url, secret_hash, events) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
-            (wh_id, account_id, user["id"], url, secret_hash, events_json)
-        )
-    else:
-        cur.execute(
-            "INSERT INTO webhooks (id, created_at, account_id, user_id, url, secret_hash, events) "
-            "VALUES (?, datetime('now'), ?, ?, ?, ?, ?)",
-            (wh_id, account_id, user["id"], url, secret_hash, events_json)
-        )
+    cur.execute(
+        "INSERT INTO webhooks "
+        "(id, account_id, user_id, url, secret_hash, "
+        "secret_encrypted, events, active) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)",
+        (
+            wh_id,
+            account_id,
+            user["id"],
+            url,
+            secret_hash,
+            secret_encrypted,
+            events_json,
+        ),
+    )
     conn.commit()
     conn.close()
 
@@ -421,7 +408,6 @@ def create_webhook():
         "message": "Store this secret securely. It will not be shown again."
     }), 201
 
-
 @account_bp.route("/api/v1/webhooks/<wh_id>", methods=["DELETE"])
 @login_required
 def delete_webhook(wh_id):
@@ -429,11 +415,10 @@ def delete_webhook(wh_id):
     account_id = _get_or_create_account(user["id"], user["email"])
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     cur.execute(
-        f"UPDATE webhooks SET active=FALSE WHERE id={p} AND account_id={p}" if database.USE_PG else
-        f"UPDATE webhooks SET active=0 WHERE id={p} AND account_id={p}",
+        f"UPDATE webhooks SET active=FALSE WHERE id={p} AND account_id={p}",
         (wh_id, account_id)
     )
     affected = cur.rowcount
@@ -452,7 +437,7 @@ def webhook_deliveries(wh_id):
     account_id = _get_or_create_account(user["id"], user["email"])
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     # Verify ownership
     cur.execute(f"SELECT id FROM webhooks WHERE id={p} AND account_id={p}", (wh_id, account_id))
@@ -471,7 +456,7 @@ def webhook_deliveries(wh_id):
     cols = ["id", "created_at", "response_code", "latency_ms", "success", "retry_count"]
     deliveries = []
     for row in rows:
-        d = dict(zip(cols, row)) if database.USE_PG else dict(row)
+        d = dict(zip(cols, row))
         d["created_at"] = str(d["created_at"]) if d["created_at"] else None
         deliveries.append(d)
 
@@ -495,35 +480,23 @@ def set_spend_alert():
     alert_id = "alrt_" + uuid.uuid4().hex[:12]
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     # Upsert — one alert per account
     cur.execute(f"SELECT id FROM spend_alerts WHERE account_id={p}", (account_id,))
     existing = cur.fetchone()
 
     if existing:
-        existing_id = existing[0] if database.USE_PG else existing["id"]
-        if database.USE_PG:
-            cur.execute(
-                "UPDATE spend_alerts SET threshold_cents=%s, notify_email=%s, active=TRUE WHERE id=%s",
-                (threshold, notify_email, existing_id)
-            )
-        else:
-            cur.execute(
-                "UPDATE spend_alerts SET threshold_cents=?, notify_email=?, active=1 WHERE id=?",
-                (threshold, notify_email, existing_id)
-            )
+        existing_id = existing[0]
+        cur.execute(
+            "UPDATE spend_alerts SET threshold_cents=%s, notify_email=%s, active=TRUE WHERE id=%s",
+            (threshold, notify_email, existing_id)
+        )
     else:
-        if database.USE_PG:
-            cur.execute(
-                "INSERT INTO spend_alerts (id, account_id, threshold_cents, notify_email) VALUES (%s, %s, %s, %s)",
-                (alert_id, account_id, threshold, notify_email)
-            )
-        else:
-            cur.execute(
-                "INSERT INTO spend_alerts (id, created_at, account_id, threshold_cents, notify_email) VALUES (?, datetime('now'), ?, ?, ?)",
-                (alert_id, account_id, threshold, notify_email)
-            )
+        cur.execute(
+            "INSERT INTO spend_alerts (id, account_id, threshold_cents, notify_email) VALUES (%s, %s, %s, %s)",
+            (alert_id, account_id, threshold, notify_email)
+        )
 
     conn.commit()
     conn.close()
@@ -545,36 +518,23 @@ def set_auto_recharge():
     ar_id = "ar_" + uuid.uuid4().hex[:12]
     conn = database.db_connect()
     cur = conn.cursor()
-    p = "%s" if database.USE_PG else "?"
+    p = "%s"
 
     cur.execute(f"SELECT id FROM auto_recharge WHERE account_id={p}", (account_id,))
     existing = cur.fetchone()
 
     if existing:
-        existing_id = existing[0] if database.USE_PG else existing["id"]
-        if database.USE_PG:
-            cur.execute(
-                "UPDATE auto_recharge SET trigger_cents=%s, recharge_cents=%s, active=%s, stripe_payment_method_id=%s WHERE id=%s",
-                (trigger, recharge, active, pm_id, existing_id)
-            )
-        else:
-            cur.execute(
-                "UPDATE auto_recharge SET trigger_cents=?, recharge_cents=?, active=?, stripe_payment_method_id=? WHERE id=?",
-                (trigger, recharge, 1 if active else 0, pm_id, existing_id)
-            )
+        existing_id = existing[0]
+        cur.execute(
+            "UPDATE auto_recharge SET trigger_cents=%s, recharge_cents=%s, active=%s, stripe_payment_method_id=%s WHERE id=%s",
+            (trigger, recharge, active, pm_id, existing_id)
+        )
     else:
-        if database.USE_PG:
-            cur.execute(
-                "INSERT INTO auto_recharge (id, account_id, trigger_cents, recharge_cents, active, stripe_payment_method_id) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (ar_id, account_id, trigger, recharge, active, pm_id)
-            )
-        else:
-            cur.execute(
-                "INSERT INTO auto_recharge (id, created_at, account_id, trigger_cents, recharge_cents, active, stripe_payment_method_id) "
-                "VALUES (?, datetime('now'), ?, ?, ?, ?, ?)",
-                (ar_id, account_id, trigger, recharge, 1 if active else 0, pm_id)
-            )
+        cur.execute(
+            "INSERT INTO auto_recharge (id, account_id, trigger_cents, recharge_cents, active, stripe_payment_method_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (ar_id, account_id, trigger, recharge, active, pm_id)
+        )
 
     conn.commit()
     conn.close()

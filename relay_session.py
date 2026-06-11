@@ -38,12 +38,10 @@ from blob_builder import InjectionBlob
 
 try:
     import db as _db
-    _USE_DB = _db.USE_PG
-    if not _USE_DB:
-        print("[relay_session] WARNING: DATABASE_URL not postgres — sessions in-memory only", flush=True)
+    _USE_DB = True
 except ImportError:
     _db = None
-    _USE_DB = False
+    _USE_DB = True
     print("[relay_session] WARNING: db module unavailable — sessions in-memory only", flush=True)
 
 
@@ -64,27 +62,19 @@ _lock = threading.Lock()
 
 def _db_load(session_id: str) -> Optional[SimulatedThread]:
     """Load a session from RDS. Returns None if not found or DB unavailable."""
-    if not _USE_DB:
-        return None
     try:
         conn = _db.db_connect()
         cur = conn.cursor()
-        if _db.USE_PG:
-            cur.execute(
-                "SELECT label, state_json FROM relay_sessions WHERE session_id = %s",
-                (session_id,)
-            )
-        else:
-            cur.execute(
-                "SELECT label, state_json FROM relay_sessions WHERE session_id = ?",
-                (session_id,)
-            )
+        cur.execute(
+            "SELECT label, state_json FROM relay_sessions WHERE session_id = %s",
+            (session_id,)
+        )
         row = cur.fetchone()
         conn.close()
         if not row:
             return None
-        label = row[0] if _db.USE_PG else row["label"]
-        state_json = row[1] if _db.USE_PG else row["state_json"]
+        label = row[0]
+        state_json = row[1]
         if not state_json:
             return None
         state = json.loads(state_json) if isinstance(state_json, str) else state_json
@@ -96,33 +86,21 @@ def _db_load(session_id: str) -> Optional[SimulatedThread]:
 
 def _db_save(session_id: str, thread: SimulatedThread) -> None:
     """Persist session state to RDS. Silent on failure — RAM cache still valid."""
-    if not _USE_DB:
-        return
     try:
         state = _thread_to_state(thread)
         state_json = json.dumps(state)
         conn = _db.db_connect()
         cur = conn.cursor()
-        if _db.USE_PG:
-            cur.execute(
-                """
+        cur.execute(
+            """
                 INSERT INTO relay_sessions (session_id, label, state_json, updated_at)
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (session_id) DO UPDATE
                   SET state_json = EXCLUDED.state_json,
                       updated_at = EXCLUDED.updated_at
                 """,
-                (session_id, thread.label, state_json, _now_iso())
-            )
-        else:
-            # SQLite fallback (dev only)
-            cur.execute(
-                """
-                INSERT OR REPLACE INTO relay_sessions (session_id, label, state_json, updated_at)
-                VALUES (?, ?, ?, ?)
-                """,
-                (session_id, thread.label, state_json, _now_iso())
-            )
+            (session_id, thread.label, state_json, _now_iso())
+        )
         conn.commit()
         conn.close()
     except Exception as e:
@@ -130,15 +108,10 @@ def _db_save(session_id: str, thread: SimulatedThread) -> None:
 
 
 def _db_delete(session_id: str) -> None:
-    if not _USE_DB:
-        return
     try:
         conn = _db.db_connect()
         cur = conn.cursor()
-        if _db.USE_PG:
-            cur.execute("DELETE FROM relay_sessions WHERE session_id = %s", (session_id,))
-        else:
-            cur.execute("DELETE FROM relay_sessions WHERE session_id = ?", (session_id,))
+        cur.execute("DELETE FROM relay_sessions WHERE session_id = %s", (session_id,))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -147,16 +120,13 @@ def _db_delete(session_id: str) -> None:
 
 def _db_active_count() -> int:
     """Count active sessions from RDS."""
-    if not _USE_DB:
-        with _lock:
-            return len(_cache)
     try:
         conn = _db.db_connect()
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM relay_sessions")
         row = cur.fetchone()
         conn.close()
-        count = row[0] if _db.USE_PG else row[0]
+        count = row[0]
         return count or 0
     except Exception as e:
         print(f"[relay_session] RDS count error: {e}", flush=True)
