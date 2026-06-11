@@ -33,9 +33,7 @@ candidate_bp = Blueprint("candidate", __name__)
 def candidate_db_init():
     conn = database.db_connect()
     cur = conn.cursor()
-
-    if database.USE_PG:
-        cur.execute("""
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS candidate_races (
             id TEXT PRIMARY KEY,
             slug TEXT UNIQUE NOT NULL,
@@ -48,7 +46,7 @@ def candidate_db_init():
         )
         """)
 
-        cur.execute("""
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS candidates (
             id TEXT PRIMARY KEY,
             race_id TEXT NOT NULL REFERENCES candidate_races(id),
@@ -65,9 +63,9 @@ def candidate_db_init():
             UNIQUE(race_id, slug)
         )
         """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_candidates_race ON candidates(race_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_candidates_race ON candidates(race_id)")
 
-        cur.execute("""
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS candidate_statements (
             id TEXT PRIMARY KEY,
             candidate_id TEXT NOT NULL REFERENCES candidates(id),
@@ -78,52 +76,8 @@ def candidate_db_init():
             added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_stmts_candidate ON candidate_statements(candidate_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_stmts_race ON candidate_statements(race_id)")
-
-    else:
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS candidate_races (
-            id TEXT PRIMARY KEY,
-            slug TEXT UNIQUE NOT NULL,
-            title TEXT NOT NULL,
-            subtitle TEXT,
-            race_type TEXT NOT NULL DEFAULT 'election',
-            election_date TEXT,
-            location TEXT,
-            created_at TEXT NOT NULL
-        )
-        """)
-
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS candidates (
-            id TEXT PRIMARY KEY,
-            race_id TEXT NOT NULL,
-            slug TEXT NOT NULL,
-            name TEXT NOT NULL,
-            initials TEXT,
-            party TEXT,
-            role TEXT,
-            raised TEXT,
-            endorsements TEXT,
-            bio TEXT,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT NOT NULL,
-            UNIQUE(race_id, slug)
-        )
-        """)
-
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS candidate_statements (
-            id TEXT PRIMARY KEY,
-            candidate_id TEXT NOT NULL,
-            race_id TEXT NOT NULL,
-            statement TEXT NOT NULL,
-            source_url TEXT,
-            source_label TEXT,
-            added_at TEXT NOT NULL
-        )
-        """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_stmts_candidate ON candidate_statements(candidate_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_stmts_race ON candidate_statements(race_id)")
 
     conn.commit()
     conn.close()
@@ -299,31 +253,15 @@ def seed_candidates():
     conn = database.db_connect()
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
-
-    # Create seed metadata table if it doesn't exist
-    if database.USE_PG:
-        cur.execute("""
+    cur.execute("""
             CREATE TABLE IF NOT EXISTS candidate_seed_meta (
                 key TEXT PRIMARY KEY,
                 value TEXT,
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """)
-    else:
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS candidate_seed_meta (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                updated_at TEXT
-            )
-        """)
     conn.commit()
-
-    # Check current seed version
-    if database.USE_PG:
-        cur.execute("SELECT value FROM candidate_seed_meta WHERE key = 'seed_version'")
-    else:
-        cur.execute("SELECT value FROM candidate_seed_meta WHERE key = 'seed_version'")
+    cur.execute("SELECT value FROM candidate_seed_meta WHERE key = 'seed_version'")
     row = cur.fetchone()
     current_version = row[0] if row else None
 
@@ -334,90 +272,47 @@ def seed_candidates():
 
     # Version mismatch — wipe and reseed
     log.info(f"Seed version mismatch: DB={current_version} CODE={SEED_VERSION} — reseeding...")
-    if database.USE_PG:
-        cur.execute("DELETE FROM candidate_statements")
-        cur.execute("DELETE FROM candidates")
-        cur.execute("DELETE FROM candidate_races")
-    else:
-        cur.execute("DELETE FROM candidate_statements")
-        cur.execute("DELETE FROM candidates")
-        cur.execute("DELETE FROM candidate_races")
+    cur.execute("DELETE FROM candidate_statements")
+    cur.execute("DELETE FROM candidates")
+    cur.execute("DELETE FROM candidate_races")
     conn.commit()
 
     log.info("Seeding candidate data...")
 
     for race in SEED_RACES:
         race_id = str(uuid.uuid4())
-        if database.USE_PG:
-            cur.execute("""
+        cur.execute("""
                 INSERT INTO candidate_races (id, slug, title, subtitle, race_type, election_date, location, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
                 ON CONFLICT (slug) DO NOTHING
             """, (race_id, race["slug"], race["title"], race.get("subtitle"), race["race_type"],
-                  race.get("election_date"), race.get("location")))
-        else:
-            cur.execute("""
-                INSERT OR IGNORE INTO candidate_races (id, slug, title, subtitle, race_type, election_date, location, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (race_id, race["slug"], race["title"], race.get("subtitle"), race["race_type"],
-                  race.get("election_date"), race.get("location"), now))
-
-        # Get actual race_id (may differ if ON CONFLICT skipped)
-        if database.USE_PG:
-            cur.execute("SELECT id FROM candidate_races WHERE slug = %s", (race["slug"],))
-        else:
-            cur.execute("SELECT id FROM candidate_races WHERE slug = ?", (race["slug"],))
+              race.get("election_date"), race.get("location")))
+        cur.execute("SELECT id FROM candidate_races WHERE slug = %s", (race["slug"],))
         actual_race_id = cur.fetchone()[0]
 
         for cand in SEED_CANDIDATES.get(race["slug"], []):
             cand_id = str(uuid.uuid4())
-            if database.USE_PG:
-                cur.execute("""
+            cur.execute("""
                     INSERT INTO candidates (id, race_id, slug, name, initials, party, role, raised, endorsements, bio, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                     ON CONFLICT (race_id, slug) DO NOTHING
                 """, (cand_id, actual_race_id, cand["slug"], cand["name"], cand.get("initials"),
-                      cand.get("party"), cand.get("role"), cand.get("raised"), cand.get("endorsements"), cand.get("bio")))
-            else:
-                cur.execute("""
-                    INSERT OR IGNORE INTO candidates (id, race_id, slug, name, initials, party, role, raised, endorsements, bio, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (cand_id, actual_race_id, cand["slug"], cand["name"], cand.get("initials"),
-                      cand.get("party"), cand.get("role"), cand.get("raised"), cand.get("endorsements"), cand.get("bio"), now))
-
-            # Get actual candidate id
-            if database.USE_PG:
-                cur.execute("SELECT id FROM candidates WHERE race_id = %s AND slug = %s", (actual_race_id, cand["slug"]))
-            else:
-                cur.execute("SELECT id FROM candidates WHERE race_id = ? AND slug = ?", (actual_race_id, cand["slug"]))
+                  cand.get("party"), cand.get("role"), cand.get("raised"), cand.get("endorsements"), cand.get("bio")))
+            cur.execute("SELECT id FROM candidates WHERE race_id = %s AND slug = %s", (actual_race_id, cand["slug"]))
             actual_cand_id = cur.fetchone()[0]
 
             for stmt_data in SEED_STATEMENTS.get(race["slug"], {}).get(cand["slug"], []):
                 stmt_text, source_url = stmt_data
                 stmt_id = str(uuid.uuid4())
-                if database.USE_PG:
-                    cur.execute("""
+                cur.execute("""
                         INSERT INTO candidate_statements (id, candidate_id, race_id, statement, source_url, added_at)
                         VALUES (%s, %s, %s, %s, %s, NOW())
                     """, (stmt_id, actual_cand_id, actual_race_id, stmt_text, source_url))
-                else:
-                    cur.execute("""
-                        INSERT INTO candidate_statements (id, candidate_id, race_id, statement, source_url, added_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """, (stmt_id, actual_cand_id, actual_race_id, stmt_text, source_url, now))
-
-    # Write seed version so next boot skips reseed
-    if database.USE_PG:
-        cur.execute("""
+    cur.execute("""
             INSERT INTO candidate_seed_meta (key, value, updated_at)
             VALUES ('seed_version', %s, NOW())
             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
         """, (SEED_VERSION,))
-    else:
-        cur.execute("""
-            INSERT OR REPLACE INTO candidate_seed_meta (key, value, updated_at)
-            VALUES ('seed_version', ?, ?)
-        """, (SEED_VERSION, now))
 
     conn.commit()
     conn.close()
@@ -429,10 +324,7 @@ def seed_candidates():
 # ══════════════════════════════════════════════════════════════════
 
 def _fetch_race(cur, race_slug):
-    if database.USE_PG:
-        cur.execute("SELECT id, slug, title, subtitle, race_type, election_date, location FROM candidate_races WHERE slug = %s", (race_slug,))
-    else:
-        cur.execute("SELECT id, slug, title, subtitle, race_type, election_date, location FROM candidate_races WHERE slug = ?", (race_slug,))
+    cur.execute("SELECT id, slug, title, subtitle, race_type, election_date, location FROM candidate_races WHERE slug = %s", (race_slug,))
     row = cur.fetchone()
     if not row:
         return None
@@ -443,15 +335,9 @@ def _fetch_race(cur, race_slug):
 
 
 def _fetch_candidates(cur, race_id):
-    if database.USE_PG:
-        cur.execute("""
+    cur.execute("""
             SELECT id, slug, name, initials, party, role, raised, endorsements, bio
             FROM candidates WHERE race_id = %s AND is_active = TRUE ORDER BY created_at
-        """, (race_id,))
-    else:
-        cur.execute("""
-            SELECT id, slug, name, initials, party, role, raised, endorsements, bio
-            FROM candidates WHERE race_id = ? AND is_active = 1 ORDER BY created_at
         """, (race_id,))
     rows = cur.fetchall()
     return [{"id": r[0], "slug": r[1], "name": r[2], "initials": r[3], "party": r[4],
@@ -459,15 +345,9 @@ def _fetch_candidates(cur, race_id):
 
 
 def _fetch_statements(cur, candidate_id):
-    if database.USE_PG:
-        cur.execute("""
+    cur.execute("""
             SELECT statement, source_url, source_label, added_at
             FROM candidate_statements WHERE candidate_id = %s ORDER BY added_at
-        """, (candidate_id,))
-    else:
-        cur.execute("""
-            SELECT statement, source_url, source_label, added_at
-            FROM candidate_statements WHERE candidate_id = ? ORDER BY added_at
         """, (candidate_id,))
     rows = cur.fetchall()
     return [{"text": r[0], "source_url": r[1], "source_label": r[2], "added_at": str(r[3])} for r in rows]
@@ -509,16 +389,9 @@ def api_candidate(race_slug, candidate_slug):
         if not race:
             conn.close()
             return jsonify({"error": "Race not found"}), 404
-
-        if database.USE_PG:
-            cur.execute("""
+        cur.execute("""
                 SELECT id, slug, name, initials, party, role, raised, endorsements, bio
                 FROM candidates WHERE race_id = %s AND slug = %s AND is_active = TRUE
-            """, (race["id"], candidate_slug))
-        else:
-            cur.execute("""
-                SELECT id, slug, name, initials, party, role, raised, endorsements, bio
-                FROM candidates WHERE race_id = ? AND slug = ? AND is_active = 1
             """, (race["id"], candidate_slug))
         row = cur.fetchone()
         if not row:
@@ -569,11 +442,7 @@ def api_add_statement(race_slug, candidate_slug):
         if not race:
             conn.close()
             return jsonify({"error": "Race not found"}), 404
-
-        if database.USE_PG:
-            cur.execute("SELECT id FROM candidates WHERE race_id = %s AND slug = %s", (race["id"], candidate_slug))
-        else:
-            cur.execute("SELECT id FROM candidates WHERE race_id = ? AND slug = ?", (race["id"], candidate_slug))
+        cur.execute("SELECT id FROM candidates WHERE race_id = %s AND slug = %s", (race["id"], candidate_slug))
         row = cur.fetchone()
         if not row:
             conn.close()
@@ -582,17 +451,10 @@ def api_add_statement(race_slug, candidate_slug):
         cand_id = row[0]
         stmt_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
-
-        if database.USE_PG:
-            cur.execute("""
+        cur.execute("""
                 INSERT INTO candidate_statements (id, candidate_id, race_id, statement, source_url, source_label, added_at)
                 VALUES (%s, %s, %s, %s, %s, %s, NOW())
             """, (stmt_id, cand_id, race["id"], statement, source_url, source_label))
-        else:
-            cur.execute("""
-                INSERT INTO candidate_statements (id, candidate_id, race_id, statement, source_url, source_label, added_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (stmt_id, cand_id, race["id"], statement, source_url, source_label, now))
 
         conn.commit()
         conn.close()
