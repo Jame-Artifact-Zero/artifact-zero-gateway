@@ -41,20 +41,9 @@ try:
 except ImportError:
     _USE_DB = False
 
-# ─── Import require_api_key from app ──────────────────────────────────────
-try:
-    from app import require_api_key
-    _HAS_AUTH = True
-except ImportError:
-    import functools
-    def require_api_key(f):
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            request._api_key_id = "dev"
-            request._api_tier = "dev"
-            return f(*args, **kwargs)
-        return wrapper
-    _HAS_AUTH = False
+# ─── Import require_api_key from shared auth module ───────────────────────
+from api_auth import require_api_key
+_HAS_AUTH = True
 
 
 # ─── Governance profile DB helpers ─────────────────────────────────────────
@@ -66,20 +55,14 @@ def _get_governance_profile(api_key_id: str) -> dict:
     try:
         conn = database.db_connect()
         cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute(
-                "SELECT governance_profile FROM api_keys WHERE id = %s",
-                (api_key_id,)
-            )
-        else:
-            cur.execute(
-                "SELECT governance_profile FROM api_keys WHERE id = ?",
-                (api_key_id,)
-            )
+        cur.execute(
+            "SELECT governance_profile FROM api_keys WHERE id = %s",
+            (api_key_id,)
+        )
         row = cur.fetchone()
         conn.close()
         if row:
-            val = row[0] if database.USE_PG else row["governance_profile"]
+            val = row[0]
             if val:
                 return json.loads(val) if isinstance(val, str) else val
     except Exception as e:
@@ -95,16 +78,10 @@ def _set_governance_profile(api_key_id: str, profile: dict) -> bool:
         conn = database.db_connect()
         cur = conn.cursor()
         profile_json = json.dumps(profile)
-        if database.USE_PG:
-            cur.execute(
-                "UPDATE api_keys SET governance_profile = %s WHERE id = %s",
-                (profile_json, api_key_id)
-            )
-        else:
-            cur.execute(
-                "UPDATE api_keys SET governance_profile = ? WHERE id = ?",
-                (profile_json, api_key_id)
-            )
+        cur.execute(
+            "UPDATE api_keys SET governance_profile = %s WHERE id = %s",
+            (profile_json, api_key_id)
+        )
         conn.commit()
         conn.close()
         return True

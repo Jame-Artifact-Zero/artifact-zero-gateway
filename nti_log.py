@@ -20,8 +20,7 @@ Usage:
     from nti_log import log_check, log_override, log_stamp, log_spend, get_check, export_checks
 
 Environment:
-    DATABASE_URL — PostgreSQL connection string (required in production)
-    Falls back to SQLite at /tmp/nti_log.db for local dev only.
+    PostgreSQL is required and is accessed through db.db_connect().
 """
 
 import os
@@ -31,28 +30,16 @@ import time
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
+import db as database
 
 log = logging.getLogger("nti_log")
 
 # ── CONNECTION ────────────────────────────────────────────────────────────────
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-
 def _get_conn():
-    """Return a DB connection. Postgres in production, SQLite for local dev."""
-    if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
-        try:
-            import psycopg2
-            import psycopg2.extras
-            conn = psycopg2.connect(DATABASE_URL)
-            return conn, "postgres"
-        except ImportError:
-            raise RuntimeError("psycopg2 not installed. Add psycopg2-binary to requirements.txt")
-    else:
-        import sqlite3
-        conn = sqlite3.connect("/tmp/nti_log.db")
-        conn.row_factory = sqlite3.Row
-        return conn, "sqlite"
+    """Return a PostgreSQL connection from the canonical database module."""
+    return database.db_connect()
+
 
 
 def _now() -> str:
@@ -62,136 +49,139 @@ def _now() -> str:
 # ── SCHEMA INIT ───────────────────────────────────────────────────────────────
 
 def init_log_tables() -> None:
-    """Create all log tables if they don't exist. Safe to call on every startup."""
-    conn, driver = _get_conn()
-    cur = conn.cursor()
+    """Create the canonical NTI and RH request-log tables in PostgreSQL."""
+    conn = _get_conn()
 
-    if driver == "postgres":
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS nti_checks (
-                request_id      TEXT PRIMARY KEY,
-                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                account_id      TEXT,
-                user_id         TEXT,
-                user_email      TEXT,
-                surface         TEXT,           -- 'outlook' | 'gmail' | 'api' | 'slack' | 'teams' etc
-                nti_version     TEXT NOT NULL,
-                score           NUMERIC(5,2),   -- 0.00 to 100.00
-                nii_raw         NUMERIC(5,4),   -- 0.0000 to 1.0000 (engine native)
-                band            TEXT,           -- 'SOLID' | 'REVIEW' | 'HIGH_RISK'
-                signals         JSONB,          -- array of signal IDs fired
-                signal_count    INTEGER,
-                text_hash       TEXT,           -- SHA256 of input text (not the text itself)
-                char_count      INTEGER,
-                word_count      INTEGER,
-                rewrite_offered BOOLEAN DEFAULT FALSE,
-                rewrite_accepted BOOLEAN DEFAULT FALSE,
-                latency_ms      INTEGER,
-                ip              TEXT,
-                user_agent      TEXT,
-                metadata        JSONB           -- catch-all for surface-specific data
-            )
-        """)
+    try:
+        cur = conn.cursor()
 
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS nti_overrides (
-                id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                request_id      TEXT NOT NULL REFERENCES nti_checks(request_id),
-                account_id      TEXT,
-                user_id         TEXT,
-                user_email      TEXT,
-                score           NUMERIC(5,2),
-                signals         JSONB,
-                override_reason TEXT            -- optional: user-provided reason
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS nti_stamps (
-                id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                request_id      TEXT NOT NULL REFERENCES nti_checks(request_id),
-                account_id      TEXT,
-                user_id         TEXT,
-                score           NUMERIC(5,2),
-                stamp_text      TEXT,           -- the actual stamp appended
-                recipient_domain TEXT           -- domain of To: address (no PII)
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS nti_verify_hits (
-                id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                request_id      TEXT NOT NULL,
-                lookup_ip       TEXT,
-                found           BOOLEAN
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS nti_spend (
-                id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                request_id      TEXT,
-                account_id      TEXT,
-                model           TEXT,           -- 'claude' | 'openai'
-                call_type       TEXT,           -- 'ungoverned' | 'governed' | 'draft_reply'
-                input_tokens    INTEGER,
-                output_tokens   INTEGER,
-                cost_usd        NUMERIC(10,6),
-                markup_usd      NUMERIC(10,6)
-            )
-        """)
-
-        # Indexes for common query patterns
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_checks_account ON nti_checks(account_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_checks_user ON nti_checks(user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_checks_created ON nti_checks(created_at)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_overrides_request ON nti_overrides(request_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_stamps_request ON nti_stamps(request_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_spend_account ON nti_spend(account_id)")
-
-    else:
-        # SQLite fallback for local dev
-        cur.executescript("""
             CREATE TABLE IF NOT EXISTS nti_checks (
                 request_id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                account_id TEXT, user_id TEXT, user_email TEXT, surface TEXT,
-                nti_version TEXT NOT NULL, score REAL, nii_raw REAL, band TEXT,
-                signals TEXT, signal_count INTEGER, text_hash TEXT,
-                char_count INTEGER, word_count INTEGER,
-                rewrite_offered INTEGER DEFAULT 0, rewrite_accepted INTEGER DEFAULT 0,
-                latency_ms INTEGER, ip TEXT, user_agent TEXT, metadata TEXT
-            );
-            CREATE TABLE IF NOT EXISTS nti_overrides (
-                id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
-                request_id TEXT NOT NULL, account_id TEXT, user_id TEXT,
-                user_email TEXT, score REAL, signals TEXT, override_reason TEXT
-            );
-            CREATE TABLE IF NOT EXISTS nti_stamps (
-                id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
-                request_id TEXT NOT NULL, account_id TEXT, user_id TEXT,
-                score REAL, stamp_text TEXT, recipient_domain TEXT
-            );
-            CREATE TABLE IF NOT EXISTS nti_verify_hits (
-                id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
-                request_id TEXT NOT NULL, lookup_ip TEXT, found INTEGER
-            );
-            CREATE TABLE IF NOT EXISTS nti_spend (
-                id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
-                request_id TEXT, account_id TEXT, model TEXT, call_type TEXT,
-                input_tokens INTEGER, output_tokens INTEGER,
-                cost_usd REAL, markup_usd REAL
-            );
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                account_id TEXT,
+                user_id TEXT,
+                user_email TEXT,
+                surface TEXT,
+                nti_version TEXT NOT NULL,
+                score NUMERIC(5,2),
+                nii_raw NUMERIC(5,4),
+                band TEXT,
+                signals JSONB,
+                signal_count INTEGER,
+                text_hash TEXT,
+                char_count INTEGER,
+                word_count INTEGER,
+                rewrite_offered BOOLEAN DEFAULT FALSE,
+                rewrite_accepted BOOLEAN DEFAULT FALSE,
+                latency_ms INTEGER,
+                ip TEXT,
+                user_agent TEXT,
+                metadata JSONB
+            )
         """)
 
-    conn.commit()
-    cur.close()
-    conn.close()
-    log.info("nti_log: tables initialized")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS nti_overrides (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                request_id TEXT NOT NULL REFERENCES nti_checks(request_id),
+                account_id TEXT,
+                user_id TEXT,
+                user_email TEXT,
+                score NUMERIC(5,2),
+                signals JSONB,
+                override_reason TEXT
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS nti_stamps (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                request_id TEXT NOT NULL REFERENCES nti_checks(request_id),
+                account_id TEXT,
+                user_id TEXT,
+                score NUMERIC(5,2),
+                stamp_text TEXT,
+                recipient_domain TEXT
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS nti_verify_hits (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                request_id TEXT NOT NULL,
+                lookup_ip TEXT,
+                found BOOLEAN
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS nti_spend (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                request_id TEXT,
+                account_id TEXT,
+                model TEXT,
+                call_type TEXT,
+                input_tokens INTEGER,
+                output_tokens INTEGER,
+                cost_usd NUMERIC(10,6),
+                markup_usd NUMERIC(10,6)
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS rh_api_requests (
+                id BIGSERIAL PRIMARY KEY,
+                request_id TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                status_code INTEGER NOT NULL,
+                latency_ms NUMERIC(10,2),
+                api_key_id TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS idx_checks_account "
+            "ON nti_checks(account_id)",
+
+            "CREATE INDEX IF NOT EXISTS idx_checks_user "
+            "ON nti_checks(user_id)",
+
+            "CREATE INDEX IF NOT EXISTS idx_checks_created "
+            "ON nti_checks(created_at)",
+
+            "CREATE INDEX IF NOT EXISTS idx_overrides_request "
+            "ON nti_overrides(request_id)",
+
+            "CREATE INDEX IF NOT EXISTS idx_stamps_request "
+            "ON nti_stamps(request_id)",
+
+            "CREATE INDEX IF NOT EXISTS idx_spend_account "
+            "ON nti_spend(account_id)",
+
+            "CREATE INDEX IF NOT EXISTS idx_rh_api_requests_created "
+            "ON rh_api_requests(created_at)",
+
+            "CREATE INDEX IF NOT EXISTS idx_rh_api_requests_key "
+            "ON rh_api_requests(api_key_id)",
+        ):
+            cur.execute(statement)
+
+        conn.commit()
+        log.info("nti_log: PostgreSQL tables initialized")
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
 
 
 # ── WRITE: CHECK ──────────────────────────────────────────────────────────────
@@ -199,8 +189,8 @@ def init_log_tables() -> None:
 def log_check(
     request_id: str,
     nti_version: str,
-    score: float,                   # 0-100 scale
-    nii_raw: float,                 # 0.0-1.0 engine native
+    score: float,
+    nii_raw: float,
     signals: List[str],
     char_count: int,
     word_count: int,
@@ -216,79 +206,116 @@ def log_check(
     user_agent: Optional[str] = None,
     metadata: Optional[Dict] = None,
 ) -> bool:
-    """Write a check event. Returns True on success."""
+    """Write an NTI check event to PostgreSQL."""
     band = _score_to_band(score)
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        conn = _get_conn()
         cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute("""
-                INSERT INTO nti_checks
-                (request_id, account_id, user_id, user_email, surface,
-                 nti_version, score, nii_raw, band, signals, signal_count,
-                 text_hash, char_count, word_count, rewrite_offered, rewrite_accepted,
-                 latency_ms, ip, user_agent, metadata)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (request_id) DO NOTHING
-            """, (
-                request_id, account_id, user_id, user_email, surface,
-                nti_version, round(score, 2), round(nii_raw, 4), band,
-                json.dumps(signals), len(signals),
-                text_hash, char_count, word_count,
-                rewrite_offered, rewrite_accepted,
-                latency_ms, ip, user_agent,
-                json.dumps(metadata or {})
-            ))
-        else:
-            cur.execute("""
-                INSERT OR IGNORE INTO nti_checks
-                (request_id, created_at, account_id, user_id, user_email, surface,
-                 nti_version, score, nii_raw, band, signals, signal_count,
-                 text_hash, char_count, word_count, rewrite_offered, rewrite_accepted,
-                 latency_ms, ip, user_agent, metadata)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (
-                request_id, _now(), account_id, user_id, user_email, surface,
-                nti_version, round(score, 2), round(nii_raw, 4), band,
-                json.dumps(signals), len(signals),
-                text_hash, char_count, word_count,
-                int(rewrite_offered), int(rewrite_accepted),
-                latency_ms, ip, user_agent,
-                json.dumps(metadata or {})
-            ))
+
+        cur.execute("""
+            INSERT INTO nti_checks (
+                request_id,
+                account_id,
+                user_id,
+                user_email,
+                surface,
+                nti_version,
+                score,
+                nii_raw,
+                band,
+                signals,
+                signal_count,
+                text_hash,
+                char_count,
+                word_count,
+                rewrite_offered,
+                rewrite_accepted,
+                latency_ms,
+                ip,
+                user_agent,
+                metadata
+            )
+            VALUES (
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s::jsonb,
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s::jsonb
+            )
+            ON CONFLICT (request_id) DO NOTHING
+        """, (
+            request_id,
+            account_id,
+            user_id,
+            user_email,
+            surface,
+            nti_version,
+            round(score, 2),
+            round(nii_raw, 4),
+            band,
+            json.dumps(signals),
+            len(signals),
+            text_hash,
+            char_count,
+            word_count,
+            rewrite_offered,
+            rewrite_accepted,
+            latency_ms,
+            ip,
+            user_agent,
+            json.dumps(metadata or {}),
+        ))
+
         conn.commit()
-        cur.close()
-        conn.close()
         return True
-    except Exception as e:
-        log.error(f"log_check failed: {e}")
+
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"log_check failed: {error}")
         return False
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── WRITE: REWRITE ACCEPTED ───────────────────────────────────────────────────
 
 def log_rewrite_accepted(request_id: str) -> bool:
-    """Mark a check record as having had its rewrite accepted by the user."""
+    """Mark an NTI rewrite as accepted."""
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        conn = _get_conn()
         cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute(
-                "UPDATE nti_checks SET rewrite_accepted = TRUE WHERE request_id = %s",
-                (request_id,)
-            )
-        else:
-            cur.execute(
-                "UPDATE nti_checks SET rewrite_accepted = 1 WHERE request_id = ?",
-                (request_id,)
-            )
+
+        cur.execute(
+            """
+            UPDATE nti_checks
+            SET rewrite_accepted = TRUE
+            WHERE request_id = %s
+            """,
+            (request_id,),
+        )
+
         conn.commit()
-        cur.close()
-        conn.close()
         return True
-    except Exception as e:
-        log.error(f"log_rewrite_accepted failed: {e}")
+
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"log_rewrite_accepted failed: {error}")
         return False
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── WRITE: OVERRIDE ───────────────────────────────────────────────────────────
@@ -302,32 +329,50 @@ def log_override(
     user_email: Optional[str] = None,
     override_reason: Optional[str] = None,
 ) -> bool:
-    """Log when a user bypasses a failed check and sends anyway."""
+    """Record a user override of an NTI result."""
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        conn = _get_conn()
         cur = conn.cursor()
-        oid = str(uuid.uuid4())
-        if driver == "postgres":
-            cur.execute("""
-                INSERT INTO nti_overrides
-                (id, request_id, account_id, user_id, user_email, score, signals, override_reason)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (oid, request_id, account_id, user_id, user_email,
-                  round(score, 2), json.dumps(signals), override_reason))
-        else:
-            cur.execute("""
-                INSERT INTO nti_overrides
-                (id, created_at, request_id, account_id, user_id, user_email, score, signals, override_reason)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            """, (oid, _now(), request_id, account_id, user_id, user_email,
-                  round(score, 2), json.dumps(signals), override_reason))
+
+        cur.execute("""
+            INSERT INTO nti_overrides (
+                id,
+                request_id,
+                account_id,
+                user_id,
+                user_email,
+                score,
+                signals,
+                override_reason
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+        """, (
+            str(uuid.uuid4()),
+            request_id,
+            account_id,
+            user_id,
+            user_email,
+            round(score, 2),
+            json.dumps(signals),
+            override_reason,
+        ))
+
         conn.commit()
-        cur.close()
-        conn.close()
         return True
-    except Exception as e:
-        log.error(f"log_override failed: {e}")
+
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"log_override failed: {error}")
         return False
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── WRITE: STAMP ──────────────────────────────────────────────────────────────
@@ -340,32 +385,48 @@ def log_stamp(
     user_id: Optional[str] = None,
     recipient_domain: Optional[str] = None,
 ) -> bool:
-    """Log when a verified stamp is appended to an outbound email."""
+    """Record an NTI verification stamp."""
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        conn = _get_conn()
         cur = conn.cursor()
-        sid = str(uuid.uuid4())
-        if driver == "postgres":
-            cur.execute("""
-                INSERT INTO nti_stamps
-                (id, request_id, account_id, user_id, score, stamp_text, recipient_domain)
-                VALUES (%s,%s,%s,%s,%s,%s,%s)
-            """, (sid, request_id, account_id, user_id,
-                  round(score, 2), stamp_text, recipient_domain))
-        else:
-            cur.execute("""
-                INSERT INTO nti_stamps
-                (id, created_at, request_id, account_id, user_id, score, stamp_text, recipient_domain)
-                VALUES (?,?,?,?,?,?,?,?)
-            """, (sid, _now(), request_id, account_id, user_id,
-                  round(score, 2), stamp_text, recipient_domain))
+
+        cur.execute("""
+            INSERT INTO nti_stamps (
+                id,
+                request_id,
+                account_id,
+                user_id,
+                score,
+                stamp_text,
+                recipient_domain
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            str(uuid.uuid4()),
+            request_id,
+            account_id,
+            user_id,
+            round(score, 2),
+            stamp_text,
+            recipient_domain,
+        ))
+
         conn.commit()
-        cur.close()
-        conn.close()
         return True
-    except Exception as e:
-        log.error(f"log_stamp failed: {e}")
+
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"log_stamp failed: {error}")
         return False
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── WRITE: SPEND ──────────────────────────────────────────────────────────────
@@ -380,96 +441,139 @@ def log_spend(
     request_id: Optional[str] = None,
     account_id: Optional[str] = None,
 ) -> bool:
-    """Log AI call cost. markup_pct applied on top of cost_usd."""
+    """Record model usage and marked-up spend."""
     markup_usd = round(cost_usd * markup_pct, 6)
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        conn = _get_conn()
         cur = conn.cursor()
-        sid = str(uuid.uuid4())
-        if driver == "postgres":
-            cur.execute("""
-                INSERT INTO nti_spend
-                (id, request_id, account_id, model, call_type,
-                 input_tokens, output_tokens, cost_usd, markup_usd)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (sid, request_id, account_id, model, call_type,
-                  input_tokens, output_tokens, round(cost_usd, 6), markup_usd))
-        else:
-            cur.execute("""
-                INSERT INTO nti_spend
-                (id, created_at, request_id, account_id, model, call_type,
-                 input_tokens, output_tokens, cost_usd, markup_usd)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-            """, (sid, _now(), request_id, account_id, model, call_type,
-                  input_tokens, output_tokens, round(cost_usd, 6), markup_usd))
+
+        cur.execute("""
+            INSERT INTO nti_spend (
+                id,
+                request_id,
+                account_id,
+                model,
+                call_type,
+                input_tokens,
+                output_tokens,
+                cost_usd,
+                markup_usd
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            str(uuid.uuid4()),
+            request_id,
+            account_id,
+            model,
+            call_type,
+            input_tokens,
+            output_tokens,
+            round(cost_usd, 6),
+            markup_usd,
+        ))
+
         conn.commit()
-        cur.close()
-        conn.close()
         return True
-    except Exception as e:
-        log.error(f"log_spend failed: {e}")
+
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"log_spend failed: {error}")
         return False
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── READ: VERIFY ──────────────────────────────────────────────────────────────
 
-def get_check(request_id: str, lookup_ip: Optional[str] = None) -> Optional[Dict]:
+def get_check(
+    request_id: str,
+    lookup_ip: Optional[str] = None,
+) -> Optional[Dict]:
     """
-    Public verify lookup. Returns the minimum needed for /verify/<request_id>.
-    Logs the lookup hit regardless of found/not found.
+    Return the public verification record and log the lookup attempt.
     """
-    try:
-        conn, driver = _get_conn()
-        cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute("""
-                SELECT request_id, created_at, nti_version, score, band, signals, signal_count
-                FROM nti_checks WHERE request_id = %s
-            """, (request_id,))
-            row = cur.fetchone()
-        else:
-            cur.execute("""
-                SELECT request_id, created_at, nti_version, score, band, signals, signal_count
-                FROM nti_checks WHERE request_id = ?
-            """, (request_id,))
-            row = cur.fetchone()
+    conn = None
 
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                request_id,
+                created_at,
+                nti_version,
+                score,
+                band,
+                signals,
+                signal_count
+            FROM nti_checks
+            WHERE request_id = %s
+        """, (request_id,))
+
+        row = cur.fetchone()
         found = row is not None
         result = None
 
         if found:
+            raw_signals = row[5]
+
+            if isinstance(raw_signals, str):
+                parsed_signals = json.loads(raw_signals)
+            else:
+                parsed_signals = raw_signals or []
+
             result = {
                 "request_id": row[0],
                 "checked_at": row[1],
                 "nti_version": row[2],
-                "score": float(row[3]) if row[3] is not None else None,
+                "score": (
+                    float(row[3])
+                    if row[3] is not None
+                    else None
+                ),
                 "band": row[4],
-                "signals": json.loads(row[5]) if row[5] else [],
+                "signals": parsed_signals,
                 "signal_count": row[6],
                 "verified": True,
             }
 
-        # Log the lookup
-        vid = str(uuid.uuid4())
-        if driver == "postgres":
-            cur.execute("""
-                INSERT INTO nti_verify_hits (id, request_id, lookup_ip, found)
-                VALUES (%s,%s,%s,%s)
-            """, (vid, request_id, lookup_ip, found))
-        else:
-            cur.execute("""
-                INSERT INTO nti_verify_hits (id, created_at, request_id, lookup_ip, found)
-                VALUES (?,?,?,?,?)
-            """, (vid, _now(), request_id, lookup_ip, int(found)))
+        cur.execute("""
+            INSERT INTO nti_verify_hits (
+                id,
+                request_id,
+                lookup_ip,
+                found
+            )
+            VALUES (%s, %s, %s, %s)
+        """, (
+            str(uuid.uuid4()),
+            request_id,
+            lookup_ip,
+            found,
+        ))
 
         conn.commit()
-        cur.close()
-        conn.close()
         return result
 
-    except Exception as e:
-        log.error(f"get_check failed: {e}")
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"get_check failed: {error}")
         return None
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── READ: REPORTING ───────────────────────────────────────────────────────────
@@ -478,82 +582,99 @@ def get_account_stats(
     account_id: str,
     days: int = 30,
 ) -> Dict[str, Any]:
-    """
-    Aggregate stats for the reporting dashboard.
-    Returns: check count, avg score, band distribution, top signals,
-             override count, rewrite acceptance rate, spend total.
-    """
+    """Return PostgreSQL-backed NTI account statistics."""
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        period_days = max(
+            1,
+            min(int(days), 3650),
+        )
+
+        conn = _get_conn()
         cur = conn.cursor()
 
-        if driver == "postgres":
-            cur.execute("""
-                SELECT
-                    COUNT(*)                                        AS total_checks,
-                    ROUND(AVG(score)::numeric, 1)                  AS avg_score,
-                    COUNT(*) FILTER (WHERE band = 'SOLID')         AS solid_count,
-                    COUNT(*) FILTER (WHERE band = 'REVIEW')        AS review_count,
-                    COUNT(*) FILTER (WHERE band = 'HIGH_RISK')     AS high_risk_count,
-                    COUNT(*) FILTER (WHERE rewrite_accepted = TRUE) AS rewrites_accepted,
-                    COUNT(*) FILTER (WHERE rewrite_offered = TRUE)  AS rewrites_offered
-                FROM nti_checks
-                WHERE account_id = %s
-                  AND created_at >= NOW() - INTERVAL '%s days'
-            """, (account_id, days))
-            stats = cur.fetchone()
+        cur.execute("""
+            SELECT
+                COUNT(*) AS total_checks,
+                ROUND(AVG(score)::numeric, 1) AS avg_score,
+                COUNT(*) FILTER (
+                    WHERE band = 'SOLID'
+                ) AS solid_count,
+                COUNT(*) FILTER (
+                    WHERE band = 'REVIEW'
+                ) AS review_count,
+                COUNT(*) FILTER (
+                    WHERE band = 'HIGH_RISK'
+                ) AS high_risk_count,
+                COUNT(*) FILTER (
+                    WHERE rewrite_accepted = TRUE
+                ) AS rewrites_accepted,
+                COUNT(*) FILTER (
+                    WHERE rewrite_offered = TRUE
+                ) AS rewrites_offered
+            FROM nti_checks
+            WHERE account_id = %s
+              AND created_at >= (
+                  NOW() - (%s * INTERVAL '1 day')
+              )
+        """, (
+            account_id,
+            period_days,
+        ))
 
-            cur.execute("""
-                SELECT COUNT(*) FROM nti_overrides
-                WHERE account_id = %s
-                  AND created_at >= NOW() - INTERVAL '%s days'
-            """, (account_id, days))
-            override_count = cur.fetchone()[0]
+        stats = cur.fetchone()
 
-            cur.execute("""
-                SELECT ROUND(SUM(cost_usd + markup_usd)::numeric, 4)
-                FROM nti_spend
-                WHERE account_id = %s
-                  AND created_at >= NOW() - INTERVAL '%s days'
-            """, (account_id, days))
-            spend = cur.fetchone()[0] or 0.0
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM nti_overrides
+            WHERE account_id = %s
+              AND created_at >= (
+                  NOW() - (%s * INTERVAL '1 day')
+              )
+        """, (
+            account_id,
+            period_days,
+        ))
 
-        else:
-            cur.execute("""
-                SELECT
-                    COUNT(*) AS total_checks,
-                    ROUND(AVG(score), 1) AS avg_score,
-                    SUM(CASE WHEN band='SOLID' THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN band='REVIEW' THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN band='HIGH_RISK' THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN rewrite_accepted=1 THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN rewrite_offered=1 THEN 1 ELSE 0 END)
-                FROM nti_checks
-                WHERE account_id = ?
-                  AND created_at >= datetime('now', ? || ' days')
-            """, (account_id, f"-{days}"))
-            stats = cur.fetchone()
+        override_count = cur.fetchone()[0]
 
-            cur.execute("""
-                SELECT COUNT(*) FROM nti_overrides
-                WHERE account_id = ?
-                  AND created_at >= datetime('now', ? || ' days')
-            """, (account_id, f"-{days}"))
-            override_count = cur.fetchone()[0]
-            spend = 0.0
+        cur.execute("""
+            SELECT ROUND(
+                SUM(cost_usd + markup_usd)::numeric,
+                4
+            )
+            FROM nti_spend
+            WHERE account_id = %s
+              AND created_at >= (
+                  NOW() - (%s * INTERVAL '1 day')
+              )
+        """, (
+            account_id,
+            period_days,
+        ))
+
+        spend = cur.fetchone()[0] or 0.0
 
         rewrite_rate = 0.0
-        if stats[6] and stats[6] > 0:
-            rewrite_rate = round((stats[5] or 0) / stats[6] * 100, 1)
 
-        cur.close()
-        conn.close()
+        if stats[6] and stats[6] > 0:
+            rewrite_rate = round(
+                (stats[5] or 0)
+                / stats[6]
+                * 100,
+                1,
+            )
 
         return {
             "account_id": account_id,
-            "period_days": days,
+            "period_days": period_days,
             "total_checks": stats[0] or 0,
-            "avg_score": float(stats[1]) if stats[1] else 0.0,
+            "avg_score": (
+                float(stats[1])
+                if stats[1] is not None
+                else 0.0
+            ),
             "band_distribution": {
                 "solid": stats[2] or 0,
                 "review": stats[3] or 0,
@@ -564,50 +685,74 @@ def get_account_stats(
             "spend_usd": float(spend),
         }
 
-    except Exception as e:
-        log.error(f"get_account_stats failed: {e}")
+    except Exception as error:
+        log.error(f"get_account_stats failed: {error}")
         return {}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 def export_checks_csv(
     account_id: str,
     days: int = 30,
 ) -> List[Dict]:
-    """Return check records as list of dicts for CSV export."""
-    try:
-        conn, driver = _get_conn()
-        cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute("""
-                SELECT request_id, created_at, user_email, surface,
-                       score, band, signal_count, signals,
-                       rewrite_offered, rewrite_accepted, latency_ms
-                FROM nti_checks
-                WHERE account_id = %s
-                  AND created_at >= NOW() - INTERVAL '%s days'
-                ORDER BY created_at DESC
-            """, (account_id, days))
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        else:
-            cur.execute("""
-                SELECT request_id, created_at, user_email, surface,
-                       score, band, signal_count, signals,
-                       rewrite_offered, rewrite_accepted, latency_ms
-                FROM nti_checks
-                WHERE account_id = ?
-                  AND created_at >= datetime('now', ? || ' days')
-                ORDER BY created_at DESC
-            """, (account_id, f"-{days}"))
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    """Return PostgreSQL NTI check records for CSV export."""
+    conn = None
 
-        cur.close()
-        conn.close()
-        return rows
-    except Exception as e:
-        log.error(f"export_checks_csv failed: {e}")
+    try:
+        period_days = max(
+            1,
+            min(int(days), 3650),
+        )
+
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                request_id,
+                created_at,
+                user_email,
+                surface,
+                score,
+                band,
+                signal_count,
+                signals,
+                rewrite_offered,
+                rewrite_accepted,
+                latency_ms
+            FROM nti_checks
+            WHERE account_id = %s
+              AND created_at >= (
+                  NOW() - (%s * INTERVAL '1 day')
+              )
+            ORDER BY created_at DESC
+        """, (
+            account_id,
+            period_days,
+        ))
+
+        columns = [
+            description[0]
+            for description in cur.description
+        ]
+
+        return [
+            dict(zip(columns, row))
+            for row in cur.fetchall()
+        ]
+
+    except Exception as error:
+        log.error(f"export_checks_csv failed: {error}")
         return []
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -631,130 +776,50 @@ def hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def log_request(request_id: str, endpoint: str, status_code: int, latency_ms: float, api_key_id: str = None) -> None:
-    """Log an RH Toolkit API request."""
+def log_request(
+    request_id: str,
+    endpoint: str,
+    status_code: int,
+    latency_ms: float,
+    api_key_id: str = None,
+) -> None:
+    """Record an RH Toolkit API request in PostgreSQL."""
+    conn = None
+
     try:
-        conn, driver = _get_conn()
+        conn = _get_conn()
         cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS rh_api_requests (
-                    id          BIGSERIAL PRIMARY KEY,
-                    request_id  TEXT NOT NULL,
-                    endpoint    TEXT NOT NULL,
-                    status_code INTEGER NOT NULL,
-                    latency_ms  NUMERIC(10,2),
-                    api_key_id  TEXT,
-                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
-        else:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS rh_api_requests (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    request_id  TEXT NOT NULL,
-                    endpoint    TEXT NOT NULL,
-                    status_code INTEGER NOT NULL,
-                    latency_ms  REAL,
-                    api_key_id  TEXT,
-                    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-            cur.execute("""
-                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
+
+        cur.execute("""
+            INSERT INTO rh_api_requests (
+                request_id,
+                endpoint,
+                status_code,
+                latency_ms,
+                api_key_id
+            )
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            request_id,
+            endpoint,
+            status_code,
+            round(latency_ms, 2),
+            api_key_id,
+        ))
+
         conn.commit()
-        conn.close()
-    except Exception:
-        pass
+
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+
+        log.error(f"log_request failed: {error}")
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
-def log_request(request_id: str, endpoint: str, status_code: int, latency_ms: float, api_key_id: str = None) -> None:
-    """Log an RH Toolkit API request."""
-    try:
-        conn, driver = _get_conn()
-        cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS rh_api_requests (
-                    id          BIGSERIAL PRIMARY KEY,
-                    request_id  TEXT NOT NULL,
-                    endpoint    TEXT NOT NULL,
-                    status_code INTEGER NOT NULL,
-                    latency_ms  NUMERIC(10,2),
-                    api_key_id  TEXT,
-                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
-        else:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS rh_api_requests (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    request_id  TEXT NOT NULL,
-                    endpoint    TEXT NOT NULL,
-                    status_code INTEGER NOT NULL,
-                    latency_ms  REAL,
-                    api_key_id  TEXT,
-                    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-            cur.execute("""
-                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
 
 
-def log_request(request_id: str, endpoint: str, status_code: int, latency_ms: float, api_key_id: str = None) -> None:
-    """Log an RH Toolkit API request."""
-    try:
-        conn, driver = _get_conn()
-        cur = conn.cursor()
-        if driver == "postgres":
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS rh_api_requests (
-                    id          BIGSERIAL PRIMARY KEY,
-                    request_id  TEXT NOT NULL,
-                    endpoint    TEXT NOT NULL,
-                    status_code INTEGER NOT NULL,
-                    latency_ms  NUMERIC(10,2),
-                    api_key_id  TEXT,
-                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
-        else:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS rh_api_requests (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    request_id  TEXT NOT NULL,
-                    endpoint    TEXT NOT NULL,
-                    status_code INTEGER NOT NULL,
-                    latency_ms  REAL,
-                    api_key_id  TEXT,
-                    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-            cur.execute("""
-                INSERT INTO rh_api_requests (request_id, endpoint, status_code, latency_ms, api_key_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (request_id, endpoint, status_code, round(latency_ms, 2), api_key_id))
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+

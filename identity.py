@@ -48,7 +48,6 @@ oauth = OAuth()
 def identity_db_init():
     """Create identity-specific tables."""
     p = param_placeholder()
-    USE_PG = bool(os.getenv("DATABASE_URL"))
 
     with db_connection() as conn:
         cur = conn.cursor()
@@ -123,11 +122,10 @@ def identity_db_init():
         )
         """)
 
-        if USE_PG:
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_idp_org ON identity_providers(org_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_refresh_user ON refresh_tokens(user_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_abac_org ON abac_policies(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_idp_org ON identity_providers(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_refresh_user ON refresh_tokens(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_abac_org ON abac_policies(org_id)")
 
         conn.commit()
     print("[IDENTITY] Tables initialized")
@@ -240,18 +238,12 @@ def mfa_setup(user_id: str, email: str) -> dict:
     with db_connection() as conn:
         cur = conn.cursor()
         # Upsert
-        if os.getenv("DATABASE_URL"):
-            cur.execute(f"""
-                INSERT INTO mfa_secrets (user_id, totp_secret, backup_codes_json, created_at)
-                VALUES ({p}, {p}, {p}, {p})
-                ON CONFLICT (user_id) DO UPDATE SET totp_secret = EXCLUDED.totp_secret,
-                    backup_codes_json = EXCLUDED.backup_codes_json, created_at = EXCLUDED.created_at
-            """, (user_id, secret, json.dumps(backup_codes), now))
-        else:
-            cur.execute(f"""
-                INSERT OR REPLACE INTO mfa_secrets (user_id, totp_secret, backup_codes_json, created_at)
-                VALUES ({p}, {p}, {p}, {p})
-            """, (user_id, secret, json.dumps(backup_codes), now))
+        cur.execute(f"""
+            INSERT INTO mfa_secrets (user_id, totp_secret, backup_codes_json, created_at)
+            VALUES ({p}, {p}, {p}, {p})
+            ON CONFLICT (user_id) DO UPDATE SET totp_secret = EXCLUDED.totp_secret,
+                backup_codes_json = EXCLUDED.backup_codes_json, created_at = EXCLUDED.created_at
+        """, (user_id, secret, json.dumps(backup_codes), now))
         conn.commit()
 
     totp = pyotp.TOTP(secret)

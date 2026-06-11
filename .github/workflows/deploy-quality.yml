@@ -1,9 +1,9 @@
 # ============================================
-# Artifact Zero — Deploy to Quality (Staging)
+# Artifact Zero - Deploy to Quality (Staging)
 # ============================================
 # Triggers: push to quality branch (after PR merge from develop)
 # Deploys to: quality.artifact0.com
-# Uses shared artifact-zero-task family — same family as main,
+# Uses shared artifact-zero-task family - same family as main,
 # different revision. Service points at quality's revision.
 # ============================================
 
@@ -24,6 +24,22 @@ jobs:
   test:
     name: Run Tests First
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,6 +50,7 @@ jobs:
         env:
           FLASK_SECRET_KEY: test-ci-key
           AZ_SECRET: test-ci-az-secret
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
           TESTING: "1"
 
   deploy-quality:
@@ -112,16 +129,16 @@ jobs:
       - name: Verify deployment
         id: verify
         run: |
-          echo "✅ Deployed ${{ steps.build.outputs.image }}"
-          echo "⏳ Waiting 30s for task to settle..."
+          echo "Deployed ${{ steps.build.outputs.image }}"
+          echo "Waiting 30s for task to settle..."
           sleep 30
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://quality.artifact0.com/health || echo "000")
           echo "Health check response: $RESPONSE"
           if [ "$RESPONSE" = "200" ]; then
-            echo "✅ Quality healthy"
+            echo "Quality healthy"
             echo "status=success" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ Health check failed (HTTP $RESPONSE) — triggering rollback"
+            echo "Health check failed (HTTP $RESPONSE) - triggering rollback"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
@@ -129,7 +146,7 @@ jobs:
       - name: Auto-rollback on failure
         if: failure()
         run: |
-          echo "🔄 Rolling back quality to previous stable revision..."
+          echo "Rolling back quality to previous stable revision..."
           CURRENT_ARN=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
             --query "services[0].taskDefinition" --output text)
           PREV_ARN=$(aws ecs list-task-definitions --family-prefix $ECS_TASK_DEFINITION \
@@ -138,18 +155,18 @@ jobs:
             echo "Rolling back to: $PREV_ARN"
             aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE \
               --task-definition "$PREV_ARN" --force-new-deployment
-            echo "✅ Rollback initiated"
+            echo "Rollback initiated"
           else
-            echo "❌ No previous task definition found — manual intervention required"
+            echo "No previous task definition found - manual intervention required"
           fi
 
-      - name: Notify — Quality Deploy Success
+      - name: Notify - Quality Deploy Success
         if: success()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           cat > /tmp/email.json << 'EMAILEOF'
           {
-            "Subject": {"Data": "Quality Deploy OK — SHORTSHA"},
+            "Subject": {"Data": "Quality Deploy OK - SHORTSHA"},
             "Body": {"Text": {"Data": "Quality deploy succeeded.\n\nCommit: FULLSHA\nBranch: BRANCHNAME\nImage: IMAGETAG\n\nSite: https://quality.artifact0.com\nHealth: https://quality.artifact0.com/health"}}
           }
           EMAILEOF
@@ -161,15 +178,15 @@ jobs:
             --from "Artifact Zero CI <noreply@artifact0.com>" \
             --destination '{"ToAddresses":["${{ secrets.NOTIFY_EMAIL_TO }}"]}' \
             --message file:///tmp/email.json \
-            --region us-east-1 || echo "Notification send failed — deploy still succeeded"
+            --region us-east-1 || echo "Notification send failed - deploy still succeeded"
 
-      - name: Notify — Quality Deploy Failed
+      - name: Notify - Quality Deploy Failed
         if: failure()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           cat > /tmp/email.json << 'EMAILEOF'
           {
-            "Subject": {"Data": "QUALITY DEPLOY FAILED — SHORTSHA"},
+            "Subject": {"Data": "QUALITY DEPLOY FAILED - SHORTSHA"},
             "Body": {"Text": {"Data": "Quality deploy FAILED. Auto-rollback attempted.\n\nCommit: FULLSHA\nBranch: BRANCHNAME\n\nCheck: https://github.com/REPONAME/actions"}}
           }
           EMAILEOF
