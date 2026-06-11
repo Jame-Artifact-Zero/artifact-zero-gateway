@@ -54,83 +54,101 @@ P = param_placeholder()
 
 # ─── DATABASE ───
 def init_relay_db():
-    """Create relay tables. Works on both SQLite and PostgreSQL."""
+    """Create the relay tables in PostgreSQL."""
     conn = get_conn()
-    cur = conn.cursor()
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS az_users (
-            id TEXT PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            username TEXT DEFAULT '',
-            password_hash TEXT NOT NULL,
-            salt TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            turns_used INTEGER DEFAULT 0,
-            turns_limit INTEGER DEFAULT 50,
-            plan TEXT DEFAULT 'free',
-            active INTEGER DEFAULT 1
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS az_protocols (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            protocol_json TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            active INTEGER DEFAULT 1
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS az_sessions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            protocol_id TEXT NOT NULL,
-            started_at TEXT NOT NULL,
-            last_turn_at TEXT,
-            turn_count INTEGER DEFAULT 0,
-            platform TEXT DEFAULT 'unknown',
-            active INTEGER DEFAULT 1
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS az_turns (
-            id TEXT PRIMARY KEY,
-            session_id TEXT NOT NULL,
-            turn_number INTEGER NOT NULL,
-            ai_output TEXT,
-            nti_scores TEXT,
-            governance_directives TEXT,
-            created_at TEXT NOT NULL
-        )
-    """)
-
-    # Indexes for performance
     try:
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_users_email ON az_users(email)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_protocols_user ON az_protocols(user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_sessions_user ON az_sessions(user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_az_turns_session ON az_turns(session_id)")
+        cur = conn.cursor()
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS az_users (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                username TEXT DEFAULT '',
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                turns_used INTEGER DEFAULT 0,
+                turns_limit INTEGER DEFAULT 50,
+                plan TEXT DEFAULT 'free',
+                active INTEGER DEFAULT 1
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS az_protocols (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                protocol_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                active INTEGER DEFAULT 1
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS az_sessions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                protocol_id TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                last_turn_at TEXT,
+                turn_count INTEGER DEFAULT 0,
+                platform TEXT DEFAULT 'unknown',
+                active INTEGER DEFAULT 1
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS az_turns (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                turn_number INTEGER NOT NULL,
+                ai_output TEXT,
+                nti_scores TEXT,
+                governance_directives TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS "
+            "idx_az_users_email ON az_users(email)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS "
+            "idx_az_protocols_user ON az_protocols(user_id)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS "
+            "idx_az_sessions_user ON az_sessions(user_id)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS "
+            "idx_az_turns_session ON az_turns(session_id)"
+        )
+
+        conn.commit()
+
     except Exception:
-        pass  # Indexes already exist or not supported
+        conn.rollback()
+        raise
 
-    conn.commit()
-    release_conn(conn)
+    finally:
+        release_conn(conn)
+
     print("[RELAY] Tables initialized")
-
 
 init_relay_db()
 
 # Initialize Loop 4+5 tables (audit, pipeline config, disclosures, provider scores)
 try:
-    from db import init_loop4_tables, seed_loop4_data
+    from db import init_loop4_tables
     init_loop4_tables()
-    seed_loop4_data()
 except Exception as e:
     print(f"[RELAY] Loop 4+5 init: {e}")
 
@@ -385,9 +403,7 @@ def signup():
 
     session["az_user_id"] = user_id
     try:
-        from admin_dashboard import log_relay_event
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        log_relay_event("signup", ip=ip, username=username, detail=f"user_id={user_id}")
     except Exception:
         pass
     return jsonify({"ok": True, "user_id": user_id, "username": username})
@@ -415,9 +431,7 @@ def login():
 
     session["az_user_id"] = user["id"]
     try:
-        from admin_dashboard import log_relay_event
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        log_relay_event("login", ip=ip, username=email)
     except Exception:
         pass
     uname = user.get("username") or user["email"].split("@")[0]
@@ -692,12 +706,9 @@ def process_relay(user):
 
     # Admin analytics
     try:
-        from admin_dashboard import log_relay_event
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         sov = "PASS" if scores.get("pass") else "FAIL"
         snr = scores.get("snr", 0)
-        log_relay_event("score", ip=ip, username=user.get("email", ""),
-                        detail=f"sovereignty={sov} snr={snr:.3f} turn={next_turn}")
     except Exception:
         pass
 

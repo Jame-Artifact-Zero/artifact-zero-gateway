@@ -183,8 +183,7 @@ def process_company(slug, name, rank, url):
     # Store in DB
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("""
+    cur.execute("""
             INSERT INTO fortune500_scores (slug, company_name, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (slug) DO UPDATE SET
@@ -192,11 +191,6 @@ def process_company(slug, name, rank, url):
                 nii_score=EXCLUDED.nii_score, issue_count=EXCLUDED.issue_count,
                 last_checked=EXCLUDED.last_checked,
                 last_changed=CASE WHEN fortune500_scores.nii_score != EXCLUDED.nii_score THEN EXCLUDED.last_changed ELSE fortune500_scores.last_changed END
-        """, (slug, name, rank, url, copy, json.dumps(score_data), nii, issues, now, now))
-    else:
-        cur.execute("""
-            INSERT OR REPLACE INTO fortune500_scores (slug, company_name, rank, url, homepage_copy, score_json, nii_score, issue_count, last_checked, last_changed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (slug, name, rank, url, copy, json.dumps(score_data), nii, issues, now, now))
     conn.commit()
     conn.close()
