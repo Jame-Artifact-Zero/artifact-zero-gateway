@@ -30,28 +30,18 @@ from flask import Blueprint, request, jsonify, session, render_template
 user_feeds_bp = Blueprint("user_feeds", __name__)
 
 # ─── DB HELPERS ───
-# Uses the same db connection pattern as az_relay
-DB_MODE = os.getenv("AZ_DB_MODE", "sqlite")
+# Shared PostgreSQL/RDS connection layer.
 
 def db():
-    if DB_MODE == "postgres":
-        import psycopg2
-        import psycopg2.extras
-        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
-        conn.autocommit = False
-        return conn
-    else:
-        import sqlite3
-        conn = sqlite3.connect(os.getenv("AZ_RELAY_DB", "az_relay.db"))
-        conn.row_factory = sqlite3.Row
-        return conn
-
+    import db as database
+    return database.db_connect()
 
 def init_user_feeds_db():
     conn = db()
-    cur = conn.cursor()
 
-    if DB_MODE == "postgres":
+    try:
+        cur = conn.cursor()
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS user_feed_sources (
                 id TEXT PRIMARY KEY,
@@ -64,6 +54,7 @@ def init_user_feeds_db():
                 UNIQUE(user_id, rss_url)
             )
         """)
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS user_feed_candidates (
                 id TEXT PRIMARY KEY,
@@ -78,49 +69,27 @@ def init_user_feeds_db():
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         """)
+
         cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_ufs_user ON user_feed_sources(user_id)
+            CREATE INDEX IF NOT EXISTS idx_ufs_user
+            ON user_feed_sources(user_id)
         """)
+
         cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_ufc_user ON user_feed_candidates(user_id)
+            CREATE INDEX IF NOT EXISTS idx_ufc_user
+            ON user_feed_candidates(user_id)
         """)
-        conn.commit()
-    else:
-        cur.executescript("""
-            CREATE TABLE IF NOT EXISTS user_feed_sources (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                rss_url TEXT NOT NULL,
-                category TEXT DEFAULT 'custom',
-                active INTEGER DEFAULT 1,
-                created_at TEXT NOT NULL,
-                UNIQUE(user_id, rss_url)
-            );
-            CREATE TABLE IF NOT EXISTS user_feed_candidates (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                candidate_name TEXT NOT NULL,
-                office TEXT,
-                party TEXT,
-                jurisdiction TEXT,
-                election_date TEXT,
-                statements_json TEXT DEFAULT '[]',
-                active INTEGER DEFAULT 1,
-                created_at TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_ufs_user ON user_feed_sources(user_id);
-            CREATE INDEX IF NOT EXISTS idx_ufc_user ON user_feed_candidates(user_id);
-        """)
+
         conn.commit()
 
-    conn.close()
+    except Exception:
+        conn.rollback()
+        raise
 
+    finally:
+        conn.close()
 
-try:
-    init_user_feeds_db()
-except Exception as e:
-    print(f"[user_feeds] DB init deferred: {e}")
+init_user_feeds_db()
 
 
 # ─── AUTH CHECK ───
@@ -150,18 +119,11 @@ def get_feeds(user_id):
     conn = db()
     cur = conn.cursor()
 
-    if DB_MODE == "postgres":
-        cur.execute(
-            "SELECT id, name, rss_url, category, active, created_at FROM user_feed_sources WHERE user_id = %s ORDER BY created_at",
-            (user_id,)
-        )
-        rows = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
-    else:
-        cur.execute(
-            "SELECT id, name, rss_url, category, active, created_at FROM user_feed_sources WHERE user_id = ? ORDER BY created_at",
-            (user_id,)
-        )
-        rows = [dict(r) for r in cur.fetchall()]
+    cur.execute(
+        "SELECT id, name, rss_url, category, active, created_at FROM user_feed_sources WHERE user_id = %s ORDER BY created_at",
+        (user_id,)
+    )
+    rows = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
 
     conn.close()
 
@@ -197,16 +159,10 @@ def add_feed(user_id):
     cur = conn.cursor()
 
     try:
-        if DB_MODE == "postgres":
-            cur.execute(
-                "INSERT INTO user_feed_sources (id, user_id, name, rss_url, category, created_at) VALUES (%s,%s,%s,%s,%s,%s)",
-                (feed_id, user_id, name, rss_url, category, now)
-            )
-        else:
-            cur.execute(
-                "INSERT INTO user_feed_sources (id, user_id, name, rss_url, category, created_at) VALUES (?,?,?,?,?,?)",
-                (feed_id, user_id, name, rss_url, category, now)
-            )
+        cur.execute(
+            "INSERT INTO user_feed_sources (id, user_id, name, rss_url, category, created_at) VALUES (%s,%s,%s,%s,%s,%s)",
+            (feed_id, user_id, name, rss_url, category, now)
+        )
         conn.commit()
     except Exception as e:
         conn.close()
@@ -225,10 +181,7 @@ def remove_feed(user_id, feed_id):
     conn = db()
     cur = conn.cursor()
 
-    if DB_MODE == "postgres":
-        cur.execute("DELETE FROM user_feed_sources WHERE id = %s AND user_id = %s", (feed_id, user_id))
-    else:
-        cur.execute("DELETE FROM user_feed_sources WHERE id = ? AND user_id = ?", (feed_id, user_id))
+    cur.execute("DELETE FROM user_feed_sources WHERE id = %s AND user_id = %s", (feed_id, user_id))
 
     conn.commit()
     conn.close()
@@ -258,20 +211,12 @@ def add_candidate(user_id):
     conn = db()
     cur = conn.cursor()
 
-    if DB_MODE == "postgres":
-        cur.execute(
-            """INSERT INTO user_feed_candidates
-            (id, user_id, candidate_name, office, party, jurisdiction, election_date, statements_json, created_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-            (cand_id, user_id, name, office, party, jurisdiction, election_date, json.dumps(statements), now)
-        )
-    else:
-        cur.execute(
-            """INSERT INTO user_feed_candidates
-            (id, user_id, candidate_name, office, party, jurisdiction, election_date, statements_json, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?)""",
-            (cand_id, user_id, name, office, party, jurisdiction, election_date, json.dumps(statements), now)
-        )
+    cur.execute(
+        """INSERT INTO user_feed_candidates
+        (id, user_id, candidate_name, office, party, jurisdiction, election_date, statements_json, created_at)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (cand_id, user_id, name, office, party, jurisdiction, election_date, json.dumps(statements), now)
+    )
 
     conn.commit()
     conn.close()
@@ -285,18 +230,11 @@ def get_candidates(user_id):
     conn = db()
     cur = conn.cursor()
 
-    if DB_MODE == "postgres":
-        cur.execute(
-            "SELECT * FROM user_feed_candidates WHERE user_id = %s AND active = TRUE ORDER BY created_at",
-            (user_id,)
-        )
-        rows = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
-    else:
-        cur.execute(
-            "SELECT * FROM user_feed_candidates WHERE user_id = ? AND active = 1 ORDER BY created_at",
-            (user_id,)
-        )
-        rows = [dict(r) for r in cur.fetchall()]
+    cur.execute(
+        "SELECT * FROM user_feed_candidates WHERE user_id = %s AND active = TRUE ORDER BY created_at",
+        (user_id,)
+    )
+    rows = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
 
     # Parse statements JSON
     for row in rows:
@@ -324,10 +262,7 @@ def add_statement(user_id, cand_id):
     cur = conn.cursor()
 
     # Get existing statements
-    if DB_MODE == "postgres":
-        cur.execute("SELECT statements_json FROM user_feed_candidates WHERE id = %s AND user_id = %s", (cand_id, user_id))
-    else:
-        cur.execute("SELECT statements_json FROM user_feed_candidates WHERE id = ? AND user_id = ?", (cand_id, user_id))
+    cur.execute("SELECT statements_json FROM user_feed_candidates WHERE id = %s AND user_id = %s", (cand_id, user_id))
 
     row = cur.fetchone()
     if not row:
@@ -337,12 +272,8 @@ def add_statement(user_id, cand_id):
     statements = json.loads(row[0] if isinstance(row, tuple) else row["statements_json"] or "[]")
     statements.append({"text": text, "source": source, "added_at": datetime.now(timezone.utc).isoformat()})
 
-    if DB_MODE == "postgres":
-        cur.execute("UPDATE user_feed_candidates SET statements_json = %s WHERE id = %s AND user_id = %s",
-                    (json.dumps(statements), cand_id, user_id))
-    else:
-        cur.execute("UPDATE user_feed_candidates SET statements_json = ? WHERE id = ? AND user_id = ?",
-                    (json.dumps(statements), cand_id, user_id))
+    cur.execute("UPDATE user_feed_candidates SET statements_json = %s WHERE id = %s AND user_id = %s",
+                (json.dumps(statements), cand_id, user_id))
 
     conn.commit()
     conn.close()
