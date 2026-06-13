@@ -1,4 +1,4 @@
-﻿import psycopg2, os
+import psycopg2, os
 c = psycopg2.connect(os.getenv('DATABASE_URL'))
 cur = c.cursor()
 cur.execute("SELECT COUNT(*) FROM companies WHERE id NOT IN (SELECT DISTINCT company_id FROM company_pages)")
