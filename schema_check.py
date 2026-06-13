@@ -1,4 +1,4 @@
-﻿import psycopg2, os
+import psycopg2, os
 c = psycopg2.connect(os.getenv('DATABASE_URL'))
 cur = c.cursor()
 cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='company_pages' ORDER BY ordinal_position")
