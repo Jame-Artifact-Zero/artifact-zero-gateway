@@ -10,17 +10,31 @@ CLAUDE_MODEL     = 'claude-sonnet-4-6'
 
 
 def _migrate_sessions_table():
+    import db as database
+
+    conn = database.db_connect()
+
     try:
-        import db as database
-        conn = database.db_connect()
         cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("ALTER TABLE operator_sessions ADD COLUMN IF NOT EXISTS name TEXT DEFAULT ''")
-            cur.execute("ALTER TABLE operator_sessions ADD COLUMN IF NOT EXISTS thread_id TEXT DEFAULT ''")
-            conn.commit()
-        conn.close()
+
+        cur.execute(
+            "ALTER TABLE operator_sessions "
+            "ADD COLUMN IF NOT EXISTS name TEXT DEFAULT ''"
+        )
+
+        cur.execute(
+            "ALTER TABLE operator_sessions "
+            "ADD COLUMN IF NOT EXISTS thread_id TEXT DEFAULT ''"
+        )
+
+        conn.commit()
+
     except Exception:
-        pass
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
 _migrate_sessions_table()
 
@@ -121,13 +135,14 @@ def operator_chat():
 
         try:
             _store_session(messages, data, jos)
-            threading.Thread(
-                target=_auto_write_context,
-                args=(messages, data, jos),
-                daemon=True
-            ).start()
-        except Exception:
-            pass
+            _auto_write_context(messages, data, jos)
+        except Exception as persistence_error:
+            print(
+                f"[operator_room] Persistence failed: "
+                f"{persistence_error}",
+                flush=True,
+            )
+
         return jsonify(data)
 
     except Exception as e:
@@ -409,50 +424,45 @@ def _run_fortune500():
         import db as database
         conn = database.db_connect()
         cur  = conn.cursor()
-
-        if database.USE_PG:
-            cur.execute("""
+        cur.execute("""
                 SELECT company_name, nii_score, issue_count, score_json
                 FROM fortune500_scores
                 ORDER BY nii_score ASC
                 LIMIT 10
             """)
-            rows = cur.fetchall()
-            conn.close()
+        rows = cur.fetchall()
+        conn.close()
 
-            if rows:
-                lines.append("10 LOWEST NII SCORES:")
-                for r in rows:
-                    name        = r[0]
-                    score       = r[1]
-                    issue_count = r[2] or 0
-                    score_json  = r[3] or ''
+        if rows:
+            lines.append("10 LOWEST NII SCORES:")
+            for r in rows:
+                name        = r[0]
+                score       = r[1]
+                issue_count = r[2] or 0
+                score_json  = r[3] or ''
 
-                    if score >= 70:
-                        band = 'HIGH'
-                    elif score >= 50:
-                        band = 'MODERATE'
-                    else:
-                        band = 'LOW'
+                if score >= 70:
+                    band = 'HIGH'
+                elif score >= 50:
+                    band = 'MODERATE'
+                else:
+                    band = 'LOW'
 
-                    flags_display = ''
-                    if score_json:
-                        try:
-                            sj = json.loads(score_json) if isinstance(score_json, str) else score_json
-                            flags = sj.get('flags', [])
-                            if flags:
-                                flags_display = ', '.join(flags[:3])
-                        except Exception:
-                            pass
+                flags_display = ''
+                if score_json:
+                    try:
+                        sj = json.loads(score_json) if isinstance(score_json, str) else score_json
+                        flags = sj.get('flags', [])
+                        if flags:
+                            flags_display = ', '.join(flags[:3])
+                    except Exception:
+                        pass
 
-                    lines.append(f"  {name[:35]:<35} NII {score:.1f}%  [{band}]  issues: {issue_count}")
-                    if flags_display:
-                        lines.append(f"    flags: {flags_display}")
-            else:
-                lines.append("No scored companies in database.")
+                lines.append(f"  {name[:35]:<35} NII {score:.1f}%  [{band}]  issues: {issue_count}")
+                if flags_display:
+                    lines.append(f"    flags: {flags_display}")
         else:
-            conn.close()
-            lines.append("Database unavailable — PostgreSQL required.")
+            lines.append("No scored companies in database.")
 
     except Exception as e:
         lines.append(f"DB error: {str(e)[:120]}")
@@ -553,7 +563,7 @@ def _score_text_internal(text: str) -> dict:
         pass
 
     try:
-        import app as main_app
+        import core_engine.app as main_app
         l0   = main_app.detect_l0_constraints(text)
         tilt = main_app.classify_tilt(text)
         dbc  = main_app.detect_downstream_before_constraint('', text, l0)
@@ -694,9 +704,7 @@ def operator_context():
         import db as database
         conn = database.db_connect()
         cur  = conn.cursor()
-
-        if database.USE_PG:
-            cur.execute("""
+        cur.execute("""
                 CREATE TABLE IF NOT EXISTS operator_context (
                     id          TEXT PRIMARY KEY,
                     created_at  TIMESTAMPTZ DEFAULT NOW(),
@@ -706,25 +714,22 @@ def operator_context():
                 )
             """)
 
-            ctx_id  = 'ctx_' + secrets.token_hex(8)
-            source  = payload.get('source', 'exp_append')
-            summary_parts = []
-            for key in ('push', 'experiment', 'objective', 'status'):
-                if payload.get(key):
-                    summary_parts.append(f"{key}={payload[key]}")
-            summary = ' | '.join(summary_parts[:4])
+        ctx_id  = 'ctx_' + secrets.token_hex(8)
+        source  = payload.get('source', 'exp_append')
+        summary_parts = []
+        for key in ('push', 'experiment', 'objective', 'status'):
+            if payload.get(key):
+                summary_parts.append(f"{key}={payload[key]}")
+        summary = ' | '.join(summary_parts[:4])
 
-            cur.execute("""
+        cur.execute("""
                 INSERT INTO operator_context (id, blob_json, source, summary)
                 VALUES (%s, %s, %s, %s)
             """, (ctx_id, json.dumps(payload), source, summary))
-            conn.commit()
-            conn.close()
+        conn.commit()
+        conn.close()
 
-            return jsonify({'status': 'ok', 'id': ctx_id, 'summary': summary})
-        else:
-            conn.close()
-            return jsonify({'status': 'ok', 'id': 'local', 'note': 'SQLite — blob not persisted to RDS'})
+        return jsonify({'status': 'ok', 'id': ctx_id, 'summary': summary})
 
     except Exception as e:
         return jsonify({'error': str(e)[:200]}), 500
@@ -735,8 +740,6 @@ def operator_context():
 def operator_context_get():
     try:
         import db as database
-        if not database.USE_PG:
-            return jsonify({'status': 'ok', 'rows': [], 'note': 'SQLite - no RDS'})
 
         limit = min(int(request.args.get('limit', 10)), 50)
 
@@ -780,12 +783,9 @@ def operator_sessions():
         import db as database
         conn = database.db_connect()
         cur  = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT id, thread_id, created_at, summary, name FROM operator_sessions WHERE thread_id != '' ORDER BY created_at DESC LIMIT 50")
-            rows     = cur.fetchall()
-            sessions = [{'id': r[1] or r[0], 'created_at': str(r[2]), 'summary': r[3] or '', 'name': r[4] or ''} for r in rows]
-        else:
-            sessions = []
+        cur.execute("SELECT id, thread_id, created_at, summary, name FROM operator_sessions WHERE thread_id != '' ORDER BY created_at DESC LIMIT 50")
+        rows     = cur.fetchall()
+        sessions = [{'id': r[1] or r[0], 'created_at': str(r[2]), 'summary': r[3] or '', 'name': r[4] or ''} for r in rows]
         conn.close()
         return jsonify({'sessions': sessions})
     except Exception as e:
@@ -805,20 +805,19 @@ def operator_sessions_upsert():
         import db as database
         conn = database.db_connect()
         cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT id FROM operator_sessions WHERE thread_id = %s", (thread_id,))
-            existing = cur.fetchone()
-            if existing:
-                cur.execute(
-                    "UPDATE operator_sessions SET messages_json=%s, summary=%s, name=%s, created_at=NOW() WHERE thread_id=%s",
-                    (json.dumps(messages), summary, name, thread_id)
-                )
-            else:
-                cur.execute(
-                    "INSERT INTO operator_sessions (id, thread_id, messages_json, summary, name) VALUES (%s, %s, %s, %s, %s)",
-                    (thread_id, thread_id, json.dumps(messages), summary, name)
-                )
-            conn.commit()
+        cur.execute("SELECT id FROM operator_sessions WHERE thread_id = %s", (thread_id,))
+        existing = cur.fetchone()
+        if existing:
+            cur.execute(
+                "UPDATE operator_sessions SET messages_json=%s, summary=%s, name=%s, created_at=NOW() WHERE thread_id=%s",
+                (json.dumps(messages), summary, name, thread_id)
+            )
+        else:
+            cur.execute(
+                "INSERT INTO operator_sessions (id, thread_id, messages_json, summary, name) VALUES (%s, %s, %s, %s, %s)",
+                (thread_id, thread_id, json.dumps(messages), summary, name)
+            )
+        conn.commit()
         conn.close()
         return jsonify({'ok': True})
     except Exception as e:
@@ -832,12 +831,11 @@ def operator_session_get(thread_id):
         conn = database.db_connect()
         cur = conn.cursor()
         row = None
-        if database.USE_PG:
-            cur.execute(
-                "SELECT messages_json, summary, name FROM operator_sessions WHERE thread_id = %s",
-                (thread_id,)
-            )
-            row = cur.fetchone()
+        cur.execute(
+            "SELECT messages_json, summary, name FROM operator_sessions WHERE thread_id = %s",
+            (thread_id,)
+        )
+        row = cur.fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'not found'}), 404
@@ -855,12 +853,11 @@ def operator_session_patch(thread_id):
         import db as database
         conn = database.db_connect()
         cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute(
-                "UPDATE operator_sessions SET name=%s WHERE thread_id=%s",
-                (name, thread_id)
-            )
-            conn.commit()
+        cur.execute(
+            "UPDATE operator_sessions SET name=%s WHERE thread_id=%s",
+            (name, thread_id)
+        )
+        conn.commit()
         conn.close()
         return jsonify({'ok': True})
     except Exception as e:
@@ -935,13 +932,11 @@ def operator_transcribe():
 
 # ── PUSH STATE PERSISTENCE ─────────────────────────────────────────────────────
 
-def _get_active_push(cur, use_pg: bool) -> str:
+def _get_active_push(cur, ) -> str:
     """
-    Read the current push label from the push_state row in operator_context.
-    Returns empty string if not found.
+    Read the current push label from operator_context.
+    Returns an empty string when no push_state row exists.
     """
-    if not use_pg:
-        return ''
     try:
         cur.execute("""
             SELECT blob_json FROM operator_context
@@ -949,42 +944,62 @@ def _get_active_push(cur, use_pg: bool) -> str:
             ORDER BY created_at DESC
             LIMIT 1
         """)
+
         row = cur.fetchone()
+
         if row and row[0]:
             blob = json.loads(row[0])
             return blob.get('push', '')
-    except Exception:
-        pass
-    return ''
 
+    except Exception as error:
+        print(
+            f"[operator_room] Push-state lookup failed: {error}",
+            flush=True,
+        )
+
+    return ''
 
 def _upsert_push_state(push: str):
     """
-    Write or update the push_state row in operator_context.
-    Called whenever a non-auto push label is detected.
-    Uses a fixed ID so it stays as one row, always current.
+    Write or update the singleton push_state row.
     """
+    import db as database
+
+    conn = database.db_connect()
+
     try:
-        import db as database
-        if not database.USE_PG:
-            return
-        conn = database.db_connect()
-        cur  = conn.cursor()
-        blob = json.dumps({'push': push, 'updated_at': datetime.now(timezone.utc).isoformat()})
+        cur = conn.cursor()
+
+        blob = json.dumps({
+            'push': push,
+            'updated_at': datetime.now(
+                timezone.utc
+            ).isoformat(),
+        })
+
         cur.execute("""
-            INSERT INTO operator_context (id, blob_json, source, summary)
-            VALUES ('push_state_singleton', %s, 'push_state', %s)
+            INSERT INTO operator_context
+                (id, blob_json, source, summary)
+            VALUES
+                ('push_state_singleton', %s, 'push_state', %s)
             ON CONFLICT (id) DO UPDATE
                 SET blob_json  = EXCLUDED.blob_json,
                     source     = 'push_state',
                     summary    = EXCLUDED.summary,
                     created_at = NOW()
-        """, (blob, f'push={push}'))
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+        """, (
+            blob,
+            f'push={push}',
+        ))
 
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
 # ── PRIOR SESSION CONTEXT ──────────────────────────────────────────────────────
 
@@ -1001,13 +1016,11 @@ def _get_prior_session_context() -> str:
     """
     try:
         import db as database
-        if not database.USE_PG:
-            return ''
         conn = database.db_connect()
         cur  = conn.cursor()
 
         # ── 1. Authoritative push label ───────────────────────────────────────
-        active_push = _get_active_push(cur, database.USE_PG)
+        active_push = _get_active_push(cur, )
 
         # ── 2. Last session summary ───────────────────────────────────────────
         last_session_line = ''
@@ -1154,109 +1167,139 @@ def _get_prior_session_context() -> str:
 
 def _auto_write_context(messages, response, jos):
     """
-    Background thread: extract push/status/decisions/key_facts from
-    the latest exchange and write to operator_context.
-    jos is passed in so push label comes from JOS first, not regex.
-    Fires after every assistant response. Never blocks the request.
+    Extract push/status/decisions/key facts from the latest exchange
+    and persist them before the request finishes.
     """
+    import db as database
+
+    assistant_text = ''
+
     try:
-        import db as database
-        if not database.USE_PG:
-            return
-
-        # Extract full assistant response text
+        assistant_text = (
+            response
+            .get('content', [{}])[0]
+            .get('text', '')
+        )
+    except Exception:
         assistant_text = ''
-        try:
-            assistant_text = response.get('content', [{}])[0].get('text', '')
-        except Exception:
-            pass
 
-        # Extract last user message
-        user_text = ''
-        for m in reversed(messages):
-            if m.get('role') == 'user':
-                user_text = m.get('content', '')
-                if isinstance(user_text, list):
-                    user_text = ' '.join(
-                        p.get('text', '') for p in user_text if isinstance(p, dict)
-                    )
-                user_text = user_text[:2000]
-                break
+    user_text = ''
 
-        if not assistant_text and not user_text:
-            return
+    for message in reversed(messages):
+        if message.get('role') != 'user':
+            continue
 
-        # ── Push label: JOS first, then regex, then existing push_state ──────
-        push = ''
+        user_text = message.get('content', '')
 
-        # 1. JOS authoritative push
-        if jos and jos.get('push'):
-            push = jos['push'].strip()
+        if isinstance(user_text, list):
+            user_text = ' '.join(
+                part.get('text', '')
+                for part in user_text
+                if isinstance(part, dict)
+            )
 
-        # 2. Regex fallback on message text
-        if not push:
-            push_match = re.search(r'\bp\d{4}[_\w]*\b', user_text + ' ' + assistant_text[:1000])
-            if push_match:
-                push = push_match.group(0)
+        user_text = user_text[:2000]
+        break
 
-        # 3. Read existing push_state from DB as last resort
-        if not push:
-            try:
-                conn_ps = database.db_connect()
-                cur_ps  = conn_ps.cursor()
-                push    = _get_active_push(cur_ps, database.USE_PG)
-                conn_ps.close()
-            except Exception:
-                pass
+    if not assistant_text and not user_text:
+        return
 
-        if not push:
-            push = 'auto'
+    push = ''
 
-        # Persist push state if it's a real push label
-        if push != 'auto':
-            threading.Thread(target=_upsert_push_state, args=(push,), daemon=True).start()
+    if jos and jos.get('push'):
+        push = jos['push'].strip()
 
-        # Decisions — lines starting with decision markers
-        decisions = []
-        for line in (assistant_text + '\n' + user_text).split('\n'):
-            line = line.strip()
-            if any(line.lower().startswith(w) for w in (
-                'decided:', 'decision:', 'approved:', 'confirmed:', 'done:', '- ', '* '
-            )):
-                if len(line) > 10:
-                    decisions.append(line[:200])
-        decisions = decisions[:10]
-
-        # Snippets for key_facts — store more of the assistant response
-        user_snippet      = user_text[:500].strip()
-        assistant_snippet = assistant_text[:2000].strip()
-
-        ts        = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')
-        objective = f'[{ts}] U: {user_snippet[:120]} | A: {assistant_snippet[:120]}'
-
-        blob = {
-            'push':              push,
-            'status':            'active',
-            'objective':         objective,
-            'key_facts':         [user_snippet, assistant_snippet],
-            'decisions':         decisions,
-            'named_concepts':    {},
-            'open_questions':    [],
-            'source':            'auto_writer',
-            'user_snippet':      user_snippet,
-            'assistant_snippet': assistant_snippet,
-        }
-
-        summary = (
-            f'push={push} | status=active\n'
-            f'  objective: {objective}\n'
-            f'  key_facts:\n'
-            f'    - {user_snippet[:200]}\n'
-            f'    - {assistant_snippet[:200]}'
+    if not push:
+        push_match = re.search(
+            r'\bp\d{4}[_\w]*\b',
+            user_text + ' ' + assistant_text[:1000],
         )
 
-        conn = database.db_connect()
-        cur  = conn.cursor()
+        if push_match:
+            push = push_match.group(0)
+
+    if not push:
+        lookup_conn = database.db_connect()
+
+        try:
+            lookup_cur = lookup_conn.cursor()
+            push = _get_active_push(lookup_cur, )
+
+        finally:
+            lookup_conn.close()
+
+    if not push:
+        push = 'auto'
+
+    if push != 'auto':
+        _upsert_push_state(push)
+
+    decisions = []
+
+    for line in (
+        assistant_text + '\n' + user_text
+    ).split('\n'):
+        line = line.strip()
+
+        if any(
+            line.lower().startswith(marker)
+            for marker in (
+                'decided:',
+                'decision:',
+                'approved:',
+                'confirmed:',
+                'done:',
+                '- ',
+                '* ',
+            )
+        ):
+            if len(line) > 10:
+                decisions.append(line[:200])
+
+    decisions = decisions[:10]
+
+    user_snippet = user_text[:500].strip()
+    assistant_snippet = assistant_text[:2000].strip()
+
+    timestamp = datetime.now(
+        timezone.utc
+    ).strftime('%Y-%m-%d %H:%M')
+
+    objective = (
+        f'[{timestamp}] '
+        f'U: {user_snippet[:120]} | '
+        f'A: {assistant_snippet[:120]}'
+    )
+
+    blob = {
+        'push': push,
+        'status': 'active',
+        'objective': objective,
+        'key_facts': [
+            user_snippet,
+            assistant_snippet,
+        ],
+        'decisions': decisions,
+        'named_concepts': {},
+        'open_questions': [],
+        'source': 'auto_writer',
+        'user_snippet': user_snippet,
+        'assistant_snippet': assistant_snippet,
+    }
+
+    summary = (
+        f'push={push} | status=active\n'
+        f'  objective: {objective}\n'
+        f'  key_facts:\n'
+        f'    - {user_snippet[:200]}\n'
+        f'    - {assistant_snippet[:200]}'
+    )
+
+    conn = database.db_connect()
+
+    try:
+        cur = conn.cursor()
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS operator_context (
                 id          TEXT PRIMARY KEY,
@@ -1266,68 +1309,182 @@ def _auto_write_context(messages, response, jos):
                 summary     TEXT
             )
         """)
-        ctx_id = 'ctx_auto_' + secrets.token_hex(8)
+
+        context_id = (
+            'ctx_auto_'
+            + secrets.token_hex(8)
+        )
+
         cur.execute("""
-            INSERT INTO operator_context (id, blob_json, source, summary)
-            VALUES (%s, %s, %s, %s)
-        """, (ctx_id, json.dumps(blob), 'auto_writer', summary))
+            INSERT INTO operator_context
+                (id, blob_json, source, summary)
+            VALUES
+                (%s, %s, %s, %s)
+        """, (
+            context_id,
+            json.dumps(blob),
+            'auto_writer',
+            summary,
+        ))
+
         conn.commit()
-        conn.close()
 
     except Exception:
-        pass
+        conn.rollback()
+        raise
 
+    finally:
+        conn.close()
 
 # ── SESSION STORAGE ────────────────────────────────────────────────────────────
 
 def _store_session(messages, response, jos):
     """
-    Store full session exchange in operator_sessions.
-    Summary captures last user message (1000 chars) + assistant response (1000 chars).
+    Store the complete operator exchange in operator_sessions.
     """
+    import db as database
+
+    conn = database.db_connect()
+
     try:
-        import db as database
-        conn = database.db_connect()
-        cur  = conn.cursor()
-        if database.USE_PG:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS operator_sessions (
-                    id            TEXT PRIMARY KEY,
-                    created_at    TIMESTAMPTZ DEFAULT NOW(),
-                    messages_json TEXT,
-                    response_json TEXT,
-                    jos_json      TEXT,
-                    summary       TEXT
+        cur = conn.cursor()
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS operator_sessions (
+                id            TEXT PRIMARY KEY,
+                created_at    TIMESTAMPTZ DEFAULT NOW(),
+                messages_json TEXT,
+                response_json TEXT,
+                jos_json      TEXT,
+                summary       TEXT
+            )
+        """)
+
+        user_summary = ''
+
+        for message in reversed(messages):
+            if message.get('role') != 'user':
+                continue
+
+            user_summary = message.get(
+                'content',
+                '',
+            )
+
+            if isinstance(user_summary, list):
+                user_summary = ' '.join(
+                    part.get('text', '')
+                    for part in user_summary
+                    if isinstance(part, dict)
                 )
-            """)
 
-            # Full user message
-            user_summary = ''
-            for m in reversed(messages):
-                if m.get('role') == 'user':
-                    user_summary = m.get('content', '')
-                    if isinstance(user_summary, list):
-                        user_summary = ' '.join(
-                            p.get('text', '') for p in user_summary if isinstance(p, dict)
-                        )
-                    user_summary = user_summary[:1000]
-                    break
+            user_summary = user_summary[:1000]
+            break
 
-            # Full assistant response
+        assistant_summary = ''
+
+        try:
+            assistant_summary = (
+                response
+                .get('content', [{}])[0]
+                .get('text', '')[:1000]
+            )
+        except Exception:
             assistant_summary = ''
-            try:
-                assistant_summary = response.get('content', [{}])[0].get('text', '')[:1000]
-            except Exception:
-                pass
 
-            summary = f'U: {user_summary} | A: {assistant_summary}'
+        summary = (
+            f'U: {user_summary} | '
+            f'A: {assistant_summary}'
+        )
 
-            sid = 'op_' + secrets.token_hex(8)
-            cur.execute("""
-                INSERT INTO operator_sessions (id, messages_json, response_json, jos_json, summary)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (sid, json.dumps(messages), json.dumps(response), json.dumps(jos), summary))
-            conn.commit()
-        conn.close()
+        session_id = (
+            'op_'
+            + secrets.token_hex(8)
+        )
+
+        def _trim_text(value, limit=2000):
+            if isinstance(value, str) and len(value) > limit:
+                return value[:limit] + '...'
+            return value
+
+        trimmed_messages = []
+
+        for message in messages[-10:]:
+            if not isinstance(message, dict):
+                trimmed_messages.append(message)
+                continue
+
+            trimmed_message = dict(message)
+            content = trimmed_message.get('content')
+
+            if isinstance(content, str):
+                trimmed_message['content'] = _trim_text(content)
+
+            elif isinstance(content, list):
+                trimmed_content = []
+
+                for part in content:
+                    if isinstance(part, dict):
+                        trimmed_part = dict(part)
+
+                        if isinstance(trimmed_part.get('text'), str):
+                            trimmed_part['text'] = _trim_text(
+                                trimmed_part['text'],
+                            )
+
+                        trimmed_content.append(trimmed_part)
+                    else:
+                        trimmed_content.append(part)
+
+                trimmed_message['content'] = trimmed_content
+
+            trimmed_messages.append(trimmed_message)
+
+        trimmed_response = dict(response) if isinstance(response, dict) else response
+
+        if isinstance(trimmed_response, dict):
+            content = trimmed_response.get('content')
+
+            if isinstance(content, list) and content:
+                trimmed_content = list(content)
+                first_item = trimmed_content[0]
+
+                if isinstance(first_item, dict):
+                    trimmed_first_item = dict(first_item)
+
+                    if isinstance(trimmed_first_item.get('text'), str):
+                        trimmed_first_item['text'] = _trim_text(
+                            trimmed_first_item['text'],
+                        )
+
+                    trimmed_content[0] = trimmed_first_item
+                    trimmed_response['content'] = trimmed_content
+
+        cur.execute("""
+            INSERT INTO operator_sessions
+                (
+                    id,
+                    messages_json,
+                    response_json,
+                    jos_json,
+                    summary
+                )
+            VALUES
+                (%s, %s, %s, %s, %s)
+        """, (
+            session_id,
+            json.dumps(trimmed_messages),
+            json.dumps(trimmed_response),
+            json.dumps(jos),
+            summary,
+        ))
+
+        conn.commit()
+
     except Exception:
-        pass
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+

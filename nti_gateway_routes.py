@@ -18,21 +18,96 @@ Endpoints:
 from flask import Blueprint, request, jsonify
 from nti_gateway import process, score_batch, register_webhook, delete_webhook
 
-gateway_bp = Blueprint("gateway_bp", __name__)
+gateway_bp = Blueprint("nti_gateway_bp", __name__)
 
 
 # ── AUTH ──────────────────────────────────────────────────────────────────────
 
 def _auth():
-    key = (
-        request.headers.get("X-API-Key") or
-        request.headers.get("Authorization", "").replace("Bearer ", "") or
-        request.args.get("api_key", "")
+    """
+    Authenticate the gateway API key against PostgreSQL and return
+    the real account and user identity.
+    """
+    api_key = (
+        request.headers.get("X-API-Key")
+        or request.args.get("api_key")
     )
-    if not key:
-        return None
-    return {"account_id": key[:8], "user_id": None, "user_email": None}
 
+    if not api_key:
+        return None
+
+    conn = database.db_connect()
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT
+                k.id,
+                k.owner_email,
+                k.active,
+                u.id,
+                u.email
+            FROM api_keys AS k
+            LEFT JOIN users AS u
+                ON LOWER(u.email) = LOWER(k.owner_email)
+            WHERE k.id = %s
+            LIMIT 1
+            """,
+            (api_key,),
+        )
+
+        row = cur.fetchone()
+
+        if not row:
+            return None
+
+        active = row[2]
+        user_id = row[3]
+        user_email = row[4] or row[1]
+
+        if not active or not user_id or not user_email:
+            return None
+
+        cur.execute(
+            """
+            SELECT id
+            FROM accounts
+            WHERE owner_user_id = %s
+            LIMIT 1
+            """,
+            (user_id,),
+        )
+
+        account_row = cur.fetchone()
+
+        if account_row:
+            account_id = account_row[0]
+        else:
+            from account import _get_or_create_account
+
+            account_id = _get_or_create_account(
+                user_id,
+                user_email,
+            )
+
+        return {
+            "account_id": account_id,
+            "user_id": user_id,
+            "user_email": user_email,
+        }
+
+    except Exception as error:
+        print(
+            f"[nti_gateway] Authentication lookup failed: {error}",
+            flush=True,
+        )
+
+        return None
+
+    finally:
+        conn.close()
 
 # ── POST /api/v1/gateway ──────────────────────────────────────────────────────
 
@@ -109,45 +184,110 @@ def api_gateway_batch():
 
 @gateway_bp.route("/api/v1/gateway/webhook", methods=["POST"])
 def api_register_webhook():
-    """Register a webhook URL for check.complete events."""
     acct = _auth()
+
     if not acct:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"error": "Unauthorized"}), 401
 
     body = request.get_json(silent=True) or {}
+
     url = (body.get("url") or "").strip()
-    events = body.get("events", ["check.complete"])
-    secret = body.get("secret", "")
+    events = body.get(
+        "events",
+        ["check.complete"],
+    )
+    secret = (body.get("secret") or "").strip()
 
     if not url or not url.startswith("https://"):
-        return jsonify({"error": "url required and must be https"}), 400
+        return jsonify({
+            "error": "url must be a valid https:// URL"
+        }), 400
 
-    wid = register_webhook(
-        account_id=acct["account_id"],
-        url=url,
-        events=events,
-        secret=secret,
-    )
+    if not isinstance(events, list) or not events:
+        return jsonify({
+            "error": "events must be a non-empty list"
+        }), 400
 
-    return jsonify({"ok": True, "webhook_id": wid, "url": url, "events": events}), 201
+    if not secret:
+        import secrets
+
+        secret = (
+            "whsec_"
+            + secrets.token_hex(24)
+        )
+
+    try:
+        wh_id = register_webhook(
+            acct["account_id"],
+            acct["user_id"],
+            url,
+            events,
+            secret,
+        )
+
+    except RuntimeError as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+
+    except Exception as error:
+        print(
+            f"[nti_gateway] Webhook registration failed: {error}",
+            flush=True,
+        )
+
+        return jsonify({
+            "error": "Webhook registration failed"
+        }), 500
+
+    return jsonify({
+        "webhook_id": wh_id,
+        "url": url,
+        "events": events,
+        "secret": secret,
+        "message": (
+            "Store this secret securely. "
+            "It will not be shown again."
+        ),
+    }), 201
 
 
 # ── DELETE /api/v1/gateway/webhook ────────────────────────────────────────────
 
 @gateway_bp.route("/api/v1/gateway/webhook", methods=["DELETE"])
 def api_delete_webhook():
-    """Delete a registered webhook."""
     acct = _auth()
+
     if not acct:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"error": "Unauthorized"}), 401
 
     body = request.get_json(silent=True) or {}
-    wid = body.get("webhook_id", "")
-    if not wid:
-        return jsonify({"error": "webhook_id required"}), 400
 
-    deleted = delete_webhook(acct["account_id"], wid)
-    return jsonify({"ok": deleted})
+    webhook_id = (
+        body.get("webhook_id")
+        or body.get("id")
+        or request.args.get("webhook_id")
+    )
+
+    if not webhook_id:
+        return jsonify({
+            "error": "webhook_id is required"
+        }), 400
+
+    deleted = delete_webhook(
+        acct["account_id"],
+        webhook_id,
+    )
+
+    if not deleted:
+        return jsonify({
+            "error": "Webhook not found"
+        }), 404
+
+    return jsonify({
+        "deleted": True,
+        "webhook_id": webhook_id,
+    })
 
 
 # ── GET /api/v1/gateway/health ────────────────────────────────────────────────

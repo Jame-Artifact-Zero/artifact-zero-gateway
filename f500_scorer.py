@@ -79,7 +79,7 @@ def score_nti(text):
         os.environ.setdefault("AZ_SECRET", "scorer")
         os.environ.setdefault("TESTING", "1")
 
-        from app import (
+        from core_engine.app import (
             detect_l0_constraints, objective_extract, classify_tilt,
             detect_udds, detect_dce, detect_cca,
             detect_downstream_before_constraint, compute_nii

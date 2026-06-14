@@ -41,65 +41,50 @@ def verify_password(pw, stored):
 def _ensure_users_table():
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("""CREATE TABLE IF NOT EXISTS users (
+    cur.execute("""CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
             name TEXT NOT NULL DEFAULT '', tier TEXT NOT NULL DEFAULT 'free',
             role TEXT NOT NULL DEFAULT 'user',
             stripe_customer_id TEXT, stripe_subscription_id TEXT,
             score_count INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE)""")
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
-        except Exception:
-            conn.rollback()
-        cur.execute("""CREATE TABLE IF NOT EXISTS password_resets (
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+    except Exception:
+        conn.rollback()
+    cur.execute("""CREATE TABLE IF NOT EXISTS password_resets (
             id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token TEXT UNIQUE NOT NULL,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), used BOOLEAN NOT NULL DEFAULT FALSE)""")
-    else:
-        cur.execute("""CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
-            name TEXT NOT NULL DEFAULT '', tier TEXT NOT NULL DEFAULT 'free',
-            role TEXT NOT NULL DEFAULT 'user',
-            stripe_customer_id TEXT, stripe_subscription_id TEXT,
-            score_count INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1)""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS password_resets (
-            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token TEXT UNIQUE NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')), used INTEGER NOT NULL DEFAULT 0)""")
     conn.commit()
     conn.close()
 
 def _user_by_email(email):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id,role FROM users WHERE email=%s" if database.USE_PG else "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id,role FROM users WHERE email=?"
+    q = "SELECT id,email,password_hash,name,tier,score_count,stripe_customer_id,role FROM users WHERE email=%s"
     cur.execute(q, (email.lower(),))
     row = cur.fetchone()
     conn.close()
     if not row: return None
     keys = ["id","email","password_hash","name","tier","score_count","stripe_customer_id","role"]
-    return dict(zip(keys, row)) if database.USE_PG else dict(row)
+    return dict(zip(keys, row))
 
 def _user_by_id(uid):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at,role FROM users WHERE id=%s" if database.USE_PG else "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at,role FROM users WHERE id=?"
+    q = "SELECT id,email,name,tier,score_count,stripe_customer_id,created_at,role FROM users WHERE id=%s"
     cur.execute(q, (uid,))
     row = cur.fetchone()
     conn.close()
     if not row: return None
     keys = ["id","email","name","tier","score_count","stripe_customer_id","created_at","role"]
-    return dict(zip(keys, [str(v) if i==6 else v for i,v in enumerate(row)])) if database.USE_PG else dict(row)
+    return dict(zip(keys, [str(v) if i==6 else v for i,v in enumerate(row)]))
 
 def _create_user(email, pw, name=""):
     uid = "usr_" + uuid.uuid4().hex[:16]
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("INSERT INTO users (id,email,password_hash,name) VALUES (%s,%s,%s,%s)", (uid, email.lower(), hash_password(pw), name))
-    else:
-        cur.execute("INSERT INTO users (id,created_at,email,password_hash,name) VALUES (?,datetime('now'),?,?,?)", (uid, email.lower(), hash_password(pw), name))
+    cur.execute("INSERT INTO users (id,email,password_hash,name) VALUES (%s,%s,%s,%s)", (uid, email.lower(), hash_password(pw), name))
     conn.commit()
     conn.close()
     return uid
@@ -107,7 +92,7 @@ def _create_user(email, pw, name=""):
 def _update_password(uid, new_pw):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "UPDATE users SET password_hash=%s WHERE id=%s" if database.USE_PG else "UPDATE users SET password_hash=? WHERE id=?"
+    q = "UPDATE users SET password_hash=%s WHERE id=%s"
     cur.execute(q, (hash_password(new_pw), uid))
     conn.commit()
     conn.close()
@@ -115,16 +100,10 @@ def _update_password(uid, new_pw):
 def _update_last_login(uid):
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute(
-            "UPDATE users SET last_login_at=NOW(), login_count=COALESCE(login_count,0)+1 WHERE id=%s",
-            (uid,)
-        )
-    else:
-        cur.execute(
-            "UPDATE users SET last_login_at=datetime('now'), login_count=COALESCE(login_count,0)+1 WHERE id=?",
-            (uid,)
-        )
+    cur.execute(
+        "UPDATE users SET last_login_at=NOW(), login_count=COALESCE(login_count,0)+1 WHERE id=%s",
+        (uid,)
+    )
     conn.commit()
     conn.close()
 
@@ -135,23 +114,17 @@ def _record_login_history(user_id, ip, user_agent, success=True):
     hid = "lh_" + _uuid.uuid4().hex[:16]
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute(
-            "INSERT INTO login_history (id, user_id, ip, user_agent, success) VALUES (%s, %s, %s, %s, %s)",
-            (hid, user_id, ip[:64] if ip else "", user_agent[:512] if user_agent else "", success)
-        )
-    else:
-        cur.execute(
-            "INSERT INTO login_history (id, created_at, user_id, ip, user_agent, success) VALUES (?, datetime('now'), ?, ?, ?, ?)",
-            (hid, user_id, ip[:64] if ip else "", user_agent[:512] if user_agent else "", 1 if success else 0)
-        )
+    cur.execute(
+        "INSERT INTO login_history (id, user_id, ip, user_agent, success) VALUES (%s, %s, %s, %s, %s)",
+        (hid, user_id, ip[:64] if ip else "", user_agent[:512] if user_agent else "", success)
+    )
     conn.commit()
     conn.close()
 
 def _update_stripe(uid, cust_id, sub_id, tier):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "UPDATE users SET stripe_customer_id=%s,stripe_subscription_id=%s,tier=%s WHERE id=%s" if database.USE_PG else "UPDATE users SET stripe_customer_id=?,stripe_subscription_id=?,tier=? WHERE id=?"
+    q = "UPDATE users SET stripe_customer_id=%s,stripe_subscription_id=%s,tier=%s WHERE id=%s"
     cur.execute(q, (cust_id, sub_id, tier, uid))
     conn.commit()
     conn.close()
@@ -161,12 +134,8 @@ def _create_reset_token(user_id):
     rid = "rst_" + uuid.uuid4().hex[:16]
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("UPDATE password_resets SET used=TRUE WHERE user_id=%s AND used=FALSE", (user_id,))
-        cur.execute("INSERT INTO password_resets (id,user_id,token) VALUES (%s,%s,%s)", (rid, user_id, token))
-    else:
-        cur.execute("UPDATE password_resets SET used=1 WHERE user_id=? AND used=0", (user_id,))
-        cur.execute("INSERT INTO password_resets (id,user_id,token) VALUES (?,?,?)", (rid, user_id, token))
+    cur.execute("UPDATE password_resets SET used=TRUE WHERE user_id=%s AND used=FALSE", (user_id,))
+    cur.execute("INSERT INTO password_resets (id,user_id,token) VALUES (%s,%s,%s)", (rid, user_id, token))
     conn.commit()
     conn.close()
     return token
@@ -174,29 +143,25 @@ def _create_reset_token(user_id):
 def _validate_reset_token(token):
     conn = database.db_connect()
     cur = conn.cursor()
-    if database.USE_PG:
-        cur.execute("SELECT user_id,created_at FROM password_resets WHERE token=%s AND used=FALSE", (token,))
-    else:
-        cur.execute("SELECT user_id,created_at FROM password_resets WHERE token=? AND used=0", (token,))
+    cur.execute("SELECT user_id,created_at FROM password_resets WHERE token=%s AND used=FALSE", (token,))
     row = cur.fetchone()
     conn.close()
     if not row: return None
-    user_id = row[0] if database.USE_PG else row["user_id"]
-    created = row[1] if database.USE_PG else row["created_at"]
+    user_id = row[0]
+    created = row[1]
     from datetime import datetime, timezone, timedelta
-    if database.USE_PG:
-        if isinstance(created, str):
-            created = datetime.fromisoformat(created)
-        if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
-        if datetime.now(timezone.utc) - created > timedelta(hours=1):
-            return None
+    if isinstance(created, str):
+        created = datetime.fromisoformat(created)
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) - created > timedelta(hours=1):
+        return None
     return user_id
 
 def _consume_reset_token(token):
     conn = database.db_connect()
     cur = conn.cursor()
-    q = "UPDATE password_resets SET used=TRUE WHERE token=%s" if database.USE_PG else "UPDATE password_resets SET used=1 WHERE token=?"
+    q = "UPDATE password_resets SET used=TRUE WHERE token=%s"
     cur.execute(q, (token,))
     conn.commit()
     conn.close()

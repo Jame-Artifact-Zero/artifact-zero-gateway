@@ -1,5 +1,5 @@
 # ============================================
-# Artifact Zero — Test Suite
+# Artifact Zero - Test Suite
 # ============================================
 # Runs on: pushes to dev/*, PRs to quality and main
 # Must pass before merge is allowed
@@ -17,6 +17,21 @@ jobs:
   test:
     name: Smoke Tests
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -36,6 +51,7 @@ jobs:
         env:
           FLASK_SECRET_KEY: test-ci-key
           AZ_SECRET: test-ci-az-secret
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
           TESTING: "1"
         run: |
           python -m pytest tests/ -v --tb=short
@@ -44,6 +60,8 @@ jobs:
         env:
           FLASK_SECRET_KEY: test-ci-key
           AZ_SECRET: test-ci-az-secret
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          TESTING: "1"
         run: |
           python -c "
           from app import app

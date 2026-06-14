@@ -88,11 +88,9 @@ class SimulatedThread:
         Add a message to the thread.
         Returns AddResult with window status and injection signal.
 
-        If result.inject_now is True:
-          - result.blob contains the injection blob
-          - Call result.blob.to_prompt() to get the context string
-          - Pass that as system context to your next fresh API call
-          - Then call self.relay() to reset the active window
+        If result.inject_now is True, the caller should call self.relay() to
+        build the injection blob and reset the active window. add() only
+        signals; it does not create or store blobs.
         """
         # Record in monitor
         rec = self._monitor.record(content, source)
@@ -104,14 +102,9 @@ class SimulatedThread:
         self.total_messages += 1
         self.total_chars += rec.char_count
 
-        # Check if injection needed
+        # Check if injection needed. add() only signals; relay() owns blob creation.
         inject_now = self._monitor.needs_injection()
         blob = None
-
-        if inject_now:
-            builder = BlobBuilder(self._gateway, self._monitor, self.relay_number)
-            blob = builder.build()
-            self.blobs.append(blob)
 
         return AddResult(
             record_id=rec.record_id,
@@ -132,11 +125,10 @@ class SimulatedThread:
 
         Returns the blob that should be injected into the fresh context.
         """
-        # Build blob from current state if not already done
+        # Build exactly one blob from current state. relay() owns blob creation.
         builder = BlobBuilder(self._gateway, self._monitor, self.relay_number)
         blob = builder.build()
-        if not self.blobs or self.blobs[-1].blob_id != blob.blob_id:
-            self.blobs.append(blob)
+        self.blobs.append(blob)
 
         # Reset active window — fresh gateway and monitor
         self.relay_number += 1

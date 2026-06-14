@@ -158,13 +158,11 @@ def self_service_db_init():
         )
         """)
 
-        USE_PG = bool(os.getenv("DATABASE_URL"))
-        if USE_PG:
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_setup_org ON setup_steps(org_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_token ON implementation_invites(token)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_org ON implementation_invites(org_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_sandbox_org ON sandbox_sessions(org_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_protocols_org ON org_protocols(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_setup_org ON setup_steps(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_token ON implementation_invites(token)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_org ON implementation_invites(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sandbox_org ON sandbox_sessions(org_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_protocols_org ON org_protocols(org_id)")
 
         conn.commit()
     print("[SELF-SERVICE] Tables initialized")

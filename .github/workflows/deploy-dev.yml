@@ -1,5 +1,5 @@
 # ============================================
-# Artifact Zero — Deploy to Development
+# Artifact Zero - Deploy to Development
 # ============================================
 # Triggers: push to develop branch (after PR merge from dev/*)
 # Deploys to: dev.artifact0.com
@@ -22,6 +22,22 @@ jobs:
   test:
     name: Run Tests First
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,6 +48,7 @@ jobs:
         env:
           FLASK_SECRET_KEY: test-ci-key
           AZ_SECRET: test-ci-az-secret
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
           TESTING: "1"
 
   deploy-dev:
@@ -115,4 +132,3 @@ jobs:
             --limit 100 \
             --query "events[*].message" \
             --output text
-

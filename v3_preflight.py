@@ -55,7 +55,7 @@ def run_local():
     # 2. Core scoring regression
     print("\n[2/6] NTI scoring regression...")
     try:
-        from app import detect_l0_constraints, classify_tilt, compute_nii, detect_downstream_before_constraint
+        from core_engine.app import detect_l0_constraints, classify_tilt, compute_nii, detect_downstream_before_constraint
 
         def score(text):
             l0 = detect_l0_constraints(text)
