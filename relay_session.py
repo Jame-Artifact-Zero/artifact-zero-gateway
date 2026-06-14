@@ -417,6 +417,7 @@ def record_exchange(
         blob_prompt = blob.to_prompt()
 
     _db_save(session_id, thread)
+    s1_state = _thread_to_state(thread)
 
     return {
         "relay_triggered": relay_triggered,
@@ -425,6 +426,7 @@ def record_exchange(
         "window_status": ai_result.window_status,
         "relay_number": thread.relay_number,
         "total_messages": thread.total_messages,
+        "s1_state": s1_state,
     }
 
 
@@ -447,6 +449,11 @@ def get_history(session_id: str) -> List[Dict[str, str]]:
         for r in thread._monitor.records
         if r.content
     ]
+
+
+def get_s1_state(session_id: str) -> Dict[str, Any]:
+    thread = get_or_create_session(session_id)
+    return _thread_to_state(thread)
 
 
 def get_blob_for_next_call(session_id: str) -> Optional[str]:
