@@ -1402,6 +1402,64 @@ def _store_session(messages, response, jos):
             + secrets.token_hex(8)
         )
 
+        def _trim_text(value, limit=2000):
+            if isinstance(value, str) and len(value) > limit:
+                return value[:limit] + '...'
+            return value
+
+        trimmed_messages = []
+
+        for message in messages[-10:]:
+            if not isinstance(message, dict):
+                trimmed_messages.append(message)
+                continue
+
+            trimmed_message = dict(message)
+            content = trimmed_message.get('content')
+
+            if isinstance(content, str):
+                trimmed_message['content'] = _trim_text(content)
+
+            elif isinstance(content, list):
+                trimmed_content = []
+
+                for part in content:
+                    if isinstance(part, dict):
+                        trimmed_part = dict(part)
+
+                        if isinstance(trimmed_part.get('text'), str):
+                            trimmed_part['text'] = _trim_text(
+                                trimmed_part['text'],
+                            )
+
+                        trimmed_content.append(trimmed_part)
+                    else:
+                        trimmed_content.append(part)
+
+                trimmed_message['content'] = trimmed_content
+
+            trimmed_messages.append(trimmed_message)
+
+        trimmed_response = dict(response) if isinstance(response, dict) else response
+
+        if isinstance(trimmed_response, dict):
+            content = trimmed_response.get('content')
+
+            if isinstance(content, list) and content:
+                trimmed_content = list(content)
+                first_item = trimmed_content[0]
+
+                if isinstance(first_item, dict):
+                    trimmed_first_item = dict(first_item)
+
+                    if isinstance(trimmed_first_item.get('text'), str):
+                        trimmed_first_item['text'] = _trim_text(
+                            trimmed_first_item['text'],
+                        )
+
+                    trimmed_content[0] = trimmed_first_item
+                    trimmed_response['content'] = trimmed_content
+
         cur.execute("""
             INSERT INTO operator_sessions
                 (
@@ -1415,8 +1473,8 @@ def _store_session(messages, response, jos):
                 (%s, %s, %s, %s, %s)
         """, (
             session_id,
-            json.dumps(messages),
-            json.dumps(response),
+            json.dumps(trimmed_messages),
+            json.dumps(trimmed_response),
             json.dumps(jos),
             summary,
         ))
