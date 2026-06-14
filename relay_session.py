@@ -1,7 +1,7 @@
 # relay_session.py
 # Stateful session layer — wires SimulatedThread into the NTI relay pipeline.
 #
-# p0068 fix:
+# p0097 fix:
 #   - Serialize full active Gateway state, not just window counters.
 #   - Serialize full active ThreadMonitor records, not just last 8 records.
 #   - Restore Gateway + ThreadMonitor completely on cold RDS reload.
@@ -36,15 +36,114 @@ _cache: Dict[str, SimulatedThread] = {}
 _lock = threading.Lock()
 
 
-def _db_load(session_id: str) -> Optional[SimulatedThread]:
-    """Load a session from RDS. Returns None if not found or DB unavailable."""
+def _parse_dt(value: Any) -> Optional[datetime]:
+    """Parse ISO/datetime values used by saved_at and updated_at."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(text)
+        except Exception:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _coerce_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _state_blob_count(state: Optional[Dict[str, Any]]) -> int:
+    if not isinstance(state, dict):
+        return 0
+    blobs = state.get("blobs", [])
+    return len(blobs) if isinstance(blobs, list) else 0
+
+
+def _state_history_count(state: Optional[Dict[str, Any]]) -> int:
+    if not isinstance(state, dict):
+        return 0
+    if state.get("history_count") is not None:
+        return _coerce_int(state.get("history_count"), 0)
+    monitor = state.get("monitor", {}) if isinstance(state.get("monitor"), dict) else {}
+    records = monitor.get("records") or state.get("all_records") or state.get("last_records") or []
+    return len(records) if isinstance(records, list) else 0
+
+
+def _state_metrics(state: Optional[Dict[str, Any]]) -> Dict[str, int]:
+    if not isinstance(state, dict):
+        return {"total_messages": 0, "relay_number": 0, "blob_count": 0, "history_count": 0}
+    return {
+        "total_messages": _coerce_int(state.get("total_messages"), 0),
+        "relay_number": _coerce_int(state.get("relay_number"), 0),
+        "blob_count": _state_blob_count(state),
+        "history_count": _state_history_count(state),
+    }
+
+
+def _thread_metrics(thread: Optional[SimulatedThread]) -> Dict[str, int]:
+    if thread is None:
+        return {"total_messages": 0, "relay_number": 0, "blob_count": 0, "history_count": 0}
+    return {
+        "total_messages": _coerce_int(getattr(thread, "total_messages", 0), 0),
+        "relay_number": _coerce_int(getattr(thread, "relay_number", 0), 0),
+        "blob_count": len(getattr(thread, "blobs", []) or []),
+        "history_count": len(getattr(getattr(thread, "_monitor", None), "records", []) or []),
+    }
+
+
+def _thread_updated_at(thread: Optional[SimulatedThread]) -> Optional[datetime]:
+    if thread is None:
+        return None
+    for attr in ("_az_updated_at", "_az_saved_at"):
+        dt = _parse_dt(getattr(thread, attr, None))
+        if dt is not None:
+            return dt
+    return _parse_dt(getattr(thread, "created_at", None))
+
+
+def _state_datetime(state: Optional[Dict[str, Any]], updated_at: Any = None) -> Optional[datetime]:
+    if isinstance(state, dict):
+        for key in ("saved_at", "updated_at", "created_at"):
+            dt = _parse_dt(state.get(key))
+            if dt is not None:
+                return dt
+    return _parse_dt(updated_at)
+
+
+def _db_row_to_thread(session_id: str, row: Dict[str, Any]) -> Optional[SimulatedThread]:
+    state = row.get("state")
+    if not isinstance(state, dict):
+        return None
+    label = row.get("label") or state.get("label") or session_id
+    thread = _thread_from_state(session_id, label, state)
+    updated_at = _state_datetime(state, row.get("updated_at"))
+    if updated_at is not None:
+        thread._az_updated_at = updated_at.isoformat()
+        thread._az_saved_at = updated_at.isoformat()
+    return thread
+
+
+def _db_fetch_state(session_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch raw persisted state plus updated_at. Returns None if absent/unavailable."""
     if not _USE_DB or _db is None:
         return None
     try:
         conn = _db.db_connect()
         cur = conn.cursor()
         cur.execute(
-            "SELECT label, state_json FROM relay_sessions WHERE session_id = %s",
+            "SELECT label, state_json, updated_at FROM relay_sessions WHERE session_id = %s",
             (session_id,),
         )
         row = cur.fetchone()
@@ -53,21 +152,156 @@ def _db_load(session_id: str) -> Optional[SimulatedThread]:
             return None
         label = row[0]
         state_json = row[1]
+        updated_at = row[2] if len(row) > 2 else None
         if not state_json:
             return None
         state = json.loads(state_json) if isinstance(state_json, str) else state_json
-        return _thread_from_state(session_id, label, state)
+        if not isinstance(state, dict):
+            return None
+        return {"label": label, "state": state, "updated_at": updated_at}
+    except Exception as e:
+        print(f"[relay_session] RDS fetch error for {session_id}: {e}", flush=True)
+        return None
+
+
+def _db_load(session_id: str) -> Optional[SimulatedThread]:
+    """Load a session from RDS. Returns None if not found or DB unavailable."""
+    row = _db_fetch_state(session_id)
+    if row is None:
+        return None
+    try:
+        return _db_row_to_thread(session_id, row)
     except Exception as e:
         print(f"[relay_session] RDS load error for {session_id}: {e}", flush=True)
         return None
 
 
-def _db_save(session_id: str, thread: SimulatedThread) -> None:
-    """Persist session state to RDS. Silent on failure — RAM cache still valid."""
+def _db_state_is_newer_than_thread(row: Dict[str, Any], thread: Optional[SimulatedThread]) -> bool:
+    """True when persisted RDS state is ahead of RAM cache."""
+    if row is None or thread is None:
+        return False
+    db_state = row.get("state") or {}
+    dbm = _state_metrics(db_state)
+    mem = _thread_metrics(thread)
+
+    if dbm["total_messages"] > mem["total_messages"]:
+        return True
+    if dbm["relay_number"] > mem["relay_number"]:
+        return True
+    if dbm["blob_count"] > mem["blob_count"]:
+        return True
+
+    # If RAM is ahead on any monotonic metric, do not prefer RDS solely by timestamp.
+    if dbm["total_messages"] < mem["total_messages"]:
+        return False
+    if dbm["relay_number"] < mem["relay_number"]:
+        return False
+    if dbm["blob_count"] < mem["blob_count"]:
+        return False
+
+    db_dt = _state_datetime(db_state, row.get("updated_at"))
+    mem_dt = _thread_updated_at(thread)
+    return bool(db_dt and mem_dt and db_dt > mem_dt)
+
+
+def _thread_is_newer_than_db_state(thread: SimulatedThread, row: Optional[Dict[str, Any]]) -> bool:
+    """True when RAM state is ahead of persisted RDS state."""
+    if row is None:
+        return True
+    db_state = row.get("state") or {}
+    dbm = _state_metrics(db_state)
+    mem = _thread_metrics(thread)
+
+    if mem["total_messages"] > dbm["total_messages"]:
+        return True
+    if mem["relay_number"] > dbm["relay_number"]:
+        return True
+    if mem["blob_count"] > dbm["blob_count"]:
+        return True
+
+    if mem["total_messages"] < dbm["total_messages"]:
+        return False
+    if mem["relay_number"] < dbm["relay_number"]:
+        return False
+    if mem["blob_count"] < dbm["blob_count"]:
+        return False
+
+    mem_dt = _thread_updated_at(thread)
+    db_dt = _state_datetime(db_state, row.get("updated_at"))
+    return bool(mem_dt and db_dt and mem_dt > db_dt)
+
+
+def _state_write_would_reduce(candidate_state: Dict[str, Any], current_state: Dict[str, Any]) -> bool:
+    """
+    Return True if candidate would move persisted state backward.
+
+    history_count may drop only when relay_number and blob_count both increase,
+    because monitor reset is valid only immediately after relay fired.
+    """
+    cand = _state_metrics(candidate_state)
+    cur = _state_metrics(current_state)
+
+    if cand["total_messages"] < cur["total_messages"]:
+        return True
+    if cand["relay_number"] < cur["relay_number"]:
+        return True
+    if cand["blob_count"] < cur["blob_count"]:
+        return True
+
+    history_dropped = cand["history_count"] < cur["history_count"]
+    valid_relay_reset = (
+        cand["relay_number"] > cur["relay_number"]
+        and cand["blob_count"] > cur["blob_count"]
+    )
+    if history_dropped and not valid_relay_reset:
+        return True
+
+    return False
+
+
+def _set_cache(session_id: str, thread: SimulatedThread) -> None:
+    with _lock:
+        _cache[session_id] = thread
+
+
+def _db_save(session_id: str, thread: SimulatedThread) -> SimulatedThread:
+    """
+    Persist session state to RDS with monotonic protection.
+
+    Returns the authoritative thread after the save attempt. If RDS is ahead,
+    RAM is hydrated from RDS and stale RAM is not written backward.
+    """
     if not _USE_DB or _db is None:
-        return
+        return thread
+
+    current_row = _db_fetch_state(session_id)
+    if current_row is not None:
+        if _db_state_is_newer_than_thread(current_row, thread):
+            rds_thread = _thread_from_state(
+                session_id,
+                current_row.get("label", thread.label),
+                current_row.get("state") or {},
+            )
+            with _lock:
+                _cache[session_id] = rds_thread
+            return rds_thread
+
+        current_state = current_row.get("state") or {}
+        candidate_state = _thread_to_state(thread)
+
+        if _state_write_would_reduce(candidate_state, current_state):
+            authoritative = _db_row_to_thread(session_id, current_row)
+            if authoritative is not None:
+                _set_cache(session_id, authoritative)
+                print(
+                    f"[relay_session] monotonic save skipped for {session_id}: RDS ahead of RAM",
+                    flush=True,
+                )
+                return authoritative
+
     try:
         state = _thread_to_state(thread)
+        saved_at = state.get("saved_at") or _now_iso()
         state_json = json.dumps(state)
         conn = _db.db_connect()
         cur = conn.cursor()
@@ -79,12 +313,17 @@ def _db_save(session_id: str, thread: SimulatedThread) -> None:
               SET state_json = EXCLUDED.state_json,
                   updated_at = EXCLUDED.updated_at
             """,
-            (session_id, thread.label, state_json, _now_iso()),
+            (session_id, thread.label, state_json, saved_at),
         )
         conn.commit()
         conn.close()
+        thread._az_updated_at = _parse_dt(saved_at).isoformat() if _parse_dt(saved_at) else saved_at
+        thread._az_saved_at = thread._az_updated_at
+        _set_cache(session_id, thread)
+        return thread
     except Exception as e:
         print(f"[relay_session] RDS save error for {session_id}: {e}", flush=True)
+        return thread
 
 
 def _db_delete(session_id: str) -> None:
@@ -365,22 +604,46 @@ def _thread_from_state(session_id: str, label: str, state: Dict[str, Any]) -> Si
     return thread
 
 
+def _get_existing_authoritative_session(session_id: str) -> Optional[SimulatedThread]:
+    """Return existing session from RAM/RDS without creating a new one."""
+    row = _db_fetch_state(session_id)
+    db_thread = None
+    if row is not None:
+        try:
+            db_thread = _db_row_to_thread(session_id, row)
+        except Exception as e:
+            print(f"[relay_session] RDS hydrate error for {session_id}: {e}", flush=True)
+            db_thread = None
+
+    with _lock:
+        ram_thread = _cache.get(session_id)
+
+        if ram_thread is not None and db_thread is not None:
+            if _db_state_is_newer_than_thread(row, ram_thread):
+                _cache[session_id] = db_thread
+                return db_thread
+            return ram_thread
+
+        if ram_thread is not None:
+            return ram_thread
+
+        if db_thread is not None:
+            _cache[session_id] = db_thread
+            return db_thread
+
+    return None
+
+
 def get_or_create_session(session_id: str, label: str = "") -> SimulatedThread:
-    """Return SimulatedThread for session_id. Order: L1 RAM cache → RDS → new thread."""
-    with _lock:
-        if session_id in _cache:
-            return _cache[session_id]
-
-    thread = _db_load(session_id)
-
-    with _lock:
-        if session_id in _cache:
-            return _cache[session_id]
-        if thread is None:
-            thread = SimulatedThread(label=label or session_id, thread_id=session_id)
-            _db_save(session_id, thread)
-        _cache[session_id] = thread
+    """Return authoritative SimulatedThread for session_id. Order: compare RDS ↔ RAM → new."""
+    thread = _get_existing_authoritative_session(session_id)
+    if thread is not None:
         return thread
+
+    thread = SimulatedThread(label=label or session_id, thread_id=session_id)
+    thread = _db_save(session_id, thread)
+    _set_cache(session_id, thread)
+    return thread
 
 
 def destroy_session(session_id: str) -> bool:
@@ -416,7 +679,7 @@ def record_exchange(
         blob: InjectionBlob = thread.relay()
         blob_prompt = blob.to_prompt()
 
-    _db_save(session_id, thread)
+    thread = _db_save(session_id, thread)
     s1_state = _thread_to_state(thread)
 
     return {
@@ -437,11 +700,7 @@ def get_history(session_id: str) -> List[Dict[str, str]]:
 
     This shape is required by nti_relay._build_messages().
     """
-    thread = None
-    with _lock:
-        thread = _cache.get(session_id)
-    if thread is None:
-        thread = _db_load(session_id)
+    thread = _get_existing_authoritative_session(session_id)
     if thread is None:
         return []
     return [
@@ -465,11 +724,7 @@ def get_blob_for_next_call(session_id: str) -> Optional[str]:
 
 def session_status(session_id: str) -> Dict[str, Any]:
     """Return window status and thread stats for a session."""
-    thread = None
-    with _lock:
-        thread = _cache.get(session_id)
-    if thread is None:
-        thread = _db_load(session_id)
+    thread = _get_existing_authoritative_session(session_id)
     if thread is None:
         return {"error": "session not found", "session_id": session_id}
 
