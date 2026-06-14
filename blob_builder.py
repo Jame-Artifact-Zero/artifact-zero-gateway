@@ -195,7 +195,10 @@ class BlobBuilder:
     def _extract_recent(self) -> List[Dict]:
         """Last N messages verbatim from the monitor."""
         recent_records = self.monitor.records[-RECENT_MESSAGES_TO_KEEP:]
-        return [
-            {"source": r.source, "content": r.content}
-            for r in recent_records
-        ]
+        recent = []
+        for r in recent_records:
+            content = r.content
+            if len(content) > 500:
+                content = content[:500] + "..."
+            recent.append({"source": r.source, "content": content})
+        return recent
