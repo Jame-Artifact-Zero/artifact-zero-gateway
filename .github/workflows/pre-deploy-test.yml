@@ -94,14 +94,28 @@ jobs:
             exit 1
           fi
 
-      - name: Verify health route exists in app.py
+      - name: Verify health route works in Flask app
+        env:
+          FLASK_SECRET_KEY: test-ci-key
+          AZ_SECRET: test-ci-az-secret
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          TESTING: "1"
         run: |
-          if grep -q '@app.route("/health")' app.py; then
-            echo "OK: /health route found"
-          else
-            echo "::error::/health route missing from app.py"
-            exit 1
-          fi
+          python - <<'PY'
+          from app import app
+
+          client = app.test_client()
+          response = client.get('/health')
+
+          if response.status_code != 200:
+              raise SystemExit(f"/health returned {response.status_code}")
+
+          data = response.get_json(silent=True) or {}
+          if data.get('status') != 'ok':
+              raise SystemExit(f"/health returned unexpected body: {data}")
+
+          print('OK: /health route works')
+          PY
 
       - name: Docker build test
         run: docker build -t artifact-zero-test .
