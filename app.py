@@ -1,2162 +1,251 @@
 import os
-import re
-import json
-import time
-import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
-from pre_score_gate import pre_score_gate
 
-from flask import Flask, request, jsonify, render_template, session
-import db as database
+from flask import Flask
+
 
 app = Flask(__name__)
 
-
-# ── Score JSON parsing helper ──
-def _parse_score_json(result):
-    """Parse score_json string and merge csi/nti into result dict."""
-    sj = result.pop("score_json", None)
-    if sj and isinstance(sj, str):
-        try:
-            parsed = json.loads(sj)
-            if "csi" in parsed:
-                result["csi"] = parsed["csi"]
-            if "nti" in parsed:
-                result["nti"] = parsed["nti"]
-        except (json.JSONDecodeError, TypeError):
-            pass
-    elif sj and isinstance(sj, dict):
-        if "csi" in sj:
-            result["csi"] = sj["csi"]
-        if "nti" in sj:
-            result["nti"] = sj["nti"]
-    return result
-
-# ── Session Security ──
 _secret = os.getenv("FLASK_SECRET_KEY") or os.getenv("AZ_SECRET")
 if not _secret:
-    _secret = uuid.uuid4().hex + uuid.uuid4().hex          # random per-boot fallback (sessions won't persist across restarts, but never guessable)
-    print("[SECURITY] WARNING: No FLASK_SECRET_KEY or AZ_SECRET set — using random ephemeral key", flush=True)
+    raise RuntimeError(
+        "FLASK_SECRET_KEY or AZ_SECRET must be set before startup"
+    )
+
 app.secret_key = _secret
-app.config["SESSION_COOKIE_SECURE"] = True                  # only send over HTTPS
-app.config["SESSION_COOKIE_HTTPONLY"] = True                 # no JS access
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"               # CSRF protection for top-level nav
-app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7        # 7 day max session
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7
 
-# ── CSRF Protection ──
-from csrf import init_csrf
-init_csrf(app)
-
-
-# ═══════════════════════════════════════════
-# AUTH STATE — available to all templates + JS
-# ═══════════════════════════════════════════
-@app.context_processor
-def inject_auth_state():
-    """Make logged_in and user_email available in all templates."""
-    from flask import session as flask_session
-    uid = flask_session.get("user_id")
-    if uid:
-        return {"logged_in": True, "user_id": uid}
-    return {"logged_in": False, "user_id": None}
-
-
-@app.route("/api/auth/status")
-def auth_status():
-    """Lightweight endpoint for JS nav state check."""
-    uid = session.get("user_id")
-    if uid:
-        return jsonify({"logged_in": True})
-    return jsonify({"logged_in": False})
-
-# Register blueprints
-try:
-    from auth import auth_bp
-    app.register_blueprint(auth_bp)
-    try:
-        from account import account_bp
-        app.register_blueprint(account_bp)
-        print("[app] account_bp registered", flush=True)
-    except Exception as e:
-        print(f"[app] account_bp failed: {e}", flush=True)
-except ImportError:
-    print("[app] auth not found, skipping", flush=True)
 
 try:
-    from rss_proxy import rss_bp
-    app.register_blueprint(rss_bp)
-except ImportError:
-    print("[app] rss_proxy not found, skipping", flush=True)
+    from csrf import init_csrf
+
+    init_csrf(app)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] CSRF initialization failed: {e}", flush=True)
+    raise
+
 
 try:
-    from user_feeds import user_feeds_bp
-    app.register_blueprint(user_feeds_bp)
-except ImportError:
-    print("[app] user_feeds not found, skipping", flush=True)
+    from patent_core.state import StateStore
+
+    _az_store = StateStore()
+    if _az_store.retrieve() is None:
+        _az_store.initialize({
+            "system": "artifact_zero",
+            "version": "p0068",
+        })
+except Exception as e:
+    print(f"[STARTUP CRITICAL] patent_core S0 initialization failed: {e}", flush=True)
+    raise
+
 
 try:
-    from your_os import your_os
-    app.register_blueprint(your_os)
-except ImportError:
-    print("[app] your_os not found, skipping", flush=True)
+    import db as database
 
-try:
-    from control_room_bp import control_room_bp
-    app.register_blueprint(control_room_bp)
-except ImportError:
-    print("[app] control_room_bp not found, skipping", flush=True)
+    database.db_init()
+except Exception as e:
+    print(f"[STARTUP CRITICAL] database initialization failed: {e}", flush=True)
+    raise
 
-try:
-    from az_relay import az_relay
-    app.register_blueprint(az_relay)
-except ImportError:
-    print("[app] az_relay not found, skipping", flush=True)
 
-try:
-    from nti_relay_routes import relay_bp
-    app.register_blueprint(relay_bp)
-    print("[app] nti_relay_routes loaded", flush=True)
-except ImportError:
-    print("[app] nti_relay_routes not found, skipping", flush=True)
 
-try:
-    from credits import credits_bp
-    app.register_blueprint(credits_bp)
-    print("[app] credits system loaded", flush=True)
-except ImportError:
-    print("[app] credits not found, skipping", flush=True)
-
-try:
-    from admin_dashboard import init_admin
-    init_admin(app)
-except ImportError:
-    print("[app] admin_dashboard not found, skipping", flush=True)
-try:
-    from nti_log_routes import log_bp
-    app.register_blueprint(log_bp)
-    print("[app] nti_log loaded", flush=True)
-except ImportError:
-    print("[app] nti_log_routes not found, skipping", flush=True)
 
 try:
     from ccs_routes import init_ccs
+
     init_ccs(app)
-except ImportError:
-    print("[CCS] ccs_routes.py not found — skipping glossary/spec/eval routes")
+except Exception as e:
+    print(f"[STARTUP CRITICAL] CCS route initialization failed: {e}", flush=True)
+    raise
+
+
+try:
+    from auth import auth_bp
+    from account import account_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(account_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] auth/account blueprints failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from routes.public import public_bp
+
+    app.register_blueprint(public_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] public blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from routes.api import api_bp
+
+    app.register_blueprint(api_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] API blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from routes.admin import admin_bp
+
+    app.register_blueprint(admin_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] admin blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from routes.webhook import webhook_bp
+
+    app.register_blueprint(webhook_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] webhook blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from core_engine.app import core_engine_bp
+
+    app.register_blueprint(core_engine_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] core_engine blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from rss_proxy import rss_bp
+
+    app.register_blueprint(rss_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] RSS blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from user_feeds import user_feeds_bp
+
+    app.register_blueprint(user_feeds_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] user feeds blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from your_os import your_os
+
+    app.register_blueprint(your_os)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] your_os blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from control_room_bp import control_room_bp
+
+    app.register_blueprint(control_room_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] control room blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from az_relay import az_relay
+
+    app.register_blueprint(az_relay)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] AZ relay blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from nti_relay_routes import relay_bp
+
+    app.register_blueprint(relay_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] NTI relay blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from credits import credits_bp
+
+    app.register_blueprint(credits_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] credits blueprint failed to load: {e}", flush=True)
+    raise
+
+
+try:
+    from nti_log_routes import log_bp
+
+    app.register_blueprint(log_bp)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] NTI log blueprint failed to load: {e}", flush=True)
+    raise
+
+
 try:
     from gateway_routes import gateway_bp
+
     app.register_blueprint(gateway_bp)
-    print("[app] gateway loaded", flush=True)
-except ImportError:
-    print("[app] gateway_routes not found, skipping", flush=True)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] gateway blueprint failed to load: {e}", flush=True)
+    raise
+
 
 try:
     from operator_room import operator_bp
+
     app.register_blueprint(operator_bp)
-    print("[app] operator room loaded", flush=True)
-except ImportError:
-    print("[app] operator_room not found, skipping", flush=True)
+except Exception as e:
+    print(f"[STARTUP CRITICAL] operator blueprint failed to load: {e}", flush=True)
+    raise
+
 
 try:
     from rh_toolkit import bp as rh_toolkit_bp
+
     app.register_blueprint(rh_toolkit_bp)
-    print("[app] rh_toolkit loaded", flush=True)
 except Exception as e:
-    print(f"[app] rh_toolkit failed: {e}", flush=True)
+    print(f"[STARTUP CRITICAL] RH toolkit blueprint failed to load: {e}", flush=True)
+    raise
+
 
 try:
     from dicom_blueprint import dicom_bp
-    app.register_blueprint(dicom_bp, url_prefix='/dicom')
-    print("[app] dicom pipeline loaded", flush=True)
+
+    app.register_blueprint(dicom_bp, url_prefix="/dicom")
 except Exception as e:
-    print(f"[app] dicom pipeline failed: {e}", flush=True)
+    print(f"[STARTUP CRITICAL] DICOM blueprint failed to load: {e}", flush=True)
+    raise
+
 
 try:
     from azl_blueprint import bp as azl_bp
+
     app.register_blueprint(azl_bp)
-    print("[app] azl loaded", flush=True)
 except Exception as e:
-    print(f"[app] azl failed: {e}", flush=True)
+    print(f"[STARTUP CRITICAL] AZL blueprint failed to load: {e}", flush=True)
+    raise
+
 
 try:
     from preimpression.server import preimpression_bp
+
     app.register_blueprint(preimpression_bp)
-    print("[app] preimpression loaded", flush=True)
 except Exception as e:
-    print(f"[app] preimpression failed: {e}", flush=True)
-
-
-# ============================================================
-# CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
-#
-# v3.0 includes:
-# - 5-dimension weighted NII scoring (D1-D5, continuous 0-100)
-# - Tilt clusters: T1-T10
-# - Broadened DCE markers (soft deferral)
-# - V3 self-audit loop, time collapse, attribution drift stripping
-# - Convergence gate, loop detection, consolidation engine
-# - Confusion layer, axis2 friction, audit source tagging
-# - Full enforcement priority tree (L0-L4)
-# ============================================================
-NTI_VERSION = "canonical-nti-v3.0"
-
-
-# ==========================
-# DB INIT
-# ==========================
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-database.db_init()
-
-
-# ==========================
-# TELEMETRY
-# ==========================
-def get_session_id() -> str:
-    sid = request.headers.get("X-Session-Id")
-    if sid and isinstance(sid, str) and len(sid) >= 8:
-        return sid
-    return str(uuid.uuid4())
-
-
-def log_json_line(event: str, payload: Dict[str, Any]) -> None:
-    record = {"event": event, "ts": utc_now_iso(), **payload}
-    print(json.dumps(record, ensure_ascii=False))
-
-
-def record_request(
-    request_id: str,
-    route: str,
-    session_id: str,
-    latency_ms: int,
-    payload: Dict[str, Any],
-    error: Optional[str] = None
-) -> None:
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    ua = request.headers.get("User-Agent")
-    database.record_request(
-        request_id, route, ip, ua, session_id,
-        latency_ms, json.dumps(payload, ensure_ascii=False), error
-    )
-
-
-def record_result(request_id: str, result: Dict[str, Any]) -> None:
-    database.record_result(
-        request_id, NTI_VERSION,
-        json.dumps(result, ensure_ascii=False)
-    )
-
-
-# ==========================
-# TEXT UTIL
-# ==========================
-WORD_RE = re.compile(r"[A-Za-z0-9']+")
-
-STOPWORDS = {
-    "the", "a", "an", "and", "or", "but", "if", "then", "so", "to", "of", "in", "on", "for", "with", "as",
-    "we", "you", "they", "it", "is", "are", "was", "were", "be", "been", "being", "this", "that", "these",
-    "those", "will", "would", "should", "can", "could", "may", "might", "do", "does", "did", "at", "by",
-    "from", "into", "over", "under", "before", "after", "about", "because", "while", "just", "now", "today"
-}
-
-def tokenize(text: str) -> List[str]:
-    return [t.lower() for t in WORD_RE.findall(text or "")]
-
-def normalize_space(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "")).strip()
-
-def split_sentences(text: str) -> List[str]:
-    t = normalize_space(text)
-    if not t:
-        return []
-    parts = re.split(r"(?<=[.!?])\s+", t)
-    return [p.strip() for p in parts if p.strip()]
-
-def jaccard(a: List[str], b: List[str]) -> float:
-    sa = set(a)
-    sb = set(b)
-    if not sa and not sb:
-        return 1.0
-    if not sa or not sb:
-        return 0.0
-    return round(len(sa & sb) / len(sa | sb), 3)
-
-def extract_domain_tokens(text: str) -> List[str]:
-    """
-    Lightweight "domain token" extraction for scope expansion detection.
-    Heuristic:
-      - alphanumeric tokens length >= 4
-      - not a stopword
-    """
-    toks = tokenize(text)
-    dom = []
-    for t in toks:
-        if len(t) >= 4 and t not in STOPWORDS:
-            dom.append(t)
-    # unique preserve order
-    uniq = []
-    for x in dom:
-        if x not in uniq:
-            uniq.append(x)
-    return uniq[:80]
-
-
-# ==========================
-# CANONICAL LAYER MODEL (L0-L7)
-# ==========================
-L0_CONSTRAINT_MARKERS = [
-    "must", "cannot", "can't", "won't", "requires", "require", "only if", "no way", "not possible",
-    "dependency", "dependent", "api key", "openai", "render", "legal", "policy", "security", "compliance",
-    "budget", "deadline", "today", "production", "cannot expose", "secret", "token", "rate limit", "auth"
-]
-
-L2_HEDGE = [
-    "maybe", "might", "could", "perhaps", "it seems", "it sounds", "generally", "often", "usually",
-    "in general", "likely", "approximately", "around"
-]
-L2_REASSURE = ["don't worry", "no problem", "it's okay", "you got this", "rest assured", "glad", "happy to"]
-L2_CATEGORY_BLEND = ["kind of", "sort of", "basically", "overall", "in other words", "at the end of the day"]
-
-L3_MUTATION_MARKERS = ["instead", "rather than", "we should pivot", "let's change", "new plan", "different approach", "actually"]
-
-
-# ==========================
-# PARENT FAILURE MODES (UDDS / DCE / CCA)
-# ==========================
-DOWNSTREAM_CAPABILITY_MARKERS = [
-    "we can build", "we can add", "just add", "ship it", "deploy it", "we can do all of it",
-    "just use", "easy to", "quick fix", "we can implement"
-]
-
-BOUNDARY_ABSENCE_MARKERS = [
-    "maybe", "might", "could", "sort of", "kind of", "basically", "we'll see", "later",
-    "for now", "eventually", "not sure", "probably"
-]
-
-NARRATIVE_STABILIZATION_MARKERS = [
-    "don't worry", "it's fine", "no big deal", "you got this", "glad", "relief", "it's okay",
-    "not a problem", "totally"
-]
-
-# DCE broadened to include "soft deferral" markers
-DCE_DEFER_MARKERS = [
-    # explicit deferral
-    "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
-    "we'll figure it out", "next week", "after we launch", "phase 2", "future iteration", "future iterations",
-    # soft deferral / drift-by-process
-    "explore", "consider", "evaluate", "assess", "as we continue", "as we iterate", "we will look into",
-    "we'll look into", "we will revisit", "we'll revisit"
-]
-
-CCA_COLLAPSE_MARKERS = [
-    "overall", "basically", "in general", "at the end of the day", "all in all", "net net",
-    "it all comes down to", "the main thing", "just"
-]
-
-
-# ==========================
-# NTE-CLF (Tilt Taxonomy) â€” RULE-BASED CLASSIFIER
-# v2.0 adds: T4, T5, T9, T10 and keeps T2
-# ==========================
-TILT_TAXONOMY = {
-    "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
-    "T3_CONSENSUS_CLAIMS": ["most people", "many people", "everyone", "no one", "in general", "typically"],
-    "T6_CONSTRAINT_DEFERRAL": ["later", "eventually", "phase 2", "after we launch", "we'll figure it out", "future iteration"],
-    "T7_CATEGORY_BLEND": ["kind of", "sort of", "basically", "overall", "at the end of the day"],
-    "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
-}
-
-# T2: certainty inflation (absolute guarantees without enforcement verbs)
-CERTAINTY_INFLATION_TOKENS = [
-    "guarantee", "guarantees", "guaranteed",
-    "perfect", "zero risk", "eliminates all risk", "eliminate all risk",
-    "always", "never fail", "no possibility", "100%",
-    "completely secure", "ensures complete", "every scenario"
-]
-
-CERTAINTY_ENFORCEMENT_VERBS = [
-    "block", "blocks", "blocked", "blocking",
-    "prevent", "prevents", "prevented", "preventing",
-    "restrict", "restricts", "restricted", "restricting",
-    "deny", "denies", "denied", "denying",
-    "require", "requires", "required", "requiring",
-    "enforce", "enforces", "enforced", "enforcing",
-    "validate", "validates", "validated", "validating",
-    "verify", "verifies", "verified", "verifying"
-]
-
-# T5: absolute language
-ABSOLUTE_LANGUAGE_TOKENS = [
-    "always", "never", "everyone", "no one", "completely", "entirely", "100%", "guaranteed", "perfect", "zero risk"
-]
-
-# T10: authority imposition
-AUTHORITY_IMPOSITION_TOKENS = [
-    "experts agree", "industry standard", "research shows", "studies show", "best practice",
-    "widely accepted", "authorities agree", "proven by research"
-]
-
-# T4: capability overreach
-CAPABILITY_OVERREACH_TOKENS = [
-    "solves everything", "solve everything", "handles everything", "handle everything",
-    "covers all cases", "all cases", "any scenario", "every scenario", "universal solution",
-    "works for everyone", "works in any situation", "end-to-end for all"
-]
-CAPABILITY_VERBS = ["solve", "solves", "handle", "handles", "cover", "covers", "ensure", "ensures", "guarantee", "guarantees"]
-
-def _contains_any(text_lc: str, needles: List[str]) -> bool:
-    for n in needles:
-        if n in text_lc:
-            return True
-    return False
-
-def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
-    t = (text or "").lower()
-    hits: List[str] = []
-
-    # existing clusters
-    for cat, markers in TILT_TAXONOMY.items():
-        for m in markers:
-            if m in t:
-                hits.append(cat)
-                break
-
-    # T2 certainty inflation (certainty token present AND no enforcement)
-    certainty_present = _contains_any(t, CERTAINTY_INFLATION_TOKENS)
-    enforcement_present = _contains_any(t, CERTAINTY_ENFORCEMENT_VERBS)
-    if certainty_present and not enforcement_present:
-        hits.append("T2_CERTAINTY_INFLATION")
-
-    # T5 absolute language (simple token presence)
-    if _contains_any(t, ABSOLUTE_LANGUAGE_TOKENS):
-        hits.append("T5_ABSOLUTE_LANGUAGE")
-
-    # T10 authority imposition
-    if _contains_any(t, AUTHORITY_IMPOSITION_TOKENS):
-        hits.append("T10_AUTHORITY_IMPOSITION")
-
-    # T4 capability overreach: phrase OR (capability verb + universal quantifier)
-    if _contains_any(t, CAPABILITY_OVERREACH_TOKENS):
-        hits.append("T4_CAPABILITY_OVERREACH")
-    else:
-        universal = any(u in t for u in ["all", "every", "any", "everything", "everyone", "no one"])
-        capverb = _contains_any(t, CAPABILITY_VERBS)
-        if universal and capverb:
-            hits.append("T4_CAPABILITY_OVERREACH")
-
-    # T9 scope expansion: compare prompt vs answer domain tokens (only if prompt+answer provided)
-    # Heuristic: if a lot of answer domain tokens are not in prompt domain tokens AND drift is high.
-    if prompt and answer:
-        p_dom = set(extract_domain_tokens(prompt))
-        a_dom = extract_domain_tokens(answer)
-        if a_dom:
-            new_tokens = [x for x in a_dom if x not in p_dom]
-            new_ratio = len(new_tokens) / max(len(a_dom), 1)
-            # conservative threshold
-            if new_ratio >= 0.55 and len(new_tokens) >= 6:
-                hits.append("T9_SCOPE_EXPANSION")
-
-    # stable order, remove duplicates
-    uniq: List[str] = []
-    for h in hits:
-        if h not in uniq:
-            uniq.append(h)
-    return uniq
-
-
-# ==========================
-# NII (NTI Integrity Index)
-# NOTE: Schema preserved: q1/q2/q3 + nii_score.
-# q3 now penalizes boundary absence AND structural drift tilt categories (T2/T4/T5/T9/T10).
-# ==========================
-def _split_sentences(text):
-    """Split text into sentences for per-sentence analysis."""
-    import re
-    return [s.strip() for s in re.split(r'[.!?]+', text) if s.strip() and len(s.strip()) > 3]
-
-
-def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
-    """
-    NTI Integrity Index v2 — 5-dimension weighted scoring.
-    Returns 0-100 continuous score with 6 bands.
-
-    Dimensions (weights sum to 1.0):
-      D1: Constraint Density    (25%) — % of sentences containing explicit constraints
-      D2: Ask Architecture      (20%) — Ask positioned before capability claims
-      D3: Enforcement Integrity (20%) — Freedom from deferral/erosion markers
-      D4: Tilt Resistance       (15%) — Resistance to drift patterns
-      D5: Failure Mode Severity (20%) — UDDS/DCE/CCA penalty
-    """
-    text = answer or prompt or ""
-    sents = _split_sentences(text)
-    total_sents = max(len(sents), 1)
-    words = text.split()
-    word_count = max(len(words), 1)
-    t_lower = text.lower()
-
-    # D1: CONSTRAINT DENSITY (25%)
-    constraint_sents = sum(1 for s in sents if any(m in s.lower() for m in L0_CONSTRAINT_MARKERS))
-    constraint_ratio = constraint_sents / total_sents
-    constraint_word_hits = sum(1 for m in L0_CONSTRAINT_MARKERS if m in t_lower)
-    constraint_density = min(constraint_word_hits / (word_count / 100), 1.0) if word_count > 0 else 0
-    d1 = constraint_ratio * 0.6 + constraint_density * 0.4
-
-    # D2: ASK ARCHITECTURE (20%)
-    first_sent = sents[0].lower() if sents else ""
-    ask_verbs = ["need", "want", "require", "send", "provide", "confirm", "review", "approve",
-                 "schedule", "complete", "submit", "deliver", "respond", "reply", "call", "meet"]
-    first_sent_has_ask = any(v in first_sent for v in ask_verbs)
-    d2_base = 0.8 if not downstream_before_constraints else 0.2
-    d2 = min(d2_base + (0.2 if first_sent_has_ask else 0.0), 1.0)
-
-    # D3: ENFORCEMENT INTEGRITY (20%)
-    erosion_markers = BOUNDARY_ABSENCE_MARKERS + DCE_DEFER_MARKERS + NARRATIVE_STABILIZATION_MARKERS
-    clean_sents = sum(1 for s in sents if not any(m in s.lower() for m in erosion_markers))
-    clean_ratio = clean_sents / total_sents
-    framing = detect_l2_framing(text)
-    hedge_count = len(framing.get("hedge_markers", []))
-    reassurance_count = len(framing.get("reassurance_markers", []))
-    blend_count = len(framing.get("category_blend_markers", []))
-    hedge_penalty = min((hedge_count + reassurance_count + blend_count) * 0.05, 0.4)
-    d3 = max(0, clean_ratio - hedge_penalty)
-
-    # D4: TILT RESISTANCE (15%)
-    tilt_weights = {
-        "T1_REASSURANCE_DRIFT": 0.08, "T2_CERTAINTY_INFLATION": 0.12,
-        "T3_CONSENSUS_CLAIMS": 0.06, "T4_CAPABILITY_OVERREACH": 0.15,
-        "T5_ABSOLUTE_LANGUAGE": 0.10, "T6_CONSTRAINT_DEFERRAL": 0.12,
-        "T7_CATEGORY_BLEND": 0.06, "T8_PRESSURE_OPTIMIZATION": 0.04,
-        "T9_SCOPE_EXPANSION": 0.10, "T10_AUTHORITY_IMPOSITION": 0.08
-    }
-    tilt_penalty = sum(tilt_weights.get(t, 0.05) for t in tilt_taxonomy)
-    d4 = max(0, 1.0 - tilt_penalty)
-
-    # D5: FAILURE MODE SEVERITY (20%)
-    udds = detect_udds(prompt or "", answer or text, l0_constraints)
-    dce = detect_dce(answer or text, l0_constraints)
-    cca = detect_cca(prompt or "", answer or text)
-    fm_pen = {"CONFIRMED": 0.30, "PROBABLE": 0.15, "FALSE": 0.00}
-    def _fm_p(state):
-        for k, v in fm_pen.items():
-            if k in str(state):
-                return v
-        return 0.0
-    total_fm = min(_fm_p(udds.get("udds_state", "")) + _fm_p(dce.get("dce_state", "")) + _fm_p(cca.get("cca_state", "")), 0.80)
-    d5 = max(0, 1.0 - total_fm)
-
-    # WEIGHTED COMPOSITE
-    raw = (d1 * 0.25 + d2 * 0.20 + d3 * 0.20 + d4 * 0.15 + d5 * 0.20)
-    score = round(raw * 100)
-
-    if score >= 85: label = "STRONG"
-    elif score >= 70: label = "SOLID"
-    elif score >= 55: label = "MODERATE"
-    elif score >= 40: label = "WEAK"
-    elif score >= 25: label = "POOR"
-    else: label = "FAILING"
-
-    return {
-        "nii_score": score,
-        "nii_raw": round(raw, 4),
-        "nii_label": label,
-        "d1_constraint_density": round(d1, 3),
-        "d2_ask_architecture": round(d2, 3),
-        "d3_enforcement_integrity": round(d3, 3),
-        "d4_tilt_resistance": round(d4, 3),
-        "d5_failure_mode_severity": round(d5, 3),
-        # Legacy compat: map dimensions to Q names for existing UI
-        "q1": round(d1, 3),
-        "q2": round(d2, 3),
-        "q3": round(d3, 3),
-        "q4": round(d4, 3),
-        "q1_constraints_explicit": round(d1, 3),
-        "q2_constraints_before_capability": round(d2, 3),
-        "q3_substitutes_after_enforcement": round(d3, 3),
-        "detail": {
-            "constraint_sents": constraint_sents, "total_sents": total_sents,
-            "constraint_word_hits": constraint_word_hits,
-            "first_sent_has_ask": first_sent_has_ask,
-            "clean_sents": clean_sents, "hedge_count": hedge_count,
-            "reassurance_count": reassurance_count, "blend_count": blend_count,
-            "tilt_count": len(tilt_taxonomy), "tilt_patterns": tilt_taxonomy[:10],
-            "udds": udds.get("udds_state", ""), "dce": dce.get("dce_state", ""), "cca": cca.get("cca_state", "")
-        }
-    }
-
-
-# ==========================
-# L0-L7 EVALUATION
-# ==========================
-def detect_l0_constraints(text: str) -> List[str]:
-    t = (text or "").lower()
-    found = []
-    for m in L0_CONSTRAINT_MARKERS:
-        if m in t:
-            found.append(m)
-    uniq = []
-    for x in found:
-        if x not in uniq:
-            uniq.append(x)
-    return uniq[:20]
-
-
-def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> bool:
-    a = (answer or "").lower()
-    p = (prompt or "").lower()
-
-    capability = any(m in a for m in DOWNSTREAM_CAPABILITY_MARKERS) or any(m in p for m in DOWNSTREAM_CAPABILITY_MARKERS)
-    constraints_declared = len(l0_constraints) > 0
-    return bool(capability and not constraints_declared)
-
-
-def detect_boundary_absence(answer: str) -> bool:
-    a = (answer or "").lower()
-    return any(m in a for m in BOUNDARY_ABSENCE_MARKERS) or any(m in a for m in L2_CATEGORY_BLEND)
-
-
-def detect_narrative_stabilization(answer: str) -> bool:
-    a = (answer or "").lower()
-    return any(m in a for m in NARRATIVE_STABILIZATION_MARKERS) or any(m in a for m in L2_REASSURE)
-
-
-def detect_dce(answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
-    a = (answer or "").lower()
-    defer = any(m in a for m in DCE_DEFER_MARKERS)
-    constraints_missing = len(l0_constraints) == 0
-
-    state = "DCE_FALSE"
-    if defer and constraints_missing:
-        state = "DCE_CONFIRMED"
-    elif defer:
-        state = "DCE_PROBABLE"
-
-    return {"dce_state": state, "defer_markers_present": defer, "constraints_missing": constraints_missing}
-
-
-def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
-    combined = (prompt or "") + "\n" + (answer or "")
-    t = combined.lower()
-
-    collapse = any(m in t for m in CCA_COLLAPSE_MARKERS)
-    list_blend = ("and" in t and "but" in t and "overall" in t)
-
-    state = "CCA_FALSE"
-    if collapse and list_blend:
-        state = "CCA_CONFIRMED"
-    elif collapse:
-        state = "CCA_PROBABLE"
-
-    return {"cca_state": state, "collapse_markers_present": collapse, "list_blend_present": list_blend}
-
-
-def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
-    c1 = len(l0_constraints) > 0
-    c2 = detect_downstream_before_constraint(prompt, answer, l0_constraints)
-    c3 = detect_boundary_absence(answer)
-    c4 = detect_narrative_stabilization(answer)
-
-    met = sum([1 if c else 0 for c in [c1, c2, c3, c4]])
-
-    state = "UDDS_FALSE"
-    if met == 4:
-        state = "UDDS_CONFIRMED"
-    elif met == 3:
-        state = "UDDS_PROBABLE"
-
-    return {
-        "udds_state": state,
-        "criteria": {
-            "c1_l0_constraint_exists": c1,
-            "c2_downstream_before_constraint_declared": c2,
-            "c3_boundary_enforcement_absent_or_delayed": c3,
-            "c4_narrative_stabilization_present": c4,
-            "criteria_met_count": met
-        }
-    }
-
-
-def detect_l2_framing(text: str) -> Dict[str, Any]:
-    t = (text or "").lower()
-    hedges = [m for m in L2_HEDGE if m in t]
-    reassure = [m for m in L2_REASSURE if m in t]
-    blends = [m for m in L2_CATEGORY_BLEND if m in t]
-    return {
-        "hedge_markers": hedges[:10],
-        "reassurance_markers": reassure[:10],
-        "category_blend_markers": blends[:10]
-    }
-
-
-def objective_extract(prompt: str) -> Dict[str, Any]:
-    sents = split_sentences(prompt)
-    obj = sents[0] if sents else normalize_space(prompt)
-    return {"objective_text": obj[:400]}
-
-
-def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
-    p_tokens = tokenize(prompt)
-    a_tokens = tokenize(answer)
-
-    sim = jaccard(p_tokens, a_tokens)
-    drift = round(1.0 - sim, 3)
-
-    a = (answer or "").lower()
-    mutation = any(m in a for m in L3_MUTATION_MARKERS)
-
-    return {
-        "jaccard_similarity": sim,
-        "drift_score": drift,
-        "mutation_markers_present": mutation
-    }
-
-
-# ==========================
-# JOS (fill-in-the-blank form + binding contract)
-# ==========================
-def jos_template() -> Dict[str, Any]:
-    return {
-        "jos_version": "jos-binding-v1",
-        "fields": [
-            {"name": "objective", "prompt": "What is the single objective for this run? (one sentence)"},
-            {"name": "constraints", "prompt": "List constraints (one per line)."},
-            {"name": "no_go_zones", "prompt": "What is explicitly not allowed? (one per line)"},
-            {"name": "definition_of_done", "prompt": "What does done mean? (one sentence)"},
-            {"name": "closure_authority", "prompt": "Who can close/override? (you / system / both)"},
-        ],
-        "binding_contract": [
-            "Objective is frozen at L1 before execution.",
-            "Emotion may be acknowledged, never executed.",
-            "Constraints cannot be deleted; only appended explicitly.",
-            "If ambiguity exists, system must request constraint clarification OR run in 'analysis-only' mode."
-        ]
-    }
-
-
-def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
-    objective = normalize_space(str(config.get("objective", "")))
-    constraints = config.get("constraints", "")
-    if isinstance(constraints, list):
-        constraints_list = [normalize_space(str(x)) for x in constraints if normalize_space(str(x))]
-    else:
-        constraints_list = [normalize_space(x) for x in str(constraints).splitlines() if normalize_space(x)]
-
-    no_go = config.get("no_go_zones", "")
-    if isinstance(no_go, list):
-        no_go_list = [normalize_space(str(x)) for x in no_go if normalize_space(str(x))]
-    else:
-        no_go_list = [normalize_space(x) for x in str(no_go).splitlines() if normalize_space(x)]
-
-    dod = normalize_space(str(config.get("definition_of_done", "")))
-    closure = normalize_space(str(config.get("closure_authority", "")))
-
-    errors = []
-    if not objective:
-        errors.append("Missing objective")
-    if not constraints_list:
-        errors.append("Missing constraints")
-    if not dod:
-        errors.append("Missing definition_of_done")
-    if closure not in ["you", "system", "both"]:
-        errors.append("closure_authority must be: you / system / both")
-
-    status = "OK" if not errors else "INVALID"
-
-    return {
-        "status": status,
-        "errors": errors,
-        "frozen": {
-            "objective": objective,
-            "constraints": constraints_list,
-            "no_go_zones": no_go_list,
-            "definition_of_done": dod,
-            "closure_authority": closure
-        }
-    }
-
-
-# ==========================
-# ROUTES
-# ==========================
-@app.route("/")
-def home():
-    try:
-        return render_template("index.html")
-    except Exception:
-        return "NTI Canonical Runtime is live."
-
-
-# /relay handled by az_relay blueprint
-
-
-
-@app.route("/your-os")
-def youros_redirect():
-    from flask import redirect
-    return redirect("/your-os/builder", code=301)
-
-
-@app.route("/contact")
-def contact_page():
-    return render_template("contact.html")
-
-
-@app.route("/developers")
-def developers_page():
-    return render_template("developers.html")
-
-
-@app.route("/api/developer-apply", methods=["POST"])
-def api_developer_apply():
-    """Developer/vendor access request. Stores in DB, sends notification."""
-    data = request.get_json() or {}
-    name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip()
-    message = (data.get("message") or "").strip()
-    if not name or not email or not message:
-        return jsonify({"error": "All fields required"}), 400
-    try:
-        conn = _get_db()
-        conn.execute(
-            "INSERT INTO contact_submissions (name, email, message, type, created_at) VALUES (?, ?, ?, ?, ?)",
-            (name, email, message, "developer_apply", utc_now_iso())
-        )
-        conn.commit()
-    except Exception:
-        pass  # DB table may not exist yet — fail silently, log below
-    log_json_line("developer_apply", {"name": name, "email": email, "message": message[:200]})
-    return jsonify({"status": "ok"})
-
-
-@app.route("/compose")
-def compose_page():
-    return render_template("compose.html")
-
-
-@app.route("/examples")
-def examples_page():
-    return render_template("examples.html")
-
-
-@app.route("/wall")
-def wall_page():
-    return render_template("wall.html")
-
-
-@app.route("/docs")
-def docs():
-    return render_template("api.html")
-
-
-@app.route("/use-cases")
-def use_cases_page():
-    USE_CASES = [
-        {'title': 'Pre-LLM Prompt Firewall', 'industry': 'Security', 'wedge': 'Injection surface reduction', 'problem': 'Prompts carry hidden instructions, ambiguity, and adversarial framing into model calls.', 'breaks': 'Prompt injection, unsafe completions, non-deterministic behavior.', 'v1_detects': 'Injection-style framing, dominance directives, ambiguity carriers, scope drift, constraint absence.', 'v3_stabilizes': 'Strip hedges, enforce objective/constraints, normalize instruction structure.', 'model': 'Sell as a gateway middleware for any LLM product (per-request enforcement).'},
-        {'title': 'Post-LLM Output Validator', 'industry': 'Security', 'wedge': 'Governed output', 'problem': 'Generated text can include fabricated certainty, missing constraints, and risky commitments.', 'breaks': 'Compliance exposure, escalation, contractual promises.', 'v1_detects': 'Absolutes, implied commitments, missing actor/ownership, drift markers, failure modes (DCE/CCA/UDDS).', 'v3_stabilizes': 'Tighten claims to constraints, remove commitment risk, enforce assignment/timeline.', 'model': 'Add as a validator stage in agent pipelines; charge per validation.'},
-        {'title': 'AI Email Governance', 'industry': 'Productivity', 'wedge': 'Outbound control layer', 'problem': 'People send messages that escalate conflict or create hidden commitments.', 'breaks': 'Fires, churn, lawsuits, misalignment.', 'v1_detects': 'Hedges, blame, dominance, escalation words, structure gaps.', 'v3_stabilizes': 'Remove hedges/filler, anchor to objective, add timeline/owner.', 'model': 'Embed in email clients, CRMs, and outreach tools.'},
-        {'title': 'Slack/Teams Compliance Filter', 'industry': 'Enterprise IT', 'wedge': 'Realtime policy enforcement', 'problem': 'Sensitive or escalatory messages move fast in chat systems.', 'breaks': 'HR incidents, policy violations, leakage.', 'v1_detects': 'Escalation triggers, blame patterns, absolutes, dominance assertions.', 'v3_stabilizes': 'Rewrite into policy-compliant structure (optional).', 'model': 'Enterprise compliance add-on; per-message scanning.'},
-        {'title': 'Sales Commitment Guardrails', 'industry': 'Sales', 'wedge': 'Commitment risk control', 'problem': 'Reps over-promise in email and CRM notes.', 'breaks': 'Contract disputes, churn, refunds.', 'v1_detects': 'Implied/unbounded commitments, missing constraints, timeline vagueness (DCE).', 'v3_stabilizes': 'Bound commitments to scope, add timeline and owners, remove absolute language.', 'model': 'CRM plugin; per-score billing.'},
-        {'title': 'Contract Drift Detector', 'industry': 'Legal', 'wedge': 'Structural diff', 'problem': 'Negotiations drift and constraints get abstracted away.', 'breaks': 'Bad deals, missed obligations.', 'v1_detects': 'Constraint collapse (CCA), substitution drift (UDDS), missing enforcement (DCE).', 'v3_stabilizes': 'N/A (usually detect-only); generate structured drift report.', 'model': 'Law firm + procurement tooling; per-document scoring.'},
-        {'title': 'Insurance Claim Narrative Risk', 'industry': 'Insurance', 'wedge': 'Fraud/ambiguity triage', 'problem': 'Claims contain vague narratives and missing constraints.', 'breaks': 'Bad payouts, disputes, slow processing.', 'v1_detects': 'Hedge stacking, missing specifics, passive constructions, authority displacement.', 'v3_stabilizes': 'N/A; route to adjuster queues with evidence spans.', 'model': 'Per-claim scoring + routing.'},
-        {'title': 'Healthcare Documentation Risk Layer', 'industry': 'Healthcare', 'wedge': 'Clinical note integrity', 'problem': 'Notes contain ambiguity, missing actions, and unclear responsibility.', 'breaks': 'Billing issues, care errors, compliance problems.', 'v1_detects': 'Missing actor, passive voice, vague quantifiers, DCE patterns.', 'v3_stabilizes': 'Optional stabilization into clearer constraints/ownership (non-clinical).', 'model': 'Hospital compliance layer; enterprise contract.'},
-        {'title': 'Agent Tool-Use Gate', 'industry': 'AI/Agents', 'wedge': 'Deterministic gating', 'problem': 'Agents choose tools under vague intent and drift.', 'breaks': 'Bad actions, unnecessary calls, cost blowups.', 'v1_detects': 'Objective ambiguity, scope creep markers, unbounded commitments.', 'v3_stabilizes': 'Normalize objective/constraints before tool selection.', 'model': 'Sell to agent framework vendors; per-run enforcement.'},
-        {'title': 'Customer Support Escalation Predictor', 'industry': 'Support', 'wedge': 'Escalation prevention', 'problem': 'Support replies accidentally escalate tension.', 'breaks': 'Churn, refunds, reputation hits.', 'v1_detects': 'Dominance/absolutes, blame language, passive aggression triggers.', 'v3_stabilizes': 'Remove edge, add resolution path, clarify next action.', 'model': 'Helpdesk integration; per-ticket scoring.'},
-        {'title': 'HR/People Ops Message Safety', 'industry': 'HR', 'wedge': 'Policy-aligned comms', 'problem': 'Sensitive HR messages must be precise and non-escalatory.', 'breaks': 'Legal exposure, employee relations incidents.', 'v1_detects': 'Directive language, absolutes, dominance, missing resolution path.', 'v3_stabilizes': 'Structure into neutral, bounded statements with clear steps.', 'model': 'Enterprise HR suite add-on.'},
-        {'title': 'Procurement Vendor Communication Guardrails', 'industry': 'Procurement', 'wedge': 'Commitment control', 'problem': 'Vendor comms often include vague commitments and scope drift.', 'breaks': 'Delays, disputes.', 'v1_detects': 'DCE, UDDS, hedge stacking, missing constraints.', 'v3_stabilizes': 'Add constraints, owners, timeline.', 'model': 'Procurement platform plugin.'},
-        {'title': 'Policy Draft Integrity Scoring', 'industry': 'Compliance', 'wedge': 'Policy clarity', 'problem': 'Policies get written in vague, non-enforceable language.', 'breaks': 'Non-compliance, unenforceable standards.', 'v1_detects': 'Ambiguity carriers, missing actor, passive voice, weak constraints.', 'v3_stabilizes': 'Reframe into enforceable clauses (optional).', 'model': 'Compliance authoring tool.'},
-        {'title': 'Financial Advisory Email Risk', 'industry': 'Finance', 'wedge': 'Reg-safe language', 'problem': 'Advisors send emails that imply guarantees.', 'breaks': 'Regulatory action, lawsuits.', 'v1_detects': 'Guarantee/absolute language, implied certainty, missing qualifiers.', 'v3_stabilizes': 'Bound claims, remove absolutes, add required disclaimers.', 'model': 'Broker-dealer compliance integration.'},
-        {'title': 'Executive Comms Stabilizer', 'industry': 'Executive', 'wedge': 'Tone + structure', 'problem': 'High-stakes comms get distorted by tone and drift.', 'breaks': 'Escalation, reputational harm.', 'v1_detects': 'Dominance posture, escalation triggers, reputation framing.', 'v3_stabilizes': 'Trim, clarify objective, reduce edge.', 'model': 'Private exec tool; subscription.'},
-        {'title': 'Meeting Notes Action Integrity', 'industry': 'Ops', 'wedge': 'Actionability enforcement', 'problem': 'Meeting notes lack ownership/timelines.', 'breaks': 'No execution, misalignment.', 'v1_detects': 'Missing actor, no next action, DCE deferral language.', 'v3_stabilizes': 'Convert into assignments with dates (optional).', 'model': 'PM suite integration.'},
-        {'title': 'RFP Response Constraint Integrity', 'industry': 'B2B', 'wedge': 'Bid discipline', 'problem': 'Teams answer RFPs with vague claims.', 'breaks': 'Lost deals, scope problems.', 'v1_detects': 'Vague quantifiers, hedges, missing constraints.', 'v3_stabilizes': 'Clarify commitments, add constraints and definitions.', 'model': 'RFP tooling add-on.'},
-        {'title': 'Legal Intake Triage', 'industry': 'Legal', 'wedge': 'High-signal intake', 'problem': 'Client messages are messy; triage is slow.', 'breaks': 'Wrong routing, delays.', 'v1_detects': 'Objective ambiguity, missing facts, escalation language.', 'v3_stabilizes': 'N/A; structured intake summary output optional in higher tier.', 'model': 'Law firm intake pipeline.'},
-        {'title': 'Vendor SLA Drift Monitor', 'industry': 'Enterprise', 'wedge': 'SLA enforcement', 'problem': 'Service conversations drift away from SLA terms.', 'breaks': 'Hidden risk, missed obligations.', 'v1_detects': 'UDDS substitution drift, DCE deferrals, constraint loss.', 'v3_stabilizes': 'N/A; generate drift alerts with spans.', 'model': 'Enterprise contract monitoring.'},
-        {'title': 'Code Review Comment Stabilizer', 'industry': 'Engineering', 'wedge': 'Team velocity', 'problem': 'Code review comments escalate and waste cycles.', 'breaks': 'Conflict, churn.', 'v1_detects': 'Blame framing, dominance phrases, absolutes.', 'v3_stabilizes': 'Rewrite into neutral, actionable requests.', 'model': 'Dev tooling plugin.'},
-        {'title': 'Fraud Narrative Consistency Checks', 'industry': 'Risk', 'wedge': 'Narrative integrity', 'problem': 'Fraud often shows as vague or inconsistent narratives.', 'breaks': 'Bad payouts.', 'v1_detects': 'Ambiguity carriers, passive voice, missing specifics.', 'v3_stabilizes': 'N/A; risk scoring + routing.', 'model': 'Risk engine integration.'},
-        {'title': 'Public Relations Draft Risk', 'industry': 'PR', 'wedge': 'Reputational protection', 'problem': 'Drafts include absolutes and unbounded commitments.', 'breaks': 'PR crises.', 'v1_detects': 'Absolutes, dominance, resolution closure, reputation protection patterns.', 'v3_stabilizes': 'Bound claims, clarify what is known vs not known.', 'model': 'PR workflow tool.'},
-        {'title': 'AI Policy Gate for Employees', 'industry': 'Security', 'wedge': 'Org-wide enforcement', 'problem': 'Employees paste sensitive content into AI tools.', 'breaks': 'Leakage, compliance violations.', 'v1_detects': 'Sensitive-pattern prefilters + structural risk signals (optional).', 'v3_stabilizes': 'N/A; allow/block + user feedback.', 'model': 'Enterprise gateway; seat or volume.'},
-        {'title': 'Underwriter Decision Support Clarity', 'industry': 'Insurance', 'wedge': 'Decision integrity', 'problem': 'Underwriting notes contain vague reasoning and hidden deferrals.', 'breaks': 'Bad risk decisions.', 'v1_detects': 'Causal justification, missing constraints, DCE, CCA.', 'v3_stabilizes': 'N/A; evidence highlighting.', 'model': 'Carrier integration; enterprise.'},
-    ]
-    return render_template("use_cases.html", use_cases=USE_CASES)
-
-
-@app.route("/score")
-def score_page():
-    return render_template("score.html")
-
-
-@app.route("/relay")
-def relay_page():
-    return render_template("relay.html")
-
-
-@app.route("/security")
-def security_page():
-    return render_template("security.html")
-
-
-@app.route("/ai")
-def ai_page():
-    return render_template("ai.html")
-
-
-@app.route("/safecheck")
-def safecheck_page():
-    return render_template("safecheck.html")
-
-
-@app.route("/glossary")
-def glossary_page():
-    return render_template("glossary.html")
-
-@app.route("/experiment")
-def experiment_page():
-    return render_template("experiment.html")
-
-
-@app.route("/engine-bench")
-def engine_bench():
-    return render_template("engine-bench.html")
-
-
-@app.route("/voice")
-def voice_page():
-    return render_template("voice.html",
-                           logged_in=session.get('logged_in', False),
-                           user_id=session.get('user_id'))
-
-
-@app.route("/fortune500")
-@app.route("/live")
-def fortune500_page():
-    return render_template("fortune500.html")
-
-
-@app.route("/scored/<slug>")
-def scored_page(slug):
-    return render_template("scored.html")
-
-
-@app.route("/knoxville")
-def knoxville_page():
-    return render_template("knoxville.html")
-
-
-@app.route("/birkbeck")
-def birkbeck_page():
-    return render_template("birkbeck.html")
-
-
-@app.route("/anderson")
-@app.route("/anderson-county")
-def anderson_page():
-    return render_template("anderson.html")
-
-
-@app.route("/api/fortune500", methods=["GET"])
-def api_fortune500_list():
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        else:
-            cur.execute("SELECT slug, company_name, rank, url, nii_score, issue_count, last_checked FROM fortune500_scores ORDER BY rank")
-            rows = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return jsonify({"companies": rows})
-    except Exception as e:
-        return jsonify({"companies": [], "note": "Scores loading. Check back soon."})
-
-
-@app.route("/api/fortune500/<slug>", methods=["GET"])
-def api_fortune500_detail(slug):
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        # Check fortune500 first, then vc_fund_scores
-        for table in ["fortune500_scores", "vc_fund_scores"]:
-            if database.USE_PG:
-                cur.execute(f"SELECT * FROM {table} WHERE slug = %s", (slug,))
-                row = cur.fetchone()
-                if row:
-                    cols = [d[0] for d in cur.description]
-                    result = dict(zip(cols, row))
-                    if "fund_name" in result and "company_name" not in result:
-                        result["company_name"] = result["fund_name"]
-                    result = _parse_score_json(result)
-                    conn.close()
-                    return jsonify(result)
-            else:
-                cur.execute(f"SELECT * FROM {table} WHERE slug = ?", (slug,))
-                row = cur.fetchone()
-                if row:
-                    result = dict(row)
-                    if "fund_name" in result and "company_name" not in result:
-                        result["company_name"] = result["fund_name"]
-                    result = _parse_score_json(result)
-                    conn.close()
-                    return jsonify(result)
-        conn.close()
-        return jsonify({"error": "Not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/vc-funds")
-def vc_funds_page():
-    return render_template("vc_funds.html")
-
-
-@app.route("/api/vc-funds", methods=["GET"])
-def api_vc_funds_list():
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        else:
-            cur.execute("SELECT slug, fund_name, rank, url, nii_score, issue_count, last_checked FROM vc_fund_scores ORDER BY rank")
-            rows = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return jsonify({"funds": rows})
-    except Exception as e:
-        return jsonify({"funds": [], "note": "Scores loading. Check back soon."})
-
-
-@app.route("/api/vc-funds/<slug>", methods=["GET"])
-def api_vc_fund_detail(slug):
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT * FROM vc_fund_scores WHERE slug = %s", (slug,))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                return jsonify({"error": "Not found"}), 404
-            cols = [d[0] for d in cur.description]
-            result = dict(zip(cols, row))
-        else:
-            cur.execute("SELECT * FROM vc_fund_scores WHERE slug = ?", (slug,))
-            row = cur.fetchone()
-            if not row:
-                conn.close()
-                return jsonify({"error": "Not found"}), 404
-            result = dict(row)
-        result = _parse_score_json(result)
-        conn.close()
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# Free tier scoring — no API key, IP-limited
-_free_usage = {}
-
-@app.route("/api/v1/score/free", methods=["POST"])
-def api_score_free():
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    month_key = f"{ip}:{datetime.now(timezone.utc).strftime('%Y-%m')}"
-    count = _free_usage.get(month_key, 0)
-    if count >= 10:
-        return jsonify({"error": "Free tier limit reached (10/month)", "upgrade": "https://artifact0.com/docs#pricing"}), 429
-    
-    t0 = time.time()
-    payload = request.get_json() or {}
-    text = payload.get("text", "").strip()
-    if not text:
-        return jsonify({"error": "Missing 'text' field"}), 400
-    if len(text) > 50000:
-        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
-
-    # V2 PRE-SCORE GATE — reject gibberish/junk before scoring
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    try:
-        l0 = detect_l0_constraints(text)
-        obj = objective_extract(text)
-        tilt = classify_tilt(text)
-
-        # Highlights: backend owns spans, frontend only renders
-        framing = detect_l2_framing(text)
-        try:
-            from highlight_map import get_highlights
-            axis2, highlights = get_highlights(text, framing=framing)
-        except Exception:
-            axis2, highlights = None, []
-
-        dbc = detect_downstream_before_constraint("", text, l0)
-        nii = compute_nii("", text, l0, dbc, tilt)
-
-        # NTI signal detection (deterministic taxonomy)
-        try:
-            from core_engine.nti_signals import detect_signals
-            signals = detect_signals(text)
-            # Promote parent failure modes into signal summary
-            _d = nii.get("detail", {})
-            if "CONFIRMED" in str(_d.get("cca", "")) or "PROBABLE" in str(_d.get("cca", "")):
-                signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
-            if "CONFIRMED" in str(_d.get("dce", "")) or "PROBABLE" in str(_d.get("dce", "")):
-                signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
-            if "CONFIRMED" in str(_d.get("udds", "")) or "PROBABLE" in str(_d.get("udds", "")):
-                signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
-            tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
-            for code in (tilt or []):
-                _sig = tilt_to_signal.get(code)
-                if _sig:
-                    signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
-        except Exception:
-            signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
-
-        # Failure modes already computed inside compute_nii — read from detail
-        detail = nii.get("detail", {})
-        udds_state = detail.get("udds", "FALSE")
-        dce_state = detail.get("dce", "FALSE")
-        cca_state = detail.get("cca", "FALSE")
-
-        dominance = []
-        if "CONFIRMED" in udds_state or "PROBABLE" in udds_state:
-            dominance.append("UDDS")
-        if "CONFIRMED" in dce_state or "PROBABLE" in dce_state:
-            dominance.append("DCE")
-        if "CONFIRMED" in cca_state or "PROBABLE" in cca_state:
-            dominance.append("CCA")
-        if not dominance:
-            dominance = ["NONE"]
-    except Exception as e:
-        return jsonify({"error": "Scoring error", "detail": str(e)}), 500
-
-    _free_usage[month_key] = count + 1
-    latency_ms = int((time.time() - t0) * 1000)
-
-    result = {
-        "status": "ok",
-        "version": NTI_VERSION,
-        "score": {
-            "nii": nii.get("nii_score"),
-            "nii_label": nii.get("nii_label"),
-            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
-        },
-        "failure_modes": {
-            "UDDS": udds_state, "DCE": dce_state, "CCA": cca_state,
-            "dominance": dominance
-        },
-        "tilt": {"tags": tilt, "count": len(tilt)},
-        "signals": signals,
-        "highlights": highlights,
-        "axis2": axis2,
-        "framing": framing,
-        "meta": {
-            "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
-            "tier": "free", "usage_this_month": count + 1, "monthly_limit": 10
-        }
-    }
-
-    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
-    try:
-        from core_engine.v3_enforcement import self_audit
-        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
-        result["v3"] = {
-            "enforced_text": audit["enforced_text"],
-            "actions_taken": audit["actions_taken"],
-            "time_collapse_applied": audit["time_collapse_applied"],
-            "compression_ratio": audit["compression_ratio"],
-            "passed": audit["passed"],
-        }
-    except Exception as e:
-        result["v3"] = {"error": str(e), "passed": True}
-
-    return jsonify(result)
-
-
-@app.route("/health")
-@app.route("/api/health")
-def health():
-    return jsonify({"status": "ok", "version": NTI_VERSION})
-
-
-@app.route("/robots.txt")
-def robots_txt():
-    return app.send_static_file("robots.txt")
-
-
-@app.route("/static/manifest.xml")
-def manifest_xml():
-    from flask import send_from_directory
-    return send_from_directory(
-        app.static_folder,
-        "manifest.xml",
-        mimetype="application/xml",
-        as_attachment=False
-    )
-
-
-@app.route("/manifest.xml")
-def manifest_xml_root():
-    from flask import send_from_directory
-    return send_from_directory(
-        app.static_folder,
-        "manifest.xml",
-        mimetype="application/xml",
-        as_attachment=False
-    )
-
-
-
-# ─── ONE-TIME ADMIN PROMOTE (delete after use) ───
-@app.route("/api/promote-admin", methods=["POST"])
-def promote_admin():
-    """One-time admin promotion. DELETE THIS ROUTE AFTER USE."""
-    token = os.getenv("ADMIN_PROMOTE_TOKEN") or "aztempfix2026"
-    if not token:
-        return jsonify(error="disabled"), 404
-    data = request.get_json(silent=True) or {}
-    if data.get("token") != token:
-        return jsonify(error="bad token"), 403
-    email = data.get("email", "").strip().lower()
-    if not email:
-        return jsonify(error="no email"), 400
-    conn = db.db_connect()
-    cur = conn.cursor()
-    if db.USE_PG:
-        cur.execute("UPDATE users SET role='admin' WHERE email=%s", (email,))
-    else:
-        cur.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
-    affected = cur.rowcount
-    conn.commit()
-    conn.close()
-    return jsonify(ok=True, affected=affected, email=email)
-    return jsonify({"status": "ok", "version": NTI_VERSION})
-
-
-
-
-@app.route("/health/db")
-def health_db():
-    try:
-        conn = database.db_connect()
-        cur = conn.cursor()
-        if database.USE_PG:
-            cur.execute("SELECT current_database(), version()")
-            row = cur.fetchone()
-            conn.close()
-            return jsonify({"db": "postgresql", "database": row[0], "version": row[1][:40]})
-        else:
-            cur.execute("SELECT sqlite_version()")
-            row = cur.fetchone()
-            conn.close()
-            return jsonify({"db": "sqlite", "version": row[0], "path": database.DB_PATH})
-    except Exception as e:
-        return jsonify({"db": "error", "detail": str(e)}), 500
-
-
-@app.route("/canonical/status")
-def canonical_status():
-    return jsonify({
-        "status": "ok",
-        "version": NTI_VERSION,
-        "canonical": {
-            "no_llm_dependency_v0_1_rule_based": True,
-            "layers_l0_l7": True,
-            "parent_failure_modes_udds_dce_cca": True,
-            "interaction_matrix": True,
-            "nte_clf_tilt_taxonomy": True,
-            "nii_integrity_index": True,
-            "jos_template_and_binding": True,
-            "telemetry_and_persistence": True
-        },
-        "v3_modules": {
-            "self_audit": True,
-            "time_collapse": True,
-            "attribution_drift": True,
-            "convergence_gate": True,
-            "audit_source": True,
-            "axis2_friction": True,
-            "loop_detection": True,
-            "consolidation_engine": True,
-            "confusion_layer": True,
-            "time_object": True,
-            "nti_full_integration": True,
-            "per_industry_config": False,
-        }
-    })
-
-
-# ═══════════════════════════════════════
-# V3 ROUTES — Axis 2 + Full Integration
-# ═══════════════════════════════════════
-
-@app.route("/nti-friction", methods=["POST"])
-def nti_friction():
-    """E04 — Axis 2 conversational friction scoring."""
-    try:
-        from axis2_endpoint import handle_request as axis2_handle
-        payload = request.get_json(force=True) or {}
-        return jsonify(axis2_handle(payload))
-    except Exception as e:
-        return jsonify({"error": str(e), "axis": 2}), 500
-
-
-@app.route("/nti-full", methods=["POST"])
-def nti_full():
-    """Full NTI scoring: Axis 1 + Axis 2 + loop + consolidation + confusion + time object."""
-    t0 = time.time()
-    payload = request.get_json(force=True) or {}
-    text = (payload.get("text") or payload.get("input") or payload.get("message") or "").strip()
-
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-
-    # Axis 1 — existing NTI scoring
-    prompt = ""
-    answer = text
-    l0 = detect_l0_constraints(answer)
-    tilt = classify_tilt(answer, prompt, answer)
-    dbc = detect_downstream_before_constraint(prompt, answer, l0)
-    nii = compute_nii(prompt, answer, l0, dbc, tilt)
-
-    axis1 = {
-        "nii": nii,
-        "l0_constraints": l0,
-        "tilt_taxonomy": tilt,
-        "failure_modes": {
-            "udds": detect_udds(prompt, answer, l0),
-            "dce": detect_dce(answer, l0),
-            "cca": detect_cca(prompt, answer),
-        }
-    }
-
-    # Full integration — Axis 2 + detection modules
-    try:
-        from nti_full_integration_stub import build_full
-        request_id = f"nti_{uuid.uuid4().hex[:12]}"
-        payload["request_id"] = request_id
-        full = build_full(payload=payload, axis1=axis1, build_version=NTI_VERSION)
-    except Exception as e:
-        full = {"axis1": axis1, "error": str(e)}
-
-    full["latency_ms"] = int((time.time() - t0) * 1000)
-    full["version"] = NTI_VERSION
-    return jsonify(full)
-
-
-@app.route("/events", methods=["POST"])
-def events():
-    session_id = get_session_id()
-    payload = request.get_json() or {}
-    event_name = str(payload.get("event", "")).strip()
-    event_data = payload.get("data", {})
-
-    if not event_name:
-        return jsonify({"error": "Missing event name"}), 400
-
-    eid = str(uuid.uuid4())
-    database.record_event(eid, session_id, event_name, json.dumps(event_data, ensure_ascii=False))
-
-    log_json_line("event", {"session_id": session_id, "event": event_name, "data": event_data})
-    return jsonify({"ok": True, "event_id": eid})
-
-
-@app.route("/jos/template", methods=["GET"])
-def jos_get_template():
-    return jsonify(jos_template())
-
-
-@app.route("/jos/apply", methods=["POST"])
-def jos_apply_route():
-    config = request.get_json() or {}
-    return jsonify(jos_apply(config))
-
-
-@app.route("/nti", methods=["POST"])
-def nti_run():
-    request_id = str(uuid.uuid4())
-    session_id = get_session_id()
-    t0 = time.time()
-
-    payload = request.get_json() or {}
-
-    text = payload.get("text")
-    prompt = payload.get("prompt")
-    answer = payload.get("answer")
-
-    if prompt and answer and not text:
-        text = f"PROMPT:\n{prompt}\n\nANSWER:\n{answer}"
-
-    if not text:
-        latency_ms = int((time.time() - t0) * 1000)
-        record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
-        return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
-
-    # V2 PRE-SCORE GATE
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
-
-    l0_constraints = detect_l0_constraints(text)
-
-    obj = objective_extract(prompt or text)
-    drift = objective_drift(prompt or "", answer or "")
-
-    framing = detect_l2_framing(text)
-
-    # Highlights: backend owns spans, frontend only renders
-    try:
-        from highlight_map import get_highlights
-        axis2, highlights = get_highlights(text, framing=framing)
-    except Exception:
-        axis2, highlights = None, []
-
-    # tilt taxonomy (now uses prompt+answer for scope expansion detection)
-    tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
-
-    udds = detect_udds(prompt or "", answer or text, l0_constraints)
-    dce = detect_dce(answer or text, l0_constraints)
-    cca = detect_cca(prompt or "", answer or text)
-
-    downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
-    nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
-
-    # NTI signal detection (deterministic taxonomy)
-    try:
-        from core_engine.nti_signals import detect_signals
-        signals = detect_signals(text)
-        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-            signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
-        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
-            signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
-        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
-            signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
-        tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
-        for code in (tilt or []):
-            _sig = tilt_to_signal.get(code)
-            if _sig:
-                signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
-    except Exception:
-        signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
-
-    dominance: List[str] = []
-    if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-        dominance.append("CCA")
-    if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
-        dominance.append("UDDS")
-    if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
-        dominance.append("DCE")
-    if not dominance:
-        dominance = ["NONE"]
-
-    interaction = {
-        "pairwise": [
-            {"pair": "UDDS+DCE", "note": "DCE enables early drift; UDDS stabilizes narrative."},
-            {"pair": "UDDS+CCA", "note": "CCA masks constraints; UDDS reinforces substitute narrative."},
-            {"pair": "DCE+CCA", "note": "CCA collapses constraints; DCE pushes enforcement later."},
-        ],
-        "triadic": {"combo": "UDDS+DCE+CCA", "note": "High-risk drift: collapse + deferral + stabilization."},
-        "dominance_order": ["CCA", "UDDS", "DCE"],
-        "dominance_detected": dominance
-    }
-
-    layers = {
-        "L0_reality_substrate": {"constraints_found": l0_constraints},
-        "L1_input_freeze": {"objective": obj.get("objective_text", ""), "constraints_snapshot": l0_constraints},
-        "L2_interpretive_framing": framing,
-        "L3_objective_integrity": drift,
-        "L4_execution_vectors": {"note": "Canonical runtime records vectors; UI rendering is separate."},
-        "L5_output_enforcement": {"note": "Canonical runtime flags drift modes; enforcement UI is separate."},
-        "L6_interface_contracts": {"jos_binding_available": True, "jos_template_endpoint": "/jos/template"},
-        "L7_telemetry": {"request_id": request_id, "session_id": session_id}
-    }
-
-    result = {
-        "status": "ok",
-        "version": NTI_VERSION,
-        "layers": layers,
-        "parent_failure_modes": {
-            "UDDS": udds,
-            "DCE": dce,
-            "CCA": cca
-        },
-        "interaction_matrix": interaction,
-        "nii": nii,
-        "tilt_taxonomy": tilt,
-        "signals": signals,
-        "highlights": highlights,
-        "axis2": axis2
-    }
-
-    latency_ms = int((time.time() - t0) * 1000)
-    record_request(request_id, "/nti", session_id, latency_ms, payload, error=None)
-    record_result(request_id, result)
-
-    log_json_line("nti_run", {
-        "request_id": request_id,
-        "session_id": session_id,
-        "latency_ms": latency_ms,
-        "dominance": dominance,
-        "nii": nii.get("nii_score"),
-        "tilt": tilt
-    })
-
-    # Log to cockpit analytics
-    try:
-        from admin_dashboard import log_nti_run
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        if ip and "," in ip: ip = ip.split(",")[0].strip()
-        log_nti_run(request_id, ip, text, result, latency_ms, session_id)
-    except Exception:
-        pass
-
-    result["telemetry"] = {
-        "request_id": request_id,
-        "session_id": session_id,
-        "latency_ms": latency_ms
-    }
-
-    # I04 — audit source tagging
-    try:
-        from audit_source import normalize_audit_source
-        result["telemetry"]["audit_source"] = normalize_audit_source(
-            (request.get_json(silent=True) or {}).get("source")
-        )
-    except Exception:
-        result["telemetry"]["audit_source"] = "manual"
-
-    # ── V3 ENFORCEMENT: self-audit loop ──
-    # Score own output before delivery. Core governance, not optional.
-    try:
-        from v3_self_audit import run_v3_pipeline
-
-        def _v1_score_fn(txt):
-            """Adapter: run compute_nii on text and return dict with nii_score."""
-            _l0 = detect_l0_constraints(txt)
-            _tilt = classify_tilt(txt)
-            _dbc = detect_downstream_before_constraint("", txt, _l0)
-            _nii = compute_nii("", txt, _l0, _dbc, _tilt)
-            return _nii
-
-        v3 = run_v3_pipeline(
-            output_text=answer or text,
-            v1_score_fn=_v1_score_fn,
-            audit_threshold=0.85,
-            max_passes=2,
-        )
-        result["v3"] = {
-            "enforced_text": v3["output"],
-            "passes": len(v3["passes"]),
-            "final_score": v3["final_score"].get("nii_score") if isinstance(v3["final_score"], dict) else None,
-            "decision": v3["self_audit"]["decision"],
-            "time_collapse_applied": True,
-            "attribution_stripped": True,
-        }
-    except Exception as e:
-        result["v3"] = {"error": str(e), "passed": True}
-
-    return jsonify(result)
-
-
-# ═══════════════════════════════════════
-# API v1 — PUBLIC SCORING ENDPOINT
-# ═══════════════════════════════════════
-import secrets as _secrets
-import functools
-
-_TIER_LIMITS = {
-    "free": {"monthly": 10, "rpm": 5},
-    "pro": {"monthly": 500, "rpm": 30},
-    "power": {"monthly": 2000, "rpm": 60},
-    "unlimited": {"monthly": 999999999, "rpm": 120},
-    "starter": {"monthly": 10000, "rpm": 60},
-    "core": {"monthly": 75000, "rpm": 120},
-    "pipeline": {"monthly": 300000, "rpm": 300},
-    "enterprise": {"monthly": 999999999, "rpm": 1000},
-}
-
-_rate_cache = {}
-
-
-def _month_start():
-    now = datetime.now(timezone.utc)
-    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
-
-
-def _minute_key():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")
-
-
-def require_api_key(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        api_key = request.headers.get("X-API-Key") or request.args.get("api_key")
-        if not api_key:
-            return jsonify({"error": "Missing API key", "hint": "Pass key in X-API-Key header", "docs": "https://artifact0.com/docs"}), 401
-
-        try:
-            conn = database.db_connect()
-            cur = conn.cursor()
-            if database.USE_PG:
-                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = %s", (api_key,))
-            else:
-                cur.execute("SELECT id, tier, monthly_limit, active, owner_email FROM api_keys WHERE id = ?", (api_key,))
-            row = cur.fetchone()
-            conn.close()
-        except Exception as e:
-            print(f"[api] Key lookup error: {e}", flush=True)
-            return jsonify({"error": "Database error", "detail": str(e)}), 500
-
-        if not row:
-            return jsonify({"error": "Invalid API key"}), 401
-
-        key_id = row[0] if database.USE_PG else row["id"]
-        tier = row[1] if database.USE_PG else row["tier"]
-        active = row[3] if database.USE_PG else row["active"]
-
-        if not active:
-            return jsonify({"error": "API key deactivated"}), 403
-
-        # Credit balance check (replaces monthly limit for paid tiers)
-        if tier != "free":
-            try:
-                from credits import get_user_id_for_api_key, get_balance, COST_PER_SCORE
-                owner_user_id = get_user_id_for_api_key(key_id)
-                if owner_user_id:
-                    bal = get_balance(owner_user_id)
-                    cost_cents = int(COST_PER_SCORE["api"] * 100)
-                    if bal < cost_cents:
-                        return jsonify({"error": "Insufficient balance", "balance": bal / 100, "cost_per_score": cost_cents / 100,
-                                        "topup": f"{os.getenv('SITE_URL', 'https://artifact0.com')}/dashboard"}), 402
-                    request._credit_user_id = owner_user_id
-            except ImportError:
-                pass  # credits module not available, fall back to monthly limits
-
-        # Rate limit (per-minute, still applies)
-        tier_config = _TIER_LIMITS.get(tier, _TIER_LIMITS["free"])
-        cache_key = f"{key_id}:{_minute_key()}"
-        current_rpm = _rate_cache.get(cache_key, 0)
-        if current_rpm >= tier_config["rpm"]:
-            return jsonify({"error": "Rate limit exceeded", "limit": f"{tier_config['rpm']} req/min"}), 429
-        _rate_cache[cache_key] = current_rpm + 1
-
-        # Free tier: still uses monthly limits
-        if tier == "free":
-            usage_count = database.get_api_usage_count(key_id, _month_start())
-            monthly_limit = row[2] if database.USE_PG else row["monthly_limit"]
-            if usage_count >= monthly_limit:
-                return jsonify({"error": "Free tier limit reached", "usage": usage_count, "limit": monthly_limit,
-                                "upgrade": f"{os.getenv('SITE_URL', 'https://artifact0.com')}/dashboard"}), 429
-
-        request._api_key_id = key_id
-        request._api_tier = tier
-        # Update last_used_at and usage_count
-        try:
-            from account import _update_key_last_used
-            _update_key_last_used(key_id)
-        except Exception:
-            pass
-        return f(*args, **kwargs)
-    return wrapper
-
-
-@app.route("/api/v1/score", methods=["POST"])
-@require_api_key
-def api_score():
-    t0 = time.time()
-    payload = request.get_json() or {}
-    text = payload.get("text", "").strip()
-
-    if not text:
-        return jsonify({"error": "Missing 'text' field"}), 400
-    if len(text) > 50000:
-        return jsonify({"error": "Text exceeds 50,000 character limit"}), 400
-
-    # V2 PRE-SCORE GATE
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    try:
-        l0 = detect_l0_constraints(text)
-        obj = objective_extract(text)
-        drift = objective_drift("", text)
-        framing = detect_l2_framing(text)
-        tilt = classify_tilt(text)
-        udds = detect_udds("", text, l0)
-        dce = detect_dce(text, l0)
-        cca = detect_cca("", text)
-        dbc = detect_downstream_before_constraint("", text, l0)
-        nii = compute_nii("", text, l0, dbc, tilt)
-
-        dominance = []
-        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
-            dominance.append("CCA")
-        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
-            dominance.append("UDDS")
-        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
-            dominance.append("DCE")
-        if not dominance:
-            dominance = ["NONE"]
-    except Exception as e:
-        print(f"[api] Scoring error: {e}", flush=True)
-        return jsonify({"error": "Scoring engine error", "detail": str(e)}), 500
-
-    latency_ms = int((time.time() - t0) * 1000)
-    usage_id = str(uuid.uuid4())
-    database.record_api_usage(usage_id, request._api_key_id, "/api/v1/score", latency_ms, 200)
-
-    # Deduct credit for paid tiers
-    credit_info = {}
-    if hasattr(request, '_credit_user_id') and request._credit_user_id:
-        try:
-            from credits import deduct_credit, get_balance
-            ok, new_bal = deduct_credit(request._credit_user_id, "api", request._api_key_id)
-            credit_info = {"charged": 0.01, "balance": new_bal / 100}
-        except Exception as e:
-            print(f"[api] Credit deduction error: {e}", flush=True)
-
-    # ── V3 ENFORCEMENT: self-audit loop (mandatory) ──
-    v3_result = {"passed": True}
-    try:
-        from core_engine.v3_enforcement import self_audit
-        audit = self_audit(text, objective=obj.get("objective_text") if obj else None)
-        v3_result = {
-            "enforced_text": audit["enforced_text"],
-            "actions_taken": audit["actions_taken"],
-            "time_collapse_applied": audit["time_collapse_applied"],
-            "compression_ratio": audit["compression_ratio"],
-            "passed": audit["passed"],
-        }
-    except Exception as e2:
-        v3_result = {"error": str(e2), "passed": True}
-
-    return jsonify({
-        "status": "ok",
-        "version": NTI_VERSION,
-        "score": {
-            "nii": nii.get("nii_score"),
-            "nii_label": nii.get("nii_label"),
-            "components": {"q1": nii.get("q1"), "q2": nii.get("q2"), "q3": nii.get("q3"), "q4": nii.get("q4"), "d5": nii.get("d5_failure_mode_severity")}
-        },
-        "failure_modes": {
-            "UDDS": udds["udds_state"], "DCE": dce["dce_state"], "CCA": cca["cca_state"],
-            "dominance": dominance
-        },
-        "tilt": {"tags": tilt, "count": len(tilt)},
-        "v3": v3_result,
-        "meta": {
-            "latency_ms": latency_ms, "text_length": len(text), "word_count": len(text.split()),
-            "tier": request._api_tier
-        },
-        **({"credits": credit_info} if credit_info else {})
-    })
-
-
-# POST /api/v1/keys — MOVED to account_bp (account.py). Session-aware, no email required.
-# This route is intentionally removed. account_bp registers the replacement.
-
-
-# GET /api/v1/keys/usage — MOVED to account_bp as /api/v1/keys/<key_id>/usage
-
-
-# ═══════════════════════════════════════
-# STRIPE WEBHOOK
-# ═══════════════════════════════════════
-@app.route("/api/stripe/webhook", methods=["POST"])
-def stripe_webhook():
-    import json as _json
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get("Stripe-Signature", "")
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-
-    # If webhook secret is set, verify signature
-    if webhook_secret:
-        import hmac, hashlib
-        timestamp = None
-        sig_v1 = None
-        for item in sig_header.split(","):
-            k, _, v = item.strip().partition("=")
-            if k == "t": timestamp = v
-            elif k == "v1": sig_v1 = v
-        if not timestamp or not sig_v1:
-            return jsonify({"error": "Invalid signature"}), 400
-        signed_payload = f"{timestamp}.{payload}"
-        expected = hmac.new(webhook_secret.encode(), signed_payload.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, sig_v1):
-            return jsonify({"error": "Signature mismatch"}), 400
-
-    try:
-        event = _json.loads(payload)
-    except Exception:
-        return jsonify({"error": "Invalid JSON"}), 400
-
-    event_type = event.get("type", "")
-    print(f"[stripe] Webhook: {event_type}", flush=True)
-
-    if event_type == "checkout.session.completed":
-        session_obj = event.get("data", {}).get("object", {})
-        # 1. Credit top-up
-        try:
-            from credits import handle_topup_webhook
-            handled = handle_topup_webhook(event)
-            print(f"[stripe] Top-up handled: {handled}", flush=True)
-        except Exception as e:
-            print(f"[stripe] Top-up webhook error: {e}", flush=True)
-        # 2. Subscription activation
-        try:
-            uid = session_obj.get("client_reference_id")
-            if uid:
-                from auth import _update_stripe
-                _update_stripe(uid, session_obj.get("customer"), session_obj.get("subscription"), "personal")
-                print(f"[stripe] Subscription activated for {uid}", flush=True)
-        except Exception as e:
-            print(f"[stripe] Subscription webhook error: {e}", flush=True)
-
-    elif event_type == "customer.subscription.deleted":
-        try:
-            cid = event.get("data", {}).get("object", {}).get("customer")
-            if cid:
-                conn = database.db_connect()
-                cur = conn.cursor()
-                q = "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=%s" if database.USE_PG else "UPDATE users SET tier='free',stripe_subscription_id=NULL WHERE stripe_customer_id=?"
-                cur.execute(q, (cid,))
-                conn.commit()
-                conn.close()
-                print(f"[stripe] Subscription cancelled for customer {cid}", flush=True)
-        except Exception as e:
-            print(f"[stripe] Cancellation webhook error: {e}", flush=True)
-
-    return jsonify({"received": True})
-
-
-# /dashboard route owned by auth_bp (auth.py) with @login_required — do not duplicate here
-
-
-# ═══════════════════════════════════════
-# LLM-POWERED REWRITE (V3 structural rewrite via letter-race model)
-# ═══════════════════════════════════════
-def _letter_race(text):
-    """Pick model by racing letters through user text."""
-    s = re.sub(r'[^a-zA-Z]', '', text).lower()
-    models = [
-        {"name": "claude", "api": "anthropic", "color": "#d97706"},
-        {"name": "chatgpt", "api": "openai", "color": "#10b981"},
-    ]
-    for i in range(len(s)):
-        for m in models:
-            pos = 0
-            for j in range(i + 1):
-                if j < len(s) and pos < len(m["name"]) and s[j] == m["name"][pos]:
-                    pos += 1
-            if pos >= len(m["name"]):
-                return m
-    # Fallback: highest ratio
-    best = models[0]
-    best_ratio = 0
-    for m in models:
-        pos = 0
-        for ch in s:
-            if pos < len(m["name"]) and ch == m["name"][pos]:
-                pos += 1
-        ratio = pos / len(m["name"])
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best = m
-    return best
-
-
-def _call_llm(model_info, prompt, system_prompt):
-    """Call the selected LLM API. Returns response text."""
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError
-    api = model_info["api"]
-    timeout = 15
-
-    if api == "anthropic":
-        key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not key:
-            return None, "No Anthropic API key"
-        body = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 1024,
-            "system": system_prompt,
-            "messages": [{"role": "user", "content": prompt}]
-        }).encode()
-        req = Request("https://api.anthropic.com/v1/messages", data=body, headers={
-            "Content-Type": "application/json",
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01"
-        })
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        text = ""
-        for block in data.get("content", []):
-            if block.get("type") == "text":
-                text += block["text"]
-        return text, None
-
-    elif api == "openai":
-        key = os.getenv("OPENAI_API_KEY", "")
-        if not key:
-            return None, "No OpenAI API key"
-        body = json.dumps({
-            "model": "gpt-4o-mini",
-            "max_tokens": 1024,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        }).encode()
-        req = Request("https://api.openai.com/v1/chat/completions", data=body, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}"
-        })
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        return data["choices"][0]["message"]["content"], None
-
-    elif api == "xai":
-        key = os.getenv("XAI_API_KEY", "")
-        if not key:
-            return None, "No XAI API key"
-        body = json.dumps({
-            "model": "grok-2-latest",
-            "max_tokens": 1024,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        }).encode()
-        req = Request("https://api.x.ai/v1/chat/completions", data=body, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}"
-        })
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        return data["choices"][0]["message"]["content"], None
-
-    elif api == "google":
-        key = os.getenv("GOOGLE_API_KEY", "")
-        if not key:
-            return None, "No Google API key"
-        # Build contents — use systemInstruction when system_prompt present
-        body_dict = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"maxOutputTokens": 1024}
-        }
-        if system_prompt:
-            body_dict["systemInstruction"] = {"parts": [{"text": system_prompt}]}
-        body = json.dumps(body_dict).encode()
-        req = Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
-            data=body, headers={"Content-Type": "application/json"}
-        )
-        resp = urlopen(req, timeout=timeout)
-        data = json.loads(resp.read())
-        try:
-            candidates = data.get("candidates", [])
-            if not candidates:
-                reason = data.get("promptFeedback", {}).get("blockReason", "no candidates")
-                return None, f"Gemini blocked: {reason}"
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if not parts:
-                return None, "Gemini empty response"
-            return parts[0]["text"], None
-        except (KeyError, IndexError) as e:
-            return None, f"Unexpected Google API response: {e}"
-
-    return None, f"Unknown API: {api}"
-
-
-
-@app.route("/api/v1/rewrite", methods=["POST"])
-def api_rewrite():
-    """LLM-powered structural rewrite. Letter-race selects model, V3 enforces output."""
-    t0 = time.time()
-    data = request.get_json(force=True, silent=True) or {}
-    text = (data.get("text") or "").strip()
-    if not text:
-        return jsonify({"error": "text required"}), 400
-    if len(text) > 5000:
-        return jsonify({"error": "text too long (max 5000 chars)"}), 400
-
-    # V2 PRE-SCORE GATE
-    gate = pre_score_gate(text)
-    if not gate["pass"]:
-        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected"}), 422
-
-    # Convergence gate removed from /api/v1/rewrite — rewrite is always an AI call.
-    # Gate belongs on /nti (scoring), not here.
-
-    # 1. Score with V1
-    l0 = detect_l0_constraints(text)
-    obj = objective_extract(text)
-    tilt = classify_tilt(text)
-    udds = detect_udds("", text, l0)
-    dce = detect_dce(text, l0)
-    cca = detect_cca("", text)
-    dbc = detect_downstream_before_constraint("", text, l0)
-    nii = compute_nii("", text, l0, dbc, tilt)
-
-    nii_score = nii.get("nii_score", 0)
-    components = {k: v for k, v in nii.items() if k.startswith("q")}
-    failure_modes = {
-        "UDDS": udds.get("udds_state", ""),
-        "DCE": dce.get("dce_state", ""),
-        "CCA": cca.get("cca_state", "")
-    }
-
-    # 2. Letter-race model selection
-    model = _letter_race(text)
-
-    # 3. Build rewrite prompt from NTI findings
-    # Smart issue detection: short/simple messages don't need enterprise-level constraints
-    word_count = len(text.split())
-    is_question = text.strip().rstrip('.!').endswith('?') or text.lower().startswith(('what ', 'when ', 'where ', 'who ', 'how ', 'why ', 'which ', 'can ', 'could ', 'will ', 'would ', 'do ', 'does ', 'is ', 'are '))
-    is_short = word_count <= 15
-    has_real_failure = any("CONFIRMED" in str(v) for v in failure_modes.values())
-
-    issues = []
-    # Only flag Q components on substantive messages (not short questions or casual texts)
-    if not (is_short and is_question):
-        if (components.get("q1") or 0) < 0.7 and not is_short:
-            issues.append("Missing explicit constraints or conditions")
-        if (components.get("q2") or 0) < 0.7 and word_count > 20:
-            issues.append("Main ask is buried — should lead")
-        if (components.get("q3") or 0) < 0.7 and not is_question:
-            issues.append("No deadline or enforcement boundary")
-        if (components.get("q4") or 0) < 0.7 and len(tilt) > 0:
-            issues.append("Weak tilt resistance — hedge language detected")
-    # Always flag real failure modes regardless of length
-    if "CONFIRMED" in str(failure_modes.get("UDDS", "")):
-        issues.append("UDDS: Agreement given before the actual ask was stated")
-    if "CONFIRMED" in str(failure_modes.get("DCE", "")):
-        issues.append("DCE: Decision is deferred instead of made")
-    if "CONFIRMED" in str(failure_modes.get("CCA", "")):
-        issues.append("CCA: Capability claimed without constraint backing")
-
-    # 4a+4b. UNGOVERNED + GOVERNED — run in parallel to halve latency
-    ungoverned_prompt = f"Write a reply to this message.\n\nMESSAGE:\n{text}"
-    ungoverned_system = "You are a customer service representative. Reply to the message you receive."
-
-    # 4b. GOVERNED CALL — full Artifact Zero system prompt + guardrails
-    #     This output goes through V3 — card 7
-    governed_system = (
-        "You are Artifact Zero, a structural enforcement company in Knoxville, Tennessee. "
-        "You built NTI — a deterministic engine that scores and stabilizes communication. "
-        "No LLM in the scoring. Same input, same output, every time.\n\n"
-        "Someone sent a message through the contact page. Reply directly on behalf of Artifact Zero.\n\n"
-        "VOICE:\n"
-        "- Direct, sharp, confident. No filler.\n"
-        "- Short sentences. Fragments fine.\n"
-        "- Never: revolutionary, game-changing, synergy, seamless, excited, thrilled, ecosystem.\n"
-        "- No exclamation marks. Warm but not performative.\n\n"
-        "HARD RULES — these override everything else:\n"
-        "1. NEVER schedule or promise a meeting or call. NEVER give out any email address. Direct all connection to artifact0.com/docs\n"
-        "2. IF SELLING SOMETHING (warranties, SEO, software, services, anything): acknowledge with dry humor, "
-        "then suggest they run their pitch through the API. "
-        "Example: The engine caught commitment hedges in that pitch. Try artifact0.com/safecheck before the next send.\n"
-        "3. IF GIVING FEEDBACK OR SUGGESTIONS: thank them genuinely, say it will be reviewed, zero commitments on what changes.\n"
-        "4. IF WANTING TO PARTNER OR INVEST: direct to artifact0.com/docs for API access and contact info.\n"
-        "5. IF A REAL PROSPECT: one sentence on what NTI solves for their specific situation. "
-        "Direct them to artifact0.com/docs — full API access, unlimited use cases, total control. "
-        "Tell your team. Not your competitors.\n\n"
-        "REPLY RULES:\n"
-        "1. First sentence shows you read their message.\n"
-        "2. Answer the question or address the need directly.\n"
-        "3. One next step — artifact0.com/docs. Never give an email address. Never 'we will be in touch.'\n"
-        "4. 40-80 words total.\n"
-        "5. No sign-off. No Best, Thanks, Regards.\n"
-        "6. Return only the reply text. No commentary. No quotes."
-    )
-    governed_prompt = f"THEIR MESSAGE:\n{text}\n\nWrite a reply from Artifact Zero to this person."
-
-    # Run both LLM calls in parallel — cuts total latency roughly in half
-    from concurrent.futures import ThreadPoolExecutor
-    def _call_ungov():
-        try:
-            result, err = _call_llm(model, ungoverned_prompt, ungoverned_system)
-            if not result:
-                print(f"[contact] ungoverned failed: {err}", flush=True)
-            return result
-        except Exception as e:
-            print(f"[contact] ungoverned exception: {e}", flush=True)
-            return None
-
-    def _call_gov():
-        try:
-            result, err = _call_llm(model, governed_prompt, governed_system)
-            return result, err
-        except Exception as e:
-            return None, str(e)[:200]
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        fut_ungov = executor.submit(_call_ungov)
-        fut_gov   = executor.submit(_call_gov)
-        llm_ungoverned = fut_ungov.result()
-        llm_governed, err = fut_gov.result()
-
-    # Use ungoverned as llm_raw (card 5), governed as input to V3 (card 7)
-    llm_text = llm_governed  # V3 enforces the governed output
-
-    if not llm_text:
-        return jsonify({
-            "rewrite": "",
-            "llm_raw": llm_ungoverned or "",
-            "llm_ungoverned": llm_ungoverned or "",
-            "model": model["name"],
-            "model_color": model["color"],
-            "method": "v3_rule_only",
-            "fallback_reason": err or "LLM call failed",
-            "original_words": len(text.split()),
-            "rewrite_words": 0,
-            "nii_score": nii_score,
-            "issues": issues,
-            "latency_ms": int((time.time() - t0) * 1000)
-        })
-
-    # 5. Run V3 enforcement on governed LLM output
-    from core_engine.v3_enforcement import enforce
-
-    def _normalize_text(t):
-        import re
-        t = re.sub(r'artifact0\s*\.\s*[Cc]om', 'artifact0.com', t)
-        t = re.sub(r'(\w)\s+\.\s+(com|io|org|net)', r'\1.\2', t, flags=re.IGNORECASE)
-        t = re.sub(r'(\w+)\s*@\s*(\w)', r'\1@\2', t)
-        t = re.sub(r'/safe\s+[Cc]heck', '/safecheck', t)
-        return t
-    llm_words = len(llm_text.split())
-    v3_result = enforce(llm_text, objective=obj.get("objective_text"))
-    final = _normalize_text(v3_result["final_output"])
-    if llm_ungoverned:
-        llm_ungoverned = _normalize_text(llm_ungoverned)
-
-    original_words = len(text.split())
-    rewrite_words = len(final.split())
-    v3_compression = abs(llm_words - rewrite_words) / max(llm_words, 1) * 100
-
-    return jsonify({
-        "rewrite": final,
-        "llm_raw": llm_ungoverned or "",       # card 5 — ungoverned, what AI does alone
-        "llm_governed": llm_text,              # governed input before V3
-        "model": model["name"],
-        "model_color": model["color"],
-        "method": "llm_v3",
-        "original_words": original_words,
-        "llm_words": llm_words,
-        "rewrite_words": rewrite_words,
-        "compression": f"{v3_compression:.0f}%",
-        "nii_score": nii_score,
-        "issues": issues,
-        "v3_actions": v3_result.get("level_0_actions", []) + v3_result.get("level_1_actions", []),
-        "latency_ms": int((time.time() - t0) * 1000)
-    })
+    print(f"[STARTUP CRITICAL] preimpression blueprint failed to load: {e}", flush=True)
+    raise
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")), debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", "10000")),
+        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
+    )

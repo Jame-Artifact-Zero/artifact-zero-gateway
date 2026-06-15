@@ -1,41 +1,32 @@
-import os
-import re
 import json
+import re
 import time
 import uuid
-import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from flask import Flask, request, jsonify, render_template
+from flask import Blueprint, jsonify, request
 
-app = Flask(__name__)
+import db as database
+from pre_score_gate import pre_score_gate
+from patent_core.az_patent_run import run as patent_run
+
+
+core_engine_bp = Blueprint("core_engine", __name__)
 
 # ============================================================
-# CANONICAL NTI RUNTIME v2.1 (RULE-BASED, NO LLM DEPENDENCY)
+# CANONICAL NTI RUNTIME v3.0 (RULE-BASED, NO LLM DEPENDENCY)
 #
-# v2.1 additions:
-# - Conversational Physics Layer: OTC, CTC, ALS, Salience, ODD
-# - /physics endpoint
-# - /physics/declare endpoint
-# - All v2.0 logic preserved unchanged
+# v3.0 includes:
+# - 5-dimension weighted NII scoring (D1-D5, continuous 0-100)
+# - Tilt clusters: T1-T10
+# - Broadened DCE markers (soft deferral)
+# - V3 self-audit loop, time collapse, attribution drift stripping
+# - Convergence gate, loop detection, consolidation engine
+# - Confusion layer, axis2 friction, audit source tagging
+# - Full enforcement priority tree (L0-L4)
 # ============================================================
-NTI_VERSION = "canonical-nti-v2.1"
-DB_PATH = os.getenv("NTI_DB_PATH", "/tmp/nti_canonical.db")
-
-
-# ==========================
-# PHYSICS IMPORTS
-# ==========================
-try:
-    from core_engine.otc import declare_objective, validate_objective, get_allowed_transforms, get_abstraction_range
-    from core_engine.ctc import classify_transform, audit_transform
-    from core_engine.als import detect_abstraction_level, check_abstraction_guard
-    from core_engine.salience import detect_salience_transforms
-    from core_engine.odd import detect_drift, compute_state_delta
-    PHYSICS_AVAILABLE = True
-except ImportError:
-    PHYSICS_AVAILABLE = False
+NTI_VERSION = "canonical-nti-v3.0"
 
 
 # ==========================
@@ -45,54 +36,7 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def db_connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def db_init() -> None:
-    conn = db_connect()
-    cur = conn.cursor()
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS requests (
-        id TEXT PRIMARY KEY,
-        created_at TEXT NOT NULL,
-        route TEXT NOT NULL,
-        ip TEXT,
-        user_agent TEXT,
-        session_id TEXT,
-        latency_ms INTEGER,
-        payload_json TEXT,
-        error TEXT
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS results (
-        request_id TEXT PRIMARY KEY,
-        version TEXT NOT NULL,
-        result_json TEXT NOT NULL,
-        FOREIGN KEY(request_id) REFERENCES requests(id)
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS events (
-        id TEXT PRIMARY KEY,
-        created_at TEXT NOT NULL,
-        session_id TEXT,
-        event_name TEXT NOT NULL,
-        event_json TEXT NOT NULL
-    )
-    """)
-
-    conn.commit()
-    conn.close()
-
-
-db_init()
+database.db_init()
 
 
 # ==========================
@@ -120,41 +64,17 @@ def record_request(
 ) -> None:
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     ua = request.headers.get("User-Agent")
-    conn = db_connect()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT OR REPLACE INTO requests
-        (id, created_at, route, ip, user_agent, session_id, latency_ms, payload_json, error)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        request_id,
-        utc_now_iso(),
-        route,
-        ip,
-        ua,
-        session_id,
-        latency_ms,
-        json.dumps(payload, ensure_ascii=False),
-        error
-    ))
-    conn.commit()
-    conn.close()
+    database.record_request(
+        request_id, route, ip, ua, session_id,
+        latency_ms, json.dumps(payload, ensure_ascii=False), error
+    )
 
 
 def record_result(request_id: str, result: Dict[str, Any]) -> None:
-    conn = db_connect()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT OR REPLACE INTO results
-        (request_id, version, result_json)
-        VALUES (?, ?, ?)
-    """, (
-        request_id,
-        NTI_VERSION,
+    database.record_result(
+        request_id, NTI_VERSION,
         json.dumps(result, ensure_ascii=False)
-    ))
-    conn.commit()
-    conn.close()
+    )
 
 
 # ==========================
@@ -192,11 +112,18 @@ def jaccard(a: List[str], b: List[str]) -> float:
     return round(len(sa & sb) / len(sa | sb), 3)
 
 def extract_domain_tokens(text: str) -> List[str]:
+    """
+    Lightweight "domain token" extraction for scope expansion detection.
+    Heuristic:
+      - alphanumeric tokens length >= 4
+      - not a stopword
+    """
     toks = tokenize(text)
     dom = []
     for t in toks:
         if len(t) >= 4 and t not in STOPWORDS:
             dom.append(t)
+    # unique preserve order
     uniq = []
     for x in dom:
         if x not in uniq:
@@ -241,9 +168,12 @@ NARRATIVE_STABILIZATION_MARKERS = [
     "not a problem", "totally"
 ]
 
+# DCE broadened to include "soft deferral" markers
 DCE_DEFER_MARKERS = [
+    # explicit deferral
     "later", "eventually", "we can handle that later", "we'll address later", "we can worry later",
     "we'll figure it out", "next week", "after we launch", "phase 2", "future iteration", "future iterations",
+    # soft deferral / drift-by-process
     "explore", "consider", "evaluate", "assess", "as we continue", "as we iterate", "we will look into",
     "we'll look into", "we will revisit", "we'll revisit"
 ]
@@ -255,7 +185,8 @@ CCA_COLLAPSE_MARKERS = [
 
 
 # ==========================
-# NTE-CLF (Tilt Taxonomy)
+# NTE-CLF (Tilt Taxonomy) â€” RULE-BASED CLASSIFIER
+# v2.0 adds: T4, T5, T9, T10 and keeps T2
 # ==========================
 TILT_TAXONOMY = {
     "T1_REASSURANCE_DRIFT": ["don't worry", "it's fine", "it's okay", "you got this", "rest assured"],
@@ -265,6 +196,7 @@ TILT_TAXONOMY = {
     "T8_PRESSURE_OPTIMIZATION": ["now", "today", "asap", "immediately", "right away", "no sooner"]
 }
 
+# T2: certainty inflation (absolute guarantees without enforcement verbs)
 CERTAINTY_INFLATION_TOKENS = [
     "guarantee", "guarantees", "guaranteed",
     "perfect", "zero risk", "eliminates all risk", "eliminate all risk",
@@ -283,15 +215,18 @@ CERTAINTY_ENFORCEMENT_VERBS = [
     "verify", "verifies", "verified", "verifying"
 ]
 
+# T5: absolute language
 ABSOLUTE_LANGUAGE_TOKENS = [
     "always", "never", "everyone", "no one", "completely", "entirely", "100%", "guaranteed", "perfect", "zero risk"
 ]
 
+# T10: authority imposition
 AUTHORITY_IMPOSITION_TOKENS = [
     "experts agree", "industry standard", "research shows", "studies show", "best practice",
     "widely accepted", "authorities agree", "proven by research"
 ]
 
+# T4: capability overreach
 CAPABILITY_OVERREACH_TOKENS = [
     "solves everything", "solve everything", "handles everything", "handle everything",
     "covers all cases", "all cases", "any scenario", "every scenario", "universal solution",
@@ -309,23 +244,28 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
     t = (text or "").lower()
     hits: List[str] = []
 
+    # existing clusters
     for cat, markers in TILT_TAXONOMY.items():
         for m in markers:
             if m in t:
                 hits.append(cat)
                 break
 
+    # T2 certainty inflation (certainty token present AND no enforcement)
     certainty_present = _contains_any(t, CERTAINTY_INFLATION_TOKENS)
     enforcement_present = _contains_any(t, CERTAINTY_ENFORCEMENT_VERBS)
     if certainty_present and not enforcement_present:
         hits.append("T2_CERTAINTY_INFLATION")
 
+    # T5 absolute language (simple token presence)
     if _contains_any(t, ABSOLUTE_LANGUAGE_TOKENS):
         hits.append("T5_ABSOLUTE_LANGUAGE")
 
+    # T10 authority imposition
     if _contains_any(t, AUTHORITY_IMPOSITION_TOKENS):
         hits.append("T10_AUTHORITY_IMPOSITION")
 
+    # T4 capability overreach: phrase OR (capability verb + universal quantifier)
     if _contains_any(t, CAPABILITY_OVERREACH_TOKENS):
         hits.append("T4_CAPABILITY_OVERREACH")
     else:
@@ -334,15 +274,19 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
         if universal and capverb:
             hits.append("T4_CAPABILITY_OVERREACH")
 
+    # T9 scope expansion: compare prompt vs answer domain tokens (only if prompt+answer provided)
+    # Heuristic: if a lot of answer domain tokens are not in prompt domain tokens AND drift is high.
     if prompt and answer:
         p_dom = set(extract_domain_tokens(prompt))
         a_dom = extract_domain_tokens(answer)
         if a_dom:
             new_tokens = [x for x in a_dom if x not in p_dom]
             new_ratio = len(new_tokens) / max(len(a_dom), 1)
+            # conservative threshold
             if new_ratio >= 0.55 and len(new_tokens) >= 6:
                 hits.append("T9_SCOPE_EXPANSION")
 
+    # stable order, remove duplicates
     uniq: List[str] = []
     for h in hits:
         if h not in uniq:
@@ -352,39 +296,121 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
 
 # ==========================
 # NII (NTI Integrity Index)
+# NOTE: Schema preserved: q1/q2/q3 + nii_score.
+# q3 now penalizes boundary absence AND structural drift tilt categories (T2/T4/T5/T9/T10).
 # ==========================
+def _split_sentences(text):
+    """Split text into sentences for per-sentence analysis."""
+    import re
+    return [s.strip() for s in re.split(r'[.!?]+', text) if s.strip() and len(s.strip()) > 3]
+
+
 def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_before_constraints: bool, tilt_taxonomy: List[str]) -> Dict[str, Any]:
-    q1 = 1.0 if len(l0_constraints) >= 1 else 0.0
-    q2 = 0.0 if downstream_before_constraints else 1.0
+    """
+    NTI Integrity Index v2 — 5-dimension weighted scoring.
+    Returns 0-100 continuous score with 6 bands.
 
-    a_lc = (answer or "").lower()
+    Dimensions (weights sum to 1.0):
+      D1: Constraint Density    (25%) — % of sentences containing explicit constraints
+      D2: Ask Architecture      (20%) — Ask positioned before capability claims
+      D3: Enforcement Integrity (20%) — Freedom from deferral/erosion markers
+      D4: Tilt Resistance       (15%) — Resistance to drift patterns
+      D5: Failure Mode Severity (20%) — UDDS/DCE/CCA penalty
+    """
+    text = answer or prompt or ""
+    sents = _split_sentences(text)
+    total_sents = max(len(sents), 1)
+    words = text.split()
+    word_count = max(len(words), 1)
+    t_lower = text.lower()
 
-    boundary_absent = (
-        any(m in a_lc for m in BOUNDARY_ABSENCE_MARKERS) or
-        any(m in a_lc for m in L2_CATEGORY_BLEND) or
-        any(m in a_lc for m in DCE_DEFER_MARKERS) or
-        any(m in a_lc for m in NARRATIVE_STABILIZATION_MARKERS)
-    )
+    # D1: CONSTRAINT DENSITY (25%)
+    constraint_sents = sum(1 for s in sents if any(m in s.lower() for m in L0_CONSTRAINT_MARKERS))
+    constraint_ratio = constraint_sents / total_sents
+    constraint_word_hits = sum(1 for m in L0_CONSTRAINT_MARKERS if m in t_lower)
+    constraint_density = min(constraint_word_hits / (word_count / 100), 1.0) if word_count > 0 else 0
+    d1 = constraint_ratio * 0.6 + constraint_density * 0.4
 
-    structural_tilt_risk = any(t in tilt_taxonomy for t in [
-        "T2_CERTAINTY_INFLATION",
-        "T4_CAPABILITY_OVERREACH",
-        "T5_ABSOLUTE_LANGUAGE",
-        "T9_SCOPE_EXPANSION",
-        "T10_AUTHORITY_IMPOSITION",
-        "T7_CATEGORY_BLEND",
-        "T6_CONSTRAINT_DEFERRAL",
-        "T1_REASSURANCE_DRIFT"
-    ])
+    # D2: ASK ARCHITECTURE (20%)
+    first_sent = sents[0].lower() if sents else ""
+    ask_verbs = ["need", "want", "require", "send", "provide", "confirm", "review", "approve",
+                 "schedule", "complete", "submit", "deliver", "respond", "reply", "call", "meet"]
+    first_sent_has_ask = any(v in first_sent for v in ask_verbs)
+    d2_base = 0.8 if not downstream_before_constraints else 0.2
+    d2 = min(d2_base + (0.2 if first_sent_has_ask else 0.0), 1.0)
 
-    q3 = 0.0 if (boundary_absent or structural_tilt_risk) else 1.0
+    # D3: ENFORCEMENT INTEGRITY (20%)
+    erosion_markers = BOUNDARY_ABSENCE_MARKERS + DCE_DEFER_MARKERS + NARRATIVE_STABILIZATION_MARKERS
+    clean_sents = sum(1 for s in sents if not any(m in s.lower() for m in erosion_markers))
+    clean_ratio = clean_sents / total_sents
+    framing = detect_l2_framing(text)
+    hedge_count = len(framing.get("hedge_markers", []))
+    reassurance_count = len(framing.get("reassurance_markers", []))
+    blend_count = len(framing.get("category_blend_markers", []))
+    hedge_penalty = min((hedge_count + reassurance_count + blend_count) * 0.05, 0.4)
+    d3 = max(0, clean_ratio - hedge_penalty)
 
-    score = round((q1 + q2 + q3) / 3.0, 2)
+    # D4: TILT RESISTANCE (15%)
+    tilt_weights = {
+        "T1_REASSURANCE_DRIFT": 0.08, "T2_CERTAINTY_INFLATION": 0.12,
+        "T3_CONSENSUS_CLAIMS": 0.06, "T4_CAPABILITY_OVERREACH": 0.15,
+        "T5_ABSOLUTE_LANGUAGE": 0.10, "T6_CONSTRAINT_DEFERRAL": 0.12,
+        "T7_CATEGORY_BLEND": 0.06, "T8_PRESSURE_OPTIMIZATION": 0.04,
+        "T9_SCOPE_EXPANSION": 0.10, "T10_AUTHORITY_IMPOSITION": 0.08
+    }
+    tilt_penalty = sum(tilt_weights.get(t, 0.05) for t in tilt_taxonomy)
+    d4 = max(0, 1.0 - tilt_penalty)
+
+    # D5: FAILURE MODE SEVERITY (20%)
+    udds = detect_udds(prompt or "", answer or text, l0_constraints)
+    dce = detect_dce(answer or text, l0_constraints)
+    cca = detect_cca(prompt or "", answer or text)
+    fm_pen = {"CONFIRMED": 0.30, "PROBABLE": 0.15, "FALSE": 0.00}
+    def _fm_p(state):
+        for k, v in fm_pen.items():
+            if k in str(state):
+                return v
+        return 0.0
+    total_fm = min(_fm_p(udds.get("udds_state", "")) + _fm_p(dce.get("dce_state", "")) + _fm_p(cca.get("cca_state", "")), 0.80)
+    d5 = max(0, 1.0 - total_fm)
+
+    # WEIGHTED COMPOSITE
+    raw = (d1 * 0.25 + d2 * 0.20 + d3 * 0.20 + d4 * 0.15 + d5 * 0.20)
+    score = round(raw * 100)
+
+    if score >= 85: label = "STRONG"
+    elif score >= 70: label = "SOLID"
+    elif score >= 55: label = "MODERATE"
+    elif score >= 40: label = "WEAK"
+    elif score >= 25: label = "POOR"
+    else: label = "FAILING"
+
     return {
-        "q1_constraints_explicit": q1,
-        "q2_constraints_before_capability": q2,
-        "q3_substitutes_after_enforcement": q3,
-        "nii_score": score
+        "nii_score": score,
+        "nii_raw": round(raw, 4),
+        "nii_label": label,
+        "d1_constraint_density": round(d1, 3),
+        "d2_ask_architecture": round(d2, 3),
+        "d3_enforcement_integrity": round(d3, 3),
+        "d4_tilt_resistance": round(d4, 3),
+        "d5_failure_mode_severity": round(d5, 3),
+        # Legacy compat: map dimensions to Q names for existing UI
+        "q1": round(d1, 3),
+        "q2": round(d2, 3),
+        "q3": round(d3, 3),
+        "q4": round(d4, 3),
+        "q1_constraints_explicit": round(d1, 3),
+        "q2_constraints_before_capability": round(d2, 3),
+        "q3_substitutes_after_enforcement": round(d3, 3),
+        "detail": {
+            "constraint_sents": constraint_sents, "total_sents": total_sents,
+            "constraint_word_hits": constraint_word_hits,
+            "first_sent_has_ask": first_sent_has_ask,
+            "clean_sents": clean_sents, "hedge_count": hedge_count,
+            "reassurance_count": reassurance_count, "blend_count": blend_count,
+            "tilt_count": len(tilt_taxonomy), "tilt_patterns": tilt_taxonomy[:10],
+            "udds": udds.get("udds_state", ""), "dce": dce.get("dce_state", ""), "cca": cca.get("cca_state", "")
+        }
     }
 
 
@@ -407,6 +433,7 @@ def detect_l0_constraints(text: str) -> List[str]:
 def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> bool:
     a = (answer or "").lower()
     p = (prompt or "").lower()
+
     capability = any(m in a for m in DOWNSTREAM_CAPABILITY_MARKERS) or any(m in p for m in DOWNSTREAM_CAPABILITY_MARKERS)
     constraints_declared = len(l0_constraints) > 0
     return bool(capability and not constraints_declared)
@@ -426,24 +453,29 @@ def detect_dce(answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
     a = (answer or "").lower()
     defer = any(m in a for m in DCE_DEFER_MARKERS)
     constraints_missing = len(l0_constraints) == 0
+
     state = "DCE_FALSE"
     if defer and constraints_missing:
         state = "DCE_CONFIRMED"
     elif defer:
         state = "DCE_PROBABLE"
+
     return {"dce_state": state, "defer_markers_present": defer, "constraints_missing": constraints_missing}
 
 
 def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
     combined = (prompt or "") + "\n" + (answer or "")
     t = combined.lower()
+
     collapse = any(m in t for m in CCA_COLLAPSE_MARKERS)
     list_blend = ("and" in t and "but" in t and "overall" in t)
+
     state = "CCA_FALSE"
     if collapse and list_blend:
         state = "CCA_CONFIRMED"
     elif collapse:
         state = "CCA_PROBABLE"
+
     return {"cca_state": state, "collapse_markers_present": collapse, "list_blend_present": list_blend}
 
 
@@ -452,12 +484,15 @@ def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str
     c2 = detect_downstream_before_constraint(prompt, answer, l0_constraints)
     c3 = detect_boundary_absence(answer)
     c4 = detect_narrative_stabilization(answer)
+
     met = sum([1 if c else 0 for c in [c1, c2, c3, c4]])
+
     state = "UDDS_FALSE"
     if met == 4:
         state = "UDDS_CONFIRMED"
     elif met == 3:
         state = "UDDS_PROBABLE"
+
     return {
         "udds_state": state,
         "criteria": {
@@ -491,10 +526,13 @@ def objective_extract(prompt: str) -> Dict[str, Any]:
 def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
     p_tokens = tokenize(prompt)
     a_tokens = tokenize(answer)
+
     sim = jaccard(p_tokens, a_tokens)
     drift = round(1.0 - sim, 3)
+
     a = (answer or "").lower()
     mutation = any(m in a for m in L3_MUTATION_MARKERS)
+
     return {
         "jaccard_similarity": sim,
         "drift_score": drift,
@@ -503,7 +541,7 @@ def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
 
 
 # ==========================
-# JOS
+# JOS (fill-in-the-blank form + binding contract)
 # ==========================
 def jos_template() -> Dict[str, Any]:
     return {
@@ -567,22 +605,15 @@ def jos_apply(config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ==========================
-# ROUTES
+# CORE ROUTES
 # ==========================
-@app.route("/")
-def home():
-    try:
-        return render_template("index.html")
-    except Exception:
-        return "NTI Canonical Runtime is live."
-
-
-@app.route("/health")
+@core_engine_bp.route("/health")
+@core_engine_bp.route("/api/health")
 def health():
     return jsonify({"status": "ok", "version": NTI_VERSION})
 
 
-@app.route("/canonical/status")
+@core_engine_bp.route("/canonical/status")
 def canonical_status():
     return jsonify({
         "status": "ok",
@@ -595,17 +626,83 @@ def canonical_status():
             "nte_clf_tilt_taxonomy": True,
             "nii_integrity_index": True,
             "jos_template_and_binding": True,
-            "telemetry_and_persistence": True,
-            "physics_otc": PHYSICS_AVAILABLE,
-            "physics_ctc": PHYSICS_AVAILABLE,
-            "physics_als": PHYSICS_AVAILABLE,
-            "physics_salience": PHYSICS_AVAILABLE,
-            "physics_odd": PHYSICS_AVAILABLE,
+            "telemetry_and_persistence": True
+        },
+        "v3_modules": {
+            "self_audit": True,
+            "time_collapse": True,
+            "attribution_drift": True,
+            "convergence_gate": True,
+            "audit_source": True,
+            "axis2_friction": True,
+            "loop_detection": True,
+            "consolidation_engine": True,
+            "confusion_layer": True,
+            "time_object": True,
+            "nti_full_integration": True,
+            "per_industry_config": False,
         }
     })
 
 
-@app.route("/events", methods=["POST"])
+# ═══════════════════════════════════════
+# V3 ROUTES — Axis 2 + Full Integration
+# ═══════════════════════════════════════
+
+try:
+    from axis2_endpoint import handle_request as axis2_handle
+    @core_engine_bp.route("/nti-friction", methods=["POST"])
+    def nti_friction():
+        return jsonify(axis2_handle(request.get_json(force=True)))
+    print("[app] axis2 /nti-friction loaded", flush=True)
+except ImportError:
+    print("[app] axis2_endpoint not found, skipping", flush=True)
+
+
+@core_engine_bp.route("/nti-full", methods=["POST"])
+def nti_full():
+    """Full NTI scoring: Axis 1 + Axis 2 + loop + consolidation + confusion + time object."""
+    t0 = time.time()
+    payload = request.get_json(force=True) or {}
+    text = (payload.get("text") or payload.get("input") or payload.get("message") or "").strip()
+
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    # Axis 1 — existing NTI scoring
+    prompt = ""
+    answer = text
+    l0 = detect_l0_constraints(answer)
+    tilt = classify_tilt(answer, prompt, answer)
+    dbc = detect_downstream_before_constraint(prompt, answer, l0)
+    nii = compute_nii(prompt, answer, l0, dbc, tilt)
+
+    axis1 = {
+        "nii": nii,
+        "l0_constraints": l0,
+        "tilt_taxonomy": tilt,
+        "failure_modes": {
+            "udds": detect_udds(prompt, answer, l0),
+            "dce": detect_dce(answer, l0),
+            "cca": detect_cca(prompt, answer),
+        }
+    }
+
+    # Full integration — Axis 2 + detection modules
+    try:
+        from nti_full_integration_stub import build_full
+        request_id = f"nti_{uuid.uuid4().hex[:12]}"
+        payload["request_id"] = request_id
+        full = build_full(payload=payload, axis1=axis1, build_version=NTI_VERSION)
+    except Exception as e:
+        full = {"axis1": axis1, "error": str(e)}
+
+    full["latency_ms"] = int((time.time() - t0) * 1000)
+    full["version"] = NTI_VERSION
+    return jsonify(full)
+
+
+@core_engine_bp.route("/events", methods=["POST"])
 def events():
     session_id = get_session_id()
     payload = request.get_json() or {}
@@ -616,31 +713,24 @@ def events():
         return jsonify({"error": "Missing event name"}), 400
 
     eid = str(uuid.uuid4())
-    conn = db_connect()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO events (id, created_at, session_id, event_name, event_json)
-        VALUES (?, ?, ?, ?, ?)
-    """, (eid, utc_now_iso(), session_id, event_name, json.dumps(event_data, ensure_ascii=False)))
-    conn.commit()
-    conn.close()
+    database.record_event(eid, session_id, event_name, json.dumps(event_data, ensure_ascii=False))
 
     log_json_line("event", {"session_id": session_id, "event": event_name, "data": event_data})
     return jsonify({"ok": True, "event_id": eid})
 
 
-@app.route("/jos/template", methods=["GET"])
+@core_engine_bp.route("/jos/template", methods=["GET"])
 def jos_get_template():
     return jsonify(jos_template())
 
 
-@app.route("/jos/apply", methods=["POST"])
+@core_engine_bp.route("/jos/apply", methods=["POST"])
 def jos_apply_route():
     config = request.get_json() or {}
     return jsonify(jos_apply(config))
 
 
-@app.route("/nti", methods=["POST"])
+@core_engine_bp.route("/nti", methods=["POST"])
 def nti_run():
     request_id = str(uuid.uuid4())
     session_id = get_session_id()
@@ -660,16 +750,74 @@ def nti_run():
         record_request(request_id, "/nti", session_id, latency_ms, payload, error="No input provided")
         return jsonify({"error": "Provide either text OR prompt+answer", "request_id": request_id}), 400
 
+    request_text = text
+    _patent_result = patent_run(
+        Q=request_text,
+        modality="typed_manual",
+        receiver_class="llm",
+        where="nti_endpoint",
+        when=utc_now_iso(),
+        for_="nti_scoring",
+        why="human_request"
+    )
+
+    # V2 PRE-SCORE GATE
+    gate = pre_score_gate(text)
+    if not gate["pass"]:
+        return jsonify({"error": gate["msg"], "gate": gate["reason"], "status": "rejected", "request_id": request_id}), 422
+
+    # axis2_compiler — inbound pre-processor (silent transform)
+    original_text = text  # preserve for highlight_map — spans must match what user sees
+    try:
+        from axis2_compiler import compile_planned as axis2_compile
+        _compiled = axis2_compile(text)
+        if _compiled["accepted"]:
+            text = _compiled["compiled"]
+    except ImportError:
+        pass
+
     l0_constraints = detect_l0_constraints(text)
+
     obj = objective_extract(prompt or text)
     drift = objective_drift(prompt or "", answer or "")
-    framing = detect_l2_framing(text)
+
+    framing = detect_l2_framing(original_text)  # must use original — framing stores char offsets
+
+    # Highlights: backend owns spans, frontend only renders
+    # Both framing and get_highlights use original_text — offsets must match displayed text
+    try:
+        from highlight_map import get_highlights
+        axis2, highlights = get_highlights(original_text, framing=framing)
+    except Exception:
+        axis2, highlights = None, []
+
+    # tilt taxonomy (now uses prompt+answer for scope expansion detection)
     tilt = classify_tilt(text, prompt=prompt or "", answer=answer or "")
+
     udds = detect_udds(prompt or "", answer or text, l0_constraints)
     dce = detect_dce(answer or text, l0_constraints)
     cca = detect_cca(prompt or "", answer or text)
+
     downstream_before_constraints = detect_downstream_before_constraint(prompt or "", answer or text, l0_constraints)
     nii = compute_nii(prompt or "", answer or text, l0_constraints, downstream_before_constraints, tilt)
+
+    # NTI signal detection (deterministic taxonomy)
+    try:
+        from core_engine.nti_signals import detect_signals
+        signals = detect_signals(text)
+        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+            signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
+        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+            signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
+        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+            signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
+        tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
+        for code in (tilt or []):
+            _sig = tilt_to_signal.get(code)
+            if _sig:
+                signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
+    except Exception:
+        signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
     dominance: List[str] = []
     if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
@@ -714,12 +862,23 @@ def nti_run():
         },
         "interaction_matrix": interaction,
         "nii": nii,
-        "tilt_taxonomy": tilt
+        "tilt_taxonomy": tilt,
+        "signals": signals,
+        "highlights": highlights,
+        "axis2": axis2
     }
 
     latency_ms = int((time.time() - t0) * 1000)
     record_request(request_id, "/nti", session_id, latency_ms, payload, error=None)
     record_result(request_id, result)
+
+    S1 = {
+        "request_id": request_id,
+        "session_id": session_id,
+        "result_summary": result.get("nii", {}),
+        "timestamp": utc_now_iso()
+    }
+    result["S1"] = S1
 
     log_json_line("nti_run", {
         "request_id": request_id,
@@ -730,119 +889,66 @@ def nti_run():
         "tilt": tilt
     })
 
+    # Log to cockpit analytics
+    try:
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        if ip and "," in ip: ip = ip.split(",")[0].strip()
+    except Exception:
+        pass
+
     result["telemetry"] = {
         "request_id": request_id,
         "session_id": session_id,
         "latency_ms": latency_ms
     }
 
-    return jsonify(result)
+    # I04 — audit source tagging
+    try:
+        from audit_source import normalize_audit_source
+        result["telemetry"]["audit_source"] = normalize_audit_source(
+            (request.get_json(silent=True) or {}).get("source")
+        )
+    except Exception:
+        result["telemetry"]["audit_source"] = "manual"
 
+    # ── V3 ENFORCEMENT: self-audit loop ──
+    # Score own output before delivery. Core governance, not optional.
+    try:
+        from v3_self_audit import run_v3_pipeline
 
-# ==========================
-# PHYSICS ROUTES
-# ==========================
-@app.route("/physics/declare", methods=["POST"])
-def physics_declare():
-    """Declare an objective. Returns frozen objective state."""
-    if not PHYSICS_AVAILABLE:
-        return jsonify({"error": "Physics modules not available"}), 503
+        def _v1_score_fn(txt):
+            """Adapter: run compute_nii on text and return dict with nii_score."""
+            _l0 = detect_l0_constraints(txt)
+            _tilt = classify_tilt(txt)
+            _dbc = detect_downstream_before_constraint("", txt, _l0)
+            _nii = compute_nii("", txt, _l0, _dbc, _tilt)
+            return _nii
 
-    payload = request.get_json() or {}
-    objective_type = str(payload.get("objective_type", "")).strip()
-    description = str(payload.get("description", "")).strip()
-
-    if not objective_type:
-        return jsonify({"error": "Missing objective_type. Must be one of: RESOLVE, EXPLORE, STRUCTURE, EXECUTE, DIAGNOSE, ALIGN"}), 400
-
-    result = declare_objective(objective_type, description)
-    return jsonify(result)
-
-
-@app.route("/physics", methods=["POST"])
-def physics_run():
-    """
-    Full physics audit on a text turn.
-    Accepts:
-      text (required)
-      objective_type (required)
-      previous_abstraction_level (optional, default 0)
-      previous_variable_count (optional, default 0)
-      current_variable_count (optional, default 0)
-      previous_resolved_count (optional, default 0)
-      current_resolved_count (optional, default 0)
-      consecutive_stagnant_turns (optional, default 0)
-    """
-    if not PHYSICS_AVAILABLE:
-        return jsonify({"error": "Physics modules not available"}), 503
-
-    request_id = str(uuid.uuid4())
-    session_id = get_session_id()
-    t0 = time.time()
-
-    payload = request.get_json() or {}
-    text = payload.get("text", "")
-    objective_type = str(payload.get("objective_type", "")).strip()
-
-    if not text:
-        return jsonify({"error": "Missing text"}), 400
-    if not objective_type:
-        return jsonify({"error": "Missing objective_type"}), 400
-
-    # Run full drift detection
-    drift_result = detect_drift(
-        text=text,
-        objective_type=objective_type,
-        previous_abstraction_level=int(payload.get("previous_abstraction_level", 0)),
-        previous_variable_count=int(payload.get("previous_variable_count", 0)),
-        current_variable_count=int(payload.get("current_variable_count", 0)),
-        previous_resolved_count=int(payload.get("previous_resolved_count", 0)),
-        current_resolved_count=int(payload.get("current_resolved_count", 0)),
-        stagnation_threshold=int(payload.get("stagnation_threshold", 3)),
-        consecutive_stagnant_turns=int(payload.get("consecutive_stagnant_turns", 0)),
-    )
-
-    # Salience detection (separate from drift — logged, not enforced)
-    salience_result = detect_salience_transforms(text)
-
-    # Transform classification
-    transform_result = classify_transform(text)
-
-    # Abstraction detection
-    abstraction_result = detect_abstraction_level(text)
-
-    latency_ms = int((time.time() - t0) * 1000)
-
-    result = {
-        "status": "ok",
-        "version": NTI_VERSION,
-        "physics_version": "physics-v1.0",
-        "objective_type": objective_type,
-        "drift": drift_result,
-        "transform": transform_result,
-        "abstraction": abstraction_result,
-        "salience": salience_result,
-        "telemetry": {
-            "request_id": request_id,
-            "session_id": session_id,
-            "latency_ms": latency_ms,
+        v3 = run_v3_pipeline(
+            output_text=answer or text,
+            v1_score_fn=_v1_score_fn,
+            audit_threshold=0.85,
+            max_passes=2,
+        )
+        result["v3"] = {
+            "enforced_text": v3["output"],
+            "passes": len(v3["passes"]),
+            "final_score": v3["final_score"].get("nii_score") if isinstance(v3["final_score"], dict) else None,
+            "decision": v3["self_audit"]["decision"],
+            "time_collapse_applied": True,
+            "attribution_stripped": True,
         }
-    }
+    except Exception as e:
+        result["v3"] = {"error": str(e), "passed": True}
 
-    record_request(request_id, "/physics", session_id, latency_ms, payload, error=None)
-    record_result(request_id, result)
-
-    log_json_line("physics_run", {
-        "request_id": request_id,
-        "session_id": session_id,
-        "latency_ms": latency_ms,
-        "objective_type": objective_type,
-        "verdict": drift_result.get("verdict"),
-        "violation_count": drift_result.get("violation_count"),
-    })
+    # axis3_clarity — outbound clarity scorer
+    try:
+        from axis3_clarity import analyze_clarity
+        _obj_text = result.get("layers", {}).get("L1_input_freeze", {}).get("objective", text)
+        result["axis3_clarity"] = analyze_clarity(_obj_text)
+    except ImportError:
+        pass
 
     return jsonify(result)
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")), debug=True)

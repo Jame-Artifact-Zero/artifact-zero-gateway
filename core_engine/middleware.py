@@ -1,26 +1,24 @@
 # core_engine/middleware.py
-# Unified NTI Middleware Layer
-# Frozen core preserved
-# Deterministic extensions only
+# Unified NTI Middleware Layer — v2.1 (wiring bugs fixed)
+# Frozen core preserved. Deterministic extensions only.
 
 from core_engine.v2_engine import run_v2
 from core_engine.v3_engine import run_v3
-from core_engine.routing_engine import route
-from core_engine.trace import start_trace, end_trace
-
+from core_engine.routing_engine import route_decision, DEFAULT_ROUTING_KEYWORDS
+from core_engine.trace import TraceLogger, new_trace_context
 from core_engine.edge_engine import compute_relational_field
 from core_engine.interrogative_engine import compute_interrogative_field
 from core_engine.economic_layer import compute_economic_layer
 from core_engine.banding import band_cost
-from core_engine.invocation_governance import evaluate_invocation
-from core_engine.observability_layer import attach_observability
+from core_engine.invocation_governance import compute_invocation_governance
+from core_engine.observability_layer import compute_observability
 
 
 def process_request(text: str) -> dict:
     """
     Unified processing pipeline:
 
-    Human -> V2 -> AI -> V3 -> Human
+    Human -> V2 -> route -> V3 -> Human
     + Relational Field
     + Interrogative Field
     + Economic Layer
@@ -28,37 +26,44 @@ def process_request(text: str) -> dict:
     + Invocation Governance
     + Observability
 
-    Deterministic.
-    No LLM calls here.
+    Deterministic. No LLM calls here.
     """
 
     if text is None:
         text = ""
 
-    trace = start_trace(text)
+    trace_ctx = new_trace_context()
+    logger = TraceLogger()
 
     # =========================
     # Spine (Frozen Core Flow)
     # =========================
 
     v2_output = run_v2(text)
-    route_decision = route(v2_output)
-    v3_output = run_v3(v2_output)
+
+    route, route_matches = route_decision(
+        text.lower(),
+        DEFAULT_ROUTING_KEYWORDS
+    )
+
+    v3_output = run_v3(v2_output["normalized_text"])
 
     structural_field = {
         "v2": v2_output,
-        "route": route_decision,
-        "v3": v3_output
+        "route": route,
+        "route_matches": route_matches,
+        "v3": v3_output,
     }
 
     # =========================
-    # Relational Field (Axis 2 equivalent)
+    # Relational Field
     # =========================
 
     relational_field = compute_relational_field(text)
+    edge_index = float(relational_field.get("edge_index", 0.0))
 
     # =========================
-    # Interrogative Field (Question Physics)
+    # Interrogative Field
     # =========================
 
     interrogative_field = compute_interrogative_field(text)
@@ -67,7 +72,12 @@ def process_request(text: str) -> dict:
     # Economic Layer
     # =========================
 
-    economic = compute_economic_layer(text)
+    economic = compute_economic_layer(
+        input_text=text,
+        output_text=v3_output.get("stabilized_text", ""),
+        route_hint=route,
+        ai_invoked=(route == "AI_PATH"),
+    )
 
     # =========================
     # Band Classification
@@ -80,10 +90,20 @@ def process_request(text: str) -> dict:
     # Invocation Governance
     # =========================
 
-    invocation = evaluate_invocation(
-        structural_field=structural_field,
-        relational_field=relational_field,
-        economic=economic
+    structural_score = float(v2_output.get("score", 0.0))
+
+    invocation = compute_invocation_governance(
+        structural_score=structural_score,
+        edge_index=edge_index,
+    )
+
+    # =========================
+    # Observability
+    # =========================
+
+    obs = compute_observability(
+        structural_score=structural_score,
+        edge_index=edge_index,
     )
 
     # =========================
@@ -96,17 +116,20 @@ def process_request(text: str) -> dict:
         "interrogative_field": interrogative_field,
         "economic": economic,
         "invocation_governance": invocation,
+        "observability": obs,
+        "trace": trace_ctx,
     }
 
     # =========================
-    # Observability Attachment
+    # Write Trace
     # =========================
 
-    response = attach_observability(
-        trace=trace,
-        response=response
-    )
-
-    end_trace(trace)
+    logger.write({**trace_ctx, "summary": {
+        "route": route,
+        "v2_score": v2_output.get("score"),
+        "edge_index": edge_index,
+        "route_hint": invocation.get("route_hint"),
+        "obs_composite": obs.get("composite_score"),
+    }})
 
     return response

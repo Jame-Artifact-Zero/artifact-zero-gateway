@@ -340,7 +340,7 @@ def _d5_tilt_exposure(text: str) -> Tuple[float, Dict]:
     """D5: TILT EXPOSURE — corporate tilt pattern detection."""
     # Import the existing tilt classifier
     try:
-        from app import classify_tilt
+        from core_engine.app import classify_tilt
         tilts = classify_tilt(text)
     except Exception:
         tilts = []

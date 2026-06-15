@@ -42,11 +42,19 @@ def _strip_intensifiers(text: str):
 
 def _neutralize_blame(text: str):
     transforms = []
-    for tid, pat in BLAME_PATTERNS:
-        if pat.search(text):
-            text = pat.sub(TEMPLATES[tid], text)
-            transforms.append({"id": tid, "detail": "neutralized"})
-    return re.sub(r"\s{2,}", " ", text).strip(), transforms
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    result = []
+    for sentence in sentences:
+        replaced = False
+        for tid, pat in BLAME_PATTERNS:
+            if pat.search(sentence):
+                result.append(TEMPLATES[tid])
+                transforms.append({"id": tid, "detail": "neutralized"})
+                replaced = True
+                break
+        if not replaced:
+            result.append(sentence)
+    return re.sub(r"\s{2,}", " ", " ".join(result)).strip(), transforms
 
 def compile_planned(text: str) -> Dict[str, Any]:
     original = _norm(text)

@@ -2,1834 +2,1746 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NTI Engine Bench</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AZ Engine Bench</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap');
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
-  :root {
-    --bg: #0a0a0c;
-    --surface: #111114;
-    --surface2: #18181c;
-    --border: #2a2a30;
-    --border-active: #4a4a55;
-    --text: #e0e0e5;
-    --text-dim: #8888a0;
-    --accent: #00ff88;
-    --accent-dim: #00cc6a;
-    --warn: #ff6644;
-    --info: #44aaff;
-    --gold: #ffcc00;
-    --v2-color: #44aaff;
-    --v3-color: #ff6644;
-    --edge-color: #cc44ff;
-    --econ-color: #ffcc00;
-    --obs-color: #00ddcc;
-    --gov-color: #ff8844;
-    --band-color: #88cc44;
-    --pipe-color: #00ff88;
-  }
+:root{
+  --bg:#07080a;
+  --s1:#0e1014;
+  --s2:#14161b;
+  --s3:#1c1f26;
+  --border:#252830;
+  --border2:#32363f;
+  --text:#d8dce8;
+  --dim:#5a5f70;
+  --dim2:#3a3f4d;
+  --accent:#00e89c;
+  --accent2:#00b87a;
+  --warn:#ff5533;
+  --info:#3b9eff;
+  --gold:#f0b429;
+  --purple:#cc44ff;
+  --orange:#ff8844;
+  --side-a:#3b9eff;
+  --side-b:#cc44ff;
+  --good:#00e89c;
+  --topbar:52px;
+  --inputbar:0px;
+  --drawer-h:56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-  }
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column}
 
-  .header {
-    padding: 24px 32px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .header .logo {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: -1px;
-  }
-  .header .subtitle {
-    font-size: 14px;
-    color: var(--text-dim);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .header .tag {
-    margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    background: var(--surface2);
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-  }
+/* ── TOPBAR ── */
+.topbar{
+  height:var(--topbar);flex-shrink:0;
+  display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:var(--s1);border-bottom:1px solid var(--border);
+  position:relative;z-index:50;
+}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--accent);letter-spacing:-0.3px}
+.logo span{color:var(--dim);font-weight:400}
+.tag{font-size:9px;color:var(--dim);background:var(--s3);border:1px solid var(--border2);padding:2px 7px;border-radius:2px;letter-spacing:1px;text-transform:uppercase}
+.topbar-url{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topbar-url label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;display:none}
+#baseUrl{
+  background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:11px;
+  border-radius:3px;width:170px;outline:none;
+}
+#baseUrl:focus{border-color:var(--accent)}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:var(--dim2);flex-shrink:0;transition:all 0.3s}
+.conn-dot.live{background:var(--accent);box-shadow:0 0 5px var(--accent)}
 
-  .main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    min-height: calc(100vh - 73px);
-  }
+/* ── INPUT BAR ── */
+.inputbar{
+  flex-shrink:0;background:var(--s1);border-bottom:2px solid var(--border2);
+  padding:10px 14px;
+}
+.input-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+#sharedText{
+  flex:1;background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;
+  border-radius:4px;resize:none;height:64px;outline:none;line-height:1.5;
+}
+#sharedText:focus{border-color:var(--accent)}
+.run-btn{
+  background:var(--accent);color:#07080a;font-family:'Syne',sans-serif;font-weight:800;
+  font-size:12px;padding:0 16px;height:64px;border:none;border-radius:4px;
+  cursor:pointer;white-space:nowrap;transition:all 0.15s;min-width:64px;
+}
+.run-btn:active{transform:scale(0.97)}
+.run-btn:disabled{background:var(--s3);color:var(--dim);cursor:default;transform:none}
+.samples-row{display:flex;gap:6px;flex-wrap:wrap}
+.sb{
+  font-size:9px;color:var(--dim);background:var(--s2);border:1px solid var(--border);
+  padding:3px 8px;border-radius:2px;cursor:pointer;font-family:'JetBrains Mono',monospace;
+  transition:all 0.1s;
+}
+.sb:active{color:var(--text);border-color:var(--border2)}
 
-  /* LEFT: Input Panel */
-  .input-panel {
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-  }
+/* ── MAIN AREA ── */
+.main{
+  flex:1;overflow:hidden;display:flex;flex-direction:column;
+  min-height:0;
+}
 
-  .panel-header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
+/* Desktop: side by side */
+@media(min-width:768px){
+  .main{flex-direction:row}
+}
 
-  .input-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
+/* ── COLUMNS ── */
+.col{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+  border-bottom:1px solid var(--border);min-height:0;
+}
+@media(min-width:768px){
+  .col{border-bottom:none;border-right:1px solid var(--border)}
+  .col:last-child{border-right:none}
+}
 
-  #inputText {
-    flex: 1;
-    min-height: 300px;
-    background: var(--surface);
-    color: var(--text);
-    border: none;
-    padding: 20px 24px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px;
-    line-height: 1.7;
-    resize: none;
-    outline: none;
-  }
-  #inputText::placeholder {
-    color: var(--text-dim);
-    opacity: 0.5;
-  }
+/* Mobile: tabs */
+.col-tabs{
+  display:flex;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+@media(min-width:768px){.col-tabs{display:none}}
+.col-tab{
+  flex:1;padding:8px;text-align:center;font-size:11px;font-weight:700;
+  color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;
+  font-family:'Syne',sans-serif;transition:all 0.15s;
+}
+.col-tab.active-a{color:var(--side-a);border-bottom-color:var(--side-a)}
+.col-tab.active-b{color:var(--side-b);border-bottom-color:var(--side-b)}
 
-  /* Objective field */
-  .objective-row {
-    border-top: 1px solid var(--border);
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--surface);
-  }
-  .objective-row label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    white-space: nowrap;
-  }
-  #objectiveText {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    border-radius: 4px;
-    outline: none;
-  }
-  #objectiveText:focus { border-color: var(--accent); }
+/* Mobile: hide inactive col */
+@media(max-width:767px){
+  .col.hidden-mobile{display:none}
+}
 
-  /* Engine Rack */
-  .engine-rack {
-    border-top: 1px solid var(--border);
-    padding: 16px 24px;
-    background: var(--surface2);
-  }
-  .rack-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
-  }
-  .rack-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .engine-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    transition: all 0.15s;
-    user-select: none;
-  }
-  .engine-toggle:hover { border-color: var(--border-active); }
-  .engine-toggle.active { border-color: var(--accent); background: rgba(0,255,136,0.05); }
-  .engine-toggle .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--text-dim);
-    transition: background 0.15s;
-  }
-  .engine-toggle.active .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-  .engine-toggle .name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--text-dim);
-    transition: color 0.15s;
-  }
-  .engine-toggle.active .name { color: var(--text); }
+.col-header{
+  padding:8px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  background:var(--s1);flex-shrink:0;
+}
+.col-label{font-family:'Syne',sans-serif;font-weight:800;font-size:17px}
+.col-a .col-label{color:var(--side-a)}
+.col-b .col-label{color:var(--side-b)}
+.col-desc{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
 
-  /* Presets */
-  .presets {
-    border-top: 1px solid var(--border);
-    padding: 12px 24px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    background: var(--surface2);
-  }
-  .preset-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .preset-btn:hover { border-color: var(--accent); color: var(--text); }
+/* ── TOOL RACK ── */
+.tool-rack{
+  padding:8px 14px;border-bottom:1px solid var(--border);
+  background:var(--s2);flex-shrink:0;
+}
+.rack-label{font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:2px;margin-bottom:7px}
+.friction-opts{display:flex;gap:5px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.friction-opts label{font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:1px}
+.friction-opts select{background:var(--s3);border:1px solid var(--border2);color:var(--dim);font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 5px;border-radius:2px;outline:none}
+.friction-opts select:focus{border-color:var(--info)}
+.tool-group-sep{width:100%;height:1px;background:var(--border);margin:4px 0}
+.tools-grid{display:flex;flex-wrap:wrap;gap:5px}
+.tt{
+  display:flex;align-items:center;gap:5px;padding:5px 9px;
+  border-radius:3px;cursor:pointer;border:1px solid var(--border);
+  background:var(--s3);transition:all 0.1s;user-select:none;font-size:10px;color:var(--dim);
+}
+.tt:active{transform:scale(0.97)}
+.tt.on{border-color:var(--accent);background:rgba(0,232,156,0.06);color:var(--accent)}
+.tt .pip{width:5px;height:5px;border-radius:50%;background:var(--dim2);flex-shrink:0;transition:all 0.1s}
+.tt.on .pip{background:var(--accent);box-shadow:0 0 4px var(--accent)}
+.tt[data-tool="friction"].on{border-color:var(--info);background:rgba(59,158,255,0.06);color:var(--info)}
+.tt[data-tool="friction"].on .pip{background:var(--info);box-shadow:0 0 4px var(--info)}
+.tt[data-tool="safecheck"].on{border-color:var(--gold);background:rgba(240,180,41,0.06);color:var(--gold)}
+.tt[data-tool="safecheck"].on .pip{background:var(--gold);box-shadow:0 0 4px var(--gold)}
+.tt[data-tool="full"].on{border-color:var(--purple);background:rgba(204,68,255,0.06);color:var(--purple)}
+.tt[data-tool="full"].on .pip{background:var(--purple);box-shadow:0 0 4px var(--purple)}
+.tt[data-tool="free"].on{border-color:var(--orange);background:rgba(255,136,68,0.06);color:var(--orange)}
+.tt[data-tool="free"].on .pip{background:var(--orange);box-shadow:0 0 4px var(--orange)}
 
-  /* Run Button */
-  .run-bar {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-  #runBtn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--bg);
-    background: var(--accent);
-    border: none;
-    padding: 12px 32px;
-    border-radius: 6px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    transition: all 0.15s;
-  }
-  #runBtn:hover { background: var(--accent-dim); }
-  #runBtn:disabled { opacity: 0.4; cursor: default; }
+/* ── OUTPUT ── */
+.output-panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.output-empty{padding:30px 16px;text-align:center;color:var(--dim2);font-size:11px;line-height:2}
+.output-empty .big{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--s3);margin-bottom:6px}
 
-  #clearBtn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--text-dim);
-    background: transparent;
-    border: 1px solid var(--border);
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  #clearBtn:hover { border-color: var(--warn); color: var(--warn); }
+/* ── RESULT BLOCKS ── */
+.rb{border-bottom:1px solid var(--border)}
+.rh{
+  padding:9px 14px;display:flex;align-items:center;gap:9px;
+  cursor:pointer;background:var(--s2);
+}
+.rh:active{background:var(--s3)}
+.ri{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rn{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px}
+.rs{font-size:10px;color:var(--dim);margin-left:auto;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.rc{font-size:9px;color:var(--dim2);margin-left:6px;transition:transform 0.15s}
+.rh.collapsed .rc{transform:rotate(-90deg)}
+.rbody{padding:0 14px 12px;background:var(--s1)}
+.rbody.hidden{display:none}
+.rb.error .ri{background:var(--warn)}
+.rb.error .rn{color:var(--warn)}
 
-  .word-count {
-    margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
+.dr{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);font-size:10px;gap:10px}
+.dr:last-child{border-bottom:none}
+.dk{color:var(--dim);flex-shrink:0;min-width:100px}
+.dv{color:var(--text);text-align:right;word-break:break-all}
 
-  /* RIGHT: Output Panel */
-  .output-panel {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    max-height: calc(100vh - 73px);
-  }
+.score-big{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;padding:10px 0 6px;text-align:center}
+.score-lbl{text-align:center;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 
-  .output-empty {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    opacity: 0.4;
-  }
+.tag{display:inline-block;padding:2px 6px;border-radius:2px;font-size:9px;font-weight:700;margin:1px}
+.tw{background:rgba(255,85,51,0.15);color:var(--warn);border:1px solid rgba(255,85,51,0.3)}
+.tg{background:rgba(0,232,156,0.12);color:var(--good);border:1px solid rgba(0,232,156,0.25)}
+.ti{background:rgba(59,158,255,0.12);color:var(--info);border:1px solid rgba(59,158,255,0.25)}
+.td{background:var(--s3);color:var(--dim);border:1px solid var(--border2)}
+.tgo{background:rgba(240,180,41,0.15);color:var(--gold);border:1px solid rgba(240,180,41,0.3)}
 
-  /* Engine output blocks */
-  .engine-block {
-    border-bottom: 1px solid var(--border);
-    animation: fadeIn 0.3s ease;
-  }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.sep{padding:8px 0 3px;font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:2px;border-top:1px solid var(--border);margin-top:3px}
 
-  .engine-block-header {
-    padding: 14px 24px;
-    background: var(--surface2);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .engine-block-header:hover { background: rgba(255,255,255,0.03); }
-  .engine-block-header .indicator {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-  }
-  .engine-block-header .engine-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .engine-block-header .engine-summary {
-    margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-  .engine-block-header .chevron {
-    color: var(--text-dim);
-    font-size: 12px;
-    transition: transform 0.2s;
-  }
-  .engine-block.collapsed .chevron { transform: rotate(-90deg); }
-  .engine-block.collapsed .engine-body { display: none; }
+.raw-toggle{font-size:9px;color:var(--dim2);cursor:pointer;padding:7px 0 0;display:block;text-align:right}
+.raw-pre{display:none;background:var(--s3);padding:10px;border-radius:3px;font-size:9px;color:var(--dim);overflow-x:auto;max-height:200px;overflow-y:auto;margin-top:6px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+.raw-pre.show{display:block}
 
-  .engine-body {
-    padding: 16px 24px 20px;
-    background: var(--surface);
-  }
+.loading{padding:16px 14px;display:flex;align-items:center;gap:9px;font-size:11px;color:var(--dim)}
+.spinner{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Data rows inside engine output */
-  .data-row {
-    display: flex;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-    align-items: baseline;
-  }
-  .data-row:last-child { border-bottom: none; }
-  .data-key {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    min-width: 200px;
-    flex-shrink: 0;
-  }
-  .data-val {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    color: var(--text);
-    word-break: break-word;
-  }
-  .data-val.score-good { color: var(--accent); }
-  .data-val.score-warn { color: var(--gold); }
-  .data-val.score-bad { color: var(--warn); }
-  .data-val.text-output {
-    background: rgba(0,255,136,0.04);
-    padding: 10px 14px;
-    border-radius: 4px;
-    border-left: 3px solid var(--accent);
-    line-height: 1.6;
-    white-space: pre-wrap;
-    width: 100%;
-  }
+/* ── DIFF BAR ── */
+.diff-bar{
+  flex-shrink:0;background:var(--s2);border-top:2px solid var(--border2);
+  padding:10px 14px;display:none;
+}
+.diff-bar.show{display:block}
+.diff-title{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.diff-title::before{content:'';display:inline-block;width:5px;height:5px;background:var(--accent);border-radius:50%;box-shadow:0 0 5px var(--accent)}
+.diff-table{width:100%;border-collapse:collapse;font-size:10px}
+.diff-table th{padding:4px 8px;text-align:left;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:1px;font-size:8px;border-bottom:1px solid var(--border2)}
+.diff-table td{padding:5px 8px;border-bottom:1px solid var(--border)}
+.dm{color:var(--dim)}
+.da{color:var(--side-a)}
+.db{color:var(--side-b)}
+.dd{font-weight:700}
+.dd.pos{color:var(--good)}
+.dd.neg{color:var(--warn)}
+.dd.neutral{color:var(--dim2)}
 
-  .violations-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .violation-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: rgba(255,102,68,0.12);
-    color: var(--warn);
-    border: 1px solid rgba(255,102,68,0.25);
-  }
-  .marker-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: rgba(204,68,255,0.12);
-    color: var(--edge-color);
-    border: 1px solid rgba(204,68,255,0.25);
-  }
-  .band-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-weight: 700;
-  }
-  .band-OPTIMAL, .band-CALM, .band-LOCKED, .band-LOW_COST, .band-STABLE { background: rgba(0,255,136,0.12); color: var(--accent); border: 1px solid rgba(0,255,136,0.25); }
-  .band-STABLE_struct, .band-CONSISTENT, .band-MODERATE_COST, .band-WATCH { background: rgba(255,204,0,0.12); color: var(--gold); border: 1px solid rgba(255,204,0,0.25); }
-  .band-PARTIAL, .band-TENSE, .band-DRIFTING, .band-HIGH_COST, .band-TENSION { background: rgba(255,136,68,0.12); color: var(--gov-color); border: 1px solid rgba(255,136,68,0.25); }
-  .band-UNSTABLE, .band-ELEVATED, .band-DESTABILIZING, .band-HEAVY_COST, .band-CRITICAL { background: rgba(255,102,68,0.12); color: var(--warn); border: 1px solid rgba(255,102,68,0.25); }
+/* ── AI DRAWER ── */
+.drawer{
+  flex-shrink:0;
+  background:var(--s1);border-top:2px solid var(--border2);
+  display:flex;flex-direction:column;
+  transition:height 0.25s cubic-bezier(0.4,0,0.2,1);
+  height:var(--drawer-h);overflow:hidden;
+  padding-bottom:var(--safe-bottom);
+}
+.drawer.open{height:340px}
+@media(min-width:768px){
+  .drawer.open{height:280px}
+}
 
-  .route-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-weight: 700;
-  }
-  .route-AI_OPTIMAL { background: rgba(0,255,136,0.12); color: var(--accent); }
-  .route-CLARIFICATION_REQUIRED { background: rgba(255,204,0,0.12); color: var(--gold); }
-  .route-HUMAN_RECOMMENDED { background: rgba(255,136,68,0.12); color: var(--gov-color); }
-  .route-HUMAN_REQUIRED { background: rgba(255,102,68,0.12); color: var(--warn); }
-  .route-AI_PATH { background: rgba(0,255,136,0.12); color: var(--accent); }
-  .route-HUMAN_INTERNAL { background: rgba(255,102,68,0.12); color: var(--warn); }
+.drawer-header{
+  height:var(--drawer-h);flex-shrink:0;
+  display:flex;align-items:center;gap:10px;
+  padding:0 14px;cursor:pointer;
+}
+.drawer-header:active{background:var(--s2)}
+.drawer-pip{width:6px;height:6px;border-radius:50%;background:var(--purple);box-shadow:0 0 5px var(--purple);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.drawer-label{font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:var(--text)}
+.drawer-sub{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+.drawer-chevron{margin-left:auto;font-size:10px;color:var(--dim2);transition:transform 0.25s}
+.drawer.open .drawer-chevron{transform:rotate(180deg)}
+.drawer-ask-btn{
+  margin-left:auto;background:var(--purple);color:#fff;border:none;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:10px;
+  padding:5px 12px;border-radius:3px;cursor:pointer;transition:all 0.1s;
+}
+.drawer-ask-btn:active{transform:scale(0.97)}
 
-  /* File upload area */
-  .file-drop {
-    border-top: 1px solid var(--border);
-    padding: 12px 24px;
-    background: var(--surface);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .file-drop label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    cursor: pointer;
-    padding: 6px 14px;
-    border: 1px dashed var(--border);
-    border-radius: 4px;
-    transition: all 0.15s;
-  }
-  .file-drop label:hover { border-color: var(--accent); color: var(--accent); }
-  .file-drop .file-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
+.drawer-body{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0 14px 10px;
+}
+.chat-messages{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:6px 0;display:flex;flex-direction:column;gap:8px;
+}
+.msg{font-size:11px;line-height:1.6;max-width:90%}
+.msg.user{align-self:flex-end;background:var(--s3);border:1px solid var(--border2);padding:6px 10px;border-radius:6px 6px 2px 6px;color:var(--text)}
+.msg.ai{align-self:flex-start;background:rgba(204,68,255,0.08);border:1px solid rgba(204,68,255,0.2);padding:6px 10px;border-radius:2px 6px 6px 6px;color:var(--text)}
+.msg.ai .msg-label{font-size:8px;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;font-weight:700}
+.msg.system{align-self:center;font-size:9px;color:var(--dim2);font-style:italic}
+.msg.thinking{align-self:flex-start;color:var(--dim);font-style:italic;font-size:10px}
 
-  /* Diff view */
-  .diff-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 8px;
-  }
-  .diff-col {
-    padding: 10px 14px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .diff-before {
-    background: rgba(255,102,68,0.06);
-    border-left: 3px solid var(--warn);
-    color: var(--text-dim);
-  }
-  .diff-after {
-    background: rgba(0,255,136,0.06);
-    border-left: 3px solid var(--accent);
-    color: var(--text);
-  }
-  .diff-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 6px;
-  }
-  .diff-label-before { color: var(--warn); }
-  .diff-label-after { color: var(--accent); }
+.chat-input-row{display:flex;gap:6px;margin-top:6px;flex-shrink:0}
+#chatInput{
+  flex:1;background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;
+  border-radius:4px;outline:none;
+}
+#chatInput:focus{border-color:var(--purple)}
+.chat-send{
+  background:var(--purple);color:#fff;border:none;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:11px;
+  padding:0 14px;border-radius:4px;cursor:pointer;transition:all 0.1s;white-space:nowrap;
+}
+.chat-send:active{transform:scale(0.97)}
+.chat-send:disabled{background:var(--s3);color:var(--dim);cursor:default;transform:none}
 
-  @media (max-width: 900px) {
-    .main { grid-template-columns: 1fr; }
-    .input-panel { border-right: none; border-bottom: 1px solid var(--border); }
-    .output-panel { max-height: none; }
-    .diff-container { grid-template-columns: 1fr; }
-  }
+/* quick ask buttons */
+.quick-asks{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.qa{
+  font-size:9px;color:var(--dim);background:var(--s2);border:1px solid var(--border);
+  padding:3px 8px;border-radius:2px;cursor:pointer;font-family:'JetBrains Mono',monospace;
+  transition:all 0.1s;white-space:nowrap;
+}
+.qa:active{color:var(--purple);border-color:var(--purple)}
+
+/* ── TOP TABS ── */
+.top-tabs{display:flex;background:var(--s1);border-bottom:2px solid var(--border2);flex-shrink:0;z-index:40}
+.top-tab{padding:10px 18px;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;
+  color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;
+  letter-spacing:0.5px;transition:all 0.15s;white-space:nowrap}
+.top-tab:active{background:var(--s2)}
+.top-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.top-tab.active-pipe{color:#ff8844;border-bottom-color:#ff8844}
+.top-tab.active-relay{color:var(--purple);border-bottom-color:var(--purple)}
+
+/* ── TAB PAGES ── */
+.tab-page{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.tab-page.active{display:flex}
+
+/* ── PIPELINE TRACE ── */
+.pipe-shell{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.pipe-input-bar{flex-shrink:0;background:var(--s1);border-bottom:2px solid var(--border2);padding:10px 14px}
+.pipe-input-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+#pipeText{flex:1;background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;
+  border-radius:4px;resize:none;height:64px;outline:none;line-height:1.5}
+#pipeText:focus{border-color:#ff8844}
+.pipe-run-btn{background:#ff8844;color:#07080a;font-family:'Syne',sans-serif;font-weight:800;
+  font-size:12px;padding:0 16px;height:64px;border:none;border-radius:4px;cursor:pointer;
+  min-width:64px;transition:all 0.15s}
+.pipe-run-btn:active{transform:scale(0.97)}
+.pipe-run-btn:disabled{background:var(--s3);color:var(--dim);cursor:default}
+.pipe-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pipe-ctrl-label{font-size:9px;color:var(--dim2);text-transform:uppercase;letter-spacing:1px}
+.pipe-ctrl-select{background:var(--s3);border:1px solid var(--border2);color:var(--dim);
+  font-size:9px;font-family:'JetBrains Mono',monospace;padding:3px 7px;border-radius:2px;outline:none}
+.pipe-ctrl-select:focus{border-color:#ff8844}
+.pipe-ctrl-input{background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  font-size:9px;font-family:'JetBrains Mono',monospace;padding:3px 7px;border-radius:2px;
+  outline:none;width:80px}
+.pipe-ctrl-input:focus{border-color:#ff8844}
+
+/* Pipeline stages */
+.pipe-stages{flex:1;overflow-x:auto;overflow-y:hidden;display:flex;gap:0;min-height:0;-webkit-overflow-scrolling:touch}
+.pipe-stage{min-width:280px;max-width:320px;flex-shrink:0;display:flex;flex-direction:column;
+  border-right:1px solid var(--border);overflow:hidden}
+.pipe-stage:last-child{border-right:none;flex:1;min-width:280px}
+@media(max-width:767px){.pipe-stage{min-width:260px}}
+.ps-header{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s2)}
+.ps-num{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;display:inline;margin-right:6px}
+.ps-name{font-size:9px;text-transform:uppercase;letter-spacing:2px;display:block;color:var(--dim);margin-top:1px}
+.ps-badge{font-size:8px;padding:2px 7px;border-radius:2px;font-weight:700;margin-left:6px;vertical-align:middle}
+.ps-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px}
+.ps-empty{color:var(--dim2);font-size:10px;padding:16px 0;text-align:center}
+
+/* Stage-specific colors */
+.stage-1 .ps-num{color:var(--text)}
+.stage-1 .ps-badge{background:rgba(216,220,232,0.1);color:var(--text);border:1px solid var(--border2)}
+.stage-2 .ps-num{color:#ff8844}
+.stage-2 .ps-badge{background:rgba(255,136,68,0.15);color:#ff8844;border:1px solid rgba(255,136,68,0.3)}
+.stage-3 .ps-num{color:var(--purple)}
+.stage-3 .ps-badge{background:rgba(204,68,255,0.15);color:var(--purple);border:1px solid rgba(204,68,255,0.3)}
+.stage-4 .ps-num{color:var(--info)}
+.stage-4 .ps-badge{background:rgba(59,158,255,0.15);color:var(--info);border:1px solid rgba(59,158,255,0.3)}
+.stage-5 .ps-num{color:var(--accent)}
+.stage-5 .ps-badge{background:rgba(0,232,156,0.12);color:var(--accent);border:1px solid rgba(0,232,156,0.25)}
+
+.pipe-arrow{display:flex;align-items:center;justify-content:center;width:24px;flex-shrink:0;
+  color:var(--dim2);font-size:14px;background:var(--bg)}
+
+/* diff chip inside pipeline */
+.pipe-diff{padding:4px 8px;border-radius:3px;font-size:9px;margin-top:4px;
+  background:rgba(255,136,68,0.1);color:#ff8844;border:1px solid rgba(255,136,68,0.2)}
+.pipe-diff.clean{background:rgba(0,232,156,0.1);color:var(--accent);border-color:rgba(0,232,156,0.2)}
+
+/* stage override fields */
+.stage-override{margin-top:10px;padding:8px;background:var(--s3);border:1px solid var(--border2);border-radius:3px}
+.so-label{font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+.so-textarea{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);
+  font-size:10px;font-family:'JetBrains Mono',monospace;padding:5px;border-radius:2px;
+  resize:none;height:48px;outline:none;line-height:1.4}
+.so-textarea:focus{border-color:#ff8844}
+.so-apply-btn{font-size:9px;color:#ff8844;background:transparent;border:1px solid rgba(255,136,68,0.3);
+  padding:3px 8px;border-radius:2px;cursor:pointer;margin-top:4px;font-family:'JetBrains Mono',monospace}
+.so-apply-btn:active{background:rgba(255,136,68,0.1)}
+
+/* violation tags */
+.viol{display:inline-block;padding:2px 7px;border-radius:2px;font-size:9px;font-weight:700;margin:1px}
+.viol-warn{background:rgba(255,85,51,0.15);color:var(--warn);border:1px solid rgba(255,85,51,0.3)}
+.viol-ok{background:rgba(0,232,156,0.1);color:var(--accent);border:1px solid rgba(0,232,156,0.2)}
+.viol-info{background:rgba(59,158,255,0.1);color:var(--info);border:1px solid rgba(59,158,255,0.2)}
+.viol-gold{background:rgba(240,180,41,0.1);color:var(--gold);border:1px solid rgba(240,180,41,0.25)}
+
+/* text diff highlight */
+.diff-added{background:rgba(0,232,156,0.15);border-radius:2px;padding:0 2px}
+.diff-removed{background:rgba(255,85,51,0.15);text-decoration:line-through;border-radius:2px;padding:0 2px;color:var(--warn)}
+.text-display{font-size:11px;line-height:1.7;color:var(--text);padding:8px;background:var(--s3);
+  border:1px solid var(--border);border-radius:3px;word-break:break-word;font-family:'JetBrains Mono',monospace;
+  min-height:60px;white-space:pre-wrap}
+
+/* ── RELAY INSPECTOR ── */
+.relay-shell{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.relay-input-bar{flex-shrink:0;background:var(--s1);border-bottom:2px solid var(--border2);padding:10px 14px}
+.relay-input-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+#relayText{flex:1;background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;
+  border-radius:4px;resize:none;height:64px;outline:none;line-height:1.5}
+#relayText:focus{border-color:var(--purple)}
+.relay-run-btn{background:var(--purple);color:#fff;font-family:'Syne',sans-serif;font-weight:800;
+  font-size:12px;padding:0 16px;height:64px;border:none;border-radius:4px;cursor:pointer;
+  min-width:64px;transition:all 0.15s}
+.relay-run-btn:active{transform:scale(0.97)}
+.relay-run-btn:disabled{background:var(--s3);color:var(--dim);cursor:default}
+.relay-opts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.relay-opt-label{font-size:9px;color:var(--dim2);text-transform:uppercase;letter-spacing:1px}
+.relay-opt-select{background:var(--s3);border:1px solid var(--border2);color:var(--dim);
+  font-size:9px;font-family:'JetBrains Mono',monospace;padding:3px 7px;border-radius:2px;outline:none}
+.relay-opt-select:focus{border-color:var(--purple)}
+
+/* Relay columns */
+.relay-cols{flex:1;overflow-x:auto;overflow-y:hidden;display:flex;gap:0;min-height:0;-webkit-overflow-scrolling:touch}
+.relay-col{min-width:320px;flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+.relay-col:last-child{border-right:none}
+@media(max-width:767px){.relay-col{min-width:280px}}
+.rc-header{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s2);
+  display:flex;align-items:center;gap:8px}
+.rc-title{font-family:'Syne',sans-serif;font-weight:800;font-size:12px}
+.rc-badge{font-size:8px;padding:2px 7px;border-radius:2px;font-weight:700}
+.rc-tools{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.rc-tool-chip{font-size:8px;padding:2px 6px;border-radius:2px;cursor:pointer;
+  border:1px solid var(--border);color:var(--dim);background:var(--s3);font-family:'JetBrains Mono',monospace;
+  transition:all 0.1s;white-space:nowrap}
+.rc-tool-chip.on{border-color:var(--purple);color:var(--purple);background:rgba(204,68,255,0.08)}
+.rc-tool-chip:active{transform:scale(0.97)}
+.rc-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0}
+
+/* JSON viewer */
+.json-panel{padding:10px 14px}
+.json-tree{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;
+  background:var(--s3);border:1px solid var(--border);border-radius:3px;padding:10px;
+  overflow-x:auto;color:var(--dim);white-space:pre-wrap;word-break:break-all;
+  max-height:100%;min-height:80px}
+.json-key{color:var(--info)}
+.json-str{color:var(--accent)}
+.json-num{color:#ff8844}
+.json-bool{color:var(--gold)}
+.json-null{color:var(--dim2)}
+.json-toolbar{display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap}
+.json-copy-btn{font-size:9px;color:var(--dim);background:transparent;border:1px solid var(--border);
+  padding:2px 8px;border-radius:2px;cursor:pointer;font-family:'JetBrains Mono',monospace}
+.json-copy-btn:active{color:var(--text);border-color:var(--border2)}
+.json-filter-input{background:var(--s3);border:1px solid var(--border2);color:var(--text);
+  font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:2px;
+  outline:none;width:120px}
+.json-filter-input:focus{border-color:var(--purple)}
+.rc-meta{padding:6px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;background:var(--s1)}
+.rc-meta-item{font-size:9px;color:var(--dim);display:flex;gap:4px}
+.rc-meta-val{color:var(--text)}
+.relay-empty{padding:30px;text-align:center;color:var(--dim2);font-size:10px;line-height:2}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="logo">0</div>
-  <div class="subtitle">Engine Bench</div>
-  <div class="tag">DETERMINISTIC · NO LLM · ALL ENGINES</div>
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">AZ <span>/</span> BENCH</div>
+  <div class="tag">DEV</div>
+  <div class="topbar-url">
+    <div class="conn-dot" id="connDot"></div>
+    <input id="baseUrl" value="http://localhost:10000" placeholder="https://server">
+  </div>
 </div>
 
+<!-- TAB NAV -->
+<div class="top-tabs">
+  <div class="top-tab active" id="topTabBench" onclick="switchTopTab('bench')">A/B BENCH</div>
+  <div class="top-tab" id="topTabPipe" onclick="switchTopTab('pipe')">PIPELINE TRACE</div>
+  <div class="top-tab" id="topTabRelay" onclick="switchTopTab('relay')">RELAY INSPECTOR</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB: BENCH                                                 -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="tab-page active" id="pageBench">
+
+<!-- INPUT BAR -->
+<div class="inputbar">
+  <div class="input-row">
+    <textarea id="sharedText" placeholder="Paste text here — same input hits both sides..."></textarea>
+    <button class="run-btn" id="runBtn" onclick="runAll()">RUN</button>
+  </div>
+  <div class="samples-row">
+    <button class="sb" onclick="loadSample('clean')">Clean</button>
+    <button class="sb" onclick="loadSample('drift')">Drift</button>
+    <button class="sb" onclick="loadSample('dce')">DCE</button>
+    <button class="sb" onclick="loadSample('udds')">UDDS</button>
+    <button class="sb" onclick="loadSample('cca')">CCA</button>
+    <button class="sb" onclick="loadSample('strong')">Strong</button>
+  </div>
+</div>
+
+<!-- MOBILE TABS -->
+<div class="col-tabs" id="colTabs">
+  <div class="col-tab active-a" id="tabA" onclick="switchMobileTab('A')">SIDE A</div>
+  <div class="col-tab" id="tabB" onclick="switchMobileTab('B')">SIDE B</div>
+</div>
+
+<!-- MAIN -->
 <div class="main">
-  <!-- LEFT -->
-  <div class="input-panel">
-    <div class="panel-header" style="display:flex;align-items:center;gap:0">
-      <span class="tab active" data-tab="single" onclick="switchTab('single',this)" style="padding:16px 20px;cursor:pointer;border-bottom:2px solid var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:2px">Single</span>
-      <span class="tab" data-tab="batch" onclick="switchTab('batch',this)" style="padding:16px 20px;cursor:pointer;border-bottom:2px solid transparent;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px">Batch</span>
-      <span class="tab" data-tab="compare" onclick="switchTab('compare',this)" style="padding:16px 20px;cursor:pointer;border-bottom:2px solid transparent;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px">Compare</span>
+  <!-- COL A -->
+  <div class="col col-a" id="colA">
+    <div class="col-header">
+      <div class="col-label">A</div>
+      <div class="col-desc">Configure tools for side A</div>
     </div>
-    <div class="input-area" id="singleInput">
-      <textarea id="inputText" placeholder="Paste any text here — email, contract, speech, document, AI output, human message, anything. Then pick your engines and run."></textarea>
-    </div>
-    <div class="input-area" id="batchInput" style="display:none">
-      <textarea id="batchText" style="flex:1;min-height:300px;background:var(--surface);color:var(--text);border:none;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;resize:none;outline:none" placeholder="Paste multiple texts separated by ---&#10;&#10;First email text here...&#10;---&#10;Second email text here...&#10;---&#10;Third text here..."></textarea>
-    </div>
-    <div class="input-area" id="compareInput" style="display:none;flex-direction:row">
-      <textarea id="compareA" style="flex:1;min-height:300px;background:var(--surface);color:var(--text);border:none;border-right:1px solid var(--border);padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;resize:none;outline:none" placeholder="Document A — paste first version here"></textarea>
-      <textarea id="compareB" style="flex:1;min-height:300px;background:var(--surface);color:var(--text);border:none;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;resize:none;outline:none" placeholder="Document B — paste second version here"></textarea>
-    </div>
-
-    <div class="file-drop">
-      <label for="fileInput">📎 Upload .txt file</label>
-      <input type="file" id="fileInput" accept=".txt,.md,.csv" style="display:none">
-      <span class="file-name" id="fileName"></span>
-    </div>
-
-    <div class="objective-row">
-      <label>Objective (optional)</label>
-      <input type="text" id="objectiveText" placeholder="e.g. Summarize billing dispute for legal review">
-    </div>
-
-    <div class="engine-rack">
-      <div class="rack-label">Engine Rack — Select What Runs</div>
-      <div class="rack-grid">
-        <div class="engine-toggle active" data-engine="v2" onclick="toggleEngine(this)">
-          <div class="dot" style="--c:var(--v2-color)"></div>
-          <div class="name">V2 Audit</div>
-        </div>
-        <div class="engine-toggle active" data-engine="v3" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">V3 Stabilize</div>
-        </div>
-        <div class="engine-toggle active" data-engine="edge" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">Relational Field</div>
-        </div>
-        <div class="engine-toggle active" data-engine="econ" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">Economic</div>
-        </div>
-        <div class="engine-toggle active" data-engine="band" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">Banding</div>
-        </div>
-        <div class="engine-toggle active" data-engine="gov" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">Invocation Gov</div>
-        </div>
-        <div class="engine-toggle active" data-engine="obs" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">Observability</div>
-        </div>
-        <div class="engine-toggle" data-engine="convergence" onclick="toggleEngine(this)">
-          <div class="dot"></div>
-          <div class="name">Full Pipeline</div>
-        </div>
-      </div>
-      <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px">Industry</span>
-        <select id="industrySelect" onchange="activeIndustry=this.value" style="background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;border-radius:4px;outline:none;cursor:pointer">
-          <option value="all">All Industries</option>
-          <option value="healthcare">Healthcare</option>
-          <option value="legal">Legal</option>
-          <option value="insurance">Insurance</option>
-          <option value="real_estate">Real Estate</option>
-          <option value="financial">Financial Services</option>
-          <option value="government">Government</option>
-        </select>
+    <div class="tool-rack">
+      <div class="rack-label">Active Tools — tap to toggle</div>
+      <div class="tools-grid" id="toolsA"></div>
+      <div class="friction-opts" id="frictionOptsA">
+        <label>Friction:</label>
+        <label>dir</label><select id="frictionDirA"><option value="analyze">analyze</option><option value="v2">v2</option><option value="v3">v3</option></select>
+        <label>mode</label><select id="frictionModeA"><option value="OBSERVE">OBSERVE</option><option value="ENFORCE">ENFORCE</option><option value="REPORT">REPORT</option></select>
       </div>
     </div>
-
-    <div class="presets">
-      <div class="preset-btn" onclick="setPreset('v2only')">V2 Only</div>
-      <div class="preset-btn" onclick="setPreset('v3only')">V3 Only</div>
-      <div class="preset-btn" onclick="setPreset('audit')">Audit (V2 + Edge + Gov)</div>
-      <div class="preset-btn" onclick="setPreset('stabilize')">Stabilize (V3 + Econ + Band)</div>
-      <div class="preset-btn" onclick="setPreset('all')">All Engines</div>
-      <div class="preset-btn" onclick="setPreset('pipeline')">Full Pipeline</div>
-    </div>
-
-    <div class="run-bar">
-      <button id="runBtn" onclick="runEngines()">Run Engines</button>
-      <button id="clearBtn" onclick="clearAll()">Clear</button>
-      <div class="word-count" id="wordCount">0 words · 0 tokens (est)</div>
+    <div class="output-panel" id="outputA">
+      <div class="output-empty"><div class="big">A</div>Select tools · enter text · RUN</div>
     </div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="output-panel" id="outputPanel">
-    <div class="panel-header">Output</div>
-    <div class="output-empty" id="outputEmpty">Select engines. Paste text. Run.</div>
+  <!-- COL B -->
+  <div class="col col-b hidden-mobile" id="colB">
+    <div class="col-header">
+      <div class="col-label">B</div>
+      <div class="col-desc">Configure tools for side B</div>
+    </div>
+    <div class="tool-rack">
+      <div class="rack-label">Active Tools — tap to toggle</div>
+      <div class="tools-grid" id="toolsB"></div>
+      <div class="friction-opts" id="frictionOptsB">
+        <label>Friction:</label>
+        <label>dir</label><select id="frictionDirB"><option value="analyze">analyze</option><option value="v2">v2</option><option value="v3">v3</option></select>
+        <label>mode</label><select id="frictionModeB"><option value="OBSERVE">OBSERVE</option><option value="ENFORCE">ENFORCE</option><option value="REPORT">REPORT</option></select>
+      </div>
+    </div>
+    <div class="output-panel" id="outputB">
+      <div class="output-empty"><div class="big">B</div>Select tools · enter text · RUN</div>
+    </div>
+  </div>
+</div>
+
+<!-- DIFF BAR -->
+<div class="diff-bar" id="diffBar">
+  <div class="diff-title">A vs B</div>
+  <table class="diff-table">
+    <thead><tr>
+      <th>Metric</th>
+      <th style="color:var(--side-a)">A</th>
+      <th style="color:var(--side-b)">B</th>
+      <th>Delta</th>
+    </tr></thead>
+    <tbody id="diffBody"></tbody>
+  </table>
+</div>
+
+</div><!-- /pageBench -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB: PIPELINE TRACE                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="tab-page" id="pagePipe">
+<div class="pipe-shell">
+
+  <!-- Pipeline input -->
+  <div class="pipe-input-bar">
+    <div class="pipe-input-row">
+      <textarea id="pipeText" placeholder="Enter text to trace through the full V2 → AI → V3 pipeline..."></textarea>
+      <button class="pipe-run-btn" id="pipeRunBtn" onclick="runPipeline()">TRACE</button>
+    </div>
+    <div class="pipe-controls">
+      <span class="pipe-ctrl-label">V2 Threshold</span>
+      <input class="pipe-ctrl-input" id="pipeThreshold" type="number" value="0.80" min="0" max="1" step="0.05">
+      <span class="pipe-ctrl-label">V3 Max Tokens</span>
+      <input class="pipe-ctrl-input" id="pipeMaxTokens" type="number" value="400" min="50" max="2000" step="50">
+      <span class="pipe-ctrl-label">Objective Anchor</span>
+      <input class="pipe-ctrl-input" id="pipeObjective" type="text" placeholder="optional" style="width:140px">
+      <span class="pipe-ctrl-label">Friction Mode</span>
+      <select class="pipe-ctrl-select" id="pipeFrictionMode">
+        <option value="OBSERVE">OBSERVE</option><option value="ENFORCE">ENFORCE</option><option value="REPORT">REPORT</option>
+      </select>
+      <span class="pipe-ctrl-label">Samples:</span>
+      <button class="sb" onclick="loadPipeSample('clean')">Clean</button>
+      <button class="sb" onclick="loadPipeSample('drift')">Drift</button>
+      <button class="sb" onclick="loadPipeSample('dce')">DCE</button>
+      <button class="sb" onclick="loadPipeSample('strong')">Strong</button>
+    </div>
+  </div>
+
+  <!-- 5 pipeline stages -->
+  <div class="pipe-stages" id="pipeStages">
+
+    <!-- Stage 1: Raw Input -->
+    <div class="pipe-stage stage-1" id="pstage1">
+      <div class="ps-header">
+        <span class="ps-num">1</span><span class="ps-badge">INPUT</span>
+        <div class="ps-name">Raw User Input</div>
+      </div>
+      <div class="ps-body" id="psbody1">
+        <div class="ps-empty">Enter text above and hit TRACE</div>
+      </div>
+    </div>
+
+    <!-- Stage 2: V2 Engine -->
+    <div class="pipe-stage stage-2" id="pstage2">
+      <div class="ps-header">
+        <span class="ps-num">2</span><span class="ps-badge">V2</span>
+        <div class="ps-name">V2 Engine — Audit + Structure</div>
+      </div>
+      <div class="ps-body" id="psbody2">
+        <div class="ps-empty">—</div>
+      </div>
+    </div>
+
+    <!-- Stage 3: What AI Sees -->
+    <div class="pipe-stage stage-3" id="pstage3">
+      <div class="ps-header">
+        <span class="ps-num">3</span><span class="ps-badge">AI INPUT</span>
+        <div class="ps-name">What the AI Receives</div>
+      </div>
+      <div class="ps-body" id="psbody3">
+        <div class="ps-empty">—</div>
+      </div>
+    </div>
+
+    <!-- Stage 4: V3 Engine -->
+    <div class="pipe-stage stage-4" id="pstage4">
+      <div class="ps-header">
+        <span class="ps-num">4</span><span class="ps-badge">V3</span>
+        <div class="ps-name">V3 Engine — Stabilization</div>
+      </div>
+      <div class="ps-body" id="psbody4">
+        <div class="ps-empty">—</div>
+      </div>
+    </div>
+
+    <!-- Stage 5: Delivered Output -->
+    <div class="pipe-stage stage-5" id="pstage5">
+      <div class="ps-header">
+        <span class="ps-num">5</span><span class="ps-badge">OUTPUT</span>
+        <div class="ps-name">Delivered to User</div>
+      </div>
+      <div class="ps-body" id="psbody5">
+        <div class="ps-empty">—</div>
+      </div>
+    </div>
+
+  </div><!-- /pipe-stages -->
+</div>
+</div><!-- /pagePipe -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB: RELAY INSPECTOR                                       -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="tab-page" id="pageRelay">
+<div class="relay-shell">
+
+  <div class="relay-input-bar">
+    <div class="relay-input-row">
+      <textarea id="relayText" placeholder="Enter text to inspect the full relay JSON — what goes to the AI, what comes back, what each layer sees..."></textarea>
+      <button class="relay-run-btn" id="relayRunBtn" onclick="runRelay()">INSPECT</button>
+    </div>
+    <div class="relay-opts">
+      <span class="relay-opt-label">Endpoint</span>
+      <select class="relay-opt-select" id="relayEndpoint">
+        <option value="/nti">/nti — full pipeline</option>
+        <option value="/nti-full">/nti-full — axis1+2</option>
+        <option value="/nti-friction">/nti-friction — friction only</option>
+        <option value="/api/v1/score/free">/score/free — public</option>
+        <option value="/operator/score">/operator/score — proxy</option>
+      </select>
+      <span class="relay-opt-label">Format</span>
+      <select class="relay-opt-select" id="relayFormat">
+        <option value="pretty">Pretty JSON</option>
+        <option value="compact">Compact</option>
+        <option value="tree">Tree</option>
+      </select>
+      <span class="relay-opt-label">Samples:</span>
+      <button class="sb" onclick="loadRelaySample('clean')">Clean</button>
+      <button class="sb" onclick="loadRelaySample('drift')">Drift</button>
+      <button class="sb" onclick="loadRelaySample('dce')">DCE</button>
+      <button class="sb" onclick="loadRelaySample('strong')">Strong</button>
+    </div>
+  </div>
+
+  <div class="relay-cols" id="relayCols">
+
+    <!-- Col 1: Outbound Payload -->
+    <div class="relay-col" id="rcol1">
+      <div class="rc-header">
+        <div>
+          <div class="rc-title" style="color:#ff8844">→ OUTBOUND</div>
+        </div>
+        <span class="rc-badge" style="background:rgba(255,136,68,0.15);color:#ff8844;border:1px solid rgba(255,136,68,0.3)">REQUEST</span>
+      </div>
+      <div class="rc-meta" id="rcMeta1"></div>
+      <div class="rc-body">
+        <div class="json-panel">
+          <div class="json-toolbar">
+            <button class="json-copy-btn" onclick="copyJSON('rcJSON1')">copy</button>
+            <input class="json-filter-input" id="rcFilter1" placeholder="filter keys..." oninput="filterJSON('rcJSON1','rcFilter1')">
+          </div>
+          <pre class="json-tree" id="rcJSON1"><span style="color:var(--dim2)">Run an inspection to see the outbound payload sent to the endpoint.</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 2: Inbound Response -->
+    <div class="relay-col" id="rcol2">
+      <div class="rc-header">
+        <div>
+          <div class="rc-title" style="color:var(--accent)">← INBOUND</div>
+        </div>
+        <span class="rc-badge" style="background:rgba(0,232,156,0.1);color:var(--accent);border:1px solid rgba(0,232,156,0.2)">RESPONSE</span>
+        <div class="rc-tools" id="rcTools2">
+          <span class="rc-tool-chip on" onclick="toggleRelayTool(this,'v2')">V2</span>
+          <span class="rc-tool-chip on" onclick="toggleRelayTool(this,'v3')">V3</span>
+          <span class="rc-tool-chip on" onclick="toggleRelayTool(this,'nii')">NII</span>
+          <span class="rc-tool-chip" onclick="toggleRelayTool(this,'layers')">Layers</span>
+          <span class="rc-tool-chip" onclick="toggleRelayTool(this,'fm')">FM</span>
+        </div>
+      </div>
+      <div class="rc-meta" id="rcMeta2"></div>
+      <div class="rc-body">
+        <div class="json-panel">
+          <div class="json-toolbar">
+            <button class="json-copy-btn" onclick="copyJSON('rcJSON2')">copy</button>
+            <input class="json-filter-input" id="rcFilter2" placeholder="filter keys..." oninput="filterJSON('rcJSON2','rcFilter2')">
+          </div>
+          <pre class="json-tree" id="rcJSON2"><span style="color:var(--dim2)">Response will appear here after inspection.</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 3: Extracted Signals -->
+    <div class="relay-col" id="rcol3">
+      <div class="rc-header">
+        <div>
+          <div class="rc-title" style="color:var(--purple)">⊕ EXTRACTED</div>
+        </div>
+        <span class="rc-badge" style="background:rgba(204,68,255,0.1);color:var(--purple);border:1px solid rgba(204,68,255,0.2)">ANALYSIS</span>
+      </div>
+      <div class="rc-meta" id="rcMeta3"></div>
+      <div class="rc-body">
+        <div class="json-panel" id="rcExtracted">
+          <div class="relay-empty">Extracted signals, NII breakdown, failure modes, tilt, and layer analysis will appear here after inspection.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /relay-cols -->
+</div>
+</div><!-- /pageRelay -->
+
+<!-- AI DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header" onclick="toggleDrawer()">
+    <div class="drawer-pip"></div>
+    <div>
+      <div class="drawer-label">AI Assistant</div>
+    </div>
+    <div class="drawer-sub" id="drawerSub">tap to open</div>
+    <div class="drawer-chevron">▲</div>
+  </div>
+  <div class="drawer-body">
+    <div class="quick-asks" id="quickAsks">
+      <button class="qa" onclick="quickAsk('analyze')">Analyze results</button>
+      <button class="qa" onclick="quickAsk('compare')">Compare A vs B</button>
+      <button class="qa" onclick="quickAsk('why')">Why did A score that?</button>
+      <button class="qa" onclick="quickAsk('improve')">How to improve the score?</button>
+      <button class="qa" onclick="quickAsk('friction')">What friction is showing?</button>
+      <button class="qa" onclick="quickAsk('conclude')">Give me a conclusion</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg system">Run a test, then ask the assistant for analysis, conclusions, or feedback.</div>
+    </div>
+    <div class="chat-input-row">
+      <input id="chatInput" placeholder="Ask about the results..." onkeydown="if(e&&e.key==='Enter')sendChat()">
+      <button class="chat-send" id="chatSend" onclick="sendChat()">ASK</button>
+    </div>
   </div>
 </div>
 
 <script>
-// ==========================================
-// NTI ENGINES — PURE JS PORT (DETERMINISTIC)
-// EXPANDED PATTERN LIBRARIES — PRODUCTION GRADE
-// ==========================================
-
-// --- Shared ---
-function normalize(text) {
-  return (text || '').trim().replace(/\s+/g, ' ');
-}
-function approxTokens(text) {
-  return Math.max(0, Math.round((text || '').length / 4));
-}
-
-// --- V2 ENGINE (EXPANDED) ---
-const HEDGE_WORDS = [
-  // Original 5
-  'maybe', 'likely', 'possibly', 'kind of', 'sort of',
-  // Uncertainty hedges
-  'perhaps', 'might', 'could be', 'i think', 'i believe', 'i guess',
-  'i suppose', 'it seems', 'it appears', 'arguably', 'potentially',
-  'presumably', 'probably', 'conceivably', 'apparently', 'allegedly',
-  // Softeners
-  'just', 'a little', 'a bit', 'somewhat', 'fairly', 'rather',
-  'more or less', 'in a way', 'to some extent', 'to a degree',
-  // Qualifiers
-  'tend to', 'in general', 'for the most part', 'as far as i know',
-  'from my understanding', 'if i recall correctly', 'not entirely sure',
-  'i could be wrong', 'don\'t quote me', 'take this with a grain of salt',
-  // Passive deflection
-  'it would seem', 'one might argue', 'some would say', 'it\'s been said',
-  'there\'s a chance', 'it\'s possible that', 'it\'s not impossible',
-  // Commitment avoidance
-  'we\'ll see', 'time will tell', 'remains to be seen', 'hard to say',
-  'depends on', 'it depends', 'that\'s debatable', 'up in the air'
+// ── TOOLS ──
+const TOOLS = [
+  // ── Core NTI scoring ──
+  {id:'nti',        label:'/nti',            endpoint:'/nti',                    color:'var(--accent)', desc:'Full NTI pipeline (NII, layers, failure modes, axis2_compiler, axis3_clarity, V3)'},
+  {id:'free',       label:'/score/free',     endpoint:'/api/v1/score/free',      color:'var(--orange)', desc:'Free-tier public scoring'},
+  {id:'full',       label:'/nti-full',       endpoint:'/nti-full',               color:'var(--purple)', desc:'Full integration — Axis 1 + Axis 2 + loop + consolidation'},
+  {id:'corporate',  label:'/score/corp',     endpoint:'/api/v1/score/corporate', color:'#88dd44',       desc:'Corporate/Fortune 500 scoring endpoint'},
+  // ── Axis 2 friction ──
+  {id:'friction',   label:'/nti-friction',   endpoint:'/nti-friction',           color:'var(--info)',   desc:'Axis 2 friction analysis — direction/mode configurable below'},
+  // ── Safecheck ──
+  {id:'safecheck',  label:'/safecheck',      endpoint:'/safecheck',              color:'var(--gold)',   desc:'Observation cards (requires /nti on same side)'},
+  // ── Operator proxy ──
+  {id:'opscore',    label:'/op/score',       endpoint:'/operator/score',         color:'#44ffcc',       desc:'Operator room NTI proxy — server-auth path'},
+  // ── Deep analysis ──
+  {id:'signals',    label:'/signals',        endpoint:'/signals',                color:'#44aaff',       desc:'NTI signal detection — standalone taxonomy scan'},
+  {id:'loop',       label:'/loop',           endpoint:'/loop',                   color:'#ff44aa',       desc:'Loop engine — detects recursive drift patterns'},
+  {id:'convergence',label:'/convergence',    endpoint:'/convergence',            color:'#ffaa44',       desc:'Convergence gate — structural stability check'},
+  {id:'confusion',  label:'/confusion',      endpoint:'/confusion',              color:'#aa44ff',       desc:'Confusion layer — semantic contradiction detection'},
+  {id:'v3audit',    label:'/v3/audit',       endpoint:'/v3/audit',               color:'#ff6644',       desc:'V3 self-audit — enforcement preflight check'},
 ];
 
-// Severity weights for hedge words (higher = worse)
-const HEDGE_SEVERITY = {
-  'maybe': 0.04, 'likely': 0.03, 'possibly': 0.04, 'kind of': 0.05, 'sort of': 0.05,
-  'perhaps': 0.04, 'might': 0.03, 'could be': 0.04, 'i think': 0.05, 'i believe': 0.04,
-  'i guess': 0.06, 'i suppose': 0.05, 'it seems': 0.04, 'it appears': 0.03,
-  'arguably': 0.03, 'potentially': 0.03, 'presumably': 0.04, 'probably': 0.03,
-  'conceivably': 0.04, 'apparently': 0.03, 'allegedly': 0.05,
-  'just': 0.02, 'a little': 0.03, 'a bit': 0.03, 'somewhat': 0.03, 'fairly': 0.02,
-  'rather': 0.02, 'more or less': 0.04, 'in a way': 0.04, 'to some extent': 0.04,
-  'to a degree': 0.03, 'tend to': 0.03, 'in general': 0.02,
-  'for the most part': 0.04, 'as far as i know': 0.05,
-  'from my understanding': 0.05, 'if i recall correctly': 0.05,
-  'not entirely sure': 0.07, 'i could be wrong': 0.07,
-  'don\'t quote me': 0.06, 'take this with a grain of salt': 0.06,
-  'it would seem': 0.05, 'one might argue': 0.04, 'some would say': 0.04,
-  'it\'s been said': 0.04, 'there\'s a chance': 0.05, 'it\'s possible that': 0.05,
-  'it\'s not impossible': 0.06, 'we\'ll see': 0.05, 'time will tell': 0.05,
-  'remains to be seen': 0.05, 'hard to say': 0.06, 'depends on': 0.04,
-  'it depends': 0.05, 'that\'s debatable': 0.04, 'up in the air': 0.06
+const SAMPLES = {
+  clean:  "The report must be submitted by Friday 5pm EST. No extensions. Owner: Sarah Chen. Scope: Q1 financials only.",
+  drift:  "Maybe we could potentially look into possibly addressing this concern at some point down the road when things settle down.",
+  dce:    "We'll figure out the deployment strategy later. Just ship it. Phase 2 will handle security. We can revisit auth after launch.",
+  udds:   "We can build the entire platform. Just deploy it all. Don't worry, we'll handle edge cases eventually. It'll be fine.",
+  cca:    "Overall basically everything is good. At the end of the day it all comes down to one thing. Net net we're aligned.",
+  strong: "Constraint: Budget locked at $50k. No scope changes after sign-off. Deadline: March 15 — hard stop. Decision authority: CTO only."
 };
 
-const ACTION_VERBS = [
-  // Original 15
-  'create','analyze','explain','summarize','define','build','calculate','design',
-  'review','draft','write','generate','compare','audit','test',
-  // Expanded action set
-  'fix','update','remove','add','install','configure','deploy','migrate',
-  'implement','refactor','debug','validate','verify','confirm','approve',
-  'reject','send','submit','execute','run','launch','schedule','assign',
-  'delegate','escalate','resolve','close','complete','finalize','sign',
-  'file','report','document','measure','assess','evaluate','diagnose',
-  'prescribe','recommend','negotiate','settle','invoice','bill','collect',
-  'transfer','process','convert','extract','import','export','merge',
-  'split','archive','delete','restore','encrypt','decrypt','authorize',
-  'revoke','list','rank','prioritize','outline','map','trace','monitor',
-  'scan','inspect','investigate','research','compile','synthesize','translate',
-  'transcribe','proofread','edit','rewrite','publish','distribute','notify'
-];
+const stateA = new Set(['nti']);
+const stateB = new Set(['nti','friction']);
+let resultsA = {}, resultsB = {};
+let drawerOpen = false;
+let mobileTab = 'A';
+let chatHistory = [];
 
-const DEFERRED_PHRASES = [
-  // Original 6
-  "we'll fix later", "we will fix later", "for now just", "adjust after",
-  "fix later", "later we can",
-  // Expanded deferral patterns
-  "we can revisit", "circle back", "table that for now", "tbd",
-  "to be determined", "let's park that", "put a pin in", "come back to this",
-  "deal with that later", "worry about that later", "not a priority right now",
-  "we'll get to it", "we will get to it", "down the road", "at some point",
-  "eventually", "when we have time", "in a future phase", "phase 2",
-  "phase two", "next sprint", "next quarter", "backlog it", "add to backlog",
-  "not now", "later", "soon", "we'll figure it out", "we will figure it out",
-  "can wait", "low priority for now", "revisit next week", "follow up later",
-  "pending further review", "subject to change", "placeholder for now",
-  "temporary fix", "temp fix", "stopgap", "band-aid", "workaround for now",
-  "good enough for now", "ship it and fix later"
-];
-
-const CONFLICT_PAIRS = [
-  // Original 3
-  ['always','never'], ['short','detailed'], ['minimal','expand'],
-  // Expanded conflict pairs
-  ['simple','complex'], ['fast','thorough'], ['cheap','premium'],
-  ['formal','casual'], ['public','private'], ['urgent','no rush'],
-  ['mandatory','optional'], ['strict','flexible'], ['all','none'],
-  ['include','exclude'], ['approve','reject'], ['start','stop'],
-  ['increase','decrease'], ['before','after'], ['internal','external'],
-  ['conservative','aggressive'], ['automated','manual'],
-  ['centralized','distributed'], ['transparent','confidential'],
-  ['permanent','temporary'], ['required','voluntary'],
-  ['fixed','variable'], ['standard','custom']
-];
-
-const ROUTING_KEYWORDS = [
-  // Original 5
-  'budget approval', 'manager', 'finance', 'legal', 'approval',
-  // Expanded routing triggers
-  'hr department', 'human resources', 'compliance', 'regulatory',
-  'board approval', 'executive sign-off', 'sign off', 'signoff',
-  'supervisor', 'director', 'vp approval', 'c-suite', 'ceo',
-  'cfo', 'cto', 'coo', 'general counsel', 'outside counsel',
-  'insurance carrier', 'underwriter', 'claims adjuster',
-  'physician', 'doctor', 'prescriber', 'pharmacist',
-  'notary', 'witness required', 'countersignature',
-  'two-party consent', 'dual authorization', 'escalate to',
-  'needs authorization', 'requires approval', 'pending review',
-  'committee review', 'board review'
-];
-
-// Industry-specific routing keywords
-const INDUSTRY_ROUTING = {
-  healthcare: ['hipaa', 'phi', 'protected health', 'patient consent', 'medical records',
-    'prior authorization', 'formulary', 'clinical trial', 'irb', 'informed consent',
-    'discharge planning', 'case manager', 'utilization review', 'peer review',
-    'credentialing', 'privileges', 'malpractice', 'adverse event', 'sentinel event'],
-  legal: ['attorney-client', 'privileged', 'work product', 'discovery', 'deposition',
-    'subpoena', 'motion to', 'filing deadline', 'statute of limitations', 'jurisdiction',
-    'venue', 'arbitration', 'mediation', 'settlement authority', 'retainer',
-    'conflict check', 'engagement letter', 'disqualification', 'recusal'],
-  insurance: ['policy limit', 'coverage determination', 'exclusion', 'endorsement',
-    'binder', 'declarations page', 'loss run', 'actuarial', 'reinsurance',
-    'subrogation', 'bad faith', 'reservation of rights', 'excess carrier',
-    'surplus lines', 'admitted carrier', 'naic', 'rate filing'],
-  real_estate: ['title search', 'title insurance', 'escrow', 'closing disclosure',
-    'earnest money', 'contingency', 'inspection period', 'appraisal',
-    'clear to close', 'deed of trust', 'lien', 'encumbrance', 'easement',
-    'zoning', 'survey', 'hoa', 'special assessment', 'transfer tax'],
-  financial: ['fiduciary', 'accredited investor', 'securities', 'sec filing',
-    'material nonpublic', 'insider trading', 'kyc', 'aml', 'anti-money laundering',
-    'beneficial owner', 'qualified purchaser', 'reg d', 'private placement',
-    'prospectus', 'offering memorandum', 'term sheet', 'cap table'],
-  government: ['foia', 'freedom of information', 'public records', 'open meetings',
-    'sunshine law', 'procurement', 'rfp', 'sole source', 'prevailing wage',
-    'davis-bacon', 'ada compliance', 'eeoc', 'title ix', 'ferpa', 'section 508']
-};
-
-// Active industry config (user can switch)
-let activeIndustry = 'all';
-
-function runV2(text, threshold=0.80) {
-  const norm = normalize(text);
-  const lower = norm.toLowerCase();
-  let score = 1.0;
-  const violations = [];
-  const violationDetails = [];
-
-  // 1) Hedge words — severity weighted
-  const hedgeHits = HEDGE_WORDS.filter(w => lower.includes(w));
-  if (hedgeHits.length) {
-    let totalSeverity = 0;
-    for (const h of hedgeHits) {
-      const sev = HEDGE_SEVERITY[h] || 0.04;
-      totalSeverity += sev;
-      violationDetails.push({ type: 'HEDGE_WORD', trigger: h, severity: sev });
-    }
-    score -= Math.min(0.40, totalSeverity); // cap hedge penalty at 0.40
-    violations.push('HEDGE_WORD');
-  }
-
-  // 2) Missing objective (no action verb) — severity 0.10
-  if (!ACTION_VERBS.some(v => lower.includes(v))) {
-    score -= 0.10;
-    violations.push('MISSING_OBJECTIVE');
-    violationDetails.push({ type: 'MISSING_OBJECTIVE', trigger: 'no action verb detected', severity: 0.10 });
-  }
-
-  // 3) Conflicting directives — severity 0.15 (upgraded from 0.10)
-  const conflictsFound = [];
-  for (const [a, b] of CONFLICT_PAIRS) {
-    if (lower.includes(a) && lower.includes(b)) {
-      conflictsFound.push([a, b]);
-    }
-  }
-  if (conflictsFound.length) {
-    const penalty = Math.min(0.30, conflictsFound.length * 0.15);
-    score -= penalty;
-    violations.push('CONFLICTING_DIRECTIVE');
-    for (const [a,b] of conflictsFound) {
-      violationDetails.push({ type: 'CONFLICTING_DIRECTIVE', trigger: `${a} ↔ ${b}`, severity: 0.15 });
-    }
-  }
-
-  // 4) Deferred enforcement — severity 0.12 (upgraded from 0.10)
-  const deferralsFound = DEFERRED_PHRASES.filter(p => lower.includes(p));
-  if (deferralsFound.length) {
-    const penalty = Math.min(0.25, deferralsFound.length * 0.12);
-    score -= penalty;
-    violations.push('DEFERRED_ENFORCEMENT');
-    for (const d of deferralsFound) {
-      violationDetails.push({ type: 'DEFERRED_ENFORCEMENT', trigger: d, severity: 0.12 });
-    }
-  }
-
-  // 5) NEW: Passive voice detection — severity 0.05
-  const passivePatterns = [
-    /\bwas\s+\w+ed\b/gi, /\bwere\s+\w+ed\b/gi, /\bbeen\s+\w+ed\b/gi,
-    /\bis\s+being\s+\w+ed\b/gi, /\bwas\s+being\s+\w+ed\b/gi,
-    /\bhas\s+been\s+\w+ed\b/gi, /\bhave\s+been\s+\w+ed\b/gi,
-    /\bwill\s+be\s+\w+ed\b/gi, /\bshould\s+be\s+\w+ed\b/gi,
-    /\bcould\s+be\s+\w+ed\b/gi, /\bmight\s+be\s+\w+ed\b/gi
-  ];
-  let passiveCount = 0;
-  for (const p of passivePatterns) {
-    const matches = norm.match(p);
-    if (matches) passiveCount += matches.length;
-  }
-  if (passiveCount >= 3) {
-    score -= Math.min(0.15, passiveCount * 0.05);
-    violations.push('EXCESSIVE_PASSIVE');
-    violationDetails.push({ type: 'EXCESSIVE_PASSIVE', trigger: `${passiveCount} passive constructions`, severity: 0.05 });
-  }
-
-  // 6) NEW: Vague quantifier detection — severity 0.04
-  const vagueQuantifiers = ['some', 'several', 'many', 'a few', 'a lot', 'numerous',
-    'various', 'multiple', 'a number of', 'a couple', 'most', 'certain'];
-  const vagueHits = vagueQuantifiers.filter(v => {
-    const regex = new RegExp('\\b' + v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'i');
-    return regex.test(lower);
-  });
-  if (vagueHits.length >= 2) {
-    score -= Math.min(0.12, vagueHits.length * 0.04);
-    violations.push('VAGUE_QUANTIFIER');
-    for (const v of vagueHits) {
-      violationDetails.push({ type: 'VAGUE_QUANTIFIER', trigger: v, severity: 0.04 });
-    }
-  }
-
-  // 7) NEW: Missing deadline/timeframe — severity 0.06
-  const timeIndicators = ['by', 'before', 'deadline', 'due', 'until', 'within',
-    'end of day', 'eod', 'eow', 'asap', 'immediately', 'today', 'tomorrow',
-    'this week', 'next week', 'by friday', 'by monday', 'q1', 'q2', 'q3', 'q4'];
-  const hasTime = timeIndicators.some(t => lower.includes(t));
-  const hasActionButNoTime = ACTION_VERBS.some(v => lower.includes(v)) && !hasTime && norm.length > 100;
-  if (hasActionButNoTime) {
-    score -= 0.06;
-    violations.push('MISSING_TIMEFRAME');
-    violationDetails.push({ type: 'MISSING_TIMEFRAME', trigger: 'action detected but no deadline or timeframe', severity: 0.06 });
-  }
-
-  // 8) NEW: Ambiguous pronoun reference — severity 0.05
-  const ambiguousPronouns = ['it', 'this', 'that', 'they', 'them', 'those', 'these'];
-  // Check if pronouns appear without clear antecedent (beginning of sentence)
-  const sentences = norm.split(/(?<=[.!?])\s+/);
-  let ambiguousPronounCount = 0;
-  for (const s of sentences) {
-    const firstWord = s.trim().split(/\s+/)[0]?.toLowerCase();
-    if (ambiguousPronouns.includes(firstWord)) ambiguousPronounCount++;
-  }
-  if (ambiguousPronounCount >= 2) {
-    score -= Math.min(0.10, ambiguousPronounCount * 0.05);
-    violations.push('AMBIGUOUS_REFERENCE');
-    violationDetails.push({ type: 'AMBIGUOUS_REFERENCE', trigger: `${ambiguousPronounCount} sentences start with ambiguous pronouns`, severity: 0.05 });
-  }
-
-  // Clamp
-  score = Math.max(0, Math.min(1, score));
-
-  // Routing — base + industry
-  let allRoutingKeywords = [...ROUTING_KEYWORDS];
-  if (activeIndustry !== 'all' && INDUSTRY_ROUTING[activeIndustry]) {
-    allRoutingKeywords = allRoutingKeywords.concat(INDUSTRY_ROUTING[activeIndustry]);
-  } else if (activeIndustry === 'all') {
-    for (const ind of Object.values(INDUSTRY_ROUTING)) {
-      allRoutingKeywords = allRoutingKeywords.concat(ind);
-    }
-  }
-
-  const routeMatches = allRoutingKeywords.filter(k => lower.includes(k));
-  const route = routeMatches.length ? 'HUMAN_INTERNAL' : 'AI_PATH';
-
-  // Feedback
-  const lines = [`Score: ${score.toFixed(2)}`];
-  if (route === 'HUMAN_INTERNAL') {
-    lines.push('Route: HUMAN_INTERNAL');
-    if (routeMatches.length) lines.push(`Trigger: ${routeMatches.join(', ')}`);
-    lines.push('Action: This contains routing triggers requiring human involvement.');
-  } else if (violations.length) {
-    lines.push(`Issues detected (${violations.length} types, ${violationDetails.length} instances):`);
-    if (violations.includes('MISSING_OBJECTIVE')) lines.push('- State a clear objective using an action verb.');
-    if (violations.includes('HEDGE_WORD')) lines.push(`- Remove uncertain language: ${hedgeHits.slice(0,5).join(', ')}${hedgeHits.length > 5 ? ` (+${hedgeHits.length-5} more)` : ''}`);
-    if (violations.includes('CONFLICTING_DIRECTIVE')) lines.push(`- Resolve conflicting instructions: ${conflictsFound.map(([a,b])=>`${a}↔${b}`).join(', ')}`);
-    if (violations.includes('DEFERRED_ENFORCEMENT')) lines.push(`- Define enforcement now: ${deferralsFound.slice(0,3).join(', ')}`);
-    if (violations.includes('EXCESSIVE_PASSIVE')) lines.push(`- Reduce passive voice (${passiveCount} instances). Use active constructions.`);
-    if (violations.includes('VAGUE_QUANTIFIER')) lines.push(`- Replace vague quantifiers with specific numbers: ${vagueHits.join(', ')}`);
-    if (violations.includes('MISSING_TIMEFRAME')) lines.push('- Add a deadline or timeframe to the objective.');
-    if (violations.includes('AMBIGUOUS_REFERENCE')) lines.push(`- ${ambiguousPronounCount} sentences start with ambiguous pronouns. Name the subject.`);
-    lines.push('Revise and resubmit.');
-  } else {
-    lines.push('Issues: none');
-  }
-
-  return {
-    normalized_text: norm,
-    score: Math.round(score*100)/100,
-    violations,
-    violation_details: violationDetails,
-    hedge_hits: hedgeHits,
-    route,
-    route_matches: routeMatches,
-    threshold,
-    feedback: lines.join('\n'),
-    industry: activeIndustry
-  };
-}
-
-// --- V3 ENGINE (EXPANDED) ---
-const FILLER_PHRASES = [
-  // Original 4
-  'it is important to note', 'in conclusion', 'ultimately', 'to summarize',
-  // AI-generated filler (the big ones)
-  "i'd be happy to", "i'd be glad to", "i would be happy to",
-  "certainly", "absolutely", "of course", "great question",
-  "that's a great question", "that's an excellent question",
-  "thanks for asking", "thank you for asking",
-  "as mentioned earlier", "as previously mentioned", "as noted above",
-  "as i mentioned", "as we discussed", "as stated before",
-  "it's worth noting", "it's worth mentioning", "it should be noted",
-  "it bears mentioning", "it's important to mention",
-  "that being said", "having said that", "with that being said",
-  "that said", "all that being said",
-  "at the end of the day", "when all is said and done",
-  "moving forward", "going forward", "looking ahead",
-  "in terms of", "with respect to", "with regard to", "in regard to",
-  "when it comes to", "as far as", "on the topic of",
-  "it goes without saying", "needless to say",
-  "for what it's worth", "fwiw",
-  "to be honest", "honestly", "frankly", "to be frank",
-  "in my opinion", "in my humble opinion", "imo", "imho",
-  "i hope this helps", "hope that helps", "hope this was helpful",
-  "let me know if you have any questions",
-  "let me know if you need anything else",
-  "feel free to", "don't hesitate to",
-  "please don't hesitate", "please feel free",
-  "i understand your concern", "i completely understand",
-  "i appreciate your patience", "thank you for your patience",
-  "first and foremost", "last but not least",
-  "it's crucial to", "it's essential to", "it's vital to",
-  "it's important to understand that", "it's key to note",
-  "in order to", "so as to", "for the purpose of",
-  "due to the fact that", "owing to the fact that",
-  "in light of the fact that", "given the fact that",
-  "on the other hand", "by the same token",
-  "in any case", "in any event", "be that as it may",
-  "to put it simply", "to put it another way", "in other words",
-  "simply put", "put simply", "to be clear",
-  "the bottom line is", "the long and short of it",
-  "at this point in time", "at this juncture",
-  "in today's world", "in this day and age",
-  "each and every", "any and all", "first and foremost",
-  "null and void", "part and parcel",
-  "please be advised", "please note that", "kindly note",
-  "i wanted to reach out", "i'm reaching out to",
-  "just wanted to follow up", "just checking in",
-  "per our conversation", "per our discussion",
-  "as per your request", "pursuant to",
-  "for your information", "for your reference",
-  "attached please find", "please find attached",
-  "enclosed please find",
-  // Conversational padding
-  "so basically", "so essentially", "so the thing is",
-  "well actually", "i mean", "you know", "you know what i mean",
-  "like i said", "as i said", "if you will", "so to speak",
-  "more or less", "by and large", "all things considered",
-  "generally speaking", "broadly speaking",
-  // Closing filler
-  "best regards", "warm regards", "kind regards",
-  "sincerely", "respectfully", "with gratitude"
-];
-
-// Filler severity weights
-const FILLER_SEVERITY = {};
-// AI sycophancy patterns get highest weight
-["i'd be happy to","i'd be glad to","certainly","absolutely","great question",
-"that's a great question","that's an excellent question","i completely understand",
-"i hope this helps","hope that helps"].forEach(f => FILLER_SEVERITY[f] = 0.03);
-// Medium weight for padding
-["it is important to note","it's worth noting","that being said","having said that",
-"at the end of the day","moving forward","in terms of","when it comes to",
-"first and foremost","in order to","due to the fact that","at this point in time",
-"in today's world","in this day and age"].forEach(f => FILLER_SEVERITY[f] = 0.02);
-// Default
-const DEFAULT_FILLER_SEVERITY = 0.01;
-
-function runV3(text, maxTokens=400, objective=null) {
-  let t = normalize(text);
-  const originalText = t;
-  let hedgesRemoved = 0;
-  let fillerRemoved = 0;
-  const removedItems = [];
-
-  // Remove hedges
-  for (const w of HEDGE_WORDS) {
-    const regex = new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'gi');
-    const before = t;
-    t = t.replace(regex, '');
-    if (t !== before) {
-      hedgesRemoved++;
-      removedItems.push({ type: 'hedge', phrase: w });
-      t = normalize(t);
-    }
-  }
-
-  // Remove filler
-  for (const p of FILLER_PHRASES) {
-    const regex = new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
-    const before = t;
-    t = t.replace(regex, '');
-    if (t !== before) {
-      fillerRemoved++;
-      removedItems.push({ type: 'filler', phrase: p });
-      t = normalize(t);
-    }
-  }
-
-  // NEW: Remove redundant transition phrases
-  const transitionPatterns = [
-    /\b(however|moreover|furthermore|additionally|consequently|therefore|thus|hence|accordingly|nevertheless|nonetheless|meanwhile|subsequently|alternatively)\s*,?\s*/gi
-  ];
-  let transitionsRemoved = 0;
-  for (const p of transitionPatterns) {
-    const before = t;
-    t = t.replace(p, '');
-    if (t !== before) { transitionsRemoved++; t = normalize(t); }
-  }
-
-  // Dedupe sentences
-  const sentences = t.split(/(?<=[.!?])\s+/).filter(s => s.trim());
-  const seen = new Set();
-  const deduped = [];
-  let dupesRemoved = 0;
-  for (const s of sentences) {
-    if (!seen.has(s)) { seen.add(s); deduped.push(s); }
-    else { dupesRemoved++; }
-  }
-  t = deduped.join(' ').trim();
-
-  // NEW: Near-duplicate detection (sentences that share >70% of words)
-  let nearDupesRemoved = 0;
-  if (deduped.length > 1) {
-    const final = [deduped[0]];
-    for (let i = 1; i < deduped.length; i++) {
-      const wordsA = new Set(deduped[i].toLowerCase().split(/\s+/).filter(w => w.length > 3));
-      let isNearDupe = false;
-      for (const kept of final) {
-        const wordsB = new Set(kept.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-        if (wordsA.size === 0) break;
-        const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
-        const similarity = overlap / Math.max(wordsA.size, wordsB.size);
-        if (similarity > 0.70) { isNearDupe = true; nearDupesRemoved++; break; }
-      }
-      if (!isNearDupe) final.push(deduped[i]);
-    }
-    t = final.join(' ').trim();
-  }
-
-  // Objective anchoring
-  if (objective && objective.trim()) {
-    const objWords = objective.toLowerCase().match(/[a-z0-9']+/g)?.filter(w => w.length > 3) || [];
-    if (objWords.length) {
-      const sents = t.split(/(?<=[.!?])\s+/).filter(s => s.trim());
-      const kept = sents.filter(s => objWords.some(w => s.toLowerCase().includes(w)));
-      if (kept.length) t = kept.join(' ').trim();
-    }
-  }
-
-  // Token ceiling
-  const words = t.split(/\s+/);
-  let trimmed = false;
-  if (words.length > maxTokens) {
-    t = words.slice(0, maxTokens).join(' ');
-    trimmed = true;
-  }
-
-  t = normalize(t);
-
-  // Calculate compression stats
-  const origTokens = approxTokens(originalText);
-  const stabTokens = approxTokens(t);
-  const tokensSaved = origTokens - stabTokens;
-  const compressionPct = origTokens > 0 ? Math.round((tokensSaved / origTokens) * 100) : 0;
-
-  return {
-    stabilized_text: t,
-    hedges_removed: hedgesRemoved,
-    filler_removed: fillerRemoved,
-    transitions_removed: transitionsRemoved,
-    exact_dupes_removed: dupesRemoved,
-    near_dupes_removed: nearDupesRemoved,
-    removed_items: removedItems,
-    trimmed,
-    max_tokens: maxTokens,
-    tokens_before: origTokens,
-    tokens_after: stabTokens,
-    tokens_saved: tokensSaved,
-    compression_pct: compressionPct
-  };
-}
-
-// --- RELATIONAL FIELD (EDGE ENGINE — EXPANDED) ---
-const EDGE_WEIGHTS = {
-  retroactive_attribution: 0.25,
-  vertical_claim: 0.20,
-  status_displacement: 0.15,
-  amplification_vector: 0.15,
-  escalation_syntax: 0.15,
-  dominance_posture: 0.10,
-  // NEW categories
-  gaslighting_marker: 0.25,
-  false_consensus: 0.15,
-  emotional_leverage: 0.20,
-  authority_assertion: 0.15,
-  dismissal_pattern: 0.20,
-  guilt_induction: 0.20,
-  ultimatum_syntax: 0.20,
-  passive_aggression: 0.15,
-  credit_displacement: 0.15,
-  boundary_violation: 0.20
-};
-const EDGE_PATTERNS = [
-  ['retroactive_attribution', [
-    /\byou\s+were\s+wrong\b/gi, /\byou\s+made\s+(a|the)\s+mistake\b/gi,
-    /\bthat\s+was\s+your\s+fault\b/gi, /\byou\s+did\s+that\b/gi,
-    /\byou\s+caused\s+this\b/gi, /\bthis\s+is\s+on\s+you\b/gi,
-    /\byou\s+dropped\s+the\s+ball\b/gi, /\bif\s+you\s+had(n't)?\b/gi,
-    /\byou\s+should\s+have\b/gi, /\byou\s+could\s+have\b/gi
-  ]],
-  ['vertical_claim', [
-    /\byou\s+(misunderstood|missed|failed)\b/gi, /\byou\s+(thought|assumed)\b/gi,
-    /\byou\s+don'?t\s+get\b/gi, /\blet\s+me\s+be\s+clear\b/gi,
-    /\byou'?re\s+not\s+(seeing|understanding|getting)\b/gi,
-    /\bthat'?s\s+not\s+what\s+i\s+(said|meant)\b/gi,
-    /\byou'?re\s+missing\s+the\s+point\b/gi,
-    /\bi\s+never\s+said\s+that\b/gi,
-    /\byou'?re\s+confused\b/gi, /\byou'?re\s+overthinking\b/gi
-  ]],
-  ['status_displacement', [
-    /\bit\s+wasn'?t\s+[^.]{1,120}\b/gi,
-    /\bnot\s+about\s+[^.]{1,80}\s*[-–—]\s*but\s+about\b/gi,
-    /\bthe\s+real\s+question\s+is\b/gi,
-    /\bwhat\s+matters\s+here\s+is\b/gi,
-    /\bthe\s+point\s+is\b/gi
-  ]],
-  ['amplification_vector', [
-    /\bactually\b/gi, /\bclearly\b/gi, /\bobviously\b/gi, /\bliterally\b/gi,
-    /\bfundamentally\b/gi, /\babsolutely\b/gi, /\bcompletely\b/gi,
-    /\btotally\b/gi, /\bentirely\b/gi, /\bextremely\b/gi,
-    /\bprofoundly\b/gi, /\bindisputably\b/gi, /\bunquestionably\b/gi
-  ]],
-  ['escalation_syntax', [
-    /\bthe\s+(real\s+)?issue\s+is\b/gi, /\bhere'?s\s+the\s+problem\b/gi,
-    /\blet'?s\s+be\s+honest\b/gi, /\bthe\s+truth\s+is\b/gi,
-    /\bwhat\s+really\s+happened\b/gi, /\bhere'?s\s+what\s+you'?re\s+not\s+seeing\b/gi,
-    /\bthe\s+fact\s+of\s+the\s+matter\b/gi, /\blet\s+me\s+tell\s+you\b/gi,
-    /\bi'?ll\s+tell\s+you\s+what\b/gi, /\bwake\s+up\b/gi
-  ]],
-  ['dominance_posture', [
-    /\byou\s+need\s+to\b/gi, /\byou\s+have\s+to\b/gi, /\byou\s+can'?t\b/gi,
-    /\byou\s+must\b/gi, /\byou\s+will\b/gi, /\byou\s+shall\b/gi,
-    /\byou\s+better\b/gi, /\byou'?d\s+better\b/gi,
-    /\bdo\s+as\s+i\s+say\b/gi, /\bthat'?s\s+final\b/gi,
-    /\bend\s+of\s+discussion\b/gi, /\bi\s+don'?t\s+want\s+to\s+hear\b/gi
-  ]],
-  // NEW CATEGORIES
-  ['gaslighting_marker', [
-    /\bthat\s+never\s+happened\b/gi, /\byou'?re\s+(imagining|making)\s+(things|it)\s+up\b/gi,
-    /\byou'?re\s+being\s+(too\s+)?(sensitive|dramatic|emotional|paranoid)\b/gi,
-    /\bi\s+was\s+just\s+joking\b/gi, /\byou\s+can'?t\s+take\s+a\s+joke\b/gi,
-    /\bno\s+one\s+else\s+(thinks|feels|sees)\s+that\b/gi,
-    /\byou'?re\s+the\s+only\s+one\b/gi, /\beveryone\s+(agrees|thinks)\b/gi,
-    /\bthat'?s\s+not\s+how\s+it\s+happened\b/gi,
-    /\byou\s+always\s+do\s+this\b/gi, /\byou\s+never\b/gi
-  ]],
-  ['false_consensus', [
-    /\beveryone\s+(knows|agrees|thinks|says|believes)\b/gi,
-    /\bnobody\s+(thinks|believes|agrees)\b/gi,
-    /\bit'?s\s+common\s+knowledge\b/gi,
-    /\bask\s+anyone\b/gi, /\bthe\s+team\s+(agrees|feels|thinks)\b/gi,
-    /\bwe\s+all\s+(know|agree|think)\b/gi,
-    /\bmost\s+people\s+(would|think|agree)\b/gi
-  ]],
-  ['emotional_leverage', [
-    /\bafter\s+everything\s+i'?ve\s+done\b/gi,
-    /\bi\s+sacrificed\b/gi, /\bi\s+gave\s+up\b/gi,
-    /\byou\s+owe\s+me\b/gi, /\bi\s+deserve\b/gi,
-    /\bhow\s+could\s+you\b/gi, /\bi\s+can'?t\s+believe\s+you\b/gi,
-    /\byou\s+don'?t\s+(care|appreciate)\b/gi,
-    /\bi'?m\s+so\s+disappointed\b/gi, /\byou\s+hurt\s+me\b/gi
-  ]],
-  ['authority_assertion', [
-    /\bi'?m\s+the\s+(boss|manager|owner|ceo|director)\b/gi,
-    /\bi\s+have\s+more\s+experience\b/gi,
-    /\bi'?ve\s+been\s+doing\s+this\s+for\b/gi,
-    /\btrust\s+me\b/gi, /\bbecause\s+i\s+said\s+so\b/gi,
-    /\bi\s+know\s+what\s+i'?m\s+(doing|talking\s+about)\b/gi,
-    /\bwith\s+all\s+due\s+respect\b/gi, /\bno\s+offense\b/gi,
-    /\bnot\s+to\s+be\s+rude\b/gi
-  ]],
-  ['dismissal_pattern', [
-    /\bwhatever\b/gi, /\bit\s+doesn'?t\s+matter\b/gi,
-    /\bwho\s+cares\b/gi, /\bthat'?s\s+(irrelevant|not\s+important)\b/gi,
-    /\bget\s+over\s+it\b/gi, /\bmove\s+on\b/gi,
-    /\bstop\s+(complaining|whining|being)\b/gi,
-    /\bnot\s+my\s+problem\b/gi, /\bnot\s+my\s+(fault|issue|concern)\b/gi,
-    /\byeah\s+yeah\b/gi, /\bsure\s+sure\b/gi
-  ]],
-  ['guilt_induction', [
-    /\bif\s+you\s+(really|truly)\s+(cared|loved|respected)\b/gi,
-    /\ba\s+(good|real|true)\s+(friend|partner|employee)\s+would\b/gi,
-    /\bi\s+guess\s+i'?ll\s+just\b/gi,
-    /\bfine\s*,?\s*i'?ll\s+do\s+it\s+myself\b/gi,
-    /\bdon'?t\s+worry\s+about\s+me\b/gi,
-    /\bi'?m\s+used\s+to\s+it\b/gi, /\bstory\s+of\s+my\s+life\b/gi
-  ]],
-  ['ultimatum_syntax', [
-    /\bor\s+else\b/gi, /\blast\s+(chance|warning|time)\b/gi,
-    /\bfinal\s+(offer|warning|notice)\b/gi,
-    /\btake\s+it\s+or\s+leave\s+it\b/gi,
-    /\bif\s+you\s+don'?t\s*,?\s*(then\s+)?i\s+will\b/gi,
-    /\bdon'?t\s+make\s+me\b/gi, /\byou\s+leave\s+me\s+no\s+choice\b/gi,
-    /\bthis\s+is\s+(your|the)\s+last\b/gi
-  ]],
-  ['passive_aggression', [
-    /\bthat'?s\s+fine\b/gi, /\bno\s+worries\b/gi,
-    /\bi'?m\s+not\s+(mad|upset|angry)\b/gi,
-    /\bdo\s+whatever\s+you\s+want\b/gi,
-    /\bi\s+just\s+think\s+it'?s\s+(funny|interesting)\s+that\b/gi,
-    /\bper\s+my\s+(last|previous)\s+email\b/gi,
-    /\bas\s+(previously|already)\s+(stated|mentioned|noted|discussed)\b/gi,
-    /\bi\s+thought\s+(we|you)\s+(agreed|said|decided)\b/gi
-  ]],
-  ['credit_displacement', [
-    /\bthat\s+was\s+my\s+idea\b/gi, /\bi\s+came\s+up\s+with\s+that\b/gi,
-    /\bi\s+told\s+you\s+so\b/gi, /\bi\s+said\s+that\s+(first|before)\b/gi,
-    /\bif\s+it\s+wasn'?t\s+for\s+me\b/gi,
-    /\bwithout\s+me\b/gi, /\byou\s+wouldn'?t\s+have\b/gi
-  ]],
-  ['boundary_violation', [
-    /\bwhy\s+can'?t\s+you\s+just\b/gi,
-    /\byou\s+always\b/gi, /\byou\s+never\b/gi,
-    /\bi\s+have\s+a\s+right\s+to\s+know\b/gi,
-    /\byou\s+should(n'?t)?\s+have\s+to\b/gi,
-    /\bthat'?s\s+not\s+(fair|right)\b/gi,
-    /\bi\s+thought\s+we\s+were\b/gi
-  ]]
-];
-
-function computeRelationalField(text) {
-  text = text || '';
-  const markers = [];
-  const triggered = new Set();
-  const seen = new Set();
-
-  for (const [name, regexes] of EDGE_PATTERNS) {
-    const weight = EDGE_WEIGHTS[name] || 0;
-    for (const rgx of regexes) {
-      rgx.lastIndex = 0;
-      let m;
-      while ((m = rgx.exec(text)) !== null) {
-        const phrase = m[0].trim();
-        const key = name + '|' + phrase.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        triggered.add(name);
-        markers.push({ pattern: name, phrase, weight: Math.round(weight*10000)/10000 });
-      }
-    }
-  }
-
-  let totalWeight = 0;
-  for (const p of triggered) totalWeight += EDGE_WEIGHTS[p] || 0;
-  const edgeIndex = Math.min(1.0, Math.round(totalWeight * 10000) / 10000);
-
-  return {
-    field: 'relational',
-    version: 'edge-v0.1',
-    edge_index: edgeIndex,
-    edge_markers: markers,
-    triggered_patterns: [...triggered].sort()
-  };
-}
-
-// --- ECONOMIC LAYER ---
-function computeEconomic(inputText, outputText, routeHint, aiInvoked) {
-  const inTok = approxTokens(inputText || '');
-  const outTok = approxTokens(outputText || '');
-  const estCost = Math.round((inTok + outTok) * 0.00001 * 1000000) / 1000000;
-
-  let avoided;
-  if (routeHint === 'HUMAN_REQUIRED') avoided = true;
-  else if (routeHint === 'AI_OPTIMAL') avoided = false;
-  else avoided = 'conditional';
-
-  return {
-    version: 'economic-v1.0',
-    estimated_input_tokens: inTok,
-    estimated_output_tokens: outTok,
-    estimated_roundtrip_cost: estCost,
-    ai_invoked: aiInvoked,
-    invocation_avoided: avoided
-  };
-}
-
-// --- BANDING ---
-function bandStructural(score) {
-  if (score < 0.50) return 'UNSTABLE';
-  if (score < 0.75) return 'PARTIAL';
-  if (score < 0.90) return 'STABLE';
-  return 'OPTIMAL';
-}
-function bandRelational(ei) {
-  if (ei < 0.30) return 'CALM';
-  if (ei < 0.60) return 'TENSE';
-  if (ei < 0.80) return 'ELEVATED';
-  return 'DESTABILIZING';
-}
-function bandCost(cost) {
-  if (cost < 0.002) return 'LOW_COST';
-  if (cost < 0.010) return 'MODERATE_COST';
-  if (cost < 0.050) return 'HIGH_COST';
-  return 'HEAVY_COST';
-}
-function bandObs(composite) {
-  if (composite < 0.30) return 'STABLE';
-  if (composite < 0.60) return 'WATCH';
-  if (composite < 0.80) return 'TENSION';
-  return 'CRITICAL';
-}
-
-// --- INVOCATION GOVERNANCE ---
-function computeInvocationGov(structScore, edgeIndex) {
-  let routeHint;
-  if (structScore >= 0.75 && edgeIndex < 0.60) routeHint = 'AI_OPTIMAL';
-  else if (structScore < 0.75 && edgeIndex < 0.40) routeHint = 'CLARIFICATION_REQUIRED';
-  else if (structScore >= 0.75 && edgeIndex >= 0.60) routeHint = 'HUMAN_RECOMMENDED';
-  else routeHint = 'HUMAN_REQUIRED';
-
-  return { version: 'invocation-v1.0', route_hint: routeHint, advisory_only: true };
-}
-
-// --- OBSERVABILITY ---
-function computeObservability(structScore, edgeIndex) {
-  const sr = 1.0 - Math.max(0, Math.min(1, structScore));
-  const rr = Math.max(0, Math.min(1, edgeIndex));
-  const composite = Math.round((sr * 0.60 + rr * 0.40) * 10000) / 10000;
-  return { version: 'obs-v1.0', composite_score: composite, structural_risk: Math.round(sr*10000)/10000, relational_risk: Math.round(rr*10000)/10000 };
-}
-
-// ==========================================
-// UI LOGIC
-// ==========================================
-
-const activeEngines = new Set(['v2','v3','edge','econ','band','gov','obs']);
-
-function toggleEngine(el) {
-  const eng = el.dataset.engine;
-  if (el.classList.contains('active')) {
-    el.classList.remove('active');
-    activeEngines.delete(eng);
-  } else {
-    el.classList.add('active');
-    activeEngines.add(eng);
-  }
-}
-
-function setPreset(name) {
-  const all = ['v2','v3','edge','econ','band','gov','obs','convergence'];
-  const presets = {
-    v2only: ['v2'],
-    v3only: ['v3'],
-    audit: ['v2','edge','gov'],
-    stabilize: ['v3','econ','band'],
-    all: ['v2','v3','edge','econ','band','gov','obs'],
-    pipeline: ['convergence']
-  };
-  const set = new Set(presets[name] || all);
-  document.querySelectorAll('.engine-toggle').forEach(el => {
-    const eng = el.dataset.engine;
-    if (set.has(eng)) { el.classList.add('active'); activeEngines.add(eng); }
-    else { el.classList.remove('active'); activeEngines.delete(eng); }
+// ── RACKS ──
+function buildRack(id, state) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  TOOLS.forEach(t => {
+    const on = state.has(t.id);
+    const b = document.createElement('div');
+    b.className = 'tt' + (on ? ' on' : '');
+    b.dataset.tool = t.id;
+    b.innerHTML = `<div class="pip"></div>${t.label}`;
+    b.title = t.desc || t.label;
+    b.onclick = () => { state.has(t.id)?state.delete(t.id):state.add(t.id); buildRack(id, state); };
+    el.appendChild(b);
   });
 }
+buildRack('toolsA', stateA);
+buildRack('toolsB', stateB);
 
-function clearAll() {
-  document.getElementById('inputText').value = '';
-  document.getElementById('objectiveText').value = '';
-  document.getElementById('outputPanel').innerHTML = '<div class="panel-header">Output</div><div class="output-empty" id="outputEmpty">Select engines. Paste text. Run.</div>';
-  updateWordCount();
+function loadSample(k) { document.getElementById('sharedText').value = SAMPLES[k]; }
+
+// ── MOBILE TABS ──
+function switchMobileTab(side) {
+  mobileTab = side;
+  document.getElementById('colA').classList.toggle('hidden-mobile', side !== 'A');
+  document.getElementById('colB').classList.toggle('hidden-mobile', side !== 'B');
+  document.getElementById('tabA').className = 'col-tab' + (side==='A'?' active-a':'');
+  document.getElementById('tabB').className = 'col-tab' + (side==='B'?' active-b':'');
 }
 
-function updateWordCount() {
-  const text = document.getElementById('inputText').value;
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  const tokens = approxTokens(text);
-  document.getElementById('wordCount').textContent = `${words} words · ${tokens} tokens (est)`;
+// ── RUN ──
+async function runAll() {
+  const text = document.getElementById('sharedText').value.trim();
+  if (!text) { document.getElementById('sharedText').focus(); return; }
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = '...';
+  resultsA = {}; resultsB = {};
+  document.getElementById('diffBar').classList.remove('show');
+  const base = (document.getElementById('baseUrl').value||'').replace(/\/+$/,'');
+  await Promise.all([runSide('A',stateA,text,base), runSide('B',stateB,text,base)]);
+  buildDiff();
+  addSystemMsg('Run complete. Ask me to analyze the results.');
+  btn.disabled = false; btn.textContent = 'RUN';
+  checkConn(base);
 }
-document.getElementById('inputText').addEventListener('input', updateWordCount);
 
-// File upload
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  document.getElementById('fileName').textContent = file.name;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    document.getElementById('inputText').value = ev.target.result;
-    updateWordCount();
-  };
-  reader.readAsText(file);
+async function runSide(side, toolSet, text, base) {
+  const panel = document.getElementById('output'+side);
+  if (!toolSet.size) { panel.innerHTML=`<div class="output-empty"><div class="big">${side}</div>No tools selected</div>`; return; }
+  panel.innerHTML = '';
+  const store = side==='A'?resultsA:resultsB;
+
+  for (const tid of toolSet) {
+    const tool = TOOLS.find(t=>t.id===tid); if (!tool) continue;
+    const le = document.createElement('div');
+    le.className='loading';
+    le.innerHTML=`<div class="spinner"></div>${tool.endpoint}`;
+    panel.appendChild(le);
+    let data;
+    try {
+      let payload = {text};
+      if (tid==='safecheck') {
+        const nd = store['nti'] || store['opscore'];
+        if (nd&&!nd._error) payload = {text, nii_result:nd.nii||{}, l2_result:(nd.layers&&nd.layers.L2_interpretive_framing)||{}, tilt_tags:nd.tilt_taxonomy||[], edge_result:null};
+      }
+      if (tid==='friction') {
+        const sfx = side;
+        const dir = document.getElementById('frictionDir'+sfx)?.value || 'analyze';
+        const mode = document.getElementById('frictionMode'+sfx)?.value || 'OBSERVE';
+        payload = {text, direction:dir, mode};
+      }
+      const r = await fetch(base+tool.endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      data = await r.json();
+      if (!r.ok) data._error = data.error||`HTTP ${r.status}`;
+    } catch(e) { data = {_error:e.message}; }
+    store[tid] = data;
+    panel.removeChild(le);
+    panel.appendChild(renderResult(tool, data));
+  }
+}
+
+// ── RENDER ──
+function renderResult(tool, data) {
+  const block = document.createElement('div');
+  block.className='rb'+(data._error?' error':'');
+  const isErr=!!data._error, sum=buildSum(tool.id,data);
+  block.innerHTML=`
+    <div class="rh" onclick="toggleBlock(this)">
+      <div class="ri" style="background:${isErr?'var(--warn)':tool.color}"></div>
+      <div class="rn" style="color:${isErr?'var(--warn)':tool.color}">${tool.label}</div>
+      <div class="rs">${sum}</div>
+      <div class="rc">▼</div>
+    </div>
+    <div class="rbody">
+      ${isErr?`<div class="dr"><div class="dk">Error</div><div class="dv" style="color:var(--warn)">${esc(data._error||data.error||'?')}</div></div>`:renderBody(tool.id,data)}
+      <span class="raw-toggle" onclick="toggleRaw(this)">raw json ▾</span>
+      <pre class="raw-pre">${esc(JSON.stringify(data,null,2))}</pre>
+    </div>`;
+  return block;
+}
+
+function buildSum(id,d) {
+  if (d._error) return 'ERROR';
+  if (id==='nti')       { const n=d.nii||{}; return n.nii_score!=null?`NII ${n.nii_score} · ${n.nii_label||''}`:' ok'; }
+  if (id==='free')      { const s=d.score||{}; return s.nii!=null?`NII ${s.nii}`:' ok'; }
+  if (id==='friction')  { const f=d.friction_score; return f!=null?`friction ${typeof f==='number'?f.toFixed(2):f}`:' ok'; }
+  if (id==='safecheck') { return d.count!=null?`${d.count} cards`:' ok'; }
+  if (id==='full')      { const a=d.axis1&&d.axis1.nii; return a&&a.nii_score!=null?`NII ${a.nii_score}`:' ok'; }
+  if (id==='opscore')   { const n=d.nii||d.score||{}; const s=n.nii_score??n.nii; return s!=null?`NII ${s}`:' ok'; }
+  if (id==='corporate') { const n=d.nii||d.score||{}; const s=n.nii_score??n.nii; return s!=null?`NII ${s}`:' ok'; }
+  if (id==='signals')   { const cnt=d.signals_detected?.length; return cnt!=null?`${cnt} signals`:' ok'; }
+  if (id==='loop')      { return d.loop_detected!=null?(d.loop_detected?'LOOP DETECTED':'clean'):' ok'; }
+  if (id==='convergence'){return d.converged!=null?(d.converged?'converged':'drift'):' ok'; }
+  if (id==='confusion') { return d.confusion_score!=null?`conf ${d.confusion_score.toFixed?d.confusion_score.toFixed(2):d.confusion_score}`:' ok'; }
+  if (id==='v3audit')   { return d.passed!=null?(d.passed?'passed':'failed'):' ok'; }
+  return 'ok';
+}
+
+function renderBody(id,d) {
+  if (id==='nti')       return renderNTI(d);
+  if (id==='free')      return renderFree(d);
+  if (id==='friction')  return renderFriction(d);
+  if (id==='safecheck') return renderSafecheck(d);
+  if (id==='full')      return renderFull(d);
+  if (id==='opscore' || id==='corporate') return renderNTI(d);  // same shape as /nti
+  // Deep tools — render raw with summary header
+  return renderGeneric(d);
+}
+
+function renderNTI(d) {
+  const n=d.nii||{}, s=n.nii_score, lbl=n.nii_label;
+  const sc=s>=70?'var(--good)':s>=40?'var(--gold)':'var(--warn)';
+  const fm=d.parent_failure_modes||{}, tilt=d.tilt_taxonomy||[];
+  const dom=(d.interaction_matrix&&d.interaction_matrix.dominance_detected)||[];
+  const l1=(d.layers&&d.layers.L1_input_freeze)||{};
+  const ax3=d.axis3_clarity, v3=d.v3||{};
+  let h=`<div class="score-big" style="color:${sc}">${s!=null?s:'—'}</div><div class="score-lbl">${lbl||'NII Score'}</div>`;
+  h+=dr('D1 Constraint',fmt(n.d1_constraint_density));
+  h+=dr('D2 Ask Arch',fmt(n.d2_ask_architecture));
+  h+=dr('D3 Enforcement',fmt(n.d3_enforcement_integrity));
+  h+=dr('D4 Tilt Resist',fmt(n.d4_tilt_resistance));
+  h+=dr('D5 Severity',fmt(n.d5_failure_mode_severity));
+  h+=sep('Failure Modes');
+  h+=dr('UDDS',stag((fm.UDDS&&fm.UDDS.udds_state)||''));
+  h+=dr('DCE',stag((fm.DCE&&fm.DCE.dce_state)||''));
+  h+=dr('CCA',stag((fm.CCA&&fm.CCA.cca_state)||''));
+  h+=dr('Dominance',dom.map(x=>`<span class="tag td">${x}</span>`).join(' ')||'—');
+  if (tilt.length){h+=sep('Tilt');h+=`<div style="padding:5px 0">${tilt.map(t=>`<span class="tag tw">${t}</span>`).join(' ')}</div>`;}
+  if (l1.objective){h+=sep('L1 Objective');h+=`<div style="padding:5px 0;font-size:10px;color:var(--dim);line-height:1.5">${esc(l1.objective)}</div>`;}
+  if (ax3){h+=sep('Axis 3 Clarity ✦');Object.keys(ax3).filter(k=>!k.startsWith('_')).forEach(k=>{h+=dr(k,fmt(ax3[k]));});}
+  if (v3&&v3.enforced_text){h+=sep('V3');h+=dr('Passes',v3.passes);h+=dr('Decision',v3.decision);h+=`<div style="padding:5px 0;font-size:9px;color:var(--dim);line-height:1.5;border-top:1px solid var(--border);margin-top:3px">${esc(v3.enforced_text)}</div>`;}
+  return h;
+}
+function renderFree(d) {
+  const s=d.score||{}, score=s.nii, lbl=s.nii_label;
+  const sc=score>=70?'var(--good)':score>=40?'var(--gold)':'var(--warn)';
+  const fm=d.failure_modes||{}, tilt=(d.tilt&&d.tilt.tags)||[];
+  let h=`<div class="score-big" style="color:${sc}">${score!=null?score:'—'}</div><div class="score-lbl">${lbl||'NII'} · free</div>`;
+  h+=dr('UDDS',stag(fm.UDDS||''));h+=dr('DCE',stag(fm.DCE||''));h+=dr('CCA',stag(fm.CCA||''));
+  if(tilt.length)h+=`<div style="padding:5px 0">${tilt.map(t=>`<span class="tag tw">${t}</span>`).join(' ')}</div>`;
+  return h;
+}
+function renderFriction(d) {
+  const fs=d.friction_score, trig=d.triggers||[];
+  const sc=fs!=null?(fs<0.3?'var(--good)':fs<0.6?'var(--gold)':'var(--warn)'):'var(--dim)';
+  let h=`<div class="score-big" style="color:${sc}">${fs!=null?(typeof fs==='number'?fs.toFixed(3):fs):'—'}</div><div class="score-lbl">Friction · Axis 2</div>`;
+  if(!trig.length){h+=dr('Triggers','<span class="tag tg">None</span>');}
+  else trig.slice(0,10).forEach(t=>{h+=`<div class="dr"><div class="dk">${esc(t.category||t.pattern||'')}</div><div class="dv" style="color:var(--dim)">"${esc(t.phrase||'')}"</div></div>`;});
+  return h;
+}
+function renderSafecheck(d) {
+  const cards=d.cards||[];
+  let h=`<div class="score-big" style="color:var(--gold)">${d.count!=null?d.count:'—'}</div><div class="score-lbl">Observation Cards</div>`;
+  if(!cards.length)h+=dr('Cards','<span class="tag tg">None</span>');
+  else cards.forEach((c,i)=>{h+=sep(`Card ${i+1}`);Object.keys(c).forEach(k=>{h+=dr(k,typeof c[k]==='object'?JSON.stringify(c[k]):esc(String(c[k])));});});
+  return h;
+}
+function renderFull(d) {
+  const a1=d.axis1||{}, n=a1.nii||{}, s=n.nii_score;
+  const sc=s>=70?'var(--good)':s>=40?'var(--gold)':'var(--warn)';
+  const fm=a1.failure_modes||{};
+  let h=`<div class="score-big" style="color:${sc}">${s!=null?s:'—'}</div><div class="score-lbl">NII · Full Integration</div>`;
+  h+=dr('Tilt',(a1.tilt_taxonomy||[]).map(t=>`<span class="tag tw">${t}</span>`).join(' ')||'—');
+  h+=dr('UDDS',stag((fm.udds&&fm.udds.udds_state)||''));h+=dr('DCE',stag((fm.dce&&fm.dce.dce_state)||''));h+=dr('CCA',stag((fm.cca&&fm.cca.cca_state)||''));
+  if(d.axis2){h+=sep('Axis 2');Object.keys(d.axis2).slice(0,5).forEach(k=>{h+=dr(k,fmt(d.axis2[k]));});}
+  if(d.error)h+=dr('Err',`<span style="color:var(--warn)">${esc(d.error)}</span>`);
+  return h;
+}
+
+// ── GENERIC RENDERER (deep tools) ──
+function renderGeneric(d) {
+  const keys = Object.keys(d).filter(k=>!k.startsWith('_'));
+  let h = '';
+  keys.slice(0,20).forEach(k => {
+    const v = d[k];
+    if (typeof v === 'object' && v !== null) {
+      h += sep(k);
+      Object.keys(v).slice(0,8).forEach(sk => { h += dr(sk, fmt(v[sk])); });
+    } else {
+      h += dr(k, fmt(v));
+    }
+  });
+  return h || dr('Result', 'See raw json ▾');
+}
+
+// ── DIFF ──
+function buildDiff() {
+  const a=resultsA['nti']||resultsA['free'], b=resultsB['nti']||resultsB['free'];
+  if (!a||!b||a._error||b._error) return;
+  const gs=d=>(d.nii&&d.nii.nii_score!=null)?d.nii.nii_score:(d.score&&d.score.nii!=null)?d.score.nii:null;
+  const gt=d=>(d.tilt_taxonomy||(d.tilt&&d.tilt.tags)||[]).length;
+  const gd1=d=>(d.nii&&d.nii.d1_constraint_density)||null;
+  const gd3=d=>(d.nii&&d.nii.d3_enforcement_integrity)||null;
+  const metrics=[
+    {l:'NII Score',    va:gs(a),vb:gs(b), hb:true, f:v=>v!=null?v:'—'},
+    {l:'Tilt Count',   va:gt(a),vb:gt(b), hb:false,f:v=>v},
+    {l:'D1 Constraint',va:gd1(a),vb:gd1(b),hb:true,f:v=>v!=null?v.toFixed(2):'—'},
+    {l:'D3 Enforce',   va:gd3(a),vb:gd3(b),hb:true,f:v=>v!=null?v.toFixed(2):'—'},
+  ];
+  const tbody=document.getElementById('diffBody');
+  tbody.innerHTML='';
+  metrics.forEach(m=>{
+    if(m.va==null&&m.vb==null)return;
+    const d=(m.vb!=null&&m.va!=null)?m.vb-m.va:null;
+    const ar=d==null?'—':d>0?'▲':d<0?'▼':'—';
+    const cls=d==null?'neutral':(m.hb?(d>0?'pos':d<0?'neg':'neutral'):(d<0?'pos':d>0?'neg':'neutral'));
+    tbody.innerHTML+=`<tr><td class="dm">${m.l}</td><td class="da">${m.f(m.va)}</td><td class="db">${m.f(m.vb)}</td><td class="dd ${cls}">${ar} ${d!=null?Math.abs(d).toFixed(d%1===0?0:2):''}</td></tr>`;
+  });
+  document.getElementById('diffBar').classList.add('show');
+}
+
+// ── HELPERS ──
+function dr(k,v){return `<div class="dr"><div class="dk">${k}</div><div class="dv">${v!=null?v:'—'}</div></div>`;}
+function sep(l){return `<div class="sep">${l}</div>`;}
+function fmt(v){
+  if(v==null)return '—';
+  if(typeof v==='number')return v.toFixed(3);
+  if(typeof v==='boolean')return v?'<span class="tag tg">YES</span>':'<span class="tag td">NO</span>';
+  if(typeof v==='object')return `<span style="font-size:9px;color:var(--dim)">${esc(JSON.stringify(v).substring(0,60))}</span>`;
+  return esc(String(v));
+}
+function stag(s){
+  if(!s)return '—';
+  if(s.includes('CONFIRMED'))return `<span class="tag tw">${s}</span>`;
+  if(s.includes('PROBABLE'))return `<span class="tag tgo">${s}</span>`;
+  return `<span class="tag tg">${s}</span>`;
+}
+function toggleBlock(h){h.classList.toggle('collapsed');h.nextElementSibling.classList.toggle('hidden');}
+function toggleRaw(el){const p=el.nextElementSibling;p.classList.toggle('show');el.textContent=p.classList.contains('show')?'raw json ▴':'raw json ▾';}
+function esc(s){const d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+
+// ── CONN CHECK ──
+async function checkConn(base) {
+  const dot=document.getElementById('connDot');
+  try {
+    const r=await fetch((base||'')+'/health',{method:'GET'});
+    dot.classList.toggle('live', r.ok);
+  } catch(e){ dot.classList.remove('live'); }
+}
+checkConn(document.getElementById('baseUrl').value);
+document.getElementById('baseUrl').addEventListener('change',e=>checkConn(e.target.value));
+document.getElementById('sharedText').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.metaKey)runAll();});
+
+// ── DRAWER ──
+function toggleDrawer() {
+  drawerOpen = !drawerOpen;
+  document.getElementById('drawer').classList.toggle('open', drawerOpen);
+  document.getElementById('drawerSub').textContent = drawerOpen ? 'AI Assistant' : 'tap to open';
+  if (drawerOpen) setTimeout(()=>document.getElementById('chatInput').focus(), 300);
+}
+
+function addSystemMsg(text) {
+  const msgs = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  el.textContent = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('drawerSub').textContent = '● new message';
+}
+
+// ── QUICK ASKS ──
+const QUICK_PROMPTS = {
+  analyze:  'Analyze the current test results. What do the scores tell us?',
+  compare:  'Compare side A and side B results. What are the key differences?',
+  why:      'Why did side A score the way it did? Break down the main drivers.',
+  improve:  'How can the input text be improved to get a better NII score?',
+  friction: 'What friction patterns are showing in the results and what do they indicate?',
+  conclude: 'Give me a final conclusion on this test. What is the overall finding?'
+};
+
+function quickAsk(key) {
+  document.getElementById('chatInput').value = QUICK_PROMPTS[key];
+  if (!drawerOpen) toggleDrawer();
+  setTimeout(sendChat, 100);
+}
+
+// ── CHAT ──
+function buildContext() {
+  const text = document.getElementById('sharedText').value.trim();
+  const hasA = Object.keys(resultsA).length > 0;
+  const hasB = Object.keys(resultsB).length > 0;
+
+  let ctx = `You are an AI assistant embedded in the AZ Engine Bench, a developer tool for testing NTI (Natural Text Integrity) scoring endpoints. You help analyze test results, explain scores, compare sides, and give conclusions.\n\n`;
+  ctx += `NTI system: scores text for structural integrity. Key metrics: NII Score (0-100, higher=better), D1-D5 dimensions, UDDS/DCE/CCA failure modes, tilt tags, friction score, observation cards.\n\n`;
+
+  if (text) ctx += `INPUT TEXT TESTED:\n"${text}"\n\n`;
+
+  if (hasA) {
+    ctx += `SIDE A RESULTS (tools: ${[...stateA].join(', ')}):\n`;
+    Object.entries(resultsA).forEach(([k,v]) => {
+      ctx += `${k}: ${JSON.stringify(v).substring(0, 400)}\n`;
+    });
+    ctx += '\n';
+  }
+  if (hasB) {
+    ctx += `SIDE B RESULTS (tools: ${[...stateB].join(', ')}):\n`;
+    Object.entries(resultsB).forEach(([k,v]) => {
+      ctx += `${k}: ${JSON.stringify(v).substring(0, 400)}\n`;
+    });
+    ctx += '\n';
+  }
+  if (!hasA && !hasB) ctx += 'No test results available yet. User has not run a test.\n';
+
+  return ctx;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  if (!drawerOpen) toggleDrawer();
+
+  input.value = '';
+  const msgs = document.getElementById('chatMessages');
+  const send = document.getElementById('chatSend');
+  send.disabled = true; send.textContent = '...';
+
+  // User bubble
+  const uel = document.createElement('div');
+  uel.className = 'msg user';
+  uel.textContent = msg;
+  msgs.appendChild(uel);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Thinking
+  const tel = document.createElement('div');
+  tel.className = 'msg thinking';
+  tel.textContent = 'thinking...';
+  msgs.appendChild(tel);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Build history
+  const context = buildContext();
+  chatHistory.push({role:'user', content: msg});
+
+  try {
+    const base = (document.getElementById('baseUrl').value || '').replace(/\/+$/, '');
+    const resp = await fetch(base + '/operator/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        system: context,
+        messages: chatHistory.slice(-8)
+      })
+    });
+    const data = await resp.json();
+    const reply = data.content?.[0]?.text || data.text
+      || (data.error ? `Error: ${data.error}` : 'No response');
+
+    chatHistory.push({role:'assistant', content: reply});
+
+    msgs.removeChild(tel);
+    const ael = document.createElement('div');
+    ael.className = 'msg ai';
+    ael.innerHTML = `<div class="msg-label">AZ Assistant</div>${esc(reply).replace(/\n/g,'<br>')}`;
+    msgs.appendChild(ael);
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) {
+    msgs.removeChild(tel);
+    const eel = document.createElement('div');
+    eel.className = 'msg system';
+    eel.textContent = 'Error: ' + e.message;
+    msgs.appendChild(eel);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  send.disabled = false; send.textContent = 'ASK';
+  document.getElementById('drawerSub').textContent = 'AI Assistant';
+}
+
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendChat();
 });
 
-// Toggle collapse
-function toggleBlock(el) {
-  el.closest('.engine-block').classList.toggle('collapsed');
-}
 
-// ==========================================
-// RUN
-// ==========================================
-
-function runEngines() {
-  const text = document.getElementById('inputText').value;
-  if (!text.trim()) return;
-
-  const objective = document.getElementById('objectiveText').value.trim() || null;
-  const panel = document.getElementById('outputPanel');
-  panel.innerHTML = '<div class="panel-header">Output</div>';
-
-  const startTime = performance.now();
-
-  // Run selected engines
-  let v2Result = null;
-  let v3Result = null;
-  let edgeResult = null;
-  let econResult = null;
-  let govResult = null;
-  let obsResult = null;
-
-  if (activeEngines.has('v2') || activeEngines.has('convergence')) {
-    v2Result = runV2(text);
-  }
-  if (activeEngines.has('v3') || activeEngines.has('convergence')) {
-    v3Result = runV3(text, 400, objective);
-  }
-  if (activeEngines.has('edge') || activeEngines.has('convergence')) {
-    edgeResult = computeRelationalField(text);
-  }
-
-  const structScore = v2Result ? v2Result.score : 0.5;
-  const edgeIndex = edgeResult ? edgeResult.edge_index : 0;
-  const stabText = v3Result ? v3Result.stabilized_text : '';
-
-  if (activeEngines.has('econ') || activeEngines.has('convergence')) {
-    const routeHint = govResult ? govResult.route_hint : 'conditional';
-    econResult = computeEconomic(text, stabText, routeHint, false);
-  }
-  if (activeEngines.has('gov') || activeEngines.has('convergence')) {
-    govResult = computeInvocationGov(structScore, edgeIndex);
-  }
-  // Re-run econ with proper route hint now that gov is done
-  if (econResult && govResult) {
-    econResult = computeEconomic(text, stabText, govResult.route_hint, false);
-  }
-  if (activeEngines.has('obs') || activeEngines.has('convergence')) {
-    obsResult = computeObservability(structScore, edgeIndex);
-  }
-
-  const elapsed = (performance.now() - startTime).toFixed(2);
-
-  // Render output blocks
-  if (v2Result && (activeEngines.has('v2') || activeEngines.has('convergence'))) {
-    panel.innerHTML += renderV2(v2Result);
-  }
-  if (v3Result && (activeEngines.has('v3') || activeEngines.has('convergence'))) {
-    panel.innerHTML += renderV3(v3Result, text);
-  }
-  if (edgeResult && (activeEngines.has('edge') || activeEngines.has('convergence'))) {
-    panel.innerHTML += renderEdge(edgeResult);
-  }
-  if (econResult && (activeEngines.has('econ') || activeEngines.has('convergence'))) {
-    panel.innerHTML += renderEcon(econResult);
-  }
-  if (govResult && (activeEngines.has('gov') || activeEngines.has('convergence'))) {
-    panel.innerHTML += renderGov(govResult);
-  }
-  if (obsResult && (activeEngines.has('obs') || activeEngines.has('convergence'))) {
-    panel.innerHTML += renderObs(obsResult);
-  }
-
-  // Banding summary
-  if (activeEngines.has('band') || activeEngines.has('convergence')) {
-    panel.innerHTML += renderBanding(structScore, edgeIndex, econResult, obsResult);
-  }
-
-  // Timing
-  panel.innerHTML += `<div style="padding:12px 24px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); border-top:1px solid var(--border);">Completed in ${elapsed}ms · No LLM invoked · Deterministic</div>`;
-}
-
-function scoreClass(score) {
-  if (score >= 0.80) return 'score-good';
-  if (score >= 0.50) return 'score-warn';
-  return 'score-bad';
-}
-
-function renderV2(r) {
-  const detailRows = r.violation_details ? r.violation_details.map(d =>
-    `<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-      <span class="violation-tag">${d.type}</span>
-      <span style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:11px">"${escHtml(d.trigger)}"</span>
-      <span style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:10px">-${d.severity.toFixed(2)}</span>
-    </div>`
-  ).join('') : '';
-
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--v2-color)"></div>
-      <div class="engine-name" style="color:var(--v2-color)">V2 — Inbound Audit</div>
-      <div class="engine-summary">Score: ${r.score.toFixed(2)} · ${r.violations.length} types · ${(r.violation_details||[]).length} instances · ${r.route}</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Score</div><div class="data-val ${scoreClass(r.score)}" style="font-size:18px;font-weight:700">${r.score.toFixed(2)}</div></div>
-      <div class="data-row"><div class="data-key">Threshold</div><div class="data-val">${r.threshold}</div></div>
-      <div class="data-row"><div class="data-key">Gate Status</div><div class="data-val ${r.score >= r.threshold ? 'score-good' : 'score-bad'}">${r.score >= r.threshold ? 'PASS' : 'BELOW THRESHOLD'}</div></div>
-      <div class="data-row"><div class="data-key">Industry</div><div class="data-val">${r.industry || 'all'}</div></div>
-      <div class="data-row"><div class="data-key">Violation Types</div><div class="data-val"><div class="violations-list">${r.violations.length ? r.violations.map(v=>`<span class="violation-tag">${v}</span>`).join('') : '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
-      ${detailRows ? `<div class="data-row" style="flex-direction:column;gap:6px"><div class="data-key">Violation Details (${(r.violation_details||[]).length} instances)</div><div style="margin-top:4px">${detailRows}</div></div>` : ''}
-      <div class="data-row"><div class="data-key">Hedge Hits</div><div class="data-val">${r.hedge_hits.length ? r.hedge_hits.map(h=>`<span style="color:var(--gold);margin-right:6px">${h}</span>`).join('') : 'none'}</div></div>
-      <div class="data-row"><div class="data-key">Route</div><div class="data-val"><span class="route-tag route-${r.route}">${r.route}</span></div></div>
-      ${r.route_matches.length ? `<div class="data-row"><div class="data-key">Route Triggers</div><div class="data-val">${r.route_matches.map(m=>`<span style="background:rgba(255,102,68,0.1);padding:2px 6px;border-radius:3px;margin-right:4px;font-size:11px;color:var(--warn)">${m}</span>`).join('')}</div></div>` : ''}
-      <div class="data-row"><div class="data-key">Feedback</div><div class="data-val text-output">${escHtml(r.feedback)}</div></div>
-    </div>
-  </div>`;
-}
-
-function renderV3(r, originalText) {
-  const origWords = originalText.trim().split(/\s+/).length;
-  const stabWords = r.stabilized_text.trim().split(/\s+/).length;
-
-  const removedList = (r.removed_items || []).map(item =>
-    `<div style="margin-bottom:3px"><span style="background:${item.type==='hedge' ? 'rgba(255,204,0,0.12)' : 'rgba(255,102,68,0.12)'};color:${item.type==='hedge' ? 'var(--gold)' : 'var(--warn)'};padding:2px 6px;border-radius:3px;font-size:10px;text-transform:uppercase;margin-right:6px">${item.type}</span><span style="color:var(--text-dim);font-size:12px">${escHtml(item.phrase)}</span></div>`
-  ).join('');
-
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--v3-color)"></div>
-      <div class="engine-name" style="color:var(--v3-color)">V3 — Outbound Stabilization</div>
-      <div class="engine-summary">${r.compression_pct}% compressed · ${r.tokens_saved} tokens saved</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Compression</div><div class="data-val ${r.compression_pct > 20 ? 'score-good' : r.compression_pct > 5 ? 'score-warn' : ''}" style="font-size:18px;font-weight:700">${r.compression_pct}%</div></div>
-      <div class="data-row"><div class="data-key">Tokens</div><div class="data-val">${r.tokens_before} → ${r.tokens_after} <span style="color:var(--accent)">(saved ${r.tokens_saved})</span></div></div>
-      <div class="data-row"><div class="data-key">Words</div><div class="data-val">${origWords} → ${stabWords}</div></div>
-      <div class="data-row"><div class="data-key">Hedges Removed</div><div class="data-val">${r.hedges_removed}</div></div>
-      <div class="data-row"><div class="data-key">Filler Removed</div><div class="data-val">${r.filler_removed}</div></div>
-      <div class="data-row"><div class="data-key">Transitions Removed</div><div class="data-val">${r.transitions_removed || 0}</div></div>
-      <div class="data-row"><div class="data-key">Exact Dupes Removed</div><div class="data-val">${r.exact_dupes_removed || 0}</div></div>
-      <div class="data-row"><div class="data-key">Near Dupes Removed</div><div class="data-val">${r.near_dupes_removed || 0}</div></div>
-      <div class="data-row"><div class="data-key">Trimmed</div><div class="data-val">${r.trimmed ? 'YES (ceiling hit)' : 'No'}</div></div>
-      <div class="data-row"><div class="data-key">Token Ceiling</div><div class="data-val">${r.max_tokens} words</div></div>
-      ${removedList ? `<div class="data-row" style="flex-direction:column;gap:6px"><div class="data-key">Removed Items (${(r.removed_items||[]).length})</div><div style="margin-top:4px;max-height:200px;overflow-y:auto">${removedList}</div></div>` : ''}
-      <div class="data-row" style="flex-direction:column;gap:8px">
-        <div class="data-key">Before → After</div>
-        <div class="diff-container">
-          <div class="diff-col diff-before"><div class="diff-label diff-label-before">Original</div>${escHtml(originalText)}</div>
-          <div class="diff-col diff-after"><div class="diff-label diff-label-after">Stabilized</div>${escHtml(r.stabilized_text)}</div>
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderEdge(r) {
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--edge-color)"></div>
-      <div class="engine-name" style="color:var(--edge-color)">Relational Field</div>
-      <div class="engine-summary">Edge Index: ${r.edge_index.toFixed(4)} · ${r.edge_markers.length} markers</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Edge Index</div><div class="data-val" style="font-size:18px;font-weight:700;color:${r.edge_index < 0.30 ? 'var(--accent)' : r.edge_index < 0.60 ? 'var(--gold)' : 'var(--warn)'}">${r.edge_index.toFixed(4)}</div></div>
-      <div class="data-row"><div class="data-key">Triggered Patterns</div><div class="data-val"><div class="violations-list">${r.triggered_patterns.length ? r.triggered_patterns.map(p=>`<span class="marker-tag">${p}</span>`).join('') : '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
-      <div class="data-row"><div class="data-key">Markers</div><div class="data-val">${r.edge_markers.length ? r.edge_markers.map(m=>`<div style="margin-bottom:4px"><span class="marker-tag">${m.pattern}</span> <span style="color:var(--text-dim)">"${escHtml(m.phrase)}"</span> <span style="color:var(--text-dim);font-size:10px">w=${m.weight}</span></div>`).join('') : 'No destabilizing patterns detected'}</div></div>
-    </div>
-  </div>`;
-}
-
-function renderEcon(r) {
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--econ-color)"></div>
-      <div class="engine-name" style="color:var(--econ-color)">Economic Layer</div>
-      <div class="engine-summary">${r.estimated_input_tokens} in · ${r.estimated_output_tokens} out · $${r.estimated_roundtrip_cost.toFixed(6)}</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Input Tokens (est)</div><div class="data-val">${r.estimated_input_tokens}</div></div>
-      <div class="data-row"><div class="data-key">Output Tokens (est)</div><div class="data-val">${r.estimated_output_tokens}</div></div>
-      <div class="data-row"><div class="data-key">Roundtrip Cost (est)</div><div class="data-val">$${r.estimated_roundtrip_cost.toFixed(6)}</div></div>
-      <div class="data-row"><div class="data-key">AI Invoked</div><div class="data-val">${r.ai_invoked ? 'Yes' : 'No'}</div></div>
-      <div class="data-row"><div class="data-key">Invocation Avoided</div><div class="data-val">${r.invocation_avoided}</div></div>
-    </div>
-  </div>`;
-}
-
-function renderGov(r) {
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--gov-color)"></div>
-      <div class="engine-name" style="color:var(--gov-color)">Invocation Governance</div>
-      <div class="engine-summary">${r.route_hint}</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Route Hint</div><div class="data-val"><span class="route-tag route-${r.route_hint}">${r.route_hint}</span></div></div>
-      <div class="data-row"><div class="data-key">Advisory Only</div><div class="data-val">${r.advisory_only ? 'Yes' : 'No'}</div></div>
-      <div class="data-row"><div class="data-key">Logic</div><div class="data-val text-output">AI_OPTIMAL: struct ≥ 0.75 AND edge < 0.60
-CLARIFICATION_REQUIRED: struct < 0.75 AND edge < 0.40
-HUMAN_RECOMMENDED: struct ≥ 0.75 AND edge ≥ 0.60
-HUMAN_REQUIRED: struct < 0.75 AND edge ≥ 0.40</div></div>
-    </div>
-  </div>`;
-}
-
-function renderObs(r) {
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--obs-color)"></div>
-      <div class="engine-name" style="color:var(--obs-color)">Observability</div>
-      <div class="engine-summary">Risk Composite: ${r.composite_score.toFixed(4)}</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Composite Score</div><div class="data-val" style="font-size:18px;font-weight:700;color:${r.composite_score < 0.30 ? 'var(--accent)' : r.composite_score < 0.60 ? 'var(--gold)' : 'var(--warn)'}">${r.composite_score.toFixed(4)}</div></div>
-      <div class="data-row"><div class="data-key">Structural Risk</div><div class="data-val">${r.structural_risk.toFixed(4)} <span style="color:var(--text-dim)">(1 - struct_score) × 0.60</span></div></div>
-      <div class="data-row"><div class="data-key">Relational Risk</div><div class="data-val">${r.relational_risk.toFixed(4)} <span style="color:var(--text-dim)">(edge_index) × 0.40</span></div></div>
-    </div>
-  </div>`;
-}
-
-function renderBanding(structScore, edgeIndex, econResult, obsResult) {
-  const bs = bandStructural(structScore);
-  const br = bandRelational(edgeIndex);
-  const bc = econResult ? bandCost(econResult.estimated_roundtrip_cost) : 'N/A';
-  const bo = obsResult ? bandObs(obsResult.composite_score) : 'N/A';
-
-  return `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--band-color)"></div>
-      <div class="engine-name" style="color:var(--band-color)">Banding Classification</div>
-      <div class="engine-summary">${bs} · ${br} · ${bc} · ${bo}</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div class="data-row"><div class="data-key">Structural Band</div><div class="data-val"><span class="band-tag band-${bs}">${bs}</span> <span style="color:var(--text-dim);font-size:11px">(score: ${structScore.toFixed(2)})</span></div></div>
-      <div class="data-row"><div class="data-key">Relational Band</div><div class="data-val"><span class="band-tag band-${br}">${br}</span> <span style="color:var(--text-dim);font-size:11px">(edge: ${edgeIndex.toFixed(4)})</span></div></div>
-      <div class="data-row"><div class="data-key">Cost Band</div><div class="data-val"><span class="band-tag band-${bc}">${bc}</span></div></div>
-      <div class="data-row"><div class="data-key">Observability Band</div><div class="data-val"><span class="band-tag band-${bo}">${bo}</span></div></div>
-    </div>
-  </div>`;
-}
-
-function escHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-// ==========================================
-// TAB SWITCHING
-// ==========================================
-let currentTab = 'single';
-
-function switchTab(tab, el) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => {
-    t.style.borderBottomColor = 'transparent';
-    t.style.color = 'var(--text-dim)';
+// ══════════════════════════════════════════════════════════════
+// TOP TAB SWITCHING
+// ══════════════════════════════════════════════════════════════
+function switchTopTab(tab) {
+  ['bench','pipe','relay'].forEach(t => {
+    document.getElementById('page' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    const el = document.getElementById('topTab' + t.charAt(0).toUpperCase() + t.slice(1));
+    el.className = 'top-tab' + (t === tab ? (t==='bench'?' active':t==='pipe'?' active-pipe':' active-relay') : '');
   });
-  el.style.borderBottomColor = 'var(--accent)';
-  el.style.color = 'var(--text)';
-
-  document.getElementById('singleInput').style.display = tab === 'single' ? 'flex' : 'none';
-  document.getElementById('batchInput').style.display = tab === 'batch' ? 'flex' : 'none';
-  document.getElementById('compareInput').style.display = tab === 'compare' ? 'flex' : 'none';
 }
 
-// Override run button to handle modes
-const originalRunEngines = runEngines;
-runEngines = function() {
-  if (currentTab === 'single') return originalRunEngines();
-  if (currentTab === 'batch') return runBatch();
-  if (currentTab === 'compare') return runCompare();
+// ══════════════════════════════════════════════════════════════
+// PIPELINE TRACE
+// ══════════════════════════════════════════════════════════════
+const PIPE_SAMPLES = {
+  clean:  "The report must be submitted by Friday 5pm EST. No extensions. Owner: Sarah Chen. Scope: Q1 financials only.",
+  drift:  "Maybe we could possibly look into addressing this concern at some point down the road when things settle down.",
+  dce:    "We'll figure out the deployment strategy later. Just ship it. Phase 2 will handle security. Fix later.",
+  strong: "Constraint: Budget locked at $50k. No scope changes after sign-off. Deadline: March 15 — hard stop."
 };
+function loadPipeSample(k) { document.getElementById('pipeText').value = PIPE_SAMPLES[k]; }
 
-function runBatch() {
-  const raw = document.getElementById('batchText').value;
-  if (!raw.trim()) return;
+let pipeOverrides = { stage3: null }; // user-edited AI input override
 
-  const texts = raw.split(/\n---\n/).map(t => t.trim()).filter(t => t);
-  if (!texts.length) return;
+async function runPipeline() {
+  const text = document.getElementById('pipeText').value.trim();
+  if (!text) { document.getElementById('pipeText').focus(); return; }
 
-  const panel = document.getElementById('outputPanel');
-  panel.innerHTML = '<div class="panel-header">Output</div>';
+  const btn = document.getElementById('pipeRunBtn');
+  btn.disabled = true; btn.textContent = '...';
 
-  const objective = document.getElementById('objectiveText').value.trim() || null;
-  const startTime = performance.now();
+  const base = (document.getElementById('baseUrl').value||'').replace(/\/+$/,'');
+  const threshold = parseFloat(document.getElementById('pipeThreshold').value) || 0.80;
+  const maxTokens = parseInt(document.getElementById('pipeMaxTokens').value) || 400;
+  const objective = document.getElementById('pipeObjective').value.trim();
+  const frictionMode = document.getElementById('pipeFrictionMode').value;
 
-  for (let i = 0; i < texts.length; i++) {
-    const text = texts[i];
-    panel.innerHTML += `<div style="padding:12px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1px">BATCH ITEM ${i+1} of ${texts.length}</div>`;
+  // Clear all stages
+  ['1','2','3','4','5'].forEach(n => {
+    document.getElementById('psbody'+n).innerHTML = '<div class="ps-empty"><div class="spinner" style="margin:0 auto"></div></div>';
+  });
 
-    if (activeEngines.has('v2') || activeEngines.has('convergence')) {
-      panel.innerHTML += renderV2(runV2(text));
-    }
-    if (activeEngines.has('v3') || activeEngines.has('convergence')) {
-      panel.innerHTML += renderV3(runV3(text, 400, objective), text);
-    }
-    if (activeEngines.has('edge') || activeEngines.has('convergence')) {
-      panel.innerHTML += renderEdge(computeRelationalField(text));
-    }
+  // ── STAGE 1: Raw input ──
+  renderStage1(text);
 
-    const v2r = runV2(text);
-    const er = computeRelationalField(text);
-    const v3r = runV3(text, 400, objective);
-    const govr = computeInvocationGov(v2r.score, er.edge_index);
+  // ── STAGE 2: V2 via /nti (has v2 data in response) ──
+  let ntiResult = null;
+  let v2Data = null;
+  try {
+    const r = await fetch(base + '/nti', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    ntiResult = await r.json();
+    v2Data = ntiResult.v2 || extractV2(ntiResult);
+  } catch(e) { v2Data = {_error: e.message}; }
+  renderStage2(text, v2Data, threshold);
 
-    if (activeEngines.has('econ') || activeEngines.has('convergence')) {
-      panel.innerHTML += renderEcon(computeEconomic(text, v3r.stabilized_text, govr.route_hint, false));
-    }
-    if (activeEngines.has('gov') || activeEngines.has('convergence')) {
-      panel.innerHTML += renderGov(govr);
-    }
-    if (activeEngines.has('obs') || activeEngines.has('convergence')) {
-      panel.innerHTML += renderObs(computeObservability(v2r.score, er.edge_index));
-    }
-    if (activeEngines.has('band') || activeEngines.has('convergence')) {
-      const econr = computeEconomic(text, v3r.stabilized_text, govr.route_hint, false);
-      const obsr = computeObservability(v2r.score, er.edge_index);
-      panel.innerHTML += renderBanding(v2r.score, er.edge_index, econr, obsr);
+  // ── STAGE 3: What AI sees (post-compiler, pre-response) ──
+  const aiInputText = pipeOverrides.stage3 || (ntiResult && ntiResult.layers && ntiResult.layers.L1_input_freeze && ntiResult.layers.L1_input_freeze.objective) || text;
+  renderStage3(text, aiInputText, ntiResult);
+
+  // ── STAGE 4: V3 via response ──
+  const v3Data = (ntiResult && ntiResult.v3) || null;
+  renderStage4(aiInputText, v3Data, maxTokens, objective);
+
+  // ── STAGE 5: Final delivered output ──
+  renderStage5(ntiResult, v3Data, text);
+
+  btn.disabled = false; btn.textContent = 'TRACE';
+}
+
+function extractV2(d) {
+  // Try to pull v2-style data from /nti response shapes
+  if (!d) return null;
+  return {
+    score: d.nii ? (d.nii.nii_score / 100) : null,
+    violations: d.tilt_taxonomy || [],
+    hedge_hits: [],
+    route: d.interaction_matrix && d.interaction_matrix.dominance_detected && d.interaction_matrix.dominance_detected[0] !== 'NONE' ? 'AI_PATH_FLAGGED' : 'AI_PATH',
+    normalized_text: (d.layers && d.layers.L1_input_freeze && d.layers.L1_input_freeze.objective) || '',
+  };
+}
+
+function renderStage1(text) {
+  const el = document.getElementById('psbody1');
+  const wc = text.trim().split(/\s+/).length;
+  const sc = text.length;
+  el.innerHTML = `
+    <div class="ps-name" style="margin-bottom:8px;color:var(--dim)">TEXT AS ENTERED</div>
+    <div class="text-display">${esc(text)}</div>
+    <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
+      <span class="viol viol-info">${wc} words</span>
+      <span class="viol viol-info">${sc} chars</span>
+      <span class="viol viol-info">${Math.ceil(wc*1.3)} est. tokens</span>
+    </div>`;
+}
+
+function renderStage2(originalText, v2, threshold) {
+  const el = document.getElementById('psbody2');
+  if (v2 && v2._error) {
+    el.innerHTML = `<div class="viol viol-warn">${esc(v2._error)}</div>`;
+    return;
+  }
+  const score = v2 ? v2.score : null;
+  const viols = v2 ? (v2.violations || []) : [];
+  const hedges = v2 ? (v2.hedge_hits || []) : [];
+  const route = v2 ? v2.route : '—';
+  const norm = v2 ? v2.normalized_text : originalText;
+  const pass = score !== null ? score >= threshold : null;
+  const scoreColor = pass === null ? 'var(--dim)' : pass ? 'var(--accent)' : 'var(--warn)';
+
+  let html = `
+    <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:${scoreColor};padding:8px 0 4px">${score !== null ? score.toFixed(2) : '—'}</div>
+    <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px">V2 Score ${pass===true?'· PASS':pass===false?'· FAIL':''}  · threshold ${threshold}</div>`;
+
+  html += psRow('Route', `<span class="viol ${route==='AI_PATH'?'viol-ok':'viol-gold'}">${esc(route)}</span>`);
+  html += psRow('Violations', viols.length ? viols.map(v=>`<span class="viol viol-warn">${v}</span>`).join(' ') : '<span class="viol viol-ok">NONE</span>');
+  html += psRow('Hedge hits', hedges.length ? hedges.map(h=>`<span class="viol viol-info">${esc(h)}</span>`).join(' ') : '—');
+
+  html += `<div class="sep" style="margin:10px 0 6px">Normalized Text</div>`;
+  html += `<div class="text-display">${esc(norm)}</div>`;
+
+  // Diff vs original
+  if (norm && norm !== originalText) {
+    html += `<div class="pipe-diff">Text was normalized</div>`;
+  } else {
+    html += `<div class="pipe-diff clean">No normalization changes</div>`;
+  }
+
+  html += `<div class="sep" style="margin:10px 0 6px">Raw V2 Data</div>`;
+  html += `<pre style="font-size:9px;color:var(--dim);white-space:pre-wrap;word-break:break-all">${esc(JSON.stringify(v2,null,2))}</pre>`;
+  el.innerHTML = html;
+}
+
+function renderStage3(originalText, aiInputText, ntiResult) {
+  const el = document.getElementById('psbody3');
+  const layers = ntiResult && ntiResult.layers;
+  const ax3 = ntiResult && ntiResult.axis3_clarity;
+  const ax2compiled = ntiResult && ntiResult._axis2_compiled; // debug flag if present
+
+  let html = `<div class="sep" style="margin:0 0 6px">Text the AI receives</div>`;
+  html += `<div class="text-display">${esc(aiInputText)}</div>`;
+
+  const changed = aiInputText !== originalText;
+  html += `<div class="pipe-diff ${changed?'':'clean'}">${changed?'axis2_compiler rewrote input':'Input unchanged by compiler'}</div>`;
+
+  if (layers) {
+    html += `<div class="sep" style="margin:10px 0 6px">L1 Input Freeze</div>`;
+    const l1 = layers.L1_input_freeze || {};
+    Object.keys(l1).slice(0,6).forEach(k => { html += psRow(k, esc(String(l1[k]).substring(0,120))); });
+
+    html += `<div class="sep" style="margin:10px 0 6px">L2 Interpretive Framing</div>`;
+    const l2 = layers.L2_interpretive_framing || {};
+    Object.keys(l2).slice(0,8).forEach(k => { html += psRow(k, typeof l2[k]==='object'?esc(JSON.stringify(l2[k]).substring(0,80)):esc(String(l2[k]))); });
+  }
+
+  if (ax3) {
+    html += `<div class="sep" style="margin:10px 0 6px">Axis 3 Clarity ✦</div>`;
+    Object.keys(ax3).filter(k=>!k.startsWith('_')).forEach(k => { html += psRow(k, fmt(ax3[k])); });
+  }
+
+  // Override section
+  html += `<div class="stage-override">
+    <div class="so-label">Override AI Input (re-run with this text)</div>
+    <textarea class="so-textarea" id="pipeStage3Override" placeholder="Paste modified text here to test what happens when AI receives something different...">${esc(aiInputText)}</textarea>
+    <button class="so-apply-btn" onclick="applyStage3Override()">Apply + Re-run</button>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function applyStage3Override() {
+  const val = document.getElementById('pipeStage3Override').value.trim();
+  if (val) {
+    pipeOverrides.stage3 = val;
+    runPipeline();
+  }
+}
+
+function renderStage4(aiInputText, v3, maxTokens, objective) {
+  const el = document.getElementById('psbody4');
+  if (!v3) {
+    el.innerHTML = `<div class="ps-empty">No V3 data returned from endpoint</div>`;
+    return;
+  }
+  if (v3._error || v3.error) {
+    el.innerHTML = `<div class="viol viol-warn">${esc(v3._error||v3.error)}</div>`;
+    return;
+  }
+
+  const stabilized = v3.stabilized_text || v3.enforced_text || '';
+  const hedgesRemoved = v3.hedges_removed ?? '—';
+  const fillerRemoved = v3.filler_removed ?? '—';
+  const trimmed = v3.trimmed;
+  const passes = v3.passes;
+  const decision = v3.decision;
+  const finalScore = v3.final_score;
+
+  let html = '';
+
+  if (finalScore !== undefined) {
+    const scoreColor = finalScore >= 70 ? 'var(--accent)' : finalScore >= 40 ? 'var(--gold)' : 'var(--warn)';
+    html += `<div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:${scoreColor};padding:8px 0 4px">${finalScore}</div>`;
+    html += `<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px">V3 Final Score · ${decision||''}</div>`;
+  } else {
+    html += `<div class="sep" style="margin:0 0 8px">V3 Stabilization Results</div>`;
+  }
+
+  html += psRow('Hedges removed', `<span class="viol ${hedgesRemoved>0?'viol-gold':'viol-ok'}">${hedgesRemoved}</span>`);
+  html += psRow('Filler removed', `<span class="viol ${fillerRemoved>0?'viol-gold':'viol-ok'}">${fillerRemoved}</span>`);
+  html += psRow('Trimmed', trimmed ? '<span class="viol viol-warn">YES</span>' : '<span class="viol viol-ok">NO</span>');
+  if (passes !== undefined) html += psRow('Passes', `<span class="viol ${passes?'viol-ok':'viol-warn'}">${passes}</span>`);
+
+  if (stabilized) {
+    html += `<div class="sep" style="margin:10px 0 6px">Stabilized Text</div>`;
+    html += `<div class="text-display">${renderDiff(aiInputText, stabilized)}</div>`;
+    const wBefore = aiInputText.trim().split(/\s+/).length;
+    const wAfter  = stabilized.trim().split(/\s+/).length;
+    const delta = wAfter - wBefore;
+    html += `<div class="pipe-diff ${delta<0?'':'clean'}">${delta < 0 ? `${Math.abs(delta)} words removed` : 'No word reduction'}</div>`;
+  }
+
+  // Override section
+  html += `<div class="stage-override">
+    <div class="so-label">Adjust V3 params above in the toolbar and re-run</div>
+    <div style="font-size:9px;color:var(--dim2);line-height:1.6">Max tokens: ${maxTokens} · Objective anchor: ${objective||'none'}</div>
+  </div>`;
+
+  html += `<div class="sep" style="margin:10px 0 6px">Raw V3 Data</div>`;
+  html += `<pre style="font-size:9px;color:var(--dim);white-space:pre-wrap;word-break:break-all">${esc(JSON.stringify(v3,null,2))}</pre>`;
+  el.innerHTML = html;
+}
+
+function renderStage5(ntiResult, v3, originalText) {
+  const el = document.getElementById('psbody5');
+  if (!ntiResult) { el.innerHTML = `<div class="ps-empty">No result</div>`; return; }
+
+  const nii = ntiResult.nii || {};
+  const score = nii.nii_score;
+  const label = nii.nii_label;
+  const tilt = ntiResult.tilt_taxonomy || [];
+  const fm = ntiResult.parent_failure_modes || {};
+  const dom = (ntiResult.interaction_matrix && ntiResult.interaction_matrix.dominance_detected) || [];
+  const v3Text = (v3 && (v3.stabilized_text||v3.enforced_text)) || originalText;
+  const scoreColor = score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--gold)' : 'var(--warn)';
+
+  let html = `<div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:${scoreColor};padding:8px 0 4px">${score != null ? score : '—'}</div>`;
+  html += `<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px">NII Score · ${label||''}</div>`;
+
+  html += psRow('D1 Constraint', fmt(nii.d1_constraint_density));
+  html += psRow('D2 Ask Arch',   fmt(nii.d2_ask_architecture));
+  html += psRow('D3 Enforcement',fmt(nii.d3_enforcement_integrity));
+  html += psRow('D4 Tilt Resist',fmt(nii.d4_tilt_resistance));
+  html += psRow('D5 Severity',   fmt(nii.d5_failure_mode_severity));
+
+  html += `<div class="sep" style="margin:10px 0 6px">Failure Modes</div>`;
+  html += psRow('UDDS', stag((fm.UDDS&&fm.UDDS.udds_state)||''));
+  html += psRow('DCE',  stag((fm.DCE&&fm.DCE.dce_state)||''));
+  html += psRow('CCA',  stag((fm.CCA&&fm.CCA.cca_state)||''));
+  html += psRow('Dominance', dom.map(x=>`<span class="viol viol-info">${x}</span>`).join(' ')||'—');
+
+  if (tilt.length) {
+    html += `<div class="sep" style="margin:10px 0 6px">Tilt Tags</div>`;
+    html += `<div style="padding:4px 0">${tilt.map(t=>`<span class="viol viol-warn">${t}</span>`).join(' ')}</div>`;
+  }
+
+  html += `<div class="sep" style="margin:10px 0 6px">Delivered Text (post-V3)</div>`;
+  html += `<div class="text-display">${esc(v3Text)}</div>`;
+
+  const wOrig = originalText.trim().split(/\s+/).length;
+  const wFinal = v3Text.trim().split(/\s+/).length;
+  html += `<div class="pipe-diff ${wFinal<wOrig?'':'clean'}">${wFinal < wOrig ? `${wOrig-wFinal} words removed from input to output` : 'Word count unchanged'}</div>`;
+
+  el.innerHTML = html;
+}
+
+// Inline diff renderer (word-level, simple)
+function renderDiff(before, after) {
+  if (!before || !after || before === after) return esc(after);
+  const bWords = before.split(' ');
+  const aWords = after.split(' ');
+  const bSet = new Set(bWords.map(w=>w.toLowerCase().replace(/[^a-z0-9]/g,'')));
+  const aSet = new Set(aWords.map(w=>w.toLowerCase().replace(/[^a-z0-9]/g,'')));
+  return aWords.map(w => {
+    const clean = w.toLowerCase().replace(/[^a-z0-9]/g,'');
+    return bSet.has(clean) ? esc(w) : `<span class="diff-added">${esc(w)}</span>`;
+  }).join(' ');
+}
+
+function psRow(k, v) {
+  return `<div class="dr"><div class="dk">${k}</div><div class="dv">${v!=null?v:'—'}</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RELAY INSPECTOR
+// ══════════════════════════════════════════════════════════════
+const RELAY_SAMPLES = {
+  clean:  "The report must be submitted by Friday 5pm EST. No extensions. Owner: Sarah Chen. Scope: Q1 financials only.",
+  drift:  "Maybe we could possibly look into addressing this concern at some point when things settle.",
+  dce:    "We'll figure out the deployment strategy later. Just ship it. Phase 2 will handle security.",
+  strong: "Constraint: Budget locked at $50k. No scope changes after sign-off. Deadline: March 15 — hard stop."
+};
+function loadRelaySample(k) { document.getElementById('relayText').value = RELAY_SAMPLES[k]; }
+
+let relayActiveTools = new Set(['v2','v3','nii']);
+let lastRelayResponse = null;
+let lastRelayRequest = null;
+
+function toggleRelayTool(el, tool) {
+  if (relayActiveTools.has(tool)) relayActiveTools.delete(tool);
+  else relayActiveTools.add(tool);
+  el.classList.toggle('on', relayActiveTools.has(tool));
+  if (lastRelayResponse) renderRelayExtracted(lastRelayResponse, lastRelayRequest);
+}
+
+async function runRelay() {
+  const text = document.getElementById('relayText').value.trim();
+  if (!text) { document.getElementById('relayText').focus(); return; }
+
+  const btn = document.getElementById('relayRunBtn');
+  btn.disabled = true; btn.textContent = '...';
+
+  const base = (document.getElementById('baseUrl').value||'').replace(/\/+$/,'');
+  const endpoint = document.getElementById('relayEndpoint').value;
+  const fmt_mode = document.getElementById('relayFormat').value;
+
+  const payload = {text};
+  const t0 = Date.now();
+
+  // Show outbound
+  renderRelayJSON('rcJSON1', payload, fmt_mode);
+  document.getElementById('rcMeta1').innerHTML = `
+    <div class="rc-meta-item"><span>Endpoint</span><span class="rc-meta-val">${endpoint}</span></div>
+    <div class="rc-meta-item"><span>Method</span><span class="rc-meta-val">POST</span></div>
+    <div class="rc-meta-item"><span>Payload size</span><span class="rc-meta-val">${JSON.stringify(payload).length} bytes</span></div>`;
+
+  document.getElementById('rcJSON2').innerHTML = '<div class="spinner" style="margin:16px auto"></div>';
+  document.getElementById('rcExtracted').innerHTML = '<div class="relay-empty"><div class="spinner" style="margin:0 auto 8px"></div>Waiting for response...</div>';
+
+  let response = null;
+  let latency = 0;
+  try {
+    const r = await fetch(base + endpoint, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    response = await r.json();
+    latency = Date.now() - t0;
+    if (!r.ok) response._error = response.error || `HTTP ${r.status}`;
+  } catch(e) {
+    response = {_error: e.message};
+    latency = Date.now() - t0;
+  }
+
+  lastRelayResponse = response;
+  lastRelayRequest = {endpoint, payload, latency};
+
+  // Show inbound
+  renderRelayJSON('rcJSON2', response, fmt_mode);
+  document.getElementById('rcMeta2').innerHTML = `
+    <div class="rc-meta-item"><span>Latency</span><span class="rc-meta-val">${latency}ms</span></div>
+    <div class="rc-meta-item"><span>Keys</span><span class="rc-meta-val">${Object.keys(response).length}</span></div>
+    <div class="rc-meta-item"><span>Size</span><span class="rc-meta-val">${JSON.stringify(response).length} bytes</span></div>
+    ${response._error?'<div class="rc-meta-item"><span class="rc-meta-val" style="color:var(--warn)">ERROR</span></div>':''}`;
+
+  // Extracted analysis
+  renderRelayExtracted(response, {endpoint, payload, latency});
+
+  btn.disabled = false; btn.textContent = 'INSPECT';
+}
+
+function renderRelayJSON(elId, data, fmtMode) {
+  const el = document.getElementById(elId);
+  if (fmtMode === 'compact') {
+    el.textContent = JSON.stringify(data);
+  } else if (fmtMode === 'tree') {
+    el.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+  } else {
+    el.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+  }
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\u[a-zA-Z0-9]{4}|\[^u]|[^\"])*"(\s*:)?|(true|false|null)|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      let cls = 'json-num';
+      if (/^"/.test(m)) { cls = /:$/.test(m) ? 'json-key' : 'json-str'; }
+      else if (/true|false/.test(m)) { cls = 'json-bool'; }
+      else if (/null/.test(m)) { cls = 'json-null'; }
+      return `<span class="${cls}">${m}</span>`;
+    });
+}
+
+function renderRelayExtracted(d, ctx) {
+  const el = document.getElementById('rcExtracted');
+  if (!d || d._error) {
+    el.innerHTML = `<div class="json-panel"><div class="viol viol-warn">${esc(d&&d._error||'Error')}</div></div>`;
+    return;
+  }
+
+  let html = '<div class="json-panel">';
+
+  // Request summary
+  if (ctx) {
+    html += `<div class="json-toolbar" style="margin-bottom:8px">
+      <span style="font-size:9px;color:var(--dim2)">Endpoint: <span style="color:var(--text)">${ctx.endpoint}</span></span>
+      <span style="font-size:9px;color:var(--dim2);margin-left:10px">Latency: <span style="color:var(--text)">${ctx.latency}ms</span></span>
+    </div>`;
+  }
+
+  // NII block
+  if (relayActiveTools.has('nii')) {
+    const nii = d.nii || d.score || {};
+    const score = nii.nii_score ?? nii.nii;
+    if (score != null) {
+      const sc = score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--gold)' : 'var(--warn)';
+      html += `<div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:${sc};padding:8px 0 2px">${score}</div>`;
+      html += `<div style="font-size:9px;color:var(--dim);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px">NII Score · ${nii.nii_label||''}</div>`;
+      ['d1_constraint_density','d2_ask_architecture','d3_enforcement_integrity','d4_tilt_resistance','d5_failure_mode_severity'].forEach(k => {
+        if (nii[k]!=null) html += psRow(k.replace('d','D').replace(/_/g,' '), fmt(nii[k]));
+      });
     }
   }
 
-  const elapsed = (performance.now() - startTime).toFixed(2);
-  panel.innerHTML += `<div style="padding:12px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);">${texts.length} items processed in ${elapsed}ms · No LLM invoked · Deterministic</div>`;
+  // V2 block
+  if (relayActiveTools.has('v2')) {
+    const v2 = d.v2 || {};
+    const viols = v2.violations || [];
+    if (Object.keys(v2).length) {
+      html += `<div class="sep" style="margin:10px 0 6px">V2 Audit</div>`;
+      html += psRow('Score', v2.score != null ? v2.score.toFixed(2) : '—');
+      html += psRow('Route', `<span class="viol ${v2.route==='AI_PATH'?'viol-ok':'viol-gold'}">${esc(v2.route||'—')}</span>`);
+      html += psRow('Violations', viols.length ? viols.map(v=>`<span class="viol viol-warn">${v}</span>`).join(' ') : '<span class="viol viol-ok">NONE</span>');
+    }
+  }
+
+  // V3 block
+  if (relayActiveTools.has('v3')) {
+    const v3 = d.v3 || {};
+    if (Object.keys(v3).length) {
+      html += `<div class="sep" style="margin:10px 0 6px">V3 Enforcement</div>`;
+      html += psRow('Final Score', v3.final_score != null ? v3.final_score : '—');
+      html += psRow('Passes',  v3.passes != null ? (v3.passes ? '<span class="viol viol-ok">YES</span>' : '<span class="viol viol-warn">NO</span>') : '—');
+      html += psRow('Decision', esc(v3.decision||'—'));
+      html += psRow('Hedges out', v3.hedges_removed ?? '—');
+      html += psRow('Filler out', v3.filler_removed ?? '—');
+      if (v3.enforced_text) {
+        html += `<div class="sep" style="margin:8px 0 4px">Enforced Text</div>`;
+        html += `<div class="text-display" style="font-size:10px">${esc(v3.enforced_text)}</div>`;
+      }
+    }
+  }
+
+  // Failure modes
+  if (relayActiveTools.has('fm')) {
+    const fm = d.parent_failure_modes || d.failure_modes || {};
+    if (Object.keys(fm).length) {
+      html += `<div class="sep" style="margin:10px 0 6px">Failure Modes</div>`;
+      ['UDDS','DCE','CCA'].forEach(k => {
+        const v = fm[k];
+        const state = v && (v.udds_state || v.dce_state || v.cca_state || String(v));
+        html += psRow(k, stag(state||''));
+      });
+    }
+    const tilt = d.tilt_taxonomy || [];
+    if (tilt.length) {
+      html += psRow('Tilt', tilt.map(t=>`<span class="viol viol-warn">${t}</span>`).join(' '));
+    }
+  }
+
+  // Layers
+  if (relayActiveTools.has('layers')) {
+    const layers = d.layers || {};
+    if (Object.keys(layers).length) {
+      html += `<div class="sep" style="margin:10px 0 6px">Layers</div>`;
+      Object.keys(layers).forEach(lk => {
+        const lv = layers[lk];
+        html += `<div style="padding:4px 0;font-size:9px;color:var(--dim)">${lk}</div>`;
+        if (typeof lv === 'object') {
+          Object.keys(lv).slice(0,4).forEach(k => html += psRow(k, esc(String(lv[k]).substring(0,80))));
+        }
+      });
+    }
+  }
+
+  // Full key index
+  html += `<div class="sep" style="margin:12px 0 6px">All Response Keys</div>`;
+  html += `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 0">`;
+  Object.keys(d).forEach(k => {
+    const t = typeof d[k];
+    const color = t==='number'?'var(--orange)':t==='boolean'?'var(--gold)':t==='object'?'var(--info)':'var(--accent)';
+    html += `<span style="font-size:8px;padding:2px 6px;border-radius:2px;background:var(--s3);border:1px solid var(--border);color:${color}">${k}</span>`;
+  });
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
-function runCompare() {
-  const textA = document.getElementById('compareA').value;
-  const textB = document.getElementById('compareB').value;
-  if (!textA.trim() || !textB.trim()) return;
-
-  const panel = document.getElementById('outputPanel');
-  panel.innerHTML = '<div class="panel-header">Output — Comparison</div>';
-
-  const v2a = runV2(textA);
-  const v2b = runV2(textB);
-  const v3a = runV3(textA);
-  const v3b = runV3(textB);
-  const edgeA = computeRelationalField(textA);
-  const edgeB = computeRelationalField(textB);
-  const govA = computeInvocationGov(v2a.score, edgeA.edge_index);
-  const govB = computeInvocationGov(v2b.score, edgeB.edge_index);
-  const obsA = computeObservability(v2a.score, edgeA.edge_index);
-  const obsB = computeObservability(v2b.score, edgeB.edge_index);
-
-  const delta = (a, b, label, higherIsBetter=true) => {
-    const diff = b - a;
-    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
-    const color = (higherIsBetter ? diff > 0 : diff < 0) ? 'var(--accent)' : diff === 0 ? 'var(--text-dim)' : 'var(--warn)';
-    return `<div class="data-row">
-      <div class="data-key">${label}</div>
-      <div class="data-val" style="display:flex;gap:16px;align-items:center">
-        <span style="min-width:60px">${a.toFixed(4)}</span>
-        <span style="color:${color};font-weight:700">${arrow} ${Math.abs(diff).toFixed(4)}</span>
-        <span style="min-width:60px">${b.toFixed(4)}</span>
-      </div>
-    </div>`;
-  };
-
-  panel.innerHTML += `<div class="engine-block">
-    <div class="engine-block-header" onclick="toggleBlock(this)">
-      <div class="indicator" style="background:var(--accent)"></div>
-      <div class="engine-name" style="color:var(--accent)">Comparison — A vs B</div>
-      <div class="engine-summary">Score: ${v2a.score.toFixed(2)} → ${v2b.score.toFixed(2)} · Edge: ${edgeA.edge_index.toFixed(2)} → ${edgeB.edge_index.toFixed(2)}</div>
-      <div class="chevron">▼</div>
-    </div>
-    <div class="engine-body">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;display:flex;gap:16px">
-        <span style="min-width:200px"></span>
-        <span style="min-width:60px;color:var(--warn)">DOC A</span>
-        <span style="min-width:80px;text-align:center">DELTA</span>
-        <span style="min-width:60px;color:var(--accent)">DOC B</span>
-      </div>
-      ${delta(v2a.score, v2b.score, 'V2 Score', true)}
-      ${delta(edgeA.edge_index, edgeB.edge_index, 'Edge Index', false)}
-      ${delta(obsA.composite_score, obsB.composite_score, 'Risk Composite', false)}
-      ${delta(v3a.compression_pct, v3b.compression_pct, 'V3 Compression %', true)}
-      ${delta(v3a.tokens_saved, v3b.tokens_saved, 'Tokens Saved', true)}
-      <div class="data-row"><div class="data-key">V2 Violations A</div><div class="data-val"><div class="violations-list">${v2a.violations.map(v=>`<span class="violation-tag">${v}</span>`).join('') || '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
-      <div class="data-row"><div class="data-key">V2 Violations B</div><div class="data-val"><div class="violations-list">${v2b.violations.map(v=>`<span class="violation-tag">${v}</span>`).join('') || '<span style="color:var(--accent)">NONE</span>'}</div></div></div>
-      <div class="data-row"><div class="data-key">Gov Route A</div><div class="data-val"><span class="route-tag route-${govA.route_hint}">${govA.route_hint}</span></div></div>
-      <div class="data-row"><div class="data-key">Gov Route B</div><div class="data-val"><span class="route-tag route-${govB.route_hint}">${govB.route_hint}</span></div></div>
-      <div class="data-row"><div class="data-key">Edge Patterns A</div><div class="data-val">${edgeA.triggered_patterns.length ? edgeA.triggered_patterns.map(p=>`<span class="marker-tag">${p}</span>`).join(' ') : 'none'}</div></div>
-      <div class="data-row"><div class="data-key">Edge Patterns B</div><div class="data-val">${edgeB.triggered_patterns.length ? edgeB.triggered_patterns.map(p=>`<span class="marker-tag">${p}</span>`).join(' ') : 'none'}</div></div>
-    </div>
-  </div>`;
-
-  // Also show individual breakdowns
-  panel.innerHTML += `<div style="padding:12px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--warn);letter-spacing:1px">DOCUMENT A</div>`;
-  panel.innerHTML += renderV2(v2a);
-  panel.innerHTML += renderV3(v3a, textA);
-  panel.innerHTML += renderEdge(edgeA);
-  panel.innerHTML += `<div style="padding:12px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:1px">DOCUMENT B</div>`;
-  panel.innerHTML += renderV2(v2b);
-  panel.innerHTML += renderV3(v3b, textB);
-  panel.innerHTML += renderEdge(edgeB);
+function copyJSON(elId) {
+  const el = document.getElementById(elId);
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const btn = el.previousElementSibling.querySelector('.json-copy-btn');
+    if (btn) { btn.textContent='copied!'; setTimeout(()=>btn.textContent='copy',1500); }
+  });
 }
+
+function filterJSON(elId, filterId) {
+  const filter = document.getElementById(filterId).value.toLowerCase().trim();
+  const el = document.getElementById(elId);
+  if (!filter || !lastRelayResponse) return;
+  try {
+    const filtered = Object.fromEntries(
+      Object.entries(lastRelayResponse).filter(([k]) => k.toLowerCase().includes(filter))
+    );
+    el.innerHTML = syntaxHighlight(JSON.stringify(filtered, null, 2));
+  } catch(e) {}
+}
+
 </script>
-
 </body>
 </html>

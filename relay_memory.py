@@ -11,9 +11,7 @@ Changes from v5:
     3. Relay mode constants — OPEN and GOVERNED defined here as the canonical source.
 """
 
-import os
 import re
-import sqlite3
 import hashlib
 from datetime import datetime, timezone
 from typing import Optional
@@ -22,8 +20,6 @@ from typing import Optional
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-DB_PATH = os.getenv("RELAY_DB_PATH", "/tmp/relay_memory.db")
-
 P0 = 0  # Deterministic procedures — locked
 P1 = 1  # Canonical system definitions
 P2 = 2  # Reference documents
@@ -273,105 +269,176 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_db():
+    """Return a canonical PostgreSQL connection."""
+    return database.db_connect()
+
 
 
 def init_db() -> None:
+    """Create the canonical Relay memory tables and seed the P0 anchor."""
     conn = get_db()
-    cur = conn.cursor()
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS messages (
-        id          TEXT PRIMARY KEY,
-        created_at  TEXT NOT NULL,
-        role        TEXT NOT NULL,
-        content     TEXT NOT NULL,
-        topic       TEXT,
-        mode        TEXT,
-        session_id  TEXT
-    )""")
+    try:
+        cur = conn.cursor()
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS artifacts (
-        id          TEXT PRIMARY KEY,
-        created_at  TEXT NOT NULL,
-        updated_at  TEXT NOT NULL,
-        key         TEXT UNIQUE NOT NULL,
-        topic       TEXT NOT NULL,
-        priority    INTEGER NOT NULL DEFAULT 2,
-        content     TEXT NOT NULL,
-        version     INTEGER DEFAULT 1,
-        locked      INTEGER DEFAULT 0
-    )""")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                topic TEXT,
+                mode TEXT,
+                session_id TEXT
+            )
+        """)
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS staged_artifacts (
-        id          TEXT PRIMARY KEY,
-        created_at  TEXT NOT NULL,
-        key         TEXT NOT NULL,
-        topic       TEXT NOT NULL,
-        priority    INTEGER NOT NULL DEFAULT 0,
-        content     TEXT NOT NULL,
-        source_mode TEXT,
-        promoted    INTEGER DEFAULT 0
-    )""")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS artifacts (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                key TEXT UNIQUE NOT NULL,
+                topic TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 2,
+                content TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                locked BOOLEAN NOT NULL DEFAULT FALSE
+            )
+        """)
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS injections (
-        id              TEXT PRIMARY KEY,
-        created_at      TEXT NOT NULL,
-        message_id      TEXT NOT NULL,
-        artifact_key    TEXT NOT NULL,
-        topic           TEXT NOT NULL,
-        priority        INTEGER NOT NULL DEFAULT 2,
-        mode            TEXT
-    )""")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS staged_artifacts (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                key TEXT NOT NULL,
+                topic TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 0,
+                content TEXT NOT NULL,
+                source_mode TEXT,
+                promoted BOOLEAN NOT NULL DEFAULT FALSE
+            )
+        """)
 
-    for migration in [
-        "ALTER TABLE artifacts ADD COLUMN locked INTEGER DEFAULT 0",
-        "ALTER TABLE artifacts ADD COLUMN priority INTEGER NOT NULL DEFAULT 2",
-    ]:
-        try:
-            cur.execute(migration)
-            conn.commit()
-        except sqlite3.OperationalError:
-            pass
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS injections (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                message_id TEXT NOT NULL,
+                artifact_key TEXT NOT NULL,
+                topic TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 2,
+                mode TEXT
+            )
+        """)
 
-    for stmt in [
-        "CREATE INDEX IF NOT EXISTS idx_artifacts_topic    ON artifacts(topic)",
-        "CREATE INDEX IF NOT EXISTS idx_artifacts_priority ON artifacts(priority)",
-        "CREATE INDEX IF NOT EXISTS idx_messages_session   ON messages(session_id)",
-        "CREATE INDEX IF NOT EXISTS idx_messages_topic     ON messages(topic)",
-        "CREATE INDEX IF NOT EXISTS idx_staged_promoted    ON staged_artifacts(promoted)",
-    ]:
-        try:
-            cur.execute(stmt)
-        except sqlite3.OperationalError:
-            pass
+        cur.execute("""
+            DO $$
+            BEGIN
+                ALTER TABLE artifacts
+                ADD COLUMN locked BOOLEAN NOT NULL DEFAULT FALSE;
+            EXCEPTION
+                WHEN duplicate_column THEN NULL;
+            END $$;
+        """)
 
-    conn.commit()
-    conn.close()
+        cur.execute("""
+            DO $$
+            BEGIN
+                ALTER TABLE artifacts
+                ADD COLUMN priority INTEGER NOT NULL DEFAULT 2;
+            EXCEPTION
+                WHEN duplicate_column THEN NULL;
+            END $$;
+        """)
 
-    # Seed P0 anchor once
-    if not get_artifact(P0_ANCHOR_KEY):
-        _seed_anchor()
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_artifacts_topic
+            ON artifacts(topic)
+        """)
+
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_artifacts_priority
+            ON artifacts(priority)
+        """)
+
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_messages_session
+            ON messages(session_id)
+        """)
+
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_messages_topic
+            ON messages(topic)
+        """)
+
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_staged_promoted
+            ON staged_artifacts(promoted)
+        """)
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+    _seed_anchor()
+
 
 
 def _seed_anchor() -> None:
+    """Insert the locked system anchor once."""
+    anchor_id = hashlib.sha256(
+        P0_ANCHOR_KEY.encode()
+    ).hexdigest()[:16]
+
     conn = get_db()
-    anchor_id = hashlib.sha256(P0_ANCHOR_KEY.encode()).hexdigest()[:16]
-    conn.execute(
-        "INSERT OR IGNORE INTO artifacts "
-        "(id, created_at, updated_at, key, topic, priority, content, version, locked) "
-        "VALUES (?,?,?,?,?,?,?,?,?)",
-        (anchor_id, utc_now(), utc_now(), P0_ANCHOR_KEY,
-         "general", P0, P0_ANCHOR_CONTENT, 1, 1)
-    )
-    conn.commit()
-    conn.close()
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            INSERT INTO artifacts (
+                id,
+                created_at,
+                updated_at,
+                key,
+                topic,
+                priority,
+                content,
+                version,
+                locked
+            )
+            VALUES (
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, TRUE
+            )
+            ON CONFLICT (key) DO NOTHING
+        """, (
+            anchor_id,
+            utc_now(),
+            utc_now(),
+            P0_ANCHOR_KEY,
+            "general",
+            P0,
+            P0_ANCHOR_CONTENT,
+            1,
+        ))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
 
 
 # ─────────────────────────────────────────────
@@ -379,55 +446,119 @@ def _seed_anchor() -> None:
 # ─────────────────────────────────────────────
 def classify_topic(text: str) -> tuple:
     """
-    Returns (topic, confidence, method).
-    method: "signal" | "keyword" | "domain_token" | "none"
+    Return (topic, confidence, method).
 
-    Fallback chain:
-        1. Signal scoring (TOPIC_MAP phrase hits)
-        2. Keyword exact match (single-word topics)
-        3. Domain token overlap against artifact store
-        4. "general" with method="none" — flagged
+    Fallback order:
+      1. configured signal scoring;
+      2. exact topic keyword;
+      3. artifact-domain token overlap;
+      4. general/none.
     """
-    t = text.lower()
+    lowered = text.lower()
 
-    # Stage 1: Signal scoring
     scores = {}
+
     for topic, signals in TOPIC_MAP.items():
-        score = sum(1 for s in signals if s in t)
+        score = sum(
+            1
+            for signal in signals
+            if signal in lowered
+        )
+
         if score:
             scores[topic] = score
 
     if scores:
-        best = max(scores, key=scores.get)
-        if scores[best] >= CLASSIFICATION_CONFIDENCE_THRESHOLD:
-            return best, scores[best], "signal"
+        best = max(
+            scores,
+            key=scores.get,
+        )
 
-    # Stage 2: Keyword exact match
-    words = set(re.findall(r'\b\w+\b', t))
+        if scores[best] >= CLASSIFICATION_CONFIDENCE_THRESHOLD:
+            return (
+                best,
+                scores[best],
+                "signal",
+            )
+
+    words = set(
+        re.findall(
+            r"\b\w+\b",
+            lowered,
+        )
+    )
+
     for topic in TOPIC_MAP:
         if topic in words:
-            return topic, 1, "keyword"
+            return (
+                topic,
+                1,
+                "keyword",
+            )
 
-    # Stage 3: Domain token overlap against artifact store
-    tokens = [w for w in words if len(w) >= 4]
+    tokens = [
+        word
+        for word in words
+        if len(word) >= 4
+    ]
+
     if tokens:
         conn = get_db()
-        rows = conn.execute(
-            "SELECT key, topic, content FROM artifacts ORDER BY priority ASC LIMIT 50"
-        ).fetchall()
-        conn.close()
+
+        try:
+            cur = conn.cursor(
+                cursor_factory=RealDictCursor
+            )
+
+            cur.execute("""
+                SELECT
+                    key,
+                    topic,
+                    content
+                FROM artifacts
+                ORDER BY priority ASC
+                LIMIT 50
+            """)
+
+            rows = cur.fetchall()
+
+        finally:
+            conn.close()
+
         best_topic = None
         best_overlap = 0
+        token_set = set(tokens)
+
         for row in rows:
-            artifact_tokens = set(re.findall(r'\b\w{4,}\b', row["content"].lower()))
-            overlap = len(set(tokens) & artifact_tokens)
+            artifact_tokens = set(
+                re.findall(
+                    r"\b\w{4,}\b",
+                    row["content"].lower(),
+                )
+            )
+
+            overlap = len(
+                token_set
+                & artifact_tokens
+            )
+
             if overlap > best_overlap:
                 best_overlap = overlap
                 best_topic = row["topic"]
-        if best_topic and best_overlap >= 2:
-            return best_topic, best_overlap, "domain_token"
 
-    return "general", 0, "none"
+        if best_topic and best_overlap >= 2:
+            return (
+                best_topic,
+                best_overlap,
+                "domain_token",
+            )
+
+    return (
+        "general",
+        0,
+        "none",
+    )
+
 
 
 # ─────────────────────────────────────────────
@@ -478,190 +609,628 @@ def _complexity_limit(text: str) -> int:
 # ─────────────────────────────────────────────
 # MESSAGE STORAGE
 # ─────────────────────────────────────────────
-def store_message(role: str, content: str, session_id: str = "default") -> dict:
-    msg_id = hashlib.sha256(f"{utc_now()}{content[:50]}".encode()).hexdigest()[:16]
-    topic, confidence, method = classify_topic(content)
-    mode = detect_mode(content) if role == "user" else None
+def store_message(
+    role: str,
+    content: str,
+    session_id: str = "default",
+) -> dict:
+    msg_id = hashlib.sha256(
+        f"{utc_now()}{content[:50]}".encode()
+    ).hexdigest()[:16]
+
+    topic, confidence, method = classify_topic(
+        content
+    )
+
+    mode = (
+        detect_mode(content)
+        if role == "user"
+        else None
+    )
 
     conn = get_db()
-    conn.execute(
-        "INSERT OR IGNORE INTO messages (id, created_at, role, content, topic, mode, session_id) "
-        "VALUES (?,?,?,?,?,?,?)",
-        (msg_id, utc_now(), role, content, topic, mode, session_id)
-    )
-    conn.commit()
-    conn.close()
-    return {"id": msg_id, "topic": topic, "confidence": confidence,
-            "classification_method": method, "mode": mode}
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            INSERT INTO messages (
+                id,
+                created_at,
+                role,
+                content,
+                topic,
+                mode,
+                session_id
+            )
+            VALUES (
+                %s, %s, %s, %s,
+                %s, %s, %s
+            )
+            ON CONFLICT (id) DO NOTHING
+        """, (
+            msg_id,
+            utc_now(),
+            role,
+            content,
+            topic,
+            mode,
+            session_id,
+        ))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+    return {
+        "id": msg_id,
+        "topic": topic,
+        "confidence": confidence,
+        "classification_method": method,
+        "mode": mode,
+    }
+
 
 
 # ─────────────────────────────────────────────
 # ARTIFACT MANAGEMENT
 # ─────────────────────────────────────────────
-def store_artifact(key: str, topic: str, content: str, priority: int = P2,
-                   source_mode: str = None) -> dict:
-    priority = max(0, min(3, priority))
-    conn = get_db()
-    existing = conn.execute(
-        "SELECT version, priority, locked FROM artifacts WHERE key = ?", (key,)
-    ).fetchone()
-
-    if existing and existing["locked"] == 1:
-        staged_id = hashlib.sha256(f"staged_{key}_{utc_now()}".encode()).hexdigest()[:16]
-        conn.execute(
-            "INSERT INTO staged_artifacts "
-            "(id, created_at, key, topic, priority, content, source_mode) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (staged_id, utc_now(), key, topic, priority, content, source_mode or "manual")
-        )
-        conn.commit()
-        conn.close()
-        return {"key": key, "topic": topic, "priority": priority,
-                "version": existing["version"], "staged": True,
-                "message": "P0 artifact is locked. Content staged for manual promotion."}
-
-    version = (existing["version"] + 1) if existing else 1
-    locked = 1 if priority == P0 else 0
-
-    if existing:
-        conn.execute(
-            "UPDATE artifacts SET content=?, updated_at=?, version=?, topic=?, priority=?, locked=? "
-            "WHERE key=?",
-            (content, utc_now(), version, topic, priority, locked, key)
-        )
-    else:
-        artifact_id = hashlib.sha256(key.encode()).hexdigest()[:16]
-        conn.execute(
-            "INSERT INTO artifacts "
-            "(id, created_at, updated_at, key, topic, priority, content, version, locked) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
-            (artifact_id, utc_now(), utc_now(), key, topic, priority, content, version, locked)
-        )
-
-    conn.commit()
-    conn.close()
-    return {"key": key, "topic": topic, "priority": priority, "version": version, "staged": False}
-
-
-def promote_staged_artifact(staged_id: str) -> dict:
-    conn = get_db()
-    staged = conn.execute(
-        "SELECT * FROM staged_artifacts WHERE id = ? AND promoted = 0", (staged_id,)
-    ).fetchone()
-
-    if not staged:
-        conn.close()
-        return {"error": "staged artifact not found or already promoted"}
-
-    key = staged["key"]
-    existing = conn.execute("SELECT version FROM artifacts WHERE key = ?", (key,)).fetchone()
-    version = (existing["version"] + 1) if existing else 1
-
-    conn.execute(
-        "UPDATE artifacts SET content=?, updated_at=?, version=?, locked=1 WHERE key=?",
-        (staged["content"], utc_now(), version, key)
+def store_artifact(
+    key: str,
+    topic: str,
+    content: str,
+    priority: int = P2,
+    source_mode: str = None,
+) -> dict:
+    priority = max(
+        0,
+        min(3, priority),
     )
-    conn.execute("UPDATE staged_artifacts SET promoted=1 WHERE id=?", (staged_id,))
-    conn.commit()
-    conn.close()
-    return {"key": key, "version": version, "promoted": True}
 
-
-def get_artifact(key: str) -> Optional[dict]:
     conn = get_db()
-    row = conn.execute(
-        "SELECT key, content, priority, version, locked FROM artifacts WHERE key = ?", (key,)
-    ).fetchone()
-    conn.close()
-    return dict(row) if row else None
+
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+
+        cur.execute("""
+            SELECT
+                version,
+                priority,
+                locked
+            FROM artifacts
+            WHERE key = %s
+            FOR UPDATE
+        """, (key,))
+
+        existing = cur.fetchone()
+
+        if existing and existing["locked"]:
+            staged_id = hashlib.sha256(
+                f"staged_{key}_{utc_now()}".encode()
+            ).hexdigest()[:16]
+
+            cur.execute("""
+                INSERT INTO staged_artifacts (
+                    id,
+                    created_at,
+                    key,
+                    topic,
+                    priority,
+                    content,
+                    source_mode
+                )
+                VALUES (
+                    %s, %s, %s, %s,
+                    %s, %s, %s
+                )
+                ON CONFLICT (id) DO NOTHING
+            """, (
+                staged_id,
+                utc_now(),
+                key,
+                topic,
+                priority,
+                content,
+                source_mode or "manual",
+            ))
+
+            conn.commit()
+
+            return {
+                "key": key,
+                "topic": topic,
+                "priority": priority,
+                "version": existing["version"],
+                "staged": True,
+                "message": (
+                    "P0 artifact is locked. Content staged "
+                    "for manual promotion."
+                ),
+            }
+
+        version = (
+            existing["version"] + 1
+            if existing
+            else 1
+        )
+
+        locked = priority == P0
+
+        if existing:
+            cur.execute("""
+                UPDATE artifacts
+                SET
+                    content = %s,
+                    updated_at = %s,
+                    version = %s,
+                    topic = %s,
+                    priority = %s,
+                    locked = %s
+                WHERE key = %s
+            """, (
+                content,
+                utc_now(),
+                version,
+                topic,
+                priority,
+                locked,
+                key,
+            ))
+
+        else:
+            artifact_id = hashlib.sha256(
+                key.encode()
+            ).hexdigest()[:16]
+
+            cur.execute("""
+                INSERT INTO artifacts (
+                    id,
+                    created_at,
+                    updated_at,
+                    key,
+                    topic,
+                    priority,
+                    content,
+                    version,
+                    locked
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s
+                )
+            """, (
+                artifact_id,
+                utc_now(),
+                utc_now(),
+                key,
+                topic,
+                priority,
+                content,
+                version,
+                locked,
+            ))
+
+        conn.commit()
+
+        return {
+            "key": key,
+            "topic": topic,
+            "priority": priority,
+            "version": version,
+            "staged": False,
+        }
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
 
-def get_staged_artifacts(key: str = None) -> list:
+
+def promote_staged_artifact(
+    staged_id: str,
+) -> dict:
     conn = get_db()
-    if key:
-        rows = conn.execute(
-            "SELECT * FROM staged_artifacts WHERE key=? AND promoted=0 ORDER BY created_at DESC",
-            (key,)
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM staged_artifacts WHERE promoted=0 ORDER BY created_at DESC"
-        ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+
+        cur.execute("""
+            SELECT *
+            FROM staged_artifacts
+            WHERE id = %s
+              AND promoted = FALSE
+            FOR UPDATE
+        """, (staged_id,))
+
+        staged = cur.fetchone()
+
+        if not staged:
+            conn.rollback()
+
+            return {
+                "error": (
+                    "staged artifact not found "
+                    "or already promoted"
+                )
+            }
+
+        key = staged["key"]
+
+        cur.execute("""
+            SELECT version
+            FROM artifacts
+            WHERE key = %s
+            FOR UPDATE
+        """, (key,))
+
+        existing = cur.fetchone()
+
+        version = (
+            existing["version"] + 1
+            if existing
+            else 1
+        )
+
+        if existing:
+            cur.execute("""
+                UPDATE artifacts
+                SET
+                    content = %s,
+                    updated_at = %s,
+                    version = %s,
+                    locked = TRUE
+                WHERE key = %s
+            """, (
+                staged["content"],
+                utc_now(),
+                version,
+                key,
+            ))
+
+        else:
+            artifact_id = hashlib.sha256(
+                key.encode()
+            ).hexdigest()[:16]
+
+            cur.execute("""
+                INSERT INTO artifacts (
+                    id,
+                    created_at,
+                    updated_at,
+                    key,
+                    topic,
+                    priority,
+                    content,
+                    version,
+                    locked
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, TRUE
+                )
+            """, (
+                artifact_id,
+                utc_now(),
+                utc_now(),
+                key,
+                staged["topic"],
+                P0,
+                staged["content"],
+                version,
+            ))
+
+        cur.execute("""
+            UPDATE staged_artifacts
+            SET promoted = TRUE
+            WHERE id = %s
+        """, (staged_id,))
+
+        conn.commit()
+
+        return {
+            "key": key,
+            "version": version,
+            "promoted": True,
+        }
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+
+
+def get_artifact(
+    key: str,
+) -> Optional[dict]:
+    conn = get_db()
+
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+
+        cur.execute("""
+            SELECT
+                key,
+                content,
+                priority,
+                version,
+                locked
+            FROM artifacts
+            WHERE key = %s
+        """, (key,))
+
+        row = cur.fetchone()
+
+        return (
+            dict(row)
+            if row
+            else None
+        )
+
+    finally:
+        conn.close()
+
+
+
+def get_staged_artifacts(
+    key: str = None,
+) -> list:
+    conn = get_db()
+
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+
+        if key:
+            cur.execute("""
+                SELECT *
+                FROM staged_artifacts
+                WHERE key = %s
+                  AND promoted = FALSE
+                ORDER BY created_at DESC
+            """, (key,))
+
+        else:
+            cur.execute("""
+                SELECT *
+                FROM staged_artifacts
+                WHERE promoted = FALSE
+                ORDER BY created_at DESC
+            """)
+
+        return [
+            dict(row)
+            for row in cur.fetchall()
+        ]
+
+    finally:
+        conn.close()
+
 
 
 # ─────────────────────────────────────────────
 # RETRIEVAL — DYNAMIC LIMIT + FALLBACK CHAIN
 # ─────────────────────────────────────────────
-def _recency_score(updated_at_iso: str) -> float:
+def _recency_score(
+    updated_at_value,
+) -> float:
     try:
-        updated = datetime.fromisoformat(updated_at_iso)
-        age_days = max(0, (datetime.now(timezone.utc) - updated).days)
-        return round(RECENCY_MAX_BONUS * max(0, 1 - (age_days / 30)), 2)
+        if isinstance(
+            updated_at_value,
+            datetime,
+        ):
+            updated = updated_at_value
+        else:
+            updated = datetime.fromisoformat(
+                str(updated_at_value)
+            )
+
+        if updated.tzinfo is None:
+            updated = updated.replace(
+                tzinfo=timezone.utc
+            )
+
+        age_days = max(
+            0,
+            (
+                datetime.now(timezone.utc)
+                - updated
+            ).days,
+        )
+
+        return round(
+            RECENCY_MAX_BONUS
+            * max(
+                0,
+                1 - (age_days / 30),
+            ),
+            2,
+        )
+
     except Exception:
         return 0.0
 
 
-def get_artifacts_by_topic(topic: str, user_message: str = "",
-                            global_fallback: bool = True) -> tuple:
+
+def get_artifacts_by_topic(
+    topic: str,
+    user_message: str = "",
+    global_fallback: bool = True,
+) -> tuple:
     """
-    Returns (artifacts, retrieval_meta).
-    P0 anchor always included first.
-    Limit is dynamically set from task complexity.
+    Return (artifacts, retrieval_meta).
+
+    The locked P0 anchor is always first. Retrieval capacity is based on
+    task complexity.
     """
     if user_message:
-        topic, confidence, method = classify_topic(user_message)
-        limit = _complexity_limit(user_message)
+        topic, confidence, method = classify_topic(
+            user_message
+        )
+
+        limit = _complexity_limit(
+            user_message
+        )
+
     else:
-        confidence, method, limit = 0, "direct", 6
+        confidence = 0
+        method = "direct"
+        limit = 6
+
+    safe_limit = max(
+        1,
+        min(int(limit), 100),
+    )
 
     conn = get_db()
 
-    anchor_row = conn.execute(
-        "SELECT key, content, priority, version, updated_at FROM artifacts WHERE key=?",
-        (P0_ANCHOR_KEY,)
-    ).fetchone()
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
 
-    rows = conn.execute(
-        "SELECT key, content, priority, version, updated_at FROM artifacts "
-        "WHERE topic=? AND key!=? ORDER BY priority ASC, updated_at DESC LIMIT ?",
-        (topic, P0_ANCHOR_KEY, limit * 2)
-    ).fetchall()
-    results = [dict(r) for r in rows]
+        cur.execute("""
+            SELECT
+                key,
+                content,
+                priority,
+                version,
+                updated_at
+            FROM artifacts
+            WHERE key = %s
+        """, (P0_ANCHOR_KEY,))
 
-    fallback_used = False
-    if global_fallback and len(results) < 2 and topic != "general":
-        global_rows = conn.execute(
-            "SELECT key, content, priority, version, updated_at FROM artifacts "
-            "WHERE topic!=? AND key!=? ORDER BY priority ASC, updated_at DESC LIMIT ?",
-            (topic, P0_ANCHOR_KEY, limit)
-        ).fetchall()
-        results += [dict(r) for r in global_rows]
-        fallback_used = len(global_rows) > 0
+        anchor_row = cur.fetchone()
 
-    conn.close()
+        cur.execute("""
+            SELECT
+                key,
+                content,
+                priority,
+                version,
+                updated_at
+            FROM artifacts
+            WHERE topic = %s
+              AND key <> %s
+            ORDER BY
+                priority ASC,
+                updated_at DESC
+            LIMIT %s
+        """, (
+            topic,
+            P0_ANCHOR_KEY,
+            safe_limit * 2,
+        ))
 
-    for r in results:
-        r["_score"] = PRIORITY_WEIGHT.get(r["priority"], 0) + _recency_score(r.get("updated_at", ""))
-    results.sort(key=lambda x: x["_score"], reverse=True)
-    results = results[:limit]
+        results = [
+            dict(row)
+            for row in cur.fetchall()
+        ]
+
+        fallback_used = False
+
+        if (
+            global_fallback
+            and len(results) < 2
+            and topic != "general"
+        ):
+            cur.execute("""
+                SELECT
+                    key,
+                    content,
+                    priority,
+                    version,
+                    updated_at
+                FROM artifacts
+                WHERE topic <> %s
+                  AND key <> %s
+                ORDER BY
+                    priority ASC,
+                    updated_at DESC
+                LIMIT %s
+            """, (
+                topic,
+                P0_ANCHOR_KEY,
+                safe_limit,
+            ))
+
+            global_rows = [
+                dict(row)
+                for row in cur.fetchall()
+            ]
+
+            results.extend(
+                global_rows
+            )
+
+            fallback_used = bool(
+                global_rows
+            )
+
+    finally:
+        conn.close()
+
+    for result in results:
+        result["_score"] = (
+            PRIORITY_WEIGHT.get(
+                result["priority"],
+                0,
+            )
+            + _recency_score(
+                result.get("updated_at")
+            )
+        )
+
+    results.sort(
+        key=lambda item: item["_score"],
+        reverse=True,
+    )
+
+    results = results[:safe_limit]
 
     if anchor_row:
         anchor = dict(anchor_row)
-        results = [anchor] + [r for r in results if r["key"] != P0_ANCHOR_KEY]
+
+        results = [
+            anchor
+        ] + [
+            result
+            for result in results
+            if result["key"] != P0_ANCHOR_KEY
+        ]
 
     retrieval_meta = {
         "topic": topic,
         "confidence": confidence,
         "classification_method": method,
-        "limit_used": limit,
+        "limit_used": safe_limit,
         "fallback_used": fallback_used,
         "artifact_count": len(results),
         "classification_flagged": method == "none",
     }
 
-    return results, retrieval_meta
+    return (
+        results,
+        retrieval_meta,
+    )
+
 
 
 # ─────────────────────────────────────────────
@@ -679,75 +1248,166 @@ def wrap_artifact(a: dict) -> str:
 # ─────────────────────────────────────────────
 # DETERMINISTIC PROMPT ASSEMBLY v4
 # ─────────────────────────────────────────────
-def build_injected_prompt(user_message: str, session_id: str = "default") -> dict:
+def build_injected_prompt(
+    user_message: str,
+    session_id: str = "default",
+) -> dict:
     """
-    Fixed assembly order:
-        [SYSTEM] → [ARTIFACTS P0→P3] → [CONTEXT] → [USER]
-
-    P0 anchor always first in artifacts.
-    Classification warning injected if method="none".
+    Assemble the governed Relay prompt in its fixed order.
     """
     mode = detect_mode(user_message)
-    msg_meta = store_message("user", user_message, session_id)
+
+    msg_meta = store_message(
+        "user",
+        user_message,
+        session_id,
+    )
 
     artifacts, retrieval_meta = get_artifacts_by_topic(
-        retrieval_meta["topic"] if (retrieval_meta := None) else "general",
-        user_message=user_message
+        "general",
+        user_message=user_message,
     )
-    # Note: retrieval_meta is set correctly inside get_artifacts_by_topic
-    artifacts, retrieval_meta = get_artifacts_by_topic("general", user_message=user_message)
 
-    recent = get_recent_messages(session_id, limit=6)
+    recent = get_recent_messages(
+        session_id,
+        limit=6,
+    )
 
-    # ── SYSTEM ──
-    system_block = f"[SYSTEM]\nMODE: {mode}\n{MODE_INSTRUCTIONS.get(mode, '')}\n"
-    if retrieval_meta.get("classification_flagged"):
+    system_block = (
+        f"[SYSTEM]\n"
+        f"MODE: {mode}\n"
+        f"{MODE_INSTRUCTIONS.get(mode, '')}\n"
+    )
+
+    if retrieval_meta.get(
+        "classification_flagged"
+    ):
         system_block += (
             "\n[WARNING] Topic classification returned no match. "
-            "Artifacts may not be relevant. Operator review recommended.\n"
+            "Artifacts may not be relevant. "
+            "Operator review recommended.\n"
         )
 
-    # ── ARTIFACTS ──
     artifacts_block = ""
     injected_keys = []
 
     if artifacts:
         artifacts_block = "\n[ARTIFACTS]\n"
-        for p in [P0, P1, P2, P3]:
-            group = [a for a in artifacts if a["priority"] == p]
-            if group:
-                artifacts_block += f"\n<!-- {PRIORITY_LABELS[p]} -->\n"
-                cap = len(group) if p == P0 else 2
-                for a in group[:cap]:
-                    artifacts_block += wrap_artifact(a) + "\n"
-                    injected_keys.append({"key": a["key"], "priority": p})
 
-    # ── CONTEXT ──
+        for priority in (
+            P0,
+            P1,
+            P2,
+            P3,
+        ):
+            group = [
+                artifact
+                for artifact in artifacts
+                if artifact["priority"] == priority
+            ]
+
+            if not group:
+                continue
+
+            artifacts_block += (
+                f"\n<!-- "
+                f"{PRIORITY_LABELS[priority]} "
+                f"-->\n"
+            )
+
+            cap = (
+                len(group)
+                if priority == P0
+                else 2
+            )
+
+            for artifact in group[:cap]:
+                artifacts_block += (
+                    wrap_artifact(artifact)
+                    + "\n"
+                )
+
+                injected_keys.append({
+                    "key": artifact["key"],
+                    "priority": priority,
+                })
+
     context_block = ""
+
     if len(recent) > 1:
         context_block = "\n[CONTEXT]\n"
-        for msg in recent[:-1]:
-            label = "USER" if msg["role"] == "user" else "ASSISTANT"
-            context_block += f"{label}: {msg['content'][:300]}\n"
 
-    # ── USER ──
-    user_block = f"\n[USER]\n{user_message}"
+        for message in recent[:-1]:
+            label = (
+                "USER"
+                if message["role"] == "user"
+                else "ASSISTANT"
+            )
 
-    prompt = system_block + artifacts_block + context_block + user_block
+            context_block += (
+                f"{label}: "
+                f"{message['content'][:300]}\n"
+            )
+
+    user_block = (
+        f"\n[USER]\n"
+        f"{user_message}"
+    )
+
+    prompt = (
+        system_block
+        + artifacts_block
+        + context_block
+        + user_block
+    )
 
     if injected_keys:
         conn = get_db()
-        for item in injected_keys:
-            inj_id = hashlib.sha256(f"{msg_meta['id']}{item['key']}".encode()).hexdigest()[:16]
-            conn.execute(
-                "INSERT OR IGNORE INTO injections "
-                "(id, created_at, message_id, artifact_key, topic, priority, mode) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (inj_id, utc_now(), msg_meta["id"], item["key"],
-                 retrieval_meta["topic"], item["priority"], mode)
-            )
-        conn.commit()
-        conn.close()
+
+        try:
+            cur = conn.cursor()
+
+            for item in injected_keys:
+                injection_id = hashlib.sha256(
+                    (
+                        f"{msg_meta['id']}"
+                        f"{item['key']}"
+                    ).encode()
+                ).hexdigest()[:16]
+
+                cur.execute("""
+                    INSERT INTO injections (
+                        id,
+                        created_at,
+                        message_id,
+                        artifact_key,
+                        topic,
+                        priority,
+                        mode
+                    )
+                    VALUES (
+                        %s, %s, %s, %s,
+                        %s, %s, %s
+                    )
+                    ON CONFLICT (id) DO NOTHING
+                """, (
+                    injection_id,
+                    utc_now(),
+                    msg_meta["id"],
+                    item["key"],
+                    retrieval_meta["topic"],
+                    item["priority"],
+                    mode,
+                ))
+
+            conn.commit()
+
+        except Exception:
+            conn.rollback()
+            raise
+
+        finally:
+            conn.close()
 
     return {
         "original": user_message,
@@ -759,36 +1419,113 @@ def build_injected_prompt(user_message: str, session_id: str = "default") -> dic
     }
 
 
+
 # ─────────────────────────────────────────────
 # CONVERSATION HISTORY
 # ─────────────────────────────────────────────
-def get_recent_messages(session_id: str = "default", limit: int = 20) -> list:
+def get_recent_messages(
+    session_id: str = "default",
+    limit: int = 20,
+) -> list:
+    safe_limit = max(
+        1,
+        min(int(limit), 200),
+    )
+
     conn = get_db()
-    rows = conn.execute(
-        "SELECT role, content FROM messages WHERE session_id=? ORDER BY created_at DESC LIMIT ?",
-        (session_id, limit)
-    ).fetchall()
-    conn.close()
-    return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+
+        cur.execute("""
+            SELECT
+                role,
+                content
+            FROM messages
+            WHERE session_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (
+            session_id,
+            safe_limit,
+        ))
+
+        rows = [
+            dict(row)
+            for row in cur.fetchall()
+        ]
+
+    finally:
+        conn.close()
+
+    return list(
+        reversed(rows)
+    )
 
 
-def search_messages(query: str, topic: Optional[str] = None, limit: int = 10) -> list:
+
+def search_messages(
+    query: str,
+    topic: Optional[str] = None,
+    limit: int = 10,
+) -> list:
+    safe_limit = max(
+        1,
+        min(int(limit), 200),
+    )
+
+    query_pattern = f"%{query}%"
     conn = get_db()
-    if topic:
-        rows = conn.execute(
-            "SELECT role, content, topic, created_at FROM messages "
-            "WHERE topic=? AND content LIKE ? ORDER BY created_at DESC LIMIT ?",
-            (topic, f"%{query}%", limit)
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT role, content, topic, created_at FROM messages "
-            "WHERE content LIKE ? ORDER BY created_at DESC LIMIT ?",
-            (f"%{query}%", limit)
-        ).fetchall()
-    conn.close()
-    return [{"role": r["role"], "content": r["content"],
-             "topic": r["topic"], "created_at": r["created_at"]} for r in rows]
+
+    try:
+        cur = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+
+        if topic:
+            cur.execute("""
+                SELECT
+                    role,
+                    content,
+                    topic,
+                    created_at
+                FROM messages
+                WHERE topic = %s
+                  AND content ILIKE %s
+                ORDER BY created_at DESC
+                LIMIT %s
+            """, (
+                topic,
+                query_pattern,
+                safe_limit,
+            ))
+
+        else:
+            cur.execute("""
+                SELECT
+                    role,
+                    content,
+                    topic,
+                    created_at
+                FROM messages
+                WHERE content ILIKE %s
+                ORDER BY created_at DESC
+                LIMIT %s
+            """, (
+                query_pattern,
+                safe_limit,
+            ))
+
+        return [
+            dict(row)
+            for row in cur.fetchall()
+        ]
+
+    finally:
+        conn.close()
+
 
 
 # ─────────────────────────────────────────────
@@ -819,6 +1556,8 @@ For now: answer as well as you can."""
 # FILLER STRIP (inline — no gateway dependency)
 # ─────────────────────────────────────────────
 import re as _re
+import db as database
+from psycopg2.extras import RealDictCursor
 
 _FILLER_PATTERNS = [
     r"\bi think\b", r"\bi believe\b", r"\bi feel like\b",

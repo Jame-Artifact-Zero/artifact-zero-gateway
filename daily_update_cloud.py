@@ -10,7 +10,7 @@ import json
 import secrets
 import io
 from datetime import datetime, timezone, timedelta
-from db import db_connect, USE_PG
+from db import db_connect
 
 try:
     import yfinance as yf
@@ -23,7 +23,7 @@ except ImportError:
 def load_existing_dates():
     conn = db_connect()
     cur = conn.cursor()
-    p = "%s" if USE_PG else "?"
+    p = "%s"
     cur.execute("SELECT date FROM sp500_prices ORDER BY date ASC")
     rows = cur.fetchall()
     conn.close()
@@ -34,8 +34,7 @@ def load_existing_dates():
 def ensure_price_table():
     conn = db_connect()
     cur = conn.cursor()
-    if USE_PG:
-        cur.execute("""
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS sp500_prices (
             date TEXT PRIMARY KEY,
             open REAL,
@@ -43,18 +42,6 @@ def ensure_price_table():
             low REAL,
             close REAL,
             volume BIGINT,
-            change_pct REAL
-        )
-        """)
-    else:
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS sp500_prices (
-            date TEXT PRIMARY KEY,
-            open REAL,
-            high REAL,
-            low REAL,
-            close REAL,
-            volume INTEGER,
             change_pct REAL
         )
         """)
@@ -110,12 +97,11 @@ def append_rows(new_rows, existing_dates_set):
 
     conn = db_connect()
     cur = conn.cursor()
-    p = "%s" if USE_PG else "?"
+    p = "%s"
 
     added = []
     for row in to_add:
-        if USE_PG:
-            cur.execute("""
+        cur.execute("""
             INSERT INTO sp500_prices (date, open, high, low, close, volume, change_pct)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (date) DO UPDATE SET
@@ -123,14 +109,7 @@ def append_rows(new_rows, existing_dates_set):
                 close=EXCLUDED.close, volume=EXCLUDED.volume,
                 change_pct=EXCLUDED.change_pct
             """, (row["date"], row["open"], row["high"], row["low"],
-                  row["close"], row["volume"], row["change_pct"]))
-        else:
-            cur.execute("""
-            INSERT OR REPLACE INTO sp500_prices
-            (date, open, high, low, close, volume, change_pct)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (row["date"], row["open"], row["high"], row["low"],
-                  row["close"], row["volume"], row["change_pct"]))
+              row["close"], row["volume"], row["change_pct"]))
         added.append(row)
 
     conn.commit()
@@ -142,7 +121,7 @@ def append_rows(new_rows, existing_dates_set):
 def update_pending_actuals(dates_ordered, actuals):
     conn = db_connect()
     cur = conn.cursor()
-    p = "%s" if USE_PG else "?"
+    p = "%s"
 
     cur.execute(
         f"SELECT id, data_thru, prediction FROM prediction_log WHERE actual = {p}",
@@ -314,9 +293,7 @@ def write_prediction_record(record, runner_output, blob_data=None):
     now      = datetime.now(timezone.utc).isoformat()
     run_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     row_id   = secrets.token_hex(16)
-
-    if USE_PG:
-        cur.execute("""
+    cur.execute("""
         INSERT INTO prediction_log (
             id, run_date, data_thru, prediction, actual, chg_pct, correct,
             omega_score, path_b_score, weekly_score, monthly_score,
@@ -332,48 +309,19 @@ def write_prediction_record(record, runner_output, blob_data=None):
         )
         ON CONFLICT (id) DO NOTHING
         """, (
-            row_id, run_date, record.get("data_thru"), record.get("prediction"),
-            "PENDING", None, "PENDING",
-            record.get("omega_score"), record.get("path_b_score"),
-            record.get("weekly_score"), record.get("monthly_score"),
-            record.get("shock_flags"), record.get("giveback"),
-            record.get("giveback_conf"), record.get("scream"),
-            record.get("streak_dn"), record.get("streak_up"),
-            record.get("magnitude"), record.get("magnitude_flag"),
-            record.get("resolved_via"), record.get("conflict"),
-            runner_output,
-            json.dumps(blob_data) if blob_data else None,
-            now
-        ))
-    else:
-        cur.execute("""
-        INSERT OR IGNORE INTO prediction_log (
-            id, run_date, data_thru, prediction, actual, chg_pct, correct,
-            omega_score, path_b_score, weekly_score, monthly_score,
-            shock_flags, giveback, giveback_conf, scream,
-            streak_dn, streak_up, magnitude, magnitude_flag,
-            resolved_via, conflict, analysis_text, blob_json, created_at
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?, ?
-        )
-        """, (
-            row_id, run_date, record.get("data_thru"), record.get("prediction"),
-            "PENDING", None, "PENDING",
-            record.get("omega_score"), record.get("path_b_score"),
-            record.get("weekly_score"), record.get("monthly_score"),
-            record.get("shock_flags"), record.get("giveback"),
-            record.get("giveback_conf"), record.get("scream"),
-            record.get("streak_dn"), record.get("streak_up"),
-            record.get("magnitude"), record.get("magnitude_flag"),
-            record.get("resolved_via"), record.get("conflict"),
-            runner_output,
-            json.dumps(blob_data) if blob_data else None,
-            now
-        ))
+        row_id, run_date, record.get("data_thru"), record.get("prediction"),
+        "PENDING", None, "PENDING",
+        record.get("omega_score"), record.get("path_b_score"),
+        record.get("weekly_score"), record.get("monthly_score"),
+        record.get("shock_flags"), record.get("giveback"),
+        record.get("giveback_conf"), record.get("scream"),
+        record.get("streak_dn"), record.get("streak_up"),
+        record.get("magnitude"), record.get("magnitude_flag"),
+        record.get("resolved_via"), record.get("conflict"),
+        runner_output,
+        json.dumps(blob_data) if blob_data else None,
+        now
+    ))
 
     conn.commit()
     conn.close()

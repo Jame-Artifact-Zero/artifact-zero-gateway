@@ -1,5 +1,5 @@
 # ============================================
-# Artifact Zero — Pre-Deploy Test
+# Artifact Zero - Pre-Deploy Test
 # ============================================
 # Runs ONLY on PRs targeting main branch
 # Produces the "Pre-Deploy Test" status check
@@ -17,6 +17,21 @@ jobs:
     name: Pre-Deploy Test
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,13 +44,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Python syntax check — app.py
+      - name: Python syntax check - app.py
         run: python -m py_compile app.py
 
-      - name: Python syntax check — db.py
+      - name: Python syntax check - db.py
         run: python -m py_compile db.py
 
-      - name: Python syntax check — all engine files
+      - name: Python syntax check - all engine files
         run: |
           python -m py_compile pre_score_gate.py
           python -m py_compile csrf.py
@@ -79,22 +94,39 @@ jobs:
             exit 1
           fi
 
-      - name: Verify health route exists in app.py
+      - name: Verify health route works in Flask app
+        env:
+          FLASK_SECRET_KEY: test-ci-key
+          AZ_SECRET: test-ci-az-secret
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          TESTING: "1"
         run: |
-          if grep -q '@app.route("/health")' app.py; then
-            echo "OK: /health route found"
-          else
-            echo "::error::/health route missing from app.py"
-            exit 1
-          fi
+          python - <<'PY'
+          from app import app
+
+          client = app.test_client()
+          response = client.get('/health')
+
+          if response.status_code != 200:
+              raise SystemExit(f"/health returned {response.status_code}")
+
+          data = response.get_json(silent=True) or {}
+          if data.get('status') != 'ok':
+              raise SystemExit(f"/health returned unexpected body: {data}")
+
+          print('OK: /health route works')
+          PY
 
       - name: Docker build test
         run: docker build -t artifact-zero-test .
 
       - name: Container health check
         run: |
-          docker run -d --name az-test -p 10000:10000 \
-            -e DATABASE_URL="sqlite:///test.db" \
+          docker run -d --name az-test --network host \
+            -e DATABASE_URL="postgresql://test:test@127.0.0.1:5432/test" \
+            -e FLASK_SECRET_KEY="test-ci-key" \
+            -e AZ_SECRET="test-ci-az-secret" \
+            -e TESTING="1" \
             -e WEB_CONCURRENCY=1 \
             artifact-zero-test
           echo "Waiting 15s for container startup..."

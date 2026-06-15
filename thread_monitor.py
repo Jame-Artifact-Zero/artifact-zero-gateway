@@ -115,7 +115,7 @@ class ThreadMonitor:
 
     def needs_injection(self) -> bool:
         """True if the thread has crossed the injection threshold."""
-        return self.cumulative_chars >= (MAX_CHARS * THRESHOLD_INJECT)
+        return self.cumulative_chars >= (MAX_CHARS * THRESHOLD_PREP)
 
     def needs_preparation(self) -> bool:
         """True if the thread should begin building a blob now."""

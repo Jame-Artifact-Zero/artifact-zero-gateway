@@ -20,7 +20,7 @@ Endpoints:
 """
 
 from flask import Blueprint, request, jsonify
-from relay_artifacts import (
+from relay_memory import (
     build_injected_prompt,
     store_message,
     store_artifact,
@@ -82,7 +82,7 @@ def post_artifact():
     if not key or not content:
         return jsonify({"error": "key and content required"}), 400
     if not topic:
-        topic = classify_topic(content)
+        topic, _ = classify_topic(content)
 
     result = store_artifact(key, topic, content, priority=int(priority))
     return jsonify({"ok": True, **result})
@@ -186,4 +186,5 @@ def classify():
     text = (body.get("text") or "").strip()
     if not text:
         return jsonify({"error": "text required"}), 400
-    return jsonify({"topic": classify_topic(text), "mode": detect_mode(text)})
+    topic, confidence = classify_topic(text)
+    return jsonify({"topic": topic, "confidence": confidence, "mode": detect_mode(text)})
