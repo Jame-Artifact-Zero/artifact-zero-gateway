@@ -243,6 +243,10 @@ except Exception as e:
     raise
 
 
+from routes.pipeline_routes import pipeline_bp
+app.register_blueprint(pipeline_bp)
+
+
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",

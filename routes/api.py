@@ -10,6 +10,8 @@ from flask import Blueprint, jsonify, request
 
 import db as database
 from pre_score_gate import pre_score_gate
+from products.score.handler import handle as score_handle
+from core_engine.service import dispatch
 
 from core_engine.app import (
     NTI_VERSION,
@@ -781,28 +783,24 @@ def api_score():
         }), 422
 
     try:
-        l0 = detect_l0_constraints(text)
-        obj = objective_extract(text)
-        drift = objective_drift("", text)
-        framing = detect_l2_framing(text)
-        tilt = classify_tilt(text)
-        udds = detect_udds("", text, l0)
-        dce = detect_dce(text, l0)
-        cca = detect_cca("", text)
+        S0 = {
+            "Q": text,
+            "decision": {"action": "score"},
+            "signal": {"intent": "score"}
+        }
+        result = dispatch(S0)
+        tool_result = result.get("result", {})
 
-        dbc = detect_downstream_before_constraint(
-            "",
-            text,
-            l0,
-        )
-
-        nii = compute_nii(
-            "",
-            text,
-            l0,
-            dbc,
-            tilt,
-        )
+        l0 = tool_result.get("detect_l0_constraints")
+        obj = tool_result.get("objective_extract")
+        drift = tool_result.get("objective_drift")
+        framing = tool_result.get("detect_l2_framing")
+        tilt = tool_result.get("classify_tilt")
+        udds = tool_result.get("detect_udds")
+        dce = tool_result.get("detect_dce")
+        cca = tool_result.get("detect_cca")
+        dbc = tool_result.get("detect_downstream_before_constraint")
+        nii = tool_result.get("compute_nii")
 
         dominance = []
 
@@ -903,7 +901,7 @@ def api_score():
             "passed": True,
         }
 
-    return jsonify({
+    result = {
         "status": "ok",
         "version": NTI_VERSION,
         "score": {
@@ -941,7 +939,23 @@ def api_score():
             if credit_info
             else {}
         ),
-    })
+    }
+
+    if (
+        hasattr(request, "_credit_user_id")
+        and request._credit_user_id
+    ):
+        score_handle({
+            "context": {"user_id": request._credit_user_id},
+            "Q": text,
+            "R": {
+                "score": result.get("score"),
+                "label": result.get("label"),
+                "dimensions": result.get("dimensions"),
+            },
+        })
+
+    return jsonify(result)
 
 
 def _letter_race(text):
