@@ -331,6 +331,15 @@ def db_init():
                 summary       TEXT
             )
             """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS memory_buckets (
+                user_id TEXT NOT NULL,
+                bucket_key TEXT NOT NULL,
+                data JSONB,
+                updated_at TIMESTAMP DEFAULT NOW(),
+                PRIMARY KEY (user_id, bucket_key)
+            );
+            """)
 
 
         conn.commit()

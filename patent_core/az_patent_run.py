@@ -174,6 +174,7 @@ def run(
     when: str,
     for_: str,
     why: str,
+    s0_override: dict = None,
 ):
     """
     Full chain per AZ-PAT-003 Claim 9:
@@ -211,7 +212,10 @@ def run(
 
     # LAYER 3 — Prior State S0 (AZ-PAT-002 Claim 10)
     store = StateStore()
-    S0 = store.retrieve()
+    if s0_override is not None:
+        S0 = s0_override
+    else:
+        S0 = store.retrieve()
 
     # PRECONDITION GATE — Phi does not execute without S0 (AZ-PAT-002 Claim 12)
     gate = PreconditionGate(S0, S_neg1, receiver)
