@@ -1,14 +1,22 @@
 """Run the core engine scoring step for the current task state."""
 
-from core_engine.service import dispatch
+from core_engine.app import detect_all, score_composite
 
 
 def run(S0: dict) -> dict:
-    """Run NTI scoring through core_engine and return the response R."""
     S0 = S0 or {}
-    result = dispatch(S0)
+
+    text   = str(S0.get("text") or S0.get("input") or S0.get("message") or "")
+    prompt = str(S0.get("prompt") or "")
+    answer = str(S0.get("answer") or "")
+
+    detection = detect_all(text=text, prompt=prompt, answer=answer)
+    scoring   = score_composite(detection)
 
     return {
         "type": "response",
-        "content": result
+        "content": {
+            "detection": detection,
+            "scoring":   scoring,
+        }
     }
