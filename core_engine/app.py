@@ -11,6 +11,11 @@ import db as database
 from pre_score_gate import pre_score_gate
 from patent_core.az_patent_run import run as patent_run
 
+try:
+    from core_engine.semantic import detect_semantic_layer
+except ImportError:  # pragma: no cover - direct local execution fallback
+    from semantic import detect_semantic_layer
+
 
 core_engine_bp = Blueprint("core_engine", __name__)
 
@@ -291,7 +296,15 @@ def classify_tilt(text: str, prompt: str = "", answer: str = "") -> List[str]:
     for h in hits:
         if h not in uniq:
             uniq.append(h)
-    return uniq
+    return {
+        "tool": "classify_tilt",
+        "input_type": "unknown",
+        "signal": "TILT_DETECTED" if uniq else "NO_TILT",
+        "strength": min(len(uniq) / 10.0, 1.0),
+        "evidence": uniq,
+        "detail": {"tilt_taxonomy": uniq},
+        "fired": bool(uniq)
+    }
 
 
 # ==========================
@@ -317,6 +330,9 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
       D4: Tilt Resistance       (15%) — Resistance to drift patterns
       D5: Failure Mode Severity (20%) — UDDS/DCE/CCA penalty
     """
+    l0_list = l0_constraints.get("evidence", []) if isinstance(l0_constraints, dict) else l0_constraints
+    downstream_value = downstream_before_constraints.get("fired", False) if isinstance(downstream_before_constraints, dict) else downstream_before_constraints
+    tilt_list = tilt_taxonomy.get("evidence", []) if isinstance(tilt_taxonomy, dict) else tilt_taxonomy
     text = answer or prompt or ""
     sents = _split_sentences(text)
     total_sents = max(len(sents), 1)
@@ -336,7 +352,7 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
     ask_verbs = ["need", "want", "require", "send", "provide", "confirm", "review", "approve",
                  "schedule", "complete", "submit", "deliver", "respond", "reply", "call", "meet"]
     first_sent_has_ask = any(v in first_sent for v in ask_verbs)
-    d2_base = 0.8 if not downstream_before_constraints else 0.2
+    d2_base = 0.8 if not downstream_value else 0.2
     d2 = min(d2_base + (0.2 if first_sent_has_ask else 0.0), 1.0)
 
     # D3: ENFORCEMENT INTEGRITY (20%)
@@ -344,9 +360,10 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
     clean_sents = sum(1 for s in sents if not any(m in s.lower() for m in erosion_markers))
     clean_ratio = clean_sents / total_sents
     framing = detect_l2_framing(text)
-    hedge_count = len(framing.get("hedge_markers", []))
-    reassurance_count = len(framing.get("reassurance_markers", []))
-    blend_count = len(framing.get("category_blend_markers", []))
+    framing_detail = framing.get("detail", {})
+    hedge_count = len(framing_detail.get("hedge_markers", []))
+    reassurance_count = len(framing_detail.get("reassurance_markers", []))
+    blend_count = len(framing_detail.get("category_blend_markers", []))
     hedge_penalty = min((hedge_count + reassurance_count + blend_count) * 0.05, 0.4)
     d3 = max(0, clean_ratio - hedge_penalty)
 
@@ -358,12 +375,12 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
         "T7_CATEGORY_BLEND": 0.06, "T8_PRESSURE_OPTIMIZATION": 0.04,
         "T9_SCOPE_EXPANSION": 0.10, "T10_AUTHORITY_IMPOSITION": 0.08
     }
-    tilt_penalty = sum(tilt_weights.get(t, 0.05) for t in tilt_taxonomy)
+    tilt_penalty = sum(tilt_weights.get(t, 0.05) for t in tilt_list)
     d4 = max(0, 1.0 - tilt_penalty)
 
     # D5: FAILURE MODE SEVERITY (20%)
-    udds = detect_udds(prompt or "", answer or text, l0_constraints)
-    dce = detect_dce(answer or text, l0_constraints)
+    udds = detect_udds(prompt or "", answer or text, l0_list)
+    dce = detect_dce(answer or text, l0_list)
     cca = detect_cca(prompt or "", answer or text)
     fm_pen = {"CONFIRMED": 0.30, "PROBABLE": 0.15, "FALSE": 0.00}
     def _fm_p(state):
@@ -371,7 +388,7 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
             if k in str(state):
                 return v
         return 0.0
-    total_fm = min(_fm_p(udds.get("udds_state", "")) + _fm_p(dce.get("dce_state", "")) + _fm_p(cca.get("cca_state", "")), 0.80)
+    total_fm = min(_fm_p(udds.get("signal", "")) + _fm_p(dce.get("signal", "")) + _fm_p(cca.get("signal", "")), 0.80)
     d5 = max(0, 1.0 - total_fm)
 
     # WEIGHTED COMPOSITE
@@ -385,7 +402,7 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
     elif score >= 25: label = "POOR"
     else: label = "FAILING"
 
-    return {
+    detail = {
         "nii_score": score,
         "nii_raw": round(raw, 4),
         "nii_label": label,
@@ -408,16 +425,39 @@ def compute_nii(prompt: str, answer: str, l0_constraints: List[str], downstream_
             "first_sent_has_ask": first_sent_has_ask,
             "clean_sents": clean_sents, "hedge_count": hedge_count,
             "reassurance_count": reassurance_count, "blend_count": blend_count,
-            "tilt_count": len(tilt_taxonomy), "tilt_patterns": tilt_taxonomy[:10],
-            "udds": udds.get("udds_state", ""), "dce": dce.get("dce_state", ""), "cca": cca.get("cca_state", "")
+            "tilt_count": len(tilt_list), "tilt_patterns": tilt_list[:10],
+            "udds": udds.get("signal", ""), "dce": dce.get("signal", ""), "cca": cca.get("signal", "")
         }
+    }
+    evidence = list(l0_list) + list(tilt_list[:10])
+    return {
+        # Legacy top-level fields used by existing routes/tests/UI.
+        "nii_score": detail["nii_score"],
+        "nii_raw": detail["nii_raw"],
+        "nii_label": detail["nii_label"],
+        "q1": detail["q1"],
+        "q2": detail["q2"],
+        "q3": detail["q3"],
+        "q4": detail["q4"],
+        "q1_constraints_explicit": detail["q1_constraints_explicit"],
+        "q2_constraints_before_capability": detail["q2_constraints_before_capability"],
+        "q3_substitutes_after_enforcement": detail["q3_substitutes_after_enforcement"],
+        "d5_failure_mode_severity": detail["d5_failure_mode_severity"],
+        # Structured tool-envelope fields for the semantic layer.
+        "tool": "compute_nii",
+        "input_type": "unknown",
+        "signal": label,
+        "strength": round(raw, 4),
+        "evidence": evidence,
+        "detail": detail,
+        "fired": score > 0
     }
 
 
 # ==========================
 # L0-L7 EVALUATION
 # ==========================
-def detect_l0_constraints(text: str) -> List[str]:
+def detect_l0_constraints(text: str) -> Dict[str, Any]:
     t = (text or "").lower()
     found = []
     for m in L0_CONSTRAINT_MARKERS:
@@ -427,16 +467,36 @@ def detect_l0_constraints(text: str) -> List[str]:
     for x in found:
         if x not in uniq:
             uniq.append(x)
-    return uniq[:20]
+    constraints = uniq[:20]
+    return {
+        "tool": "detect_l0_constraints",
+        "input_type": "unknown",
+        "signal": "L0_CONSTRAINTS" if constraints else "NO_L0_CONSTRAINTS",
+        "strength": min(len(constraints) / 20.0, 1.0),
+        "evidence": constraints,
+        "detail": {"constraints": constraints},
+        "fired": bool(constraints)
+    }
 
 
-def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> bool:
+def detect_downstream_before_constraint(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
     a = (answer or "").lower()
     p = (prompt or "").lower()
+    l0_list = l0_constraints.get("evidence", []) if isinstance(l0_constraints, dict) else l0_constraints
 
     capability = any(m in a for m in DOWNSTREAM_CAPABILITY_MARKERS) or any(m in p for m in DOWNSTREAM_CAPABILITY_MARKERS)
-    constraints_declared = len(l0_constraints) > 0
-    return bool(capability and not constraints_declared)
+    constraints_declared = len(l0_list) > 0
+    fired = bool(capability and not constraints_declared)
+    evidence = [m for m in DOWNSTREAM_CAPABILITY_MARKERS if m in a or m in p]
+    return {
+        "tool": "detect_downstream_before_constraint",
+        "input_type": "unknown",
+        "signal": "DOWNSTREAM_BEFORE_CONSTRAINT" if fired else "NO_DOWNSTREAM_BEFORE_CONSTRAINT",
+        "strength": 1.0 if fired else 0.0,
+        "evidence": evidence,
+        "detail": {"capability": capability, "constraints_declared": constraints_declared},
+        "fired": fired
+    }
 
 
 def detect_boundary_absence(answer: str) -> bool:
@@ -451,8 +511,9 @@ def detect_narrative_stabilization(answer: str) -> bool:
 
 def detect_dce(answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
     a = (answer or "").lower()
+    l0_list = l0_constraints.get("evidence", []) if isinstance(l0_constraints, dict) else l0_constraints
     defer = any(m in a for m in DCE_DEFER_MARKERS)
-    constraints_missing = len(l0_constraints) == 0
+    constraints_missing = len(l0_list) == 0
 
     state = "DCE_FALSE"
     if defer and constraints_missing:
@@ -460,7 +521,17 @@ def detect_dce(answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
     elif defer:
         state = "DCE_PROBABLE"
 
-    return {"dce_state": state, "defer_markers_present": defer, "constraints_missing": constraints_missing}
+    evidence = [m for m in DCE_DEFER_MARKERS if m in a]
+    strength = 1.0 if state == "DCE_CONFIRMED" else 0.5 if state == "DCE_PROBABLE" else 0.0
+    return {
+        "tool": "detect_dce",
+        "input_type": "unknown",
+        "signal": state,
+        "strength": strength,
+        "evidence": evidence,
+        "detail": {"dce_state": state, "defer_markers_present": defer, "constraints_missing": constraints_missing},
+        "fired": state != "DCE_FALSE"
+    }
 
 
 def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
@@ -476,12 +547,26 @@ def detect_cca(prompt: str, answer: str) -> Dict[str, Any]:
     elif collapse:
         state = "CCA_PROBABLE"
 
-    return {"cca_state": state, "collapse_markers_present": collapse, "list_blend_present": list_blend}
+    evidence = [m for m in CCA_COLLAPSE_MARKERS if m in t]
+    if list_blend:
+        evidence.append("and/but/overall")
+    strength = 1.0 if state == "CCA_CONFIRMED" else 0.5 if state == "CCA_PROBABLE" else 0.0
+    return {
+        "tool": "detect_cca",
+        "input_type": "unknown",
+        "signal": state,
+        "strength": strength,
+        "evidence": evidence,
+        "detail": {"cca_state": state, "collapse_markers_present": collapse, "list_blend_present": list_blend},
+        "fired": state != "CCA_FALSE"
+    }
 
 
 def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str, Any]:
-    c1 = len(l0_constraints) > 0
-    c2 = detect_downstream_before_constraint(prompt, answer, l0_constraints)
+    l0_list = l0_constraints.get("evidence", []) if isinstance(l0_constraints, dict) else l0_constraints
+    c1 = len(l0_list) > 0
+    c2_signal = detect_downstream_before_constraint(prompt, answer, l0_list)
+    c2 = c2_signal.get("fired", False)
     c3 = detect_boundary_absence(answer)
     c4 = detect_narrative_stabilization(answer)
 
@@ -493,15 +578,28 @@ def detect_udds(prompt: str, answer: str, l0_constraints: List[str]) -> Dict[str
     elif met == 3:
         state = "UDDS_PROBABLE"
 
+    a = (answer or "").lower()
+    evidence = list(l0_list)
+    evidence.extend([m for m in BOUNDARY_ABSENCE_MARKERS if m in a])
+    evidence.extend([m for m in NARRATIVE_STABILIZATION_MARKERS if m in a])
+    strength = met / 4.0
     return {
-        "udds_state": state,
-        "criteria": {
-            "c1_l0_constraint_exists": c1,
-            "c2_downstream_before_constraint_declared": c2,
-            "c3_boundary_enforcement_absent_or_delayed": c3,
-            "c4_narrative_stabilization_present": c4,
-            "criteria_met_count": met
-        }
+        "tool": "detect_udds",
+        "input_type": "unknown",
+        "signal": state,
+        "strength": strength,
+        "evidence": evidence,
+        "detail": {
+            "udds_state": state,
+            "criteria": {
+                "c1_l0_constraint_exists": c1,
+                "c2_downstream_before_constraint_declared": c2,
+                "c3_boundary_enforcement_absent_or_delayed": c3,
+                "c4_narrative_stabilization_present": c4,
+                "criteria_met_count": met
+            }
+        },
+        "fired": state != "UDDS_FALSE"
     }
 
 
@@ -510,17 +608,35 @@ def detect_l2_framing(text: str) -> Dict[str, Any]:
     hedges = [m for m in L2_HEDGE if m in t]
     reassure = [m for m in L2_REASSURE if m in t]
     blends = [m for m in L2_CATEGORY_BLEND if m in t]
+    evidence = hedges[:10] + reassure[:10] + blends[:10]
     return {
-        "hedge_markers": hedges[:10],
-        "reassurance_markers": reassure[:10],
-        "category_blend_markers": blends[:10]
+        "tool": "detect_l2_framing",
+        "input_type": "unknown",
+        "signal": "L2_FRAMING" if evidence else "NO_L2_FRAMING",
+        "strength": min(len(evidence) / 30.0, 1.0),
+        "evidence": evidence,
+        "detail": {
+            "hedge_markers": hedges[:10],
+            "reassurance_markers": reassure[:10],
+            "category_blend_markers": blends[:10]
+        },
+        "fired": bool(evidence)
     }
 
 
 def objective_extract(prompt: str) -> Dict[str, Any]:
     sents = split_sentences(prompt)
     obj = sents[0] if sents else normalize_space(prompt)
-    return {"objective_text": obj[:400]}
+    objective_text = obj[:400]
+    return {
+        "tool": "objective_extract",
+        "input_type": "unknown",
+        "signal": "OBJECTIVE_EXTRACTED" if objective_text else "NO_OBJECTIVE_EXTRACTED",
+        "strength": 1.0 if objective_text else 0.0,
+        "evidence": [objective_text] if objective_text else [],
+        "detail": {"objective_text": objective_text},
+        "fired": bool(objective_text)
+    }
 
 
 def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
@@ -532,12 +648,472 @@ def objective_drift(prompt: str, answer: str) -> Dict[str, Any]:
 
     a = (answer or "").lower()
     mutation = any(m in a for m in L3_MUTATION_MARKERS)
+    evidence = [m for m in L3_MUTATION_MARKERS if m in a]
 
     return {
-        "jaccard_similarity": sim,
-        "drift_score": drift,
-        "mutation_markers_present": mutation
+        "tool": "objective_drift",
+        "input_type": "unknown",
+        "signal": "OBJECTIVE_DRIFT" if drift > 0 or mutation else "NO_OBJECTIVE_DRIFT",
+        "strength": drift,
+        "evidence": evidence,
+        "detail": {
+            "jaccard_similarity": sim,
+            "drift_score": drift,
+            "mutation_markers_present": mutation
+        },
+        "fired": bool(drift > 0 or mutation)
     }
+
+
+# ==========================
+# MOVED FROM detection.py
+# ==========================
+def split_paragraphs(text: str) -> List[str]:
+    """Split text into paragraphs by double newline or significant whitespace."""
+    paras = re.split(r"\n\s*\n|\r\n\s*\r\n", text or "")
+    return [p.strip() for p in paras if p.strip() and len(p.strip()) > 20]
+
+
+def detect_all(text: str, prompt: str = "", answer: str = "") -> Dict[str, Any]:
+    """Run all detection engines. Returns a DetectionMap."""
+    effective_text = text
+    if prompt and answer and not text:
+        effective_text = f"{prompt}\n{answer}"
+
+    l0_constraints = detect_l0_constraints(effective_text)
+    l0_list = l0_constraints.get("evidence", [])
+    framing = detect_l2_framing(effective_text)
+    tilt = classify_tilt(effective_text, prompt=prompt, answer=answer)
+    tilt_list = tilt.get("evidence", [])
+
+    udds = detect_udds(prompt or "", answer or effective_text, l0_list)
+    dce = detect_dce(answer or effective_text, l0_list)
+    cca = detect_cca(prompt or "", answer or effective_text)
+
+    downstream_before = detect_downstream_before_constraint(prompt or "", answer or effective_text, l0_list)
+    obj = objective_extract(prompt or effective_text)
+    drift = objective_drift(prompt or "", answer or "")
+    semantic_detection = detect_semantic_layer(
+        effective_text,
+        input_type="detect_all",
+    )
+
+    failure_modes = {
+        "UDDS": udds,
+        "DCE": dce,
+        "CCA": cca,
+    }
+
+    active_failures = [k for k, v in failure_modes.items()
+                       if v.get("signal", "").endswith("CONFIRMED")
+                       or v.get("signal", "").endswith("PROBABLE")]
+
+    word_count = len(tokenize(effective_text))
+    sentence_count = len(split_sentences(effective_text))
+
+    detail = {
+        "text": effective_text,
+        "word_count": word_count,
+        "sentence_count": sentence_count,
+        "l0_constraints": l0_list,
+        "framing": framing,
+        "tilt_taxonomy": tilt_list,
+        "failure_modes": failure_modes,
+        "active_failures": active_failures,
+        "downstream_before_constraints": downstream_before.get("fired", False),
+        "objective": obj,
+        "drift": drift,
+        "semantic_detection": semantic_detection,
+        "signal_density": round(len(tilt_list) / max(word_count, 1) * 100, 2),
+    }
+    evidence = []
+    evidence.extend(l0_constraints.get("evidence", []))
+    evidence.extend(framing.get("evidence", []))
+    evidence.extend(tilt.get("evidence", []))
+    evidence.extend(drift.get("evidence", []))
+    evidence.extend(semantic_detection.get("evidence", []))
+    strength = min((len(evidence) + len(active_failures)) / 20.0, 1.0)
+    return {
+        "tool": "detect_all",
+        "input_type": "unknown",
+        "signal": "DETECTION_MAP" if evidence or active_failures else "NO_DETECTION_MAP",
+        "strength": strength,
+        "evidence": evidence,
+        "detail": detail,
+        "fired": bool(evidence or active_failures)
+    }
+
+
+def detect_paragraphs(text: str, prompt: str = "", answer: str = "") -> Dict[str, Any]:
+    """Split text into paragraphs and run detect_all on each."""
+    paras = split_paragraphs(text)
+    if not paras:
+        result = detect_all(text, prompt, answer)
+        return {
+            "tool": "detect_paragraphs",
+            "input_type": "unknown",
+            "signal": "PARAGRAPH_DETECTION" if result.get("fired") else "NO_PARAGRAPH_DETECTION",
+            "strength": result.get("strength", 0.0),
+            "evidence": result.get("evidence", []),
+            "detail": {"paragraphs": [result]},
+            "fired": result.get("fired", False)
+        }
+    results = []
+    evidence = []
+    for i, para in enumerate(paras):
+        det = detect_all(para, prompt, answer)
+        det["detail"]["paragraph_index"] = i
+        det["detail"]["paragraph_text"] = para
+        evidence.extend(det.get("evidence", []))
+        results.append(det)
+    return {
+        "tool": "detect_paragraphs",
+        "input_type": "unknown",
+        "signal": "PARAGRAPH_DETECTION" if evidence else "NO_PARAGRAPH_DETECTION",
+        "strength": min(len(evidence) / 20.0, 1.0),
+        "evidence": evidence,
+        "detail": {"paragraphs": results},
+        "fired": bool(evidence)
+    }
+
+
+
+# ==========================
+# MOVED FROM scoring.py
+# ==========================
+def score_nii(det: Dict[str, Any]) -> Dict[str, Any]:
+    """NII scoring from detection map."""
+    det = det.get("detail", det) if isinstance(det, dict) else {}
+    l0 = det.get("l0_constraints", [])
+    tilt = det.get("tilt_taxonomy", [])
+    fm = det.get("failure_modes", {})
+    downstream = det.get("downstream_before_constraints", False)
+
+    # Q1: Are constraints present and explicit?
+    q1 = 1.0 if len(l0) >= 1 else 0.0
+
+    # Q2: Are constraints declared before capability claims?
+    q2 = 0.0 if downstream else 1.0
+
+    # Q3: Boundary integrity — penalize failure modes + structural drift tilts
+    structural_tilts = {"T2_CERTAINTY_INFLATION", "T4_CAPABILITY_OVERREACH",
+                        "T5_ABSOLUTE_LANGUAGE", "T9_SCOPE_EXPANSION", "T10_AUTHORITY_IMPOSITION"}
+    drift_count = len([t for t in tilt if t in structural_tilts])
+    active_fm = len(det.get("active_failures", []))
+    q3_penalty = min((drift_count * 0.15) + (active_fm * 0.25), 1.0)
+    q3 = max(1.0 - q3_penalty, 0.0)
+
+    nii_score = round((q1 + q2 + q3) / 3.0, 3)
+
+    detail = {
+        "nii_score": nii_score,
+        "q1_constraints_explicit": q1,
+        "q2_constraints_before_capability": q2,
+        "q3_boundary_integrity": round(q3, 3),
+        "structural_tilt_count": drift_count,
+        "active_failure_count": active_fm,
+    }
+    return {
+        "tool": "score_nii",
+        "input_type": "unknown",
+        "signal": "NII_SCORE",
+        "strength": nii_score,
+        "evidence": list(l0) + list(tilt),
+        "detail": detail,
+        "fired": True
+    }
+
+
+def score_nti(det: Dict[str, Any]) -> Dict[str, Any]:
+    """NTI composite score (0-100). Higher = cleaner."""
+    det = det.get("detail", det) if isinstance(det, dict) else {}
+    tilt = det.get("tilt_taxonomy", [])
+    framing = det.get("framing", {})
+    framing_detail = framing.get("detail", framing) if isinstance(framing, dict) else {}
+    active_fm = len(det.get("active_failures", []))
+    word_count = det.get("word_count", 1)
+
+    # Start at 100, deduct
+    score = 100.0
+
+    # Tilt deductions: each tilt category costs 5 points
+    score -= len(tilt) * 5.0
+
+    # Failure mode deductions: CONFIRMED = 10, PROBABLE = 5
+    fm = det.get("failure_modes", {})
+    for key in ["UDDS", "DCE", "CCA"]:
+        state = fm.get(key, {}).get("signal", "")
+        if "CONFIRMED" in state:
+            score -= 10.0
+        elif "PROBABLE" in state:
+            score -= 5.0
+
+    # Framing noise deduction: hedges and reassurances
+    hedge_count = len(framing_detail.get("hedge_markers", [])) if "hedge_markers" in framing_detail else framing_detail.get("hedge_count", 0)
+    reassurance_count = len(framing_detail.get("reassurance_markers", [])) if "reassurance_markers" in framing_detail else framing_detail.get("reassurance_count", 0)
+    score -= hedge_count * 2.0
+    score -= reassurance_count * 1.5
+
+    # Signal density bonus/penalty
+    density = det.get("signal_density", 0)
+    if density > 5.0:
+        score -= (density - 5.0) * 2.0
+
+    score = max(0.0, min(100.0, round(score, 1)))
+
+    detail = {
+        "nti_score": score,
+        "tilt_count": len(tilt),
+        "failure_mode_deductions": active_fm,
+        "hedge_deductions": hedge_count,
+        "signal_density": density,
+    }
+    return {
+        "tool": "score_nti",
+        "input_type": "unknown",
+        "signal": "NTI_SCORE",
+        "strength": score / 100.0,
+        "evidence": list(tilt),
+        "detail": detail,
+        "fired": True
+    }
+
+
+def score_csi(det: Dict[str, Any]) -> Dict[str, Any]:
+    """CSI scoring — 10 dimensions, 0-100 each, composite average."""
+    det = det.get("detail", det) if isinstance(det, dict) else {}
+    text = det.get("text", "")
+    word_count = det.get("word_count", 1)
+    tilt = det.get("tilt_taxonomy", [])
+    framing = det.get("framing", {})
+    framing_detail = framing.get("detail", framing) if isinstance(framing, dict) else {}
+    l0 = det.get("l0_constraints", [])
+    fm = det.get("failure_modes", {})
+
+    dimensions = {}
+
+    # D1: Constraint Presence (are commitments bounded?)
+    dimensions["constraint_presence"] = min(100, len(l0) * 25)
+
+    # D2: Hedge Density (lower = better)
+    hedge_count = len(framing_detail.get("hedge_markers", [])) if "hedge_markers" in framing_detail else framing_detail.get("hedge_count", 0)
+    hedge_ratio = hedge_count / max(word_count / 50, 1)
+    dimensions["hedge_control"] = max(0, round(100 - hedge_ratio * 30, 1))
+
+    # D3: Tilt Load (fewer tilt categories = better)
+    dimensions["tilt_load"] = max(0, round(100 - len(tilt) * 12, 1))
+
+    # D4: Failure Mode Risk
+    active = len(det.get("active_failures", []))
+    dimensions["failure_mode_risk"] = max(0, round(100 - active * 25, 1))
+
+    # D5: Certainty Calibration
+    cert_hit = 1 if "T2_CERTAINTY_INFLATION" in tilt else 0
+    abs_hit = 1 if "T5_ABSOLUTE_LANGUAGE" in tilt else 0
+    dimensions["certainty_calibration"] = max(0, round(100 - (cert_hit + abs_hit) * 25, 1))
+
+    # D6: Authority Balance
+    auth_hit = 1 if "T10_AUTHORITY_IMPOSITION" in tilt else 0
+    dimensions["authority_balance"] = max(0, 100 - auth_hit * 35)
+
+    # D7: Scope Discipline
+    scope_hit = 1 if "T9_SCOPE_EXPANSION" in tilt else 0
+    cap_hit = 1 if "T4_CAPABILITY_OVERREACH" in tilt else 0
+    dimensions["scope_discipline"] = max(0, 100 - (scope_hit + cap_hit) * 25)
+
+    # D8: Accountability Presence
+    acc_hit = 1 if "T3_ACCOUNTABILITY_DISPLACEMENT" in tilt else 0
+    dimensions["accountability"] = max(0, 100 - acc_hit * 40)
+
+    # D9: Emotional Framing
+    emo_hit = 1 if "T7_EMOTIONAL_FRAMING" in tilt else 0
+    dimensions["emotional_control"] = max(0, 100 - emo_hit * 30)
+
+    # D10: Social Proof Dependency
+    sp_hit = 1 if "T8_SOCIAL_PROOF_PRESSURE" in tilt else 0
+    dimensions["social_proof_independence"] = max(0, 100 - sp_hit * 30)
+
+    # Composite: weighted average
+    weights = {
+        "constraint_presence": 1.5,
+        "hedge_control": 1.0,
+        "tilt_load": 1.2,
+        "failure_mode_risk": 1.5,
+        "certainty_calibration": 1.0,
+        "authority_balance": 0.8,
+        "scope_discipline": 1.0,
+        "accountability": 1.0,
+        "emotional_control": 0.7,
+        "social_proof_independence": 0.7,
+    }
+
+    total_weight = sum(weights.values())
+    weighted_sum = sum(dimensions[k] * weights[k] for k in dimensions)
+    composite = round(weighted_sum / total_weight, 1)
+
+    detail = {
+        "csi_score": composite,
+        "dimensions": dimensions,
+        "dimension_count": len(dimensions),
+    }
+    return {
+        "tool": "score_csi",
+        "input_type": "unknown",
+        "signal": "CSI_SCORE",
+        "strength": composite / 100.0,
+        "evidence": list(l0) + list(tilt),
+        "detail": detail,
+        "fired": True
+    }
+
+
+def score_hcs(det: Dict[str, Any]) -> Dict[str, Any]:
+    """HCS scoring — 5 lenses."""
+    det = det.get("detail", det) if isinstance(det, dict) else {}
+    tilt = det.get("tilt_taxonomy", [])
+    framing = det.get("framing", {})
+    framing_detail = framing.get("detail", framing) if isinstance(framing, dict) else {}
+    fm = det.get("failure_modes", {})
+
+    lenses = {}
+
+    # Lens 1: Clarity (hedges + vague quantification hurt)
+    hedge_count = len(framing_detail.get("hedge_markers", [])) if "hedge_markers" in framing_detail else framing_detail.get("hedge_count", 0)
+    hedge_penalty = hedge_count * 8
+    vague_hit = 1 if "T6_VAGUE_QUANTIFICATION" in tilt else 0
+    lenses["clarity"] = max(0, round(100 - hedge_penalty - vague_hit * 15, 1))
+
+    # Lens 2: Respect (dominance, authority, blame hurt)
+    respect_tilts = {"T10_AUTHORITY_IMPOSITION", "T3_ACCOUNTABILITY_DISPLACEMENT"}
+    respect_hits = len([t for t in tilt if t in respect_tilts])
+    lenses["respect"] = max(0, round(100 - respect_hits * 20, 1))
+
+    # Lens 3: Honesty (certainty inflation + absolute language hurt)
+    honesty_tilts = {"T2_CERTAINTY_INFLATION", "T5_ABSOLUTE_LANGUAGE", "T4_CAPABILITY_OVERREACH"}
+    honesty_hits = len([t for t in tilt if t in honesty_tilts])
+    lenses["honesty"] = max(0, round(100 - honesty_hits * 18, 1))
+
+    # Lens 4: Commitment Integrity (failure modes hurt)
+    active = len(det.get("active_failures", []))
+    lenses["commitment_integrity"] = max(0, round(100 - active * 20, 1))
+
+    # Lens 5: Emotional Regulation (urgency + emotional framing hurt)
+    emo_tilts = {"T1_URGENCY_ESCALATION", "T7_EMOTIONAL_FRAMING", "T8_SOCIAL_PROOF_PRESSURE"}
+    emo_hits = len([t for t in tilt if t in emo_tilts])
+    lenses["emotional_regulation"] = max(0, round(100 - emo_hits * 15, 1))
+
+    composite = round(sum(lenses.values()) / len(lenses), 1)
+
+    detail = {
+        "hcs_score": composite,
+        "lenses": lenses,
+    }
+    return {
+        "tool": "score_hcs",
+        "input_type": "unknown",
+        "signal": "HCS_SCORE",
+        "strength": composite / 100.0,
+        "evidence": list(tilt),
+        "detail": detail,
+        "fired": True
+    }
+
+
+def score_composite(det: Dict[str, Any]) -> Dict[str, Any]:
+    """All scoring lenses applied to one detection map."""
+    nii = score_nii(det)
+    nti = score_nti(det)
+    csi = score_csi(det)
+    hcs = score_hcs(det)
+
+    detail = {
+        "nii": nii,
+        "nti": nti,
+        "csi": csi,
+        "hcs": hcs,
+    }
+    evidence = []
+    for score in detail.values():
+        evidence.extend(score.get("evidence", []))
+    strength = round((nii.get("strength", 0.0) + nti.get("strength", 0.0) + csi.get("strength", 0.0) + hcs.get("strength", 0.0)) / 4.0, 4)
+    return {
+        "tool": "score_composite",
+        "input_type": "unknown",
+        "signal": "COMPOSITE_SCORE",
+        "strength": strength,
+        "evidence": evidence,
+        "detail": detail,
+        "fired": True
+    }
+
+
+def score_paragraphs(paragraph_maps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Score each paragraph, produce paragraph-level and page-level scores."""
+    if isinstance(paragraph_maps, dict) and paragraph_maps.get("tool") == "detect_paragraphs":
+        paragraph_maps = paragraph_maps.get("detail", {}).get("paragraphs", [])
+    paragraph_scores = []
+    for det in paragraph_maps:
+        scores = score_composite(det)
+        det_detail = det.get("detail", det) if isinstance(det, dict) else {}
+        scores["detail"]["paragraph_index"] = det_detail.get("paragraph_index", 0)
+        scores["detail"]["word_count"] = det_detail.get("word_count", 0)
+        paragraph_scores.append(scores)
+
+    if not paragraph_scores:
+        return {
+            "tool": "score_paragraphs",
+            "input_type": "unknown",
+            "signal": "NO_PARAGRAPH_SCORES",
+            "strength": 0.0,
+            "evidence": [],
+            "detail": {"paragraph_scores": [], "page_score": {}},
+            "fired": False
+        }
+
+    # Page-level: weighted average by word count
+    total_words = sum(p.get("detail", {}).get("word_count", 1) for p in paragraph_scores)
+    if total_words == 0:
+        total_words = 1
+
+    def weighted_avg(key_path):
+        total = 0
+        for ps in paragraph_scores:
+            wc = ps.get("detail", {}).get("word_count", 1)
+            val = ps.get("detail", {})
+            for k in key_path:
+                val = val.get(k, {}) if isinstance(val, dict) else 0
+            if isinstance(val, dict) and "detail" in val and len(key_path) > 1:
+                val = val.get("detail", {}).get(key_path[-1], 0)
+            if isinstance(val, (int, float)):
+                total += val * wc
+        return round(total / total_words, 1)
+
+    page_score = {
+        "nii_score": weighted_avg(["nii", "nii_score"]),
+        "nti_score": weighted_avg(["nti", "nti_score"]),
+        "csi_score": weighted_avg(["csi", "csi_score"]),
+        "hcs_score": weighted_avg(["hcs", "hcs_score"]),
+        "paragraph_count": len(paragraph_scores),
+        "total_words": total_words,
+    }
+
+    evidence = []
+    for ps in paragraph_scores:
+        evidence.extend(ps.get("evidence", []))
+    return {
+        "tool": "score_paragraphs",
+        "input_type": "unknown",
+        "signal": "PARAGRAPH_SCORES",
+        "strength": min(len(paragraph_scores) / 10.0, 1.0),
+        "evidence": evidence,
+        "detail": {
+            "paragraph_scores": paragraph_scores,
+            "page_score": page_score,
+        },
+        "fired": True
+    }
+
+
 
 
 # ==========================
@@ -787,7 +1363,7 @@ def nti_run():
     # Both framing and get_highlights use original_text — offsets must match displayed text
     try:
         from highlight_map import get_highlights
-        axis2, highlights = get_highlights(original_text, framing=framing)
+        axis2, highlights = get_highlights(original_text, framing=framing.get("detail", framing))
     except Exception:
         axis2, highlights = None, []
 
@@ -805,14 +1381,14 @@ def nti_run():
     try:
         from core_engine.nti_signals import detect_signals
         signals = detect_signals(text)
-        if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+        if cca.get("signal") in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
             signals["signals_summary"]["CCA_COLLAPSE"] = max(1, signals["signals_summary"].get("CCA_COLLAPSE", 0))
-        if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+        if dce.get("signal") in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
             signals["signals_summary"]["DCE_DEFERRAL"] = max(1, signals["signals_summary"].get("DCE_DEFERRAL", 0))
-        if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+        if udds.get("signal") in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
             signals["signals_summary"]["UDDS_DRIFT"] = max(1, signals["signals_summary"].get("UDDS_DRIFT", 0))
         tilt_to_signal = {"T8_PRESSURE_OPTIMIZATION": "SOCIAL_PRESSURE", "T7_AUTHORITY_ANCHOR": "AUTHORITY_ELEVATED", "T6_ABSOLUTE_FRAMING": "ABSOLUTE_LANGUAGE"}
-        for code in (tilt or []):
+        for code in (tilt.get("evidence", []) if isinstance(tilt, dict) else (tilt or [])):
             _sig = tilt_to_signal.get(code)
             if _sig:
                 signals["signals_summary"][_sig] = max(1, signals["signals_summary"].get(_sig, 0))
@@ -820,11 +1396,11 @@ def nti_run():
         signals = {"catalog_version": "nti-signals-v1", "signal_catalog": {}, "signals_summary": {}, "signals_detected": [], "highlights": []}
 
     dominance: List[str] = []
-    if cca["cca_state"] in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
+    if cca.get("signal") in ["CCA_CONFIRMED", "CCA_PROBABLE"]:
         dominance.append("CCA")
-    if udds["udds_state"] in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
+    if udds.get("signal") in ["UDDS_CONFIRMED", "UDDS_PROBABLE"]:
         dominance.append("UDDS")
-    if dce["dce_state"] in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
+    if dce.get("signal") in ["DCE_CONFIRMED", "DCE_PROBABLE"]:
         dominance.append("DCE")
     if not dominance:
         dominance = ["NONE"]
@@ -842,7 +1418,7 @@ def nti_run():
 
     layers = {
         "L0_reality_substrate": {"constraints_found": l0_constraints},
-        "L1_input_freeze": {"objective": obj.get("objective_text", ""), "constraints_snapshot": l0_constraints},
+        "L1_input_freeze": {"objective": obj.get("detail", {}).get("objective_text", ""), "constraints_snapshot": l0_constraints.get("evidence", [])},
         "L2_interpretive_framing": framing,
         "L3_objective_integrity": drift,
         "L4_execution_vectors": {"note": "Canonical runtime records vectors; UI rendering is separate."},
@@ -854,6 +1430,19 @@ def nti_run():
     result = {
         "status": "ok",
         "version": NTI_VERSION,
+        # Legacy flat score fields retained for gauntlet/API compatibility.
+        "nii_score": nii.get("nii_score", nii.get("detail", {}).get("nii_score")),
+        "nii_label": nii.get("nii_label", nii.get("detail", {}).get("nii_label")),
+        "q1": nii.get("q1", nii.get("detail", {}).get("q1")),
+        "q2": nii.get("q2", nii.get("detail", {}).get("q2")),
+        "q3": nii.get("q3", nii.get("detail", {}).get("q3")),
+        "q4": nii.get("q4", nii.get("detail", {}).get("q4")),
+        "failure_modes": {
+            "UDDS": udds.get("signal", udds.get("udds_state", "")),
+            "DCE": dce.get("signal", dce.get("dce_state", "")),
+            "CCA": cca.get("signal", cca.get("cca_state", "")),
+            "dominance": dominance,
+        },
         "layers": layers,
         "parent_failure_modes": {
             "UDDS": udds,
@@ -885,8 +1474,8 @@ def nti_run():
         "session_id": session_id,
         "latency_ms": latency_ms,
         "dominance": dominance,
-        "nii": nii.get("nii_score"),
-        "tilt": tilt
+        "nii": nii.get("detail", {}).get("nii_score"),
+        "tilt": tilt.get("evidence", []) if isinstance(tilt, dict) else tilt
     })
 
     # Log to cockpit analytics
@@ -933,7 +1522,7 @@ def nti_run():
         result["v3"] = {
             "enforced_text": v3["output"],
             "passes": len(v3["passes"]),
-            "final_score": v3["final_score"].get("nii_score") if isinstance(v3["final_score"], dict) else None,
+            "final_score": v3["final_score"].get("detail", {}).get("nii_score") if isinstance(v3["final_score"], dict) else None,
             "decision": v3["self_audit"]["decision"],
             "time_collapse_applied": True,
             "attribution_stripped": True,
