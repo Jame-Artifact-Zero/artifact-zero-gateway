@@ -24,8 +24,10 @@ def run_pipeline(event: dict) -> dict:
     S0 = memory_read.run(S0)
     S0 = detect.run(S0)
     S0 = decision.run(S0)
+    R = phi_run.run(S0)
+    S0["R"] = R
     handler = S0.get("decision", {}).get("handler")
     if handler in _HANDLER_MAP:
-        S0["handler_result"] = _HANDLER_MAP[handler](S0)
-    R = phi_run.run(S0)
+        handler_output = _HANDLER_MAP[handler](S0)
+        S0["handler_result"] = handler_output
     return psi_run.run(S0, R)
