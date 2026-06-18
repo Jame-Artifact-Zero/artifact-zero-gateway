@@ -518,8 +518,8 @@ def operator_score():
 def _score_text_internal(text: str) -> dict:
     try:
         from core_engine.v3_engine import run_v3
-        from core_engine.scoring import compute_nii
-        from core_engine.detection import (
+        from core_engine.app import (
+            compute_nii,
             detect_l0_constraints,
             detect_downstream_before_constraint,
             detect_udds,

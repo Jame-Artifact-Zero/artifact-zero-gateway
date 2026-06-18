@@ -341,7 +341,15 @@ def _d5_tilt_exposure(text: str) -> Tuple[float, Dict]:
     # Import the existing tilt classifier
     try:
         from core_engine.app import classify_tilt
-        tilts = classify_tilt(text)
+        raw_tilts = classify_tilt(text)
+        if isinstance(raw_tilts, dict):
+            tilts = (
+                raw_tilts.get("evidence")
+                or raw_tilts.get("detail", {}).get("tilt_taxonomy")
+                or []
+            )
+        else:
+            tilts = raw_tilts or []
     except Exception:
         tilts = []
 
